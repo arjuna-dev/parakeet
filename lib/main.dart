@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
@@ -60,7 +60,12 @@ class MyHomePage extends StatelessWidget {
             if (response.statusCode == 200) {
               // If the server returns a 200 OK response,
               // then parse the JSON.
-              print('Response data: ${response.body}');
+              final Map<String, dynamic> data = jsonDecode(response.body);
+
+              await FirebaseFirestore.instance
+                  .collection('jsonFiles')
+                  .add(data);
+              print(data);
             } else {
               // If the server returns an unexpected response,
               // then throw an exception.
