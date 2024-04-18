@@ -25,54 +25,113 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, this.title});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key, this.title}) : super(key: key);
 
-  final title;
+  final String? title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  var topic = '';
+
+  var keywords = '';
+
+  var nativeLanguage = '';
+
+  var learningLanguage = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Flutter Demo'),
-        ),
-        body: Center(
-            child: FloatingActionButton(
-          onPressed: () async {
-            final response = await http.post(
-              Uri.parse('https://parakeetapi-hma7fmdqza-uc.a.run.app'),
-              headers: <String, String>{
-                'Content-Type': 'application/json; charset=UTF-8',
+      appBar: AppBar(
+        title: const Text('Flutter Demo'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Topic',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  topic = value;
+                });
               },
-              body: jsonEncode(<String, String>{
-                'topic': 'Ordering a coffee',
-                'keywords': 'coffee, order, drink',
-                'native_language': 'English',
-                'learning_language': 'Spanish',
-              }),
-            );
-
-            if (response.statusCode == 200) {
-              // If the server returns a 200 OK response,
-              // then parse the JSON.
-              final Map<String, dynamic> data = jsonDecode(response.body);
-
-              await FirebaseFirestore.instance
-                  .collection('jsonFiles')
-                  .add(data);
-              print(data);
-            } else {
-              // If the server returns an unexpected response,
-              // then throw an exception.
-              throw Exception('Failed to load API data');
-            }
-          },
-          child: const Icon(Icons.add),
-        )));
+            ),
+            TextField(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Keywords',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  keywords = value;
+                });
+              },
+            ),
+            TextField(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Native Language',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  nativeLanguage = value;
+                });
+              },
+            ),
+            TextField(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Learning Language',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  learningLanguage = value;
+                });
+              },
+            ),
+            FloatingActionButton(
+              onPressed: () async {
+                print('pressed');
+                final response = await http.post(
+                  Uri.parse('https://parakeetapi-hma7fmdqza-uc.a.run.app'),
+                  headers: <String, String>{
+                    'Content-Type': 'application/json; charset=UTF-8',
+                  },
+                  body: jsonEncode(<String, String>{
+                    'topic': topic,
+                    'keywords': keywords,
+                    'native_language': nativeLanguage,
+                    'learning_language': learningLanguage,
+                  }),
+                );
+                if (response.statusCode == 200) {
+                  final Map<String, dynamic> data = jsonDecode(response.body);
+                  await FirebaseFirestore.instance
+                      .collection('jsonFiles')
+                      .add(data);
+                  print(data);
+                } else {
+                  throw Exception('Failed to load API data');
+                }
+              },
+              child: const Icon(Icons.add),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
