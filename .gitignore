@@ -46,3 +46,91 @@ requirements.txt
 node_modules/
 functions/node_modules/.bin/acorn
 functions/venv
+
+
+#Chatgpt recommendations
+
+# General
+.DS_Store
+.idea/
+*.iml
+*.log
+*.pid
+*.swp
+*.swo
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Flutter/Dart specific
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/generated_plugin_registrant.dart
+
+# Android related
+**/android/**/*.gradle
+**/android/.gradle
+**/android/captures/
+**/android/local.properties
+**/android/GeneratedPluginRegistrant.*
+
+# iOS related
+**/ios/**/*.generated.xcconfig
+**/ios/**/*.generated.xcworkspace
+**/ios/**/*.generated.xcodeproj
+**/ios/**/*.xcworkspace/xcuserdata/
+**/ios/**/*.xcodeproj/xcuserdata/
+**/ios/**/*.xcodeproj/project.xcworkspace/xcuserdata/
+**/ios/**/Flutter/flutter_export_environment.sh
+**/ios/**/Flutter/Generated.xcconfig
+**/ios/**/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/podhelper.rb
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/.flutter-plugins
+**/ios/Flutter/.flutter-plugins-dependencies
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Flutter*.xcconfig
+
+
+# macOS related
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter.podspec
+**/macos/Flutter/.flutter-plugins
+**/macos/Flutter/.flutter-plugins-dependencies
+**/macos/Flutter/flutter_assets/
+**/macos/Pods/
+**/macos/.symlinks/
+**/macos/Flutter/GeneratedPluginRegistrant.*
+
+# Linux related
+**/linux/Flutter/ephemeral/
+**/linux/.symlinks/
+
+# Windows related
+**/windows/flutter/ephemeral/
+**/windows/.symlinks/
+**/windows/flutter/generated_plugin_registrant.*
+
+# Web related
+**/web/ServiceWorker/
+**/web/manifest.json
+**/web/icons/Icon-*
+
+# VSCode related
+.vscode/
+
+# Other files and directories to ignore
+keys.json
+secrets.dart
+overrides.json
+
+# Optionally, ignore pubspec.lock for library packages, but keep it for applications
+# pubspec.lock
