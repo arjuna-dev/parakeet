@@ -1,11 +1,6 @@
-# Welcome to Cloud Functions for Firebase for Python!
-# To get started, simply uncomment the below code or create your own.
-# Deploy with `firebase deploy`
-
-# The Cloud Functions for Firebase SDK to create Cloud Functions and set up triggers.
+import requests
+import json
 from firebase_functions import firestore_fn, https_fn, options
-
-# The Firebase Admin SDK to access Cloud Firestore.
 from firebase_admin import initialize_app, firestore
 import google.cloud.firestore
 
@@ -48,7 +43,7 @@ def parakeetAPI(req: https_fn.Request) -> https_fn.Response:
           {"role": "user", "content": f'''Please create a JSON file for a conversation for a language learning app. It should contain 10 sentences, 5 for each character.It should include exactly the following keys for the key value pair in JSON:
 
 title: (Create a title for the conversation.)
-topic: {topic}.   
+topic: {topic}.
 keywords: {keywords}.
 native_language: {native_language}
 target_language: {target_language}
@@ -75,10 +70,15 @@ For the specifications in parenthesis you must generate the content. The keys sh
   # return https_fn.Response(data)
 
 
-# The 'requests' and 'json' libraries are imported. 
-# 'requests' is used to send HTTP requests, while 'json' is used for parsing the JSON data that we receive from the API.
-import requests
-import json
+#       ___                                   ___             __                
+#      /\_ \                                 /\_ \           /\ \               
+#    __\//\ \      __   __  __     __    ___ \//\ \      __  \ \ \____    ____  
+#  /'__`\\ \ \   /'__`\/\ \/\ \  /'__`\/' _ `\ \ \ \   /'__`\ \ \ '__`\  /',__\ 
+# /\  __/ \_\ \_/\  __/\ \ \_/ |/\  __//\ \/\ \ \_\ \_/\ \L\.\_\ \ \L\ \/\__, `\
+# \ \____\/\____\ \____\\ \___/ \ \____\ \_\ \_\/\____\ \__/.\_\\ \_,__/\/\____/
+#  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
+                                                                              
+                                                                              
 
 # An API key is defined here. You'd normally get this from the service you're accessing. It's a form of authentication.
 XI_API_KEY = "b9a5cc8dfd7e9ffa3f8e7451f1713ae0"
