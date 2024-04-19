@@ -42,11 +42,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-requirements.txt
 node_modules/
 functions/node_modules/.bin/acorn
 functions/venv
-
 
 #Chatgpt recommendations
 
