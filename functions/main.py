@@ -210,8 +210,10 @@ def elevenlabs_tts(text, output_path, voice_id="21m00Tcm4TlvDq8ikWAM"):
 
 
 def split_words(sentence):
+  additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
+  punctuation = string.punctuation + additional_chars
   words = sentence.split()
-  words = [word.strip(",.!?") for word in words]
+  words = [word.strip(punctuation) for word in words]
   return words
 
 text_for_tts = {}
