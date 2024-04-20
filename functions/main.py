@@ -18,7 +18,6 @@ app = initialize_app()
 # @https_fn.on_request()
 # def parakeetAPI(req: https_fn.Request) -> https_fn.Response:
 def parakeetAPI(request_data):
-
 #   request_data = json.loads(req.data)
   requested_scenario = request_data.get("requested_scenario")
   native_language = request_data.get("native_language")
@@ -220,19 +219,32 @@ def get_text_for_tts(conversation_JSON):
     for sentence in conversation_JSON['conversation']:
         native_language_sentence = sentence['native_language_sentence']
         target_language_sentence = sentence['target_language_sentence']
-        text_for_tts["native_language_sentence_"+str(sentence_counter)] = native_language_sentence
-        text_for_tts["target_language_sentence_"+str(sentence_counter)] = target_language_sentence
-        
-        sentence_native_list = split_words(native_language_sentence)
-        sentence_translation_list = split_words(target_language_sentence)
-        # Iterate sentence_native_list and sentence_translation_list to get the individual words and store them in the text_for_tts dictionary
-        for i in range(len(sentence_native_list)):
-            text_for_tts["native_"+str(sentence_counter)+"_word_"+str(i)] = sentence_native_list[i]
-        
-        for i in range(len(sentence_translation_list)):
-            text_for_tts["translation_"+str(sentence_counter)+"_word_"+str(i)] = sentence_translation_list[i]
-        sentence_counter += 1
+        narrator_explanation = sentence['narrator_explanation']
+        target_language_split_sentence = sentence['target_language_split_sentence']
 
+        text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
+        text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
+        text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
+        for key, value in target_language_split_sentence.items():
+            native_language_chunk = value['native_language']
+            target_language_chunk = value['target_language']
+            narrator_fun_fact_chunk = value['narrator_fun_fact']
+            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + key
+
+            text_for_tts[phrase + "_native"] = native_language_chunk
+            text_for_tts[phrase + "_target"] = target_language_chunk
+            text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
+            for index, value in enumerate(split_words(target_language_chunk)):
+                text_for_tts[phrase + "_target_"+ str(index)] = value
+
+            # text_for_tts["target_language_split_sentence_"+str(sentence_counter)+"_"+key + "narrator_fun_fact"] = narrator_fun_fact
+        sentence_counter += 1
+    # create a json file and store it there
+    with open('text_for_tts.json', 'w') as file:
+        json.dump(text_for_tts, file)
+
+        
+        
 filename = 'example_JSON.json'
 
 # Open the JSON file for reading
@@ -240,7 +252,7 @@ with open(filename, 'r') as file:
     example_JSON = json.load(file)
 
 
-get_text_for_tts(example_JSON)
+get_text_for_tts(example_JSON) 
 
 # counter = 0
 # for key, text in text_for_tts.items():
