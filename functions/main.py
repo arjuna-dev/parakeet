@@ -4,6 +4,8 @@ import openai
 from firebase_functions import firestore_fn, https_fn, options
 from firebase_admin import initialize_app, firestore
 import google.cloud.firestore
+import string
+
 
 app = initialize_app()
 
