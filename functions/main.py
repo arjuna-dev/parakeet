@@ -4,6 +4,8 @@ import openai
 from firebase_functions import firestore_fn, https_fn, options
 from firebase_admin import initialize_app, firestore
 import google.cloud.firestore
+import string
+
 
 app = initialize_app()
 
@@ -61,44 +63,44 @@ conversation: (An array of dictionaries with 10 items, that is 10 sentences. Eac
 - narrator_explanation: (
         A sentence by the narrator of the language lesson explaining the what is going on in this sentence and who is talking, include the name of the speaker in the sentence. For example, "Ben is asking a question about the PCB board."
         )
-- target_language_split_sentence: ( An object that for a sentence "Danke, Dr. Müller. Ich habe schon immer ein großes Interesse an alten Zivilisationen gehabt." would  like this: 
+- split_sentence: ( An object that for sentence with German as target language and English as native language where the target sentence is: "Danke, Dr. Müller. Ich habe schon immer ein großes Interesse an alten Zivilisationen gehabt." would  like this: 
 
 {{
         "1": {{
-          "native_language": "Danke",
-          "target_language": "thank you",
+          "target_language": "Danke",
+          "native_language": "thank you",
           "narrator_fun_fact": "The German word 'danke' is closely related to the English word thank. Both words share the same Proto-Germanic root which means 'thought' or 'gratitude.'"
         }},
         "2": {{
-          "native_language": "Ich habe schon immer",
-          "target_language": "I have always",
+          "target_language": "Ich habe schon immer",
+          "native_language": "I have always",
           "narrator_fun_fact": "The phrase 'schon immer' emphasizes a long-standing interest or condition. It literally already always"
         }},
         "3": {{
-          "native_language": "ein großes Interesse",
-          "target_language": "a great interest",
+          "target_language": "ein großes Interesse",
+          "native_language": "a great interest",
           "narrator_fun_fact": "The phrase 'ein großes Interesse' is a common way to express a strong interest in German."
         }},
         "4": {{
-          "native_language": "an alten Zivilisationen",
-          "target_language": "in ancient civilizations",
+          "target_language": "an alten Zivilisationen",
+          "native_language": "in ancient civilizations",
           "narrator_fun_fact": "The preposition 'an' is used here to indicate an interest in or towards ancient civilizations."
         }},
         "5": {{
-          "native_language": "gehabt",
-          "target_language": "had",
+          "target_language": "gehabt",
+          "native_language": "had",
           "narrator_fun_fact": "The verb 'gehabt' is the past participle of 'haben' and is used in the perfect tense construction in German."
         }}
       }}
 
-        Where native_language values are the target_language_sentence split into sets of words that make sense together and have grammatical cohesion in {target_language}. For example, if the target_language was German and the sentence  "Hallo, fangen wir mit der Leiterplatte an?" the keys would be "Hallo", "fangen wir mit" and "der Leiterplatte an".
+        Where target_language values are the target_language_sentence split into sets of words that make sense together and have grammatical cohesion in {target_language}. For example, if the target_language was German and the sentence  "Hallo, fangen wir mit der Leiterplatte an?" the keys would be "Hallo", "fangen wir mit" and "der Leiterplatte an".
 
-        The target_language values are the direct translations of the native_language values into {target_language}. Stick to the direct translation of the phrase. For example, in the German phrase "Toll! Ich habe viel darüber gehört." the key-value pair should NOT be "Ich habe viel": "Means 'I have heard a lot'" but rather "Ich habe viel": "I have a lot".
+        The native_language values are the direct translations of the native_language values into {target_language}. Stick to the direct translation of the phrase. For example, in the German phrase "Toll! Ich habe viel darüber gehört." the key-value pair should NOT be "Ich habe viel": "Means 'I have heard a lot'" but rather "Ich habe viel": "I have a lot".
 
-        The narrator_fun_fact values are fun facts about the translation, etymology history or the grammar of the target_language. Enclose words in {target_language} in single quotes. Leave words in {native_language} always without quotes.
+        The narrator_fun_fact values are fun facts about the translation, etymology, history or the grammar of the target_language. Enclose words in {target_language} in single quotes. Leave words in {native_language} always without quotes.
     )
 
-For the specifications in parenthesis you must generate the content. The keys shall remain exactly the same. If no keywords are provided for the keywords key field add your own keywords to be used in the conversation.
+For the specifications in parenthesis you must generate the content. The keys shall remain exactly the same. If no keywords are provided for the keywords key field add your own keywords to be used in the conversation and that match the conversation topic.
 '''
 }
       ],
@@ -209,8 +211,10 @@ def elevenlabs_tts(text, output_path, voice_id="21m00Tcm4TlvDq8ikWAM"):
 
 
 def split_words(sentence):
+  additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
+  punctuation = string.punctuation + additional_chars
   words = sentence.split()
-  words = [word.strip(",.!?") for word in words]
+  words = [word.strip(punctuation) for word in words]
   return words
 
 text_for_tts = {}
