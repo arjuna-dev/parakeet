@@ -8,6 +8,7 @@ import string
 from elevenlabs_api import elevenlabs_tts, get_voices
 import datetime
 from lesson_generator import generate_lesson
+import re
 
 app = initialize_app()
 
@@ -150,10 +151,10 @@ def get_text_for_tts(conversation_JSON):
     return text_for_tts
 
 chatGPT_response = parakeetAPI({
-  "requested_scenario": "A man orders a duck dish in a restaurant", 
+  "requested_scenario": "A spiritual aspirant and a Guru discuss bhakti yoga", 
   "keywords": "", 
   "native_language": "English", 
-  "target_language": "French", 
+  "target_language": "Italian", 
   "language_level": "A1"
 })
 
@@ -167,9 +168,14 @@ filename = f'text_for_tts_{now}.json'
 with open(filename, 'w') as file:
   json.dump(text_for_tts, file)
 
+pattern = r"^sentence_\d+_target$"
+
 for key, text in text_for_tts.items():
-  if "_3_" in key:
-     break
+  if re.match(pattern, key):
+    elevenlabs_tts(text, f"audio/{key}.mp3")
+    continue
+  if "_3_" in key and not re.match(pattern, key):
+     continue
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
 
