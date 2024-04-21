@@ -11,6 +11,9 @@ import re
 
 # An API key is defined here. You'd normally get this from the service you're accessing. It's a form of authentication.
 XI_API_KEY = "b9a5cc8dfd7e9ffa3f8e7451f1713ae0"
+VOICE_FOR_NARRATOR = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
+VOICE_FOR_EVEN_SENTENCE = "LcfcDJNUP1GQjkzn1xUU"
+VOICE_FOR_ODD_SENTENCE = "5Q0t7uMcjvnagumLfvZi"
 
 def get_voices():
 
@@ -50,9 +53,6 @@ def elevenlabs_tts(text, output_path):
     TEXT_TO_SPEAK = text  # Text you want to convert to speech
     OUTPUT_PATH = output_path  # Path to save the output audio file
 
-    VOICE_FOR_NARRATOR = "JBFqnCBsd6RMkjVDRZzb"
-    VOICE_FOR_EVEN_SENTENCE = "LcfcDJNUP1GQjkzn1xUU"
-    VOICE_FOR_ODD_SENTENCE = "5Q0t7uMcjvnagumLfvZi"
     # if the output_path contains narrator, the voice id should be JBFqnCBsd6RMkjVDRZzb
     if "narrator" in output_path:
         voice_id = VOICE_FOR_NARRATOR
