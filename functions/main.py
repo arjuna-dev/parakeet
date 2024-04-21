@@ -154,7 +154,7 @@ chatGPT_response = parakeetAPI({
   "keywords": "", 
   "native_language": "English", 
   "target_language": "French", 
-  "language_level": "A2"
+  "language_level": "A1"
 })
 
 now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
