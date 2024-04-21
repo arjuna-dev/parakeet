@@ -173,6 +173,6 @@ with open(filename, 'r') as file:
 
 counter = 1
 for key, text in text_for_tts.items():
-        if counter < 3:
+        if counter < 7:
           elevenlabs_tts(text, f"audio/{key}.mp3")
         counter += 1
