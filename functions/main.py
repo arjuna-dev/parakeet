@@ -113,8 +113,8 @@ def parakeetAPI(request_data):
   return data
 
 conversation_JSON = parakeetAPI({
-  "requested_scenario": "A mother talks to her 10 year old son about the importance of recycling and how to do it properly.", 
-  "keywords": "", 
+  "requested_scenario": "A woman collects her package from a package shop", 
+  "keywords": "package, collect, ID, passport", 
   "native_language": "English", 
   "target_language": "German", 
   "language_level": "A2"
