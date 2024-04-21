@@ -168,6 +168,8 @@ with open(filename, 'w') as file:
   json.dump(text_for_tts, file)
 
 for key, text in text_for_tts.items():
+  if "_3_" in key:
+     break
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
 
