@@ -171,8 +171,7 @@ with open(filename, 'r') as file:
 
 # get_text_for_tts(conversation_JSON) 
 
-counter = 1
 for key, text in text_for_tts.items():
-        if counter < 7:
-          elevenlabs_tts(text, f"audio/{key}.mp3")
-        counter += 1
+  elevenlabs_tts(text, f"audio/{key}.mp3")
+
+# elevenlabs_tts("The verb 'abzuholen' comes from 'abholen', meaning 'to pick up'.", f"audio/sentence_0_split_sentence_3_fun_fact.mp3")
