@@ -6,7 +6,8 @@ from firebase_admin import initialize_app, firestore
 import google.cloud.firestore
 import string
 from elevenlabs_api import elevenlabs_tts, get_voices
-
+import datetime
+from lesson_generator import generate_lesson
 
 app = initialize_app()
 
@@ -111,16 +112,6 @@ def parakeetAPI(request_data):
   data = json.loads(chatGPT_JSON_response)
   return data
 
-# conversation_JSON = parakeetAPI({
-#   "requested_scenario": "A woman collects her package from a package shop", 
-#   "keywords": "package, collect, ID, passport", 
-#   "native_language": "English", 
-#   "target_language": "German", 
-#   "language_level": "A2"
-# })
-
-# print(conversation_JSON)
-
 
 def split_words(sentence):
   additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
@@ -129,8 +120,8 @@ def split_words(sentence):
   words = [word.strip(punctuation) for word in words]
   return words
 
-text_for_tts = {}
 def get_text_for_tts(conversation_JSON):
+    text_for_tts = {}
     text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
     text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
     text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
@@ -156,22 +147,28 @@ def get_text_for_tts(conversation_JSON):
             for index, value in enumerate(split_words(target_language_chunk)):
                 text_for_tts[phrase + "_target_"+ str(index)] = value
         sentence_counter += 1
-    # create a json file and store it there
-    with open('text_for_tts.json', 'w') as file:
-        json.dump(text_for_tts, file)
+    return text_for_tts
 
-        
-        
-filename = 'text_for_tts.json'
+chatGPT_response = parakeetAPI({
+  "requested_scenario": "A man orders a duck dish in a restaurant", 
+  "keywords": "", 
+  "native_language": "English", 
+  "target_language": "French", 
+  "language_level": "A2"
+})
 
-# Open the JSON file for reading
-with open(filename, 'r') as file:
-    text_for_tts = json.load(file)
+now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+filename = f'chatGPT_response_{now}.json'
+with open(filename, 'w') as file:
+  json.dump(chatGPT_response, file)
 
-
-# get_text_for_tts(conversation_JSON) 
+text_for_tts = get_text_for_tts(chatGPT_response)
+filename = f'text_for_tts_{now}.json'
+with open(filename, 'w') as file:
+  json.dump(text_for_tts, file)
 
 for key, text in text_for_tts.items():
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
-# elevenlabs_tts("The verb 'abzuholen' comes from 'abholen', meaning 'to pick up'.", f"audio/sentence_0_split_sentence_3_fun_fact.mp3")
+
+generate_lesson()
