@@ -39,6 +39,4 @@ def generate_lesson():
 
     # Export the combined audio
     combined.export(filename, format="mp3")
-    print("Combined audio exported as 'full_lesson_audio.mp3'")
-
-generate_lesson()
+    print(f"Combined audio exported as {filename}")
