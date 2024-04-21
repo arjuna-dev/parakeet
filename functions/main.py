@@ -112,13 +112,13 @@ def parakeetAPI(request_data):
   data = json.loads(chatGPT_JSON_response)
   return data
 
-conversation_JSON = parakeetAPI({
-  "requested_scenario": "A woman collects her package from a package shop", 
-  "keywords": "package, collect, ID, passport", 
-  "native_language": "English", 
-  "target_language": "German", 
-  "language_level": "A2"
-})
+# conversation_JSON = parakeetAPI({
+#   "requested_scenario": "A woman collects her package from a package shop", 
+#   "keywords": "package, collect, ID, passport", 
+#   "native_language": "English", 
+#   "target_language": "German", 
+#   "language_level": "A2"
+# })
 
 # print(conversation_JSON)
 
@@ -164,16 +164,31 @@ def get_voices():
 # get_voices()
 
 
-def elevenlabs_tts(text, output_path, voice_id="21m00Tcm4TlvDq8ikWAM"):
+def elevenlabs_tts(text, output_path):
     
     # Define constants for the script
     CHUNK_SIZE = 1024  # Size of chunks to read/write at a time
-    VOICE_ID = voice_id  # ID of the voice model to use
+    VOICE_FOR_NARRATOR = "JBFqnCBsd6RMkjVDRZzb"
+    VOICE_FOR_EVEN_SENTENCE = "LcfcDJNUP1GQjkzn1xUU"
+    VOICE_FOR_ODD_SENTENCE = "5Q0t7uMcjvnagumLfvZi"
+    # if the output_path contains narrator, the voice id should be JBFqnCBsd6RMkjVDRZzb
+    if "narrator" in output_path:
+        voice_id = VOICE_FOR_NARRATOR
+    elif "sentence_" in output_path:
+      # Extract the number from the output_path
+      sentence_number = int(''.join(filter(str.isdigit, output_path)))
+      # If the sentence number is odd, use one voice id
+      if sentence_number % 2 != 0:
+        voice_id = VOICE_FOR_ODD_SENTENCE
+      # If the sentence number is even or zero, use another voice id
+      else:
+        voice_id = VOICE_FOR_EVEN_SENTENCE
+
     TEXT_TO_SPEAK = text  # Text you want to convert to speech
     OUTPUT_PATH = output_path  # Path to save the output audio file
 
     # Construct the URL for the Text-to-Speech API request
-    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
+    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
 
     # Set up headers for the API request, including the API key for authentication
     headers = {
@@ -219,48 +234,48 @@ def split_words(sentence):
 
 text_for_tts = {}
 def get_text_for_tts(conversation_JSON):
+    text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
+    text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
+    text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
     sentence_counter = 0
     for sentence in conversation_JSON['conversation']:
         native_language_sentence = sentence['native_language_sentence']
         target_language_sentence = sentence['target_language_sentence']
         narrator_explanation = sentence['narrator_explanation']
-        target_language_split_sentence = sentence['split_sentence']
+        target_language_split_sentence = list (sentence['split_sentence'].values())
 
         text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
         text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
         text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
-        for key, value in target_language_split_sentence.items():
-            native_language_chunk = value['native_language']
-            target_language_chunk = value['target_language']
-            narrator_fun_fact_chunk = value['narrator_fun_fact']
-            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + key
+        for index, value in enumerate(target_language_split_sentence):
+            native_language_chunk = value["native_language"]
+            target_language_chunk = value["target_language"]
+            narrator_fun_fact_chunk = value["narrator_fun_fact"]
+            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
 
             text_for_tts[phrase + "_native"] = native_language_chunk
             text_for_tts[phrase + "_target"] = target_language_chunk
             text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
             for index, value in enumerate(split_words(target_language_chunk)):
                 text_for_tts[phrase + "_target_"+ str(index)] = value
-
-            # text_for_tts["target_language_split_sentence_"+str(sentence_counter)+"_"+key + "narrator_fun_fact"] = narrator_fun_fact
         sentence_counter += 1
     # create a json file and store it there
-#     with open('text_for_tts.json', 'w') as file:
-#         json.dump(text_for_tts, file)
+    with open('text_for_tts.json', 'w') as file:
+        json.dump(text_for_tts, file)
 
         
         
-# filename = 'example_JSON.json'
+filename = 'text_for_tts.json'
 
-# # Open the JSON file for reading
-# with open(filename, 'r') as file:
-#     example_JSON = json.load(file)
+# Open the JSON file for reading
+with open(filename, 'r') as file:
+    text_for_tts = json.load(file)
 
 
-get_text_for_tts(conversation_JSON) 
+# get_text_for_tts(conversation_JSON) 
 
-counter = 0
+counter = 30
 for key, text in text_for_tts.items():
-    if counter < 3:
-        print(text)
-        elevenlabs_tts(text, f"audio/{key}.mp3")
-    counter += 1
+        if counter < 31:
+          elevenlabs_tts(text, f"audio/{key}.mp3")
+        counter += 1
