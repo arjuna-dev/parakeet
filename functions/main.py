@@ -111,13 +111,13 @@ def parakeetAPI(request_data):
   data = json.loads(chatGPT_JSON_response)
   return data
 
-conversation_JSON = parakeetAPI({
-  "requested_scenario": "A woman collects her package from a package shop", 
-  "keywords": "package, collect, ID, passport", 
-  "native_language": "English", 
-  "target_language": "German", 
-  "language_level": "A2"
-})
+# conversation_JSON = parakeetAPI({
+#   "requested_scenario": "A woman collects her package from a package shop", 
+#   "keywords": "package, collect, ID, passport", 
+#   "native_language": "English", 
+#   "target_language": "German", 
+#   "language_level": "A2"
+# })
 
 # print(conversation_JSON)
 
@@ -131,51 +131,48 @@ def split_words(sentence):
 
 text_for_tts = {}
 def get_text_for_tts(conversation_JSON):
+    text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
+    text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
+    text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
     sentence_counter = 0
     for sentence in conversation_JSON['conversation']:
         native_language_sentence = sentence['native_language_sentence']
         target_language_sentence = sentence['target_language_sentence']
         narrator_explanation = sentence['narrator_explanation']
-        target_language_split_sentence = sentence['split_sentence']
+        target_language_split_sentence = list (sentence['split_sentence'].values())
 
         text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
         text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
         text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
-        for key, value in target_language_split_sentence.items():
-            native_language_chunk = value['native_language']
-            target_language_chunk = value['target_language']
-            narrator_fun_fact_chunk = value['narrator_fun_fact']
-            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + key
+        for index, value in enumerate(target_language_split_sentence):
+            native_language_chunk = value["native_language"]
+            target_language_chunk = value["target_language"]
+            narrator_fun_fact_chunk = value["narrator_fun_fact"]
+            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
 
             text_for_tts[phrase + "_native"] = native_language_chunk
             text_for_tts[phrase + "_target"] = target_language_chunk
             text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
             for index, value in enumerate(split_words(target_language_chunk)):
                 text_for_tts[phrase + "_target_"+ str(index)] = value
-
-            # text_for_tts["target_language_split_sentence_"+str(sentence_counter)+"_"+key + "narrator_fun_fact"] = narrator_fun_fact
         sentence_counter += 1
     # create a json file and store it there
-#     with open('text_for_tts.json', 'w') as file:
-#         json.dump(text_for_tts, file)
+    with open('text_for_tts.json', 'w') as file:
+        json.dump(text_for_tts, file)
 
         
         
-# filename = 'example_JSON.json'
+filename = 'text_for_tts.json'
 
-# # Open the JSON file for reading
-# with open(filename, 'r') as file:
-#     example_JSON = json.load(file)
+# Open the JSON file for reading
+with open(filename, 'r') as file:
+    text_for_tts = json.load(file)
 
 
-get_text_for_tts(conversation_JSON) 
+# get_text_for_tts(conversation_JSON) 
 
-counter = 0
+counter = 1
 for key, text in text_for_tts.items():
-    if counter < 3:
-        print(text)
-        elevenlabs_tts(text, f"audio/{key}.mp3")
-    counter += 1
-
-
-elevenlabs_tts("Hello, how are you?", "audio/hello.mp3")
+        if counter < 7:
+          elevenlabs_tts(text, f"audio/{key}.mp3")
+        counter += 1

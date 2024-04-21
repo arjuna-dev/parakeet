@@ -1,4 +1,5 @@
 import requests
+import re
 
 #       ___                                   ___             __                
 #      /\_ \                                 /\_ \           /\ \               
@@ -42,16 +43,33 @@ def get_voices():
 # get_voices()
 
 
-def elevenlabs_tts(text, output_path, voice_id="21m00Tcm4TlvDq8ikWAM"):
+def elevenlabs_tts(text, output_path):
     
     # Define constants for the script
     CHUNK_SIZE = 1024  # Size of chunks to read/write at a time
-    VOICE_ID = voice_id  # ID of the voice model to use
     TEXT_TO_SPEAK = text  # Text you want to convert to speech
     OUTPUT_PATH = output_path  # Path to save the output audio file
 
+    VOICE_FOR_NARRATOR = "JBFqnCBsd6RMkjVDRZzb"
+    VOICE_FOR_EVEN_SENTENCE = "LcfcDJNUP1GQjkzn1xUU"
+    VOICE_FOR_ODD_SENTENCE = "5Q0t7uMcjvnagumLfvZi"
+    # if the output_path contains narrator, the voice id should be JBFqnCBsd6RMkjVDRZzb
+    if "narrator" in output_path:
+        voice_id = VOICE_FOR_NARRATOR
+    elif "sentence_" in output_path:
+        # Extract the number immediately following "sentence_"
+        match = re.search(r'sentence_(\d+)', output_path)
+        if match:
+            sentence_number = int(match.group(1))
+            # If the sentence number is odd, use one voice id
+            if sentence_number % 2 != 0:
+                voice_id = VOICE_FOR_ODD_SENTENCE
+            # If the sentence number is even or zero, use another voice id
+            else:
+                voice_id = VOICE_FOR_EVEN_SENTENCE
+
     # Construct the URL for the Text-to-Speech API request
-    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
+    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
 
     # Set up headers for the API request, including the API key for authentication
     headers = {
