@@ -168,13 +168,14 @@ filename = f'text_for_tts_{now}.json'
 with open(filename, 'w') as file:
   json.dump(text_for_tts, file)
 
+
 pattern = r"^sentence_\d+_target$"
 
 for key, text in text_for_tts.items():
   if re.match(pattern, key):
     elevenlabs_tts(text, f"audio/{key}.mp3")
     continue
-  if "_3_" in key and not re.match(pattern, key):
+  if "_3_" in key:
      continue
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
