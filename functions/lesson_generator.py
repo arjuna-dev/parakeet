@@ -2,10 +2,11 @@ from pydub import AudioSegment # type: ignore
 from script_generator import generate_script, get_counts
 import datetime
 import json
+import os
 
 # Constants
-now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-filename = f'full_lesson_{now}.mp3'
+#now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
 audio_files_directory = "audio"
 one_second_break = AudioSegment.silent(duration=1000)  # 1000 milliseconds = 1 second
 five_second_break = AudioSegment.silent(duration=5000)  # 5000 milliseconds = 5 seconds
@@ -20,10 +21,13 @@ def get_audio_segment(key, lesson_script_audio_segments):
         return lesson_script_audio_segments.get(key)
 
 # Function to generate the full lesson audio
-def generate_lesson(filename_text_for_tts):
+def generate_lesson(title_name):
+    
+    #name of the combined audio file
+    filename = f'all_files_{title_name}/lesson_final_{title_name}.mp3'
     
     # generating script here
-    with open(filename_text_for_tts, 'r') as file:
+    with open(f'all_files_{title_name}/text_for_tts_{title_name}.json', 'r') as file:
         text_for_tts = json.load(file)
     lesson_script = generate_script(*get_counts(text_for_tts))
     
@@ -45,6 +49,12 @@ def generate_lesson(filename_text_for_tts):
         else:
             print(f"Warning: Could not add audio segment to full lesson audio. Missing audio segment for {step}")
 
+    # Delete all the audio files in audio folder which don't start with narrator_
+    for file in os.listdir("audio"):
+        if not file.startswith("narrator_") and file.endswith(".mp3"):
+            os.remove(os.path.join("audio", file))
+    
+    
     # Export the combined audio
     combined.export(filename, format="mp3")
     print(f"Combined audio exported as {filename}")

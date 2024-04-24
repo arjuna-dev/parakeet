@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import openai # type: ignore
@@ -159,25 +160,28 @@ chatGPT_response = parakeetAPI({
 })
 
 # now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+#create a directory name with the title of the conversation
+directory = f"all_files_{chatGPT_response['title']}"
+os.makedirs(directory, exist_ok=True)
+
+#save the chatGPT response to a json file
 filename = f'chatGPT_response_{chatGPT_response["title"]}.json'
-with open(filename, 'w') as file:
+with open(f"{directory}/{filename}", 'w') as file:
   json.dump(chatGPT_response, file)
 
+#save the text for tts to a json file
 text_for_tts = get_text_for_tts(chatGPT_response)
 filename = f'text_for_tts_{chatGPT_response["title"]}.json'
-with open(filename, 'w') as file:
+with open(f"{directory}/{filename}", 'w') as file:
   json.dump(text_for_tts, file)
 
 
-pattern = r"^sentence_\d+_target$"
+# pattern = r"^sentence_\d+_target$"
 
+# loop through the text_for_tts dictionary and generate audio files for each key
 for key, text in text_for_tts.items():
-  if re.match(pattern, key):
-    elevenlabs_tts(text, f"audio/{key}.mp3")
-    continue
-  if "_3_" in key:
-     continue
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
-
-generate_lesson(filename)
+# call generate_lesson function
+generate_lesson(chatGPT_response["title"])
