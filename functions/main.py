@@ -1,9 +1,9 @@
 import requests
 import json
-import openai
-from firebase_functions import firestore_fn, https_fn, options
-from firebase_admin import initialize_app, firestore
-import google.cloud.firestore
+import openai # type: ignore
+from firebase_functions import firestore_fn, https_fn, options # type: ignore
+from firebase_admin import initialize_app, firestore # type: ignore
+import google.cloud.firestore # type: ignore
 import string
 from elevenlabs_api import elevenlabs_tts, get_voices
 import datetime

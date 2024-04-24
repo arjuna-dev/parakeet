@@ -23,8 +23,7 @@ def get_counts(text_for_tts):
                         target_count[f"sentence {sentence_number}"][f"chunk {chunk_number}"] = 0
                     if target_number > target_count[f"sentence {sentence_number}"][f"chunk {chunk_number}"]:
                         target_count[f"sentence {sentence_number}"][f"chunk {chunk_number}"] = target_number + 1
-    all = [sentence_count, chunk_count, target_count]
-    return all
+    return sentence_count, chunk_count, target_count
 
 
 def generate_script(sentence_count, chunk_count, target_count):
@@ -32,9 +31,9 @@ def generate_script(sentence_count, chunk_count, target_count):
         "narrator_opening_phrases_5_0",
         "narrator_opening_phrases_5_1",
         "lesson_title_narrator",
-        "narrator_navigation_phrases_7"
+        "narrator_navigation_phrases_7" #listen
     ]
-    for i in range(sentence_count):  # Repeat for i
+    for i in range(sentence_count):  # Narrator introducing the whole conversation
         script.extend([
             f"sentence_{i}_narrator_explanation"
         ])
@@ -109,15 +108,10 @@ def generate_script(sentence_count, chunk_count, target_count):
     script.extend([
         "narrator_closing_phrases_3"
     ])
-    return script
+    print (script)
 
-# with open('/home/aman/Desktop/Projects/Personal/parakeet/functions/text_for_tts.json', 'r') as file:
-#     text_for_tts = json.load(file)
+with open('/home/aman/Desktop/Projects/Personal/parakeet/functions/text_for_tts.json', 'r') as file:
+    text_for_tts = json.load(file)
 
-# all = get_counts(text_for_tts)
-# print (all[2])
-# sentence_count = all[0]
-# chunk_count = all[1]
-# target_count = all[2]
 
-# generate_script(sentence_count, chunk_count, target_count)
+generate_script(*get_counts(text_for_tts))
