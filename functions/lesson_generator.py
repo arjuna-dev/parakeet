@@ -1,10 +1,11 @@
-from pydub import AudioSegment
-from script import script as lesson_script
+from pydub import AudioSegment # type: ignore
+from script_generator import generate_script, get_counts
 import datetime
+import json
 
+# Constants
 now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 filename = f'full_lesson_{now}.mp3'
-
 audio_files_directory = "audio"
 one_second_break = AudioSegment.silent(duration=1000)  # 1000 milliseconds = 1 second
 five_second_break = AudioSegment.silent(duration=5000)  # 5000 milliseconds = 5 seconds
@@ -18,7 +19,14 @@ def get_audio_segment(key, lesson_script_audio_segments):
     else:
         return lesson_script_audio_segments.get(key)
 
-def generate_lesson():
+# Function to generate the full lesson audio
+def generate_lesson(filename_text_for_tts):
+    
+    # generating script here
+    with open(filename_text_for_tts, 'r') as file:
+        text_for_tts = json.load(file)
+    lesson_script = generate_script(*get_counts(text_for_tts))
+    
     #Create audio segments from the lesson_script
     lesson_script_audio_segments = {}
     for step in lesson_script:

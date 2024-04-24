@@ -6,7 +6,7 @@ from firebase_admin import initialize_app, firestore # type: ignore
 import google.cloud.firestore # type: ignore
 import string
 from elevenlabs_api import elevenlabs_tts, get_voices
-import datetime
+import datetime # type: ignore
 from lesson_generator import generate_lesson
 import re
 
@@ -151,20 +151,20 @@ def get_text_for_tts(conversation_JSON):
     return text_for_tts
 
 chatGPT_response = parakeetAPI({
-  "requested_scenario": "A spiritual aspirant and a Guru discuss bhakti yoga", 
+  "requested_scenario": "Ordering food in a restaurant.", 
   "keywords": "", 
   "native_language": "English", 
-  "target_language": "Italian", 
+  "target_language": "Spanish", 
   "language_level": "A1"
 })
 
-now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-filename = f'chatGPT_response_{now}.json'
+# now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+filename = f'chatGPT_response_{chatGPT_response["title"]}.json'
 with open(filename, 'w') as file:
   json.dump(chatGPT_response, file)
 
 text_for_tts = get_text_for_tts(chatGPT_response)
-filename = f'text_for_tts_{now}.json'
+filename = f'text_for_tts_{chatGPT_response["title"]}.json'
 with open(filename, 'w') as file:
   json.dump(text_for_tts, file)
 
@@ -180,4 +180,4 @@ for key, text in text_for_tts.items():
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
 
-generate_lesson()
+generate_lesson(filename)
