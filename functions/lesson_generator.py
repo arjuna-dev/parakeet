@@ -21,13 +21,13 @@ def get_audio_segment(key, lesson_script_audio_segments):
         return lesson_script_audio_segments.get(key)
 
 # Function to generate the full lesson audio
-def generate_lesson(title_name):
+def generate_lesson(title_name, user_name):
     
     #name of the combined audio file
-    filename = f'all_files_{title_name}/lesson_final_{title_name}.mp3'
+    filename = f'{user_name}full_lesson{title_name}/lesson_final_{title_name}.mp3'
     
     # generating script here
-    with open(f'all_files_{title_name}/text_for_tts_{title_name}.json', 'r') as file:
+    with open(f'{user_name}full_lesson{title_name}/text_for_tts_{title_name}.json', 'r') as file:
         text_for_tts = json.load(file)
     lesson_script = generate_script(*get_counts(text_for_tts))
     

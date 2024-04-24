@@ -11,6 +11,19 @@ import datetime # type: ignore
 from lesson_generator import generate_lesson
 import re
 
+# "requested_scenario": "Ordering food in a restaurant.", 
+#   "keywords": "", 
+#   "native_language": "English", 
+#   "target_language": "Spanish", 
+#   "language_level": "A1"
+
+user_name = input("Enter the user name: ")
+requested_scenario = input("Enter the requested scenario: ")
+keywords = input("Enter the keywords: ")
+native_language = input("Enter the native language: ")
+target_language = input("Enter the target language: ")
+language_level = input("Enter the language level: ")
+
 app = initialize_app()
 
 # @https_fn.on_request(
@@ -152,11 +165,11 @@ def get_text_for_tts(conversation_JSON):
     return text_for_tts
 
 chatGPT_response = parakeetAPI({
-  "requested_scenario": "Ordering food in a restaurant.", 
-  "keywords": "", 
-  "native_language": "English", 
-  "target_language": "Spanish", 
-  "language_level": "A1"
+  "requested_scenario": requested_scenario, 
+  "keywords": keywords, 
+  "native_language": native_language, 
+  "target_language": target_language, 
+  "language_level": language_level
 })
 
 # now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -166,13 +179,13 @@ directory = f"all_files_{chatGPT_response['title']}"
 os.makedirs(directory, exist_ok=True)
 
 #save the chatGPT response to a json file
-filename = f'chatGPT_response_{chatGPT_response["title"]}.json'
+filename = f'{user_name}chatGPT_response_{chatGPT_response["title"]}.json'
 with open(f"{directory}/{filename}", 'w') as file:
   json.dump(chatGPT_response, file)
 
 #save the text for tts to a json file
 text_for_tts = get_text_for_tts(chatGPT_response)
-filename = f'text_for_tts_{chatGPT_response["title"]}.json'
+filename = f'{user_name}text_for_tts_{chatGPT_response["title"]}.json'
 with open(f"{directory}/{filename}", 'w') as file:
   json.dump(text_for_tts, file)
 
@@ -184,4 +197,4 @@ for key, text in text_for_tts.items():
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
 # call generate_lesson function
-generate_lesson(chatGPT_response["title"])
+generate_lesson(chatGPT_response["title"], user_name)
