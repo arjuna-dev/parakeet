@@ -13,20 +13,23 @@
     "6_1": "...listen carefully and repeat the key phrases out loud."
   },
   "narrator_navigation_phrases": {
-    "0": "Listen to the sentence in the conversation.",
+    "0": "Listen to the next sentence in the conversation.",
     "1_0": "Reflect on the vocabulary previously learned. How do you say...",
     "1_1": "...in...",
     "2": "As we start today, can you recall how to say...",
     "3_0": "Before we dive into new material, please repeat the phrase for...",
     "3_1": "...that we heard previously.",
     "4_0": "How do you say...",
-    "4_1": "...in...?",
+    "4_1": "...in...",
     "5": "To refresh our memory, what was the word for...?",
     "6_0": "Can you start by telling me how to say...",
     "6_1": "...in...",
     "7": "Listen",
     "8_0": "Do you remember how to say...",
-    "8_1": "...in..."
+    "8_1": "...in...",
+    "9": "...means...",
+    "10": "Listen to the full sentence you just practiced and try to repeat it.",
+    "11": "It means..."
   },
   "narrator_repetition_phrases": {
     "0_0": "Listen to how they say...",
