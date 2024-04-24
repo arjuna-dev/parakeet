@@ -108,10 +108,10 @@ def generate_script(sentence_count, chunk_count, target_count):
     script.extend([
         "narrator_closing_phrases_3"
     ])
-    print (script)
+    return (script)
 
-with open('/home/aman/Desktop/Projects/Personal/parakeet/functions/text_for_tts.json', 'r') as file:
-    text_for_tts = json.load(file)
+# with open('text_for_tts.json', 'r') as file:
+#     text_for_tts = json.load(file)
 
 
-generate_script(*get_counts(text_for_tts))
+# generate_script(*get_counts(text_for_tts))
