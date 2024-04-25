@@ -142,25 +142,26 @@ def get_text_for_tts(conversation_JSON):
     text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
     sentence_counter = 0
     for sentence in conversation_JSON['conversation']:
-        native_language_sentence = sentence['native_language_sentence']
-        target_language_sentence = sentence['target_language_sentence']
-        narrator_explanation = sentence['narrator_explanation']
-        target_language_split_sentence = list (sentence['split_sentence'].values())
+        if (sentence_counter < 3):
+          native_language_sentence = sentence['native_language_sentence']
+          target_language_sentence = sentence['target_language_sentence']
+          narrator_explanation = sentence['narrator_explanation']
+          target_language_split_sentence = list (sentence['split_sentence'].values())
 
-        text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
-        text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
-        text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
-        for index, value in enumerate(target_language_split_sentence):
-            native_language_chunk = value["native_language"]
-            target_language_chunk = value["target_language"]
-            narrator_fun_fact_chunk = value["narrator_fun_fact"]
-            phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
+          text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
+          text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
+          text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
+          for index, value in enumerate(target_language_split_sentence):
+              native_language_chunk = value["native_language"]
+              target_language_chunk = value["target_language"]
+              narrator_fun_fact_chunk = value["narrator_fun_fact"]
+              phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
 
-            text_for_tts[phrase + "_native"] = native_language_chunk
-            text_for_tts[phrase + "_target"] = target_language_chunk
-            text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
-            for index, value in enumerate(split_words(target_language_chunk)):
-                text_for_tts[phrase + "_target_"+ str(index)] = value
+              text_for_tts[phrase + "_native"] = native_language_chunk
+              text_for_tts[phrase + "_target"] = target_language_chunk
+              text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
+              for index, value in enumerate(split_words(target_language_chunk)):
+                  text_for_tts[phrase + "_target_"+ str(index)] = value
         sentence_counter += 1
     return text_for_tts
 
