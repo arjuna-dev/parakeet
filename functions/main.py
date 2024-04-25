@@ -172,20 +172,20 @@ chatGPT_response = parakeetAPI({
   "language_level": language_level
 })
 
-# now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 #create a directory name with the title of the conversation
-directory = f"all_files_{chatGPT_response['title']}"
+directory = f"{user_name}_{now}"
 os.makedirs(directory, exist_ok=True)
 
 #save the chatGPT response to a json file
-filename = f'{user_name}chatGPT_response_{chatGPT_response["title"]}.json'
+filename = 'chatGPT_response.json'
 with open(f"{directory}/{filename}", 'w') as file:
   json.dump(chatGPT_response, file)
 
 #save the text for tts to a json file
 text_for_tts = get_text_for_tts(chatGPT_response)
-filename = f'{user_name}text_for_tts_{chatGPT_response["title"]}.json'
+filename = 'text_for_tts.json'
 with open(f"{directory}/{filename}", 'w') as file:
   json.dump(text_for_tts, file)
 
@@ -197,4 +197,4 @@ for key, text in text_for_tts.items():
   elevenlabs_tts(text, f"audio/{key}.mp3")
 
 # call generate_lesson function
-generate_lesson(chatGPT_response["title"], user_name)
+generate_lesson(directory)
