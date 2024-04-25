@@ -35,7 +35,7 @@ def generate_script(sentence_count, chunk_count, target_count):
     ]
     for i in range(sentence_count):  # Narrator introducing the whole conversation
         script.extend([
-            f"sentence_{i}_narrator_explanation"
+            f"sentence_{i}_target"
         ])
     script.extend([
         "one_second_break", 
