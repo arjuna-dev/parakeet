@@ -14,221 +14,331 @@ from time import sleep
 
 conversation_assistant_ID = "asst_elhm6Fq9uVWEWJ6Lo6oEy0sk"
 sentence_assistant_ID = "asst_L9TI47AwdQ0qX9tBnJyFC8mP"
+sentence_splitter_assistant_ID = "asst_lSFyjlZQZ6Q47DXQ0l9WVV9M"
 
 client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
-run = client.beta.threads.create_and_run(
-  assistant_id=conversation_assistant_ID,
-  thread={
-    "messages": [
-      {"role": "user", "content": "requested_scenario: 'A conversation between Shankaracharya and his disciple Turiiya where Shankaracharaya explains advaita vedanta' keywords: '' target_language: 'Spanish' language_level: B1"}
-    ]
-  }
-)
+# # First run
+# run_conv = client.beta.threads.create_and_run(
+#   assistant_id=conversation_assistant_ID,
+#   thread={
+#     "messages": [
+#       {"role": "user", "content": "requested_scenario: 'A conversation between Yoda and a snail' keywords: '' target_language: 'Spanish' language_level: B1"}
+#     ]
+#   }
+# )
 
-run_completed = False
-while run_completed == False:
-    retrieved_run = client.beta.threads.runs.retrieve(
-      thread_id=run.thread_id,
-      run_id=run.id
-    )
-    if retrieved_run.completed_at is not None:
-        run_completed = True
-    sleep(1)
-    print("Waiting for completion...")
+# run_completed = False
+# while run_completed == False:
+#     retrieved_run = client.beta.threads.runs.retrieve(
+#       thread_id=run_conv.thread_id,
+#       run_id=run_conv.id
+#     )
+#     if retrieved_run.completed_at is not None:
+#         run_completed = True
+#     sleep(1)
+#     print("Waiting for completion...")
 
-thread_messages = client.beta.threads.messages.list(run.thread_id)
-json_conversation = json.loads(thread_messages.data.text.value)
+# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
+# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
 
+# for sentence in json_conversation['conversation']:
+#     print (sentence['target_sentence'], "\n")
 
+# thread_message = client.beta.threads.messages.create(
+#   run_conv.thread_id,
+#   role="user",
+#   content=f"native_language:English, target_language:Spanish, native_language_sentence:{json_conversation['conversation'][0]['target_sentence']}",
+# )
 
+# # Second run
+# run_sentence = client.beta.threads.runs.create(
+#   thread_id=run_conv.thread_id,
+#   assistant_id=sentence_assistant_ID
+# )
 
+# while True:
+#     retrieved_run = client.beta.threads.runs.retrieve(
+#       thread_id=run_sentence.thread_id,
+#       run_id=run_sentence.id
+#     )
+#     if retrieved_run.completed_at is not None:
+#         break
+#     sleep(1)
+#     print("Waiting for completion...")
 
-# # "requested_scenario": "Ordering food in a restaurant.", 
-# #   "keywords": "", 
-# #   "native_language": "English", 
-# #   "target_language": "Spanish", 
-# #   "language_level": "A1"
+# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
+# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
 
-# user_name = input("Enter the user name: ")
-# requested_scenario = input("Enter the requested scenario: ")
-# keywords = input("Enter the keywords: ")
-# native_language = input("Enter the native language: ")
-# target_language = input("Enter the target language: ")
-# language_level = input("Enter the language level: ")
+# print('json_conversation: ', json_conversation)
 
-# app = initialize_app()
+# "requested_scenario": "Ordering food in a restaurant.", 
+#   "keywords": "", 
+#   "native_language": "English", 
+#   "target_language": "Spanish", 
+#   "language_level": "A1"
 
-# # @https_fn.on_request(
-# #     cors=options.CorsOptions(
-# #       cors_origins=["*"],
-# #       cors_methods=["GET", "POST"],
-# #   )
-# # )
-# # @https_fn.on_request()
-# # def parakeetAPI(req: https_fn.Request) -> https_fn.Response:
-# def parakeetAPI(request_data):
-#   # request_data = json.loads(req.data)
-#   requested_scenario = request_data.get("requested_scenario")
-#   native_language = request_data.get("native_language")
-#   target_language = request_data.get("target_language")
-#   try:
-#     language_level = request_data.get("language_level")
-#   except:
-#     language_level = "A1"
-#   try:
-#     keywords = request_data.get("keywords")
-#   except:
-#     keywords = ""
+user_name = input("Enter the user name: ")
+requested_scenario = input("Enter the requested scenario: ")
+keywords = input("Enter the keywords: ")
+native_language = input("Enter the native language: ")
+target_language = input("Enter the target language: ")
+language_level = input("Enter the language level: ")
+length = input("Enter conversation length: ")
 
-#   if not all([requested_scenario, native_language, target_language, language_level]):
-#       return {'error': 'Missing required parameters in request data'}
+app = initialize_app()
+
+# @https_fn.on_request(
+#     cors=options.CorsOptions(
+#       cors_origins=["*"],
+#       cors_methods=["GET", "POST"],
+#   )
+# )
+# @https_fn.on_request()
+# def parakeetAPI(req: https_fn.Request) -> https_fn.Response:
+def parakeetAPI(request_data):
+  # request_data = json.loads(req.data)
+  requested_scenario = request_data.get("requested_scenario")
+  native_language = request_data.get("native_language")
+  target_language = request_data.get("target_language")
+  try:
+    language_level = request_data.get("language_level")
+  except:
+    language_level = "A1"
+  try:
+    keywords = request_data.get("keywords")
+  except:
+    keywords = ""
+
+  if not all([requested_scenario, native_language, target_language, language_level]):
+      return {'error': 'Missing required parameters in request data'}
 
     
-#   # Initialize OpenAI client
-#   client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
+  # Initialize OpenAI client# First run
+# run_conv = client.beta.threads.create_and_run(
+#   assistant_id=conversation_assistant_ID,
+#   thread={
+#     "messages": [
+#       {"role": "user", "content": "requested_scenario: 'A conversation between Yoda and a snail' keywords: '' target_language: 'Spanish' language_level: B1"}
+#     ]
+#   }
+# )
 
-#   # Create the chat completion
-#   completion = client.chat.completions.create(
-#       model="gpt-4-turbo",
-#       messages=[
-#           {"role": "system", "content": "You are a helpful assistant."},
-#           # {"role": "user", "content": f"Give me a json with a name and last name {requested_scenario}."},
-#           {"role": "user", "content": f'''Please create a JSON file for a conversation for a language learning app. The language level will be {language_level}. It should contain 10 short sentences alternating for each of two characters. It should include exactly the following keys for the key-value pairs in JSON:
+# run_completed = False
+# while run_completed == False:
+#     retrieved_run = client.beta.threads.runs.retrieve(
+#       thread_id=run_conv.thread_id,
+#       run_id=run_conv.id
+#     )
+#     if retrieved_run.completed_at is not None:
+#         run_completed = True
+#     sleep(1)
+#     print("Waiting for completion...")
 
-#             title: (Create a title for the conversation.)
-#             requested_scenario: {requested_scenario}.
-#             keywords: {keywords}.
-#             native_language: {native_language}
-#             target_language: {target_language}
-#             language_level: {language_level}
-#             conversation: (An array of dictionaries with 10 items, that is 10 sentences. Each of the 10 dictionaries contains the following keys:)
+# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
+# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
 
-#             - speaker_name: (create a name for each of the speakers)
-#             - order: (order in the overall sentences from 1 to 10)
-#             - native_language_sentence: (sentence in {native_language}. Do NOT include the name of any speaker in the sentence.)
-#             - target_language_sentence: (A translation of the {native_language} sentence to {target_language})
-#             - narrator_explanation: (
-#                     A sentence by the narrator of the language lesson explaining the what is going on in this sentence and who is talking, include the name of the speaker in the sentence. For example, "Ben is asking a question about the PCB board."
-#                     )
-#             - split_sentence: ( An object that for sentence with German as target language and English as native language where the target sentence is: "Danke, Dr. Müller. Ich habe schon immer ein großes Interesse an alten Zivilisationen gehabt." would  like this: 
+# for sentence in json_conversation['conversation']:
+#     print (sentence['target_sentence'], "\n")
 
-#             {{
-#                     "1": {{
-#                       "target_language": "Danke",
-#                       "native_language": "thank you",
-#                       "narrator_fun_fact": "The German word 'danke' is closely related to the English word thank. Both words share the same Proto-Germanic root which means 'thought' or 'gratitude.'"
-#                     }},
-#                     "2": {{
-#                       "target_language": "Ich habe schon immer",
-#                       "native_language": "I have always",
-#                       "narrator_fun_fact": "The phrase 'schon immer' emphasizes a long-standing interest or condition. It literally already always"
-#                     }},
-#                     "3": {{
-#                       "target_language": "ein großes Interesse",
-#                       "native_language": "a great interest",
-#                       "narrator_fun_fact": "The phrase 'ein großes Interesse' is a common way to express a strong interest in German."
-#                     }},
-#                     "4": {{
-#                       "target_language": "an alten Zivilisationen",
-#                       "native_language": "in ancient civilizations",
-#                       "narrator_fun_fact": "The preposition 'an' is used here to indicate an interest in or towards ancient civilizations."
-#                     }},
-#                     "5": {{
-#                       "target_language": "gehabt",
-#                       "native_language": "had",
-#                       "narrator_fun_fact": "The verb 'gehabt' is the past participle of 'haben' and is used in the perfect tense construction in German."
-#                     }}
-#                   }}
+# thread_message = client.beta.threads.messages.create(
+#   run_conv.thread_id,
+#   role="user",
+#   content=f"native_language:English, target_language:Spanish, native_language_sentence:{json_conversation['conversation'][0]['target_sentence']}",
+# )
 
-#                     Where target_language values are the target_language_sentence split into sets of words that make sense together and have grammatical cohesion in {target_language}. For example, if the target_language was German and the sentence  "Hallo, fangen wir mit der Leiterplatte an?" the keys would be "Hallo", "fangen wir mit" and "der Leiterplatte an".
+# # Second run
+# run_sentence = client.beta.threads.runs.create(
+#   thread_id=run_conv.thread_id,
+#   assistant_id=sentence_assistant_ID
+# )
 
-#                     The native_language values are the direct translations of the native_language values into {target_language}. Stick to the direct translation of the phrase. For example, in the German phrase "Toll! Ich habe viel darüber gehört." the key-value pair should NOT be "Ich habe viel": "Means 'I have heard a lot'" but rather "Ich habe viel": "I have a lot".
+# while True:
+#     retrieved_run = client.beta.threads.runs.retrieve(
+#       thread_id=run_sentence.thread_id,
+#       run_id=run_sentence.id
+#     )
+#     if retrieved_run.completed_at is not None:
+#         break
+#     sleep(1)
+#     print("Waiting for completion...")
 
-#                     The narrator_fun_fact values are fun facts about the translation, etymology, history or the grammar of the target_language. Enclose words in {target_language} in single quotes. Leave words in {native_language} always without quotes.
-#                 )
+# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
+# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
+  client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
-#             For the specifications in parenthesis you must generate the content. The keys shall remain exactly the same. If no keywords are provided for the keywords key field add your own keywords to be used in the conversation and that match the conversation topic.
-#             '''
-#           }
-#       ],
-#       response_format={'type': 'json_object'}
-#   )
+  # Create the chat completion
+  completion = client.chat.completions.create(
+      model="gpt-4-turbo",
+      messages=[
+          {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
+          {"role": "user", "content": f'''This is an example of the JSON file you must generate enclosed in triple minus symbols:
 
-#   chatGPT_JSON_response = completion.choices[0].message.content
+---
+{{
+  "title": "A Delicious Dinner",
+  "requested_scenario": "A man orders a duck dish in a restaurant.",
+  "keywords": ["restaurant", "ordering", "food", "duck"],
+  "native_language": "English",
+  "target_language": "French",
+  "language_level": "A2",
+  "speakers": {{
+    "speaker_1": {{
+      "name": "Pier",
+      "gender": "male"
+    }},
+    "speaker_2": {{
+      "name": "Jerome",
+      "gender": "male"
+    }}
+  }},
+  "conversation": [
+    {{
+      "speaker": "speaker_1",
+      "sentence_nr": 1,
+      "native_language_sentence": "Good evening, I would like a table for one, please.",
+      "target_language_sentence": "Bonsoir, je voudrais une table pour une personne, s'il vous pla\u00eet.",
+      "narrator_explanation": "Pier is greeting the Jerome and requesting a table.",
+      "narrator_fun_fact": (generate a one sentence fun fact here),
+      "split_sentence": [
+        {{
+          "target_language": "Bonsoir",
+          "native_language": "Good evening",
+          "narrator_fun_fact": "The word 'Bonsoir' is used in French to greet someone in the evening."
+        }},
+        {{
+          "target_language": "je voudrais",
+          "native_language": "I would like",
+          "narrator_fun_fact": "The verb 'voudrais' is conditional of 'vouloir', meaning 'to want'. It is polite when making requests."
+        }},
+        {{
+          "target_language": "une table pour une personne",
+          "native_language": "a table for one",
+          "narrator_fun_fact": "'Une table pour une' translates directly but is specifically phrased for requesting seating in a restaurant."
+        }},
+        {{
+          "target_language": "s'il vous pla\u00eet",
+          "native_language": "please",
+          "narrator_fun_fact": "\u2018S\u2019il vous pla\u00eet\u2019 is the formal 'please' in French, used here to show politeness."
+        }}
+      ]
+    }},
+    {{
+      "speaker": "speaker_2",
+      "sentence_nr": 2,
+      "native_language_sentence": "Of course, right this way please.",
+      "target_language_sentence": "Bien s\u00fbr, suivez-moi, s'il vous pla\u00eet.",
+      "narrator_explanation": "The Jerome is welcoming Pier and leading him to a table.",
+      "narrator_fun_fact": (generate a one sentence fun fact here),
+      "split_sentence": [
+        {{
+          "target_language": "Bien s\u00fbr",
+          "native_language": "Of course",
+          "narrator_fun_fact": "'Bien s\u00fbr' shows agreement and straightforwardness in response."
+        }},
+        {{
+          "target_language": "suivez-moi",
+          "native_language": "follow me",
+          "narrator_fun_fact": "'Suivez-moi' is an imperative form directing someone to follow."
+        }},
+        {{
+          "target_language": "s'il vous pla\u00eet",
+          "native_language": "please",
+          "narrator_fun_fact": "Repeating \u2018s\u2019il vous pla\u00eet\u2019 emphasizes politeness in French culture."
+        }}
+      ]
+    }}
+  ]
+}}
+---
 
-#   data = json.loads(chatGPT_JSON_response)
-#   return data
+Please generate a JSON file with {length} sentences, so that sentence_nr should go from 1 to {length}, but using the the following:
+
+requested_scenario: {requested_scenario}
+keywords: {keywords} 
+target_language: {target_language}
+native_language: {native_language}
+language_level: {language_level}
+
+The keywords should be used in the conversation. If no keywords are provided there is no need to generate them.
+'''}
+      ],
+      response_format={'type': 'json_object'}
+)
+
+  chatGPT_JSON_response = completion.choices[0].message.content
+
+  data = json.loads(chatGPT_JSON_response)
+  return data
 
 
-# def split_words(sentence):
-#   additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
-#   punctuation = string.punctuation + additional_chars
-#   words = sentence.split()
-#   words = [word.strip(punctuation) for word in words]
-#   return words
+def split_words(sentence):
+  additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
+  punctuation = string.punctuation + additional_chars
+  words = sentence.split()
+  words = [word.strip(punctuation) for word in words]
+  return words
 
-# def get_text_for_tts(conversation_JSON):
-#     text_for_tts = {}
-#     text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
-#     text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
-#     text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
-#     sentence_counter = 0
-#     for sentence in conversation_JSON['conversation']:
-#         if (sentence_counter < 3):
-#           native_language_sentence = sentence['native_language_sentence']
-#           target_language_sentence = sentence['target_language_sentence']
-#           narrator_explanation = sentence['narrator_explanation']
-#           target_language_split_sentence = list (sentence['split_sentence'].values())
+def get_text_for_tts(conversation_JSON):
+    text_for_tts = {}
+    text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
+    text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
+    text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
+    sentence_counter = 0
+    for sentence in conversation_JSON['conversation']:
+          native_language_sentence = sentence['native_language_sentence']
+          target_language_sentence = sentence['target_language_sentence']
+          narrator_explanation = sentence['narrator_explanation']
+          # target_language_split_sentence = list (sentence['split_sentence'].values())
 
-#           text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
-#           text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
-#           text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
-#           for index, value in enumerate(target_language_split_sentence):
-#               native_language_chunk = value["native_language"]
-#               target_language_chunk = value["target_language"]
-#               narrator_fun_fact_chunk = value["narrator_fun_fact"]
-#               phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
+          text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
+          text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
+          text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
+          for index, value in enumerate(sentence['split_sentence']):
+              native_language_chunk = value["native_language"]
+              target_language_chunk = value["target_language"]
+              narrator_fun_fact_chunk = value["narrator_fun_fact"]
+              phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
 
-#               text_for_tts[phrase + "_native"] = native_language_chunk
-#               text_for_tts[phrase + "_target"] = target_language_chunk
-#               text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
-#               for index, value in enumerate(split_words(target_language_chunk)):
-#                   text_for_tts[phrase + "_target_"+ str(index)] = value
-#         sentence_counter += 1
-#     return text_for_tts
+              text_for_tts[phrase + "_native"] = native_language_chunk
+              text_for_tts[phrase + "_target"] = target_language_chunk
+              text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
+              for index, value in enumerate(split_words(target_language_chunk)):
+                  text_for_tts[phrase + "_target_"+ str(index)] = value
+          sentence_counter += 1
+    return text_for_tts
 
-# chatGPT_response = parakeetAPI({
-#   "requested_scenario": requested_scenario, 
-#   "keywords": keywords, 
-#   "native_language": native_language, 
-#   "target_language": target_language, 
-#   "language_level": language_level
-# })
+chatGPT_response = parakeetAPI({
+  "requested_scenario": requested_scenario, 
+  "keywords": keywords, 
+  "native_language": native_language, 
+  "target_language": target_language, 
+  "language_level": language_level
+})
 
-# now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-# #create a directory name with the title of the conversation
-# directory = f"{user_name}_{now}"
-# os.makedirs(directory, exist_ok=True)
+#create a directory name with the title of the conversation
+directory = f"{user_name}_{now}"
+os.makedirs(directory, exist_ok=True)
 
-# #save the chatGPT response to a json file
-# filename = 'chatGPT_response.json'
-# with open(f"{directory}/{filename}", 'w') as file:
-#   json.dump(chatGPT_response, file)
+#save the chatGPT response to a json file
+filename = 'chatGPT_response.json'
+with open(f"{directory}/{filename}", 'w') as file:
+  json.dump(chatGPT_response, file)
 
-# #save the text for tts to a json file
-# text_for_tts = get_text_for_tts(chatGPT_response)
-# filename = 'text_for_tts.json'
-# with open(f"{directory}/{filename}", 'w') as file:
-#   json.dump(text_for_tts, file)
+#save the text for tts to a json file
+text_for_tts = get_text_for_tts(chatGPT_response)
+filename = 'text_for_tts.json'
+with open(f"{directory}/{filename}", 'w') as file:
+  json.dump(text_for_tts, file)
 
 
-# # pattern = r"^sentence_\d+_target$"
+# pattern = r"^sentence_\d+_target$"
 
-# # loop through the text_for_tts dictionary and generate audio files for each key
-# for key, text in text_for_tts.items():
-#   elevenlabs_tts(text, f"audio/{key}.mp3")
+# loop through the text_for_tts dictionary and generate audio files for each key
+for key, text in text_for_tts.items():
+  elevenlabs_tts(text, f"audio/{key}.mp3")
 
-# # call generate_lesson function
-# generate_lesson(directory)
+# call generate_lesson function
+generate_lesson(directory)
