@@ -18,66 +18,6 @@ sentence_splitter_assistant_ID = "asst_lSFyjlZQZ6Q47DXQ0l9WVV9M"
 
 client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
-# # First run
-# run_conv = client.beta.threads.create_and_run(
-#   assistant_id=conversation_assistant_ID,
-#   thread={
-#     "messages": [
-#       {"role": "user", "content": "requested_scenario: 'A conversation between Yoda and a snail' keywords: '' target_language: 'Spanish' language_level: B1"}
-#     ]
-#   }
-# )
-
-# run_completed = False
-# while run_completed == False:
-#     retrieved_run = client.beta.threads.runs.retrieve(
-#       thread_id=run_conv.thread_id,
-#       run_id=run_conv.id
-#     )
-#     if retrieved_run.completed_at is not None:
-#         run_completed = True
-#     sleep(1)
-#     print("Waiting for completion...")
-
-# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
-# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
-
-# for sentence in json_conversation['conversation']:
-#     print (sentence['target_sentence'], "\n")
-
-# thread_message = client.beta.threads.messages.create(
-#   run_conv.thread_id,
-#   role="user",
-#   content=f"native_language:English, target_language:Spanish, native_language_sentence:{json_conversation['conversation'][0]['target_sentence']}",
-# )
-
-# # Second run
-# run_sentence = client.beta.threads.runs.create(
-#   thread_id=run_conv.thread_id,
-#   assistant_id=sentence_assistant_ID
-# )
-
-# while True:
-#     retrieved_run = client.beta.threads.runs.retrieve(
-#       thread_id=run_sentence.thread_id,
-#       run_id=run_sentence.id
-#     )
-#     if retrieved_run.completed_at is not None:
-#         break
-#     sleep(1)
-#     print("Waiting for completion...")
-
-# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
-# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
-
-# print('json_conversation: ', json_conversation)
-
-# "requested_scenario": "Ordering food in a restaurant.", 
-#   "keywords": "", 
-#   "native_language": "English", 
-#   "target_language": "Spanish", 
-#   "language_level": "A1"
-
 user_name = input("Enter the user name: ")
 requested_scenario = input("Enter the requested scenario: ")
 keywords = input("Enter the keywords: ")
