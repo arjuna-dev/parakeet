@@ -95,8 +95,8 @@ app = initialize_app()
 #   )
 # )
 # @https_fn.on_request()
-# def parakeetAPI(req: https_fn.Request) -> https_fn.Response:
-def parakeetAPI(request_data):
+# def chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
+def chatGPT_API_call(request_data):
   # request_data = json.loads(req.data)
   requested_scenario = request_data.get("requested_scenario")
   native_language = request_data.get("native_language")
@@ -256,7 +256,7 @@ def get_text_for_tts(conversation_JSON):
           sentence_counter += 1
     return text_for_tts
 
-chatGPT_response = parakeetAPI({
+chatGPT_response = chatGPT_API_call({
   "requested_scenario": requested_scenario, 
   "keywords": keywords, 
   "native_language": native_language, 
