@@ -113,58 +113,6 @@ def parakeetAPI(request_data):
   if not all([requested_scenario, native_language, target_language, language_level]):
       return {'error': 'Missing required parameters in request data'}
 
-    
-  # Initialize OpenAI client# First run
-# run_conv = client.beta.threads.create_and_run(
-#   assistant_id=conversation_assistant_ID,
-#   thread={
-#     "messages": [
-#       {"role": "user", "content": "requested_scenario: 'A conversation between Yoda and a snail' keywords: '' target_language: 'Spanish' language_level: B1"}
-#     ]
-#   }
-# )
-
-# run_completed = False
-# while run_completed == False:
-#     retrieved_run = client.beta.threads.runs.retrieve(
-#       thread_id=run_conv.thread_id,
-#       run_id=run_conv.id
-#     )
-#     if retrieved_run.completed_at is not None:
-#         run_completed = True
-#     sleep(1)
-#     print("Waiting for completion...")
-
-# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
-# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
-
-# for sentence in json_conversation['conversation']:
-#     print (sentence['target_sentence'], "\n")
-
-# thread_message = client.beta.threads.messages.create(
-#   run_conv.thread_id,
-#   role="user",
-#   content=f"native_language:English, target_language:Spanish, native_language_sentence:{json_conversation['conversation'][0]['target_sentence']}",
-# )
-
-# # Second run
-# run_sentence = client.beta.threads.runs.create(
-#   thread_id=run_conv.thread_id,
-#   assistant_id=sentence_assistant_ID
-# )
-
-# while True:
-#     retrieved_run = client.beta.threads.runs.retrieve(
-#       thread_id=run_sentence.thread_id,
-#       run_id=run_sentence.id
-#     )
-#     if retrieved_run.completed_at is not None:
-#         break
-#     sleep(1)
-#     print("Waiting for completion...")
-
-# thread_messages = client.beta.threads.messages.list(run_conv.thread_id)
-# json_conversation = json.loads(thread_messages.data[0].content[0].text.value)
   client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
   # Create the chat completion
@@ -260,7 +208,7 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the conversation. If no keywords are provided there is no need to generate them.
+The keywords should be used in the conversation. If no keywords are provided there is no need to generate them. The split sentence should split it in chunks that have grmatical cohesion and make sense. 
 '''}
       ],
       response_format={'type': 'json_object'}
