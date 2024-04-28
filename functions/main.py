@@ -66,7 +66,7 @@ def chatGPT_API_call(request_data):
 {{
   "title": "A Delicious Dinner",
   "requested_scenario": "A man orders a duck dish in a restaurant.",
-  "keywords": ["restaurant", "ordering", "food", "duck"],
+  "keywords": ['Good evening', 'suivez-moi']
   "native_language": "English",
   "target_language": "French",
   "language_level": "A2",
@@ -87,27 +87,35 @@ def chatGPT_API_call(request_data):
       "native_language_sentence": "Good evening, I would like a table for one, please.",
       "target_language_sentence": "Bonsoir, je voudrais une table pour une personne, s'il vous pla\u00eet.",
       "narrator_explanation": "Pier is greeting the Jerome and requesting a table.",
-      "narrator_fun_fact": (generate a one sentence fun fact here),
+      "narrator_fun_fact": "The French phrase <s'il vous plaît> literally means "if it pleases you." This polite expression is used for "please" in French, emphasizing the importance of courtesy in French culture. Historically, French culture has always valued politeness and formality, which is reflected in many everyday phrases like this one.",
       "split_sentence": [
         {{
           "target_language": "Bonsoir",
           "native_language": "Good evening",
-          "narrator_fun_fact": "The word 'Bonsoir' is used in French to greet someone in the evening."
+          "narrator_fun_fact": "The word <Bonsoir> is used in French to greet someone in the evening.",
+          "vocabulary_explanation: ""
+          "important_word": "Bonsoir"
         }},
         {{
           "target_language": "je voudrais",
           "native_language": "I would like",
-          "narrator_fun_fact": "The verb 'voudrais' is conditional of 'vouloir', meaning 'to want'. It is polite when making requests."
+          "narrator_fun_fact": "The verb <voudrais> is conditional of <vouloir>, meaning 'to want'. It is polite when making requests.",
+          "vocabulary_explanation: ""
+          "important_word": "voudrais"
         }},
         {{
           "target_language": "une table pour une personne",
           "native_language": "a table for one",
-          "narrator_fun_fact": "'Une table pour une' translates directly but is specifically phrased for requesting seating in a restaurant."
+          "narrator_fun_fact": "<Une table pour une> translates directly but is specifically phrased for requesting seating in a restaurant.",
+          "vocabulary_explanation: ""
+          "important_word": "table"
         }},
         {{
           "target_language": "s'il vous pla\u00eet",
           "native_language": "please",
-          "narrator_fun_fact": "\u2018S\u2019il vous pla\u00eet\u2019 is the formal 'please' in French, used here to show politeness."
+          "narrator_fun_fact": "<\u2018S\u2019il vous pla\u00eet\u2019> is the formal 'please' in French, used here to show politeness.",
+          "vocabulary_explanation: ""
+          "important_word": "vous"
         }}
       ]
     }},
@@ -116,26 +124,30 @@ def chatGPT_API_call(request_data):
       "sentence_nr": 2,
       "native_language_sentence": "Of course, right this way please.",
       "target_language_sentence": "Bien s\u00fbr, suivez-moi, s'il vous pla\u00eet.",
-      "narrator_explanation": "The Jerome is welcoming Pier and leading him to a table.",
-      "narrator_fun_fact": (generate a one sentence fun fact here),
+      "narrator_explanation": "Jerome is welcoming Pier and leading him to a table.",
+      "narrator_fun_fact": "The French phrase <suivez-moi> (literally "follow me") is derived from the verb <suivre>, which has its roots in the Latin word "sequor," meaning "to follow," emphasizing the deep Latin influence on the French language and its evolution over centuries.",
       "split_sentence": [
         {{
           "target_language": "Bien s\u00fbr",
           "native_language": "Of course",
-          "narrator_fun_fact": "'Bien s\u00fbr' shows agreement and straightforwardness in response."
+          "narrator_fun_fact": "<Bien s\u00fbr> shows agreement and straightforwardness in response.",
+          "important_word": "Bien"
         }},
         {{
           "target_language": "suivez-moi",
           "native_language": "follow me",
-          "narrator_fun_fact": "'Suivez-moi' is an imperative form directing someone to follow."
+          "narrator_fun_fact": "<Suivez-moi> is an imperative form directing someone to follow.",
+          "important_word": "suivez-moi"
         }},
         {{
           "target_language": "s'il vous pla\u00eet",
           "native_language": "please",
-          "narrator_fun_fact": "Repeating \u2018s\u2019il vous pla\u00eet\u2019 emphasizes politeness in French culture."
+          "narrator_fun_fact": "Repeating <\u2018s\u2019il vous pla\u00eet\u2019> emphasizes politeness in French culture.",
+          "important_word": "s'il"
         }}
       ]
-    }}
+    }},
+    (continue with more sentences here)...
   ]
 }}
 ---
