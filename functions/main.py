@@ -64,91 +64,100 @@ def chatGPT_API_call(request_data):
 
 ---
 {{
-  "title": "A Delicious Dinner",
-  "requested_scenario": "A man orders a duck dish in a restaurant.",
-  "keywords": ['Good evening', 'suivez-moi']
-  "native_language": "English",
-  "target_language": "French",
-  "language_level": "A2",
-  "speakers": {{
-    "speaker_1": {{
-      "name": "Pier",
-      "gender": "male"
-    }},
-    "speaker_2": {{
-      "name": "Jerome",
-      "gender": "male"
-    }}
-  }},
+  "title": "Learning Electrical Engineering",
+  "all_turns": [
+    "Primero, coloca el pcb con cuidado.",
+    "¿Debo conectar los cables ahora?",
+    "Sí, sigue el diagrama para el cableado.",
+    "¿Está esta la orientación correcta?",
+    "Ajustalo un poco a la izquierda.",
+    "¿Así?"
+  ],
+  "requested_scenario": "I am being taught electrical engineering",
+  "keywords": ["instructions", "pcb"],
+  "translate_to_language": "English",
+  "original_language": "Spanish",
+  "language_level": "A1",
+  "speakers": {{ "speaker_1": {{ "name": "Carlos", "gender": "m" }}, "speaker_2": {{ "name": "Elena", "gender": "f" }} }},
   "conversation": [
     {{
       "speaker": "speaker_1",
-      "sentence_nr": 1,
-      "native_language_sentence": "Good evening, I would like a table for one, please.",
-      "target_language_sentence": "Bonsoir, je voudrais une table pour une personne, s'il vous pla\u00eet.",
-      "narrator_explanation": "Pier is greeting the Jerome and requesting a table.",
-      "narrator_fun_fact": "The French phrase <s'il vous plaît> literally means "if it pleases you." This polite expression is used for "please" in French, emphasizing the importance of courtesy in French culture. Historically, French culture has always valued politeness and formality, which is reflected in many everyday phrases like this one.",
-      "split_sentence": [
+      "turn_nr": 1,
+      "original_language": "Primero, coloca el pcb con cuidado.",
+      "translate_to_language": "First, place the pcb carefully.",
+      "narrator_explanation": "Carlos is giving instructions on how to handle the pcb.",
+      "narrator_fun_fact": "PCB stands for 'printed circuit board', which is called <placa de circuito impreso> in Spanish.",
+      "turn_sentences": [
         {{
-          "target_language": "Bonsoir",
-          "native_language": "Good evening",
-          "narrator_fun_fact": "The word <Bonsoir> is used in French to greet someone in the evening.",
-          "vocabulary_explanation: ""
-          "important_word": "Bonsoir"
-        }},
-        {{
-          "target_language": "je voudrais",
-          "native_language": "I would like",
-          "narrator_fun_fact": "The verb <voudrais> is conditional of <vouloir>, meaning 'to want'. It is polite when making requests.",
-          "vocabulary_explanation: ""
-          "important_word": "voudrais"
-        }},
-        {{
-          "target_language": "une table pour une personne",
-          "native_language": "a table for one",
-          "narrator_fun_fact": "<Une table pour une> translates directly but is specifically phrased for requesting seating in a restaurant.",
-          "vocabulary_explanation: ""
-          "important_word": "table"
-        }},
-        {{
-          "target_language": "s'il vous pla\u00eet",
-          "native_language": "please",
-          "narrator_fun_fact": "<\u2018S\u2019il vous pla\u00eet\u2019> is the formal 'please' in French, used here to show politeness.",
-          "vocabulary_explanation: ""
-          "important_word": "vous"
+          "sentence": "Primero, coloca el pcb con cuidado.",
+          "translation": "First, place the pcb carefully.",
+          "sentence_parts": [
+            {{
+              "target_language": "Primero",
+              "native_language": "First",
+              "narrator_fun_fact": "<Primero> is commonly used to begin a series of instructions.",
+            }},
+            {{
+              "target_language": "coloca",
+              "native_language": "place",
+              "narrator_fun_fact": "<Coloca> is an imperative form of <colocar>, meaning to place or put.",
+            }},
+            {{
+              "target_language": "el pcb",
+              "native_language": "the pcb",
+              "narrator_fun_fact": "In Spanish, <el pcb> directly translates to 'the pcb', maintaining the abbreviation.",
+            }},
+            {{
+              "target_language": "con cuidado",
+              "native_language": "carefully",
+              "narrator_fun_fact": "<Con cuidado> is a phrase used to indicate that something should be done with care.",
+            }}
+          ]
         }}
       ]
     }},
     {{
       "speaker": "speaker_2",
-      "sentence_nr": 2,
-      "native_language_sentence": "Of course, right this way please.",
-      "target_language_sentence": "Bien s\u00fbr, suivez-moi, s'il vous pla\u00eet.",
-      "narrator_explanation": "Jerome is welcoming Pier and leading him to a table.",
-      "narrator_fun_fact": "The French phrase <suivez-moi> (literally "follow me") is derived from the verb <suivre>, which has its roots in the Latin word "sequor," meaning "to follow," emphasizing the deep Latin influence on the French language and its evolution over centuries.",
-      "split_sentence": [
+      "turn_nr": 2,
+      "original_language": "¿Debo conectar los cables ahora?",
+      "translate_to_language": "Should I connect the wires now?",
+      "narrator_explanation": "Elena is asking for further instructions about wiring.",
+      "narrator_fun_fact": "Asking questions is crucial in learning, ensuring clarity and proper process.",
+      "turn_sentences": [
         {{
-          "target_language": "Bien s\u00fbr",
-          "native_language": "Of course",
-          "narrator_fun_fact": "<Bien s\u00fbr> shows agreement and straightforwardness in response.",
-          "important_word": "Bien"
-        }},
-        {{
-          "target_language": "suivez-moi",
-          "native_language": "follow me",
-          "narrator_fun_fact": "<Suivez-moi> is an imperative form directing someone to follow.",
-          "important_word": "suivez-moi"
-        }},
-        {{
-          "target_language": "s'il vous pla\u00eet",
-          "native_language": "please",
-          "narrator_fun_fact": "Repeating <\u2018s\u2019il vous pla\u00eet\u2019> emphasizes politeness in French culture.",
-          "important_word": "s'il"
+          "sentence": "¿Debo conectar los cables ahora?",
+          "translation": "Should I connect the wires now?",
+          "sentence_parts": [
+            {{
+              "target_language": "¿Debo",
+              "native_language": "Should I",
+              "narrator_fun_fact": "<¿Debo> is from the verb <deber> which means 'should' or 'must' in this context.",
+            }},
+            {{
+              "target_language": "conectar",
+              "native_language": "connect",
+              "narrator_fun_fact": "<Conectar> means to connect, commonly used in technical and everyday contexts.",
+            }},
+            {{
+              "target_language": "los cables",
+              "native_language": "the wires",
+              "narrator_fun_fact": "<Los cables> directly translates to 'the wires'.",
+            }},
+            {{
+              "target_language": "ahora",
+              "native_language": "now",
+              "narrator_fun_fact": "<Ahora> translates directly to 'now', indicating immediate or current action.",
+            }}
+          ]
         }}
       ]
     }},
-    (continue with more sentences here)...
-  ]
+    {{
+      "speaker": "speaker_1",
+      "turn_nr": 3,
+      (continued...)
+    }}
+    ]
 }}
 ---
 
