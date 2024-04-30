@@ -103,13 +103,6 @@ class _MyHomePageState extends State<HomePage> {
                 },
                 child: const Icon(Icons.add),
               ),
-              // Add button to navigate to login page
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/login');
-                },
-                child: const Text('Login'),
-              ),
             ],
           ),
         ),
