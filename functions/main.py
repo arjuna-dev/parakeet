@@ -136,27 +136,8 @@ JSON: ===
 
 app = initialize_app()
 
-# @https_fn.on_request(
-#     cors=options.CorsOptions(
-#       cors_origins=["*"],
-#       cors_methods=["GET", "POST"],
-#   )
-# )
-# @https_fn.on_request()
-# def chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
-def chatGPT_API_call(request_data):
-  # request_data = json.loads(req.data)
-  requested_scenario = request_data.get("requested_scenario")
-  native_language = request_data.get("native_language")
-  target_language = request_data.get("target_language")
-  try:
-    language_level = request_data.get("language_level")
-  except:
-    language_level = "A1"
-  try:
-    keywords = request_data.get("keywords")
-  except:
-    keywords = ""
+    parse_and_convert_to_speech(chatGPT_response, directory)
+    parse_and_create_script(chatGPT_response, directory)
 
   if not all([requested_scenario, native_language, target_language, language_level]):
       return {'error': 'Missing required parameters in request data'}
@@ -178,66 +159,88 @@ def split_words(sentence):
   words = [word.strip(punctuation) for word in words]
   return words
 
-def get_text_for_tts(conversation_JSON):
-    text_for_tts = {}
-    text_for_tts["native_language_narrator"] = conversation_JSON['native_language']
-    text_for_tts["target_language_narrator"] = conversation_JSON['target_language']
-    text_for_tts["lesson_title_narrator"] = conversation_JSON['title']
-    sentence_counter = 0
-    for sentence in conversation_JSON['conversation']:
-          native_language_sentence = sentence['native_language_sentence']
-          target_language_sentence = sentence['target_language_sentence']
-          narrator_explanation = sentence['narrator_explanation']
-          # target_language_split_sentence = list (sentence['split_sentence'].values())
 
-          text_for_tts["sentence_"+str(sentence_counter)+"_narrator_explanation"] = narrator_explanation
-          text_for_tts["sentence_"+str(sentence_counter)+"_native"] = native_language_sentence
-          text_for_tts["sentence_"+str(sentence_counter)+"_target"] = target_language_sentence
-          for index, value in enumerate(sentence['split_sentence']):
-              native_language_chunk = value["native_language"]
-              target_language_chunk = value["target_language"]
-              narrator_fun_fact_chunk = value["narrator_fun_fact"]
-              phrase = "sentence_"+str(sentence_counter)+"_split_sentence_" + str(index)
+def parse_and_create_script(data):
+    script = []
+    for i, sentence in enumerate(data["dialogue"]):
+        script.append(f"dialogue_{i}_{"target_language"}")
 
-              text_for_tts[phrase + "_native"] = native_language_chunk
-              text_for_tts[phrase + "_target"] = target_language_chunk
-              text_for_tts[phrase + "_narrator_fun_fact"] = narrator_fun_fact_chunk
-              for index, value in enumerate(split_words(target_language_chunk)):
-                  text_for_tts[phrase + "_target_"+ str(index)] = value
-          sentence_counter += 1
-    return text_for_tts
+    # Process each turn in the dialogue
+    for i, sentence in enumerate(data["dialogue"]):
 
-chatGPT_response = chatGPT_API_call({
-  "requested_scenario": requested_scenario, 
-  "keywords": keywords, 
-  "native_language": native_language, 
-  "target_language": target_language, 
-  "language_level": language_level
-})
+        native_sentence = f"dialogue_{i}_{"native_language"}"
+        target_sentence = f"dialogue_{i}_{"target_language"}"
 
-now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        narrator_explanation = f"dialogue_{i}_{"narrator_explanation"}"
+        narrator_fun_fact = f"dialogue_{i}_{"narrator_fun_fact"}"
+        
+        sentence_sequence = sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
+        script.extend(sentence_sequence)
 
-#create a directory name with the title of the conversation
-directory = f"{user_name}_{now}"
-os.makedirs(directory, exist_ok=True)
+        # Process split_sentence items
+        for j, split_sentence in enumerate(sentence["split_sentence"]):
+            split_narrator_fun_fact = f"dialogue_{i}_split_sentence_{j}_{"narrator_fun_fact"}"
+            split_native = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
+            split_target = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
 
-#save the chatGPT response to a json file
-filename = 'chatGPT_response.json'
-with open(f"{directory}/{filename}", 'w') as file:
-  json.dump(chatGPT_response, file)
+            words = []
+            for index, value in enumerate(split_words(split_sentence['target_language'])):
+                target_word = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
+                words.append(target_word)
 
-#save the text for tts to a json file
-text_for_tts = get_text_for_tts(chatGPT_response)
-filename = 'text_for_tts.json'
-with open(f"{directory}/{filename}", 'w') as file:
-  json.dump(text_for_tts, file)
+            chunk_sequence = chunk_sequence_1(split_narrator_fun_fact, split_native, split_target, words)
+            script.extend(chunk_sequence)
 
+    return script
 
-# pattern = r"^sentence_\d+_target$"
+def parse_and_convert_to_speech(data, directory):
+    # add a subdirectory to the directory
+    os.makedirs(f"{directory}/audio", exist_ok=True)
 
-# loop through the text_for_tts dictionary and generate audio files for each key
-for key, text in text_for_tts.items():
-  elevenlabs_tts(text, f"audio/{key}.mp3")
+    text = data["title"]
+    elevenlabs_tts(text, f"{directory}/audio/{"title"}.mp3", narrator_voice_id)
+
+    # Process speaker names
+    for speaker_key, speaker_info in data["speakers"].items():
+        text = speaker_info["name"]
+        mp3_title = f"speakers_{speaker_key}_name"
+        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+
+    # Process each turn in the dialogue
+    for i, sentence in enumerate(data["dialogue"]):
+        current_speaker_voice_id = speaker_1_voice_id if i % 2 == 0 else speaker_2_voice_id
+
+        text = sentence["native_language"]
+        mp3_title = f"dialogue_{i}_{"native_language"}"
+        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+
+        text = sentence["target_language"]
+        mp3_title = f"dialogue_{i}_{"target_language"}"
+        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
+
+        for key in ["narrator_explanation", "narrator_fun_fact"]:
+            text = sentence[key]
+            mp3_title = f"dialogue_{i}_{key}"
+            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+
+        # Process split_sentence items
+        for j, split_sentence in enumerate(sentence["split_sentence"]):
+            text = split_sentence["narrator_fun_fact"]
+            mp3_title = f"dialogue_{i}_split_sentence_{j}_{"narrator_fun_fact"}"
+            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+            
+            text = split_sentence["native_language"]
+            mp3_title = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
+            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+            
+            text = split_sentence["target_language"]
+            mp3_title = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
+            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
+            
+            for index, value in enumerate(split_words(split_sentence['target_language'])):
+                text = value
+                mp3_title = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
+                elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
 
 # call generate_lesson function
 generate_lesson(directory)
