@@ -11,9 +11,6 @@ import re
 
 # An API key is defined here. You'd normally get this from the service you're accessing. It's a form of authentication.
 XI_API_KEY = "b9a5cc8dfd7e9ffa3f8e7451f1713ae0"
-VOICE_FOR_NARRATOR = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
-VOICE_FOR_EVEN_SENTENCE = "LcfcDJNUP1GQjkzn1xUU"
-VOICE_FOR_ODD_SENTENCE = "5Q0t7uMcjvnagumLfvZi"
 
 def get_voices():
 
@@ -46,27 +43,12 @@ def get_voices():
 # get_voices()
 
 
-def elevenlabs_tts(text, output_path):
+def elevenlabs_tts(text, output_path, voice_id):
     
     # Define constants for the script
     CHUNK_SIZE = 1024  # Size of chunks to read/write at a time
     TEXT_TO_SPEAK = text  # Text you want to convert to speech
     OUTPUT_PATH = output_path  # Path to save the output audio file
-
-    # if the output_path contains narrator, the voice id should be JBFqnCBsd6RMkjVDRZzb
-    if "narrator" in output_path:
-        voice_id = VOICE_FOR_NARRATOR
-    elif "sentence_" in output_path:
-        # Extract the number immediately following "sentence_"
-        match = re.search(r'sentence_(\d+)', output_path)
-        if match:
-            sentence_number = int(match.group(1))
-            # If the sentence number is odd, use one voice id
-            if sentence_number % 2 != 0:
-                voice_id = VOICE_FOR_ODD_SENTENCE
-            # If the sentence number is even or zero, use another voice id
-            else:
-                voice_id = VOICE_FOR_EVEN_SENTENCE
 
     # Construct the URL for the Text-to-Speech API request
     tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
