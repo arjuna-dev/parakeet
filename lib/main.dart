@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'screens/homepage.dart';
 import 'screens/auth_screen.dart';
+import 'screens/search_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
                 if (snapshot.connectionState == ConnectionState.active) {
                   if (snapshot.data == null) {
                     // If the user is not logged in, redirect to AuthScreen
-                    return AuthScreen();
+                    return const AuthScreen();
                   } else {
                     // If the user is logged in, show the Home page
                     return const HomePage(title: 'Parakeet Home page');
@@ -45,7 +46,8 @@ class MyApp extends StatelessWidget {
                 return const CircularProgressIndicator();
               },
             ),
-        '/login': (context) => AuthScreen(),
+        '/login': (context) => const AuthScreen(),
+        '/search': (context) => const SearchScreen(),
       },
     );
   }
