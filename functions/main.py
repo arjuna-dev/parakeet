@@ -9,6 +9,11 @@ import string
 from elevenlabs_api import elevenlabs_tts, get_voices
 import datetime # type: ignore
 from lesson_generator import generate_lesson
+from enum import Enum
+from script_sequences import sentence_sequence_1, chunk_sequence_1, words_2_reps
+
+
+now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
 def prompt(requested_scenario, native_language, target_language, language_level, keywords, length):
    return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 characters. You will be using the the following content:
@@ -136,21 +141,66 @@ JSON: ===
 
 app = initialize_app()
 
+class GPT_MODEL(Enum):
+    GPT_4_TURBO = "gpt-4-1106-preview" # Supports JSON mode
+    GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this
+    # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+      cors_origins=["*"],
+      cors_methods=["GET", "POST"],
+  )
+)
+@https_fn.on_request()
+def full_API_workflow(gpt_model, req: https_fn.Request) -> https_fn.Response:
+    chatGPT_response = chatGPT_API_call(gpt_model, req)
     parse_and_convert_to_speech(chatGPT_response, directory)
     parse_and_create_script(chatGPT_response, directory)
 
-  if not all([requested_scenario, native_language, target_language, language_level]):
-      return {'error': 'Missing required parameters in request data'}
+def chatGPT_API_call(gpt_model, req):
+    request_data = json.loads(req.data)
+    requested_scenario = request_data.get("requested_scenario")
+    native_language = request_data.get("native_language")
+    target_language = request_data.get("target_language")
+    length = request_data.get("length")
+    username = request_data.get("username")
+    try:
+        language_level = request_data.get("language_level")
+    except:
+        language_level = "A1"
+    try:
+        keywords = request_data.get("keywords")
+    except:
+        keywords = ""
 
-  client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
+    if not all([requested_scenario, native_language, target_language, language_level]):
+        return {'error': 'Missing required parameters in request data'}
 
+    client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
+
+    # Create the chat completion
+    completion = client.chat.completions.create(
+        model=gpt_model,
+        #   stream=True,
+        messages=[
+            {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
             {"role": "user", "content": prompt(requested_scenario, native_language, target_language, language_level, keywords, length)}
+        ],
+        response_format={'type': 'json_object'}
+    )
 
-  chatGPT_JSON_response = completion.choices[0].message.content
+    chatGPT_JSON_response = completion.choices[0].message.content
+    try:
+        data = json.loads(chatGPT_JSON_response)
+    except Exception as e:
+        print(chatGPT_JSON_response)
+        print(f"Error parsing JSON response from chatGPT: {e}")
+        #TODO: log error and failed JSON in DB and ask the user to try again
+        return
 
-  data = json.loads(chatGPT_JSON_response)
-  return data
-
+    data["username"] = username
+    return data
 
 def split_words(sentence):
   additional_chars = '“”‘’—–…«»„©®™£€¥×÷°'
