@@ -242,5 +242,10 @@ def parse_and_convert_to_speech(data, directory):
                 mp3_title = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
                 elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
 
-# call generate_lesson function
-generate_lesson(directory)
+example_JSON = {}
+directory = ""
+parse_and_convert_to_speech(example_JSON, directory)
+script = parse_and_create_script(example_JSON)
+
+print(script)
+generate_lesson(script, directory)
