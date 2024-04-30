@@ -113,7 +113,9 @@ class _MyHomePageState extends State<HomePage> {
               IconButton(
                 icon: const Icon(Icons.home),
                 onPressed: () {
-                  Navigator.pushNamed(context, '/');
+                  if (ModalRoute.of(context)?.settings.name != '/') {
+                    Navigator.pushNamed(context, '/');
+                  }
                 },
               ),
               IconButton(
