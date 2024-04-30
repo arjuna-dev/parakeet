@@ -1,11 +1,7 @@
 from pydub import AudioSegment # type: ignore
-from script_generator import generate_script, get_counts
 import datetime
 import json
 import os
-
-# Constants
-#now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 audio_files_directory = "audio"
 one_second_break = AudioSegment.silent(duration=1000)  # 1000 milliseconds = 1 second
@@ -21,19 +17,14 @@ def get_audio_segment(key, lesson_script_audio_segments):
         return lesson_script_audio_segments.get(key)
 
 # Function to generate the full lesson audio
-def generate_lesson(directory):
+def generate_lesson(script, directory):
     
     #name of the combined audio file
     filename = f'{directory}/lesson_final.mp3'
     
-    # generating script here
-    with open(f'{directory}/text_for_tts.json', 'r') as file:
-        text_for_tts = json.load(file)
-    lesson_script = generate_script(*get_counts(text_for_tts))
-    
     #Create audio segments from the lesson_script
     lesson_script_audio_segments = {}
-    for step in lesson_script:
+    for step in script:
         if step != "one_second_break" and step != "five_second_break":
             try:
                 lesson_script_audio_segments[step] = AudioSegment.from_mp3(f"{audio_files_directory}/{step}.mp3")
@@ -42,18 +33,12 @@ def generate_lesson(directory):
 
     # Combine audio segments in the specified sequence
     combined = AudioSegment.silent(duration=0)  # Start with a silent segment
-    for step in lesson_script:
-        segment = get_audio_segment(step, lesson_script_audio_segments)
+    for audio_file_name in script:
+        segment = get_audio_segment(audio_file_name, lesson_script_audio_segments)
         if segment:
             combined += segment
         else:
-            print(f"Warning: Could not add audio segment to full lesson audio. Missing audio segment for {step}")
-
-    # Delete all the audio files in audio folder which don't start with narrator_
-    for file in os.listdir("audio"):
-        if not file.startswith("narrator_") and file.endswith(".mp3"):
-            os.remove(os.path.join("audio", file))
-    
+            print(f"Warning: Could not add audio segment to full lesson audio. Missing audio segment for {audio_file_name}")
     
     # Export the combined audio
     combined.export(filename, format="mp3")
