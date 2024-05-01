@@ -6,10 +6,6 @@ from main import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVI
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
-narrator_voice_id = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
-speaker_1_voice_id = "LcfcDJNUP1GQjkzn1xUU"
-speaker_2_voice_id = "5Q0t7uMcjvnagumLfvZi"
-
 example_JSON = {
   "title": "Understanding Viveka Chudamani",
   "all_turns": [
@@ -61,12 +57,11 @@ example_JSON = {
 }
 
 # create a directory
-# os.mkdir(f"other/test_{now}")
-# directory = f"other/test_{now}"
+os.mkdir(f"other/test_{now}")
+directory = f"other/test_{now}"
 
-directory = f"other/test_05.01.16.30.39"
 new_audio_directory = f"{directory}/audio"
-# parse_and_convert_to_speech(example_JSON, directory, TTS_PROVIDERS.ELEVENLABS)
+parse_and_convert_to_speech(example_JSON, directory, TTS_PROVIDERS.ELEVENLABS)
 script = parse_and_create_script(example_JSON)
 
 print(script)
