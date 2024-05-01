@@ -1,9 +1,7 @@
-from elevenlabs_api import elevenlabs_tts
+import os
 import datetime
 from lesson_generator import generate_lesson
-from script_sequences import sentence_sequence_1, chunk_sequence_1, intro_sequence_1
-from gcloud_text_to_speech_api import synthesize_text as google_tts
-from main import parse_and_convert_to_speech, parse_and_create_script
+from main import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVIDERS
 
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
@@ -62,9 +60,14 @@ example_JSON = {
     ]
 }
 
-directory = "other/Arjuna_gpt-4-turbo-2024-04-09_04.30.17.16.45"
-parse_and_convert_to_speech(example_JSON, directory, google_tts)
+# create a directory
+# os.mkdir(f"other/test_{now}")
+# directory = f"other/test_{now}"
+
+directory = f"other/test_05.01.16.30.39"
+new_audio_directory = f"{directory}/audio"
+# parse_and_convert_to_speech(example_JSON, directory, TTS_PROVIDERS.ELEVENLABS)
 script = parse_and_create_script(example_JSON)
 
 print(script)
-generate_lesson(script, directory)
+generate_lesson(script, directory, new_audio_directory)
