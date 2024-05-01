@@ -10,7 +10,8 @@ from elevenlabs_api import elevenlabs_tts, get_voices
 import datetime # type: ignore
 from lesson_generator import generate_lesson
 from enum import Enum
-from script_sequences import sentence_sequence_1, chunk_sequence_1, words_2_reps
+from script_sequences import sentence_sequence_1, chunk_sequence_1, intro_sequence_1
+import gcloud_text_to_speech_api as gcloud_tts
 
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
@@ -215,6 +216,11 @@ speaker_2_voice_id = "5Q0t7uMcjvnagumLfvZi"
 
 def parse_and_create_script(data):
     script = []
+
+    narrator_title = data["title"]
+    intro_sequence = intro_sequence_1(narrator_title)
+    script.extend(intro_sequence)
+
     for i, sentence in enumerate(data["dialogue"]):
         script.append(f"dialogue_{i}_{"target_language"}")
 
@@ -246,58 +252,163 @@ def parse_and_create_script(data):
 
     return script
 
+# matching language to language code
+from language_codes import language_codes
+
+def language_to_language_code(language):
+    print('language: ', language)
+    if language in language_codes:
+        return language_codes[language]
+    else:
+        return "Language not found"
+
+
+
 def parse_and_convert_to_speech(data, directory):
+    
+    target_language = data["target_language"]
+    speaker_1_gender = data["speakers"]["speaker_1"]["gender"].lower()
+    speaker_2_gender = data["speakers"]["speaker_2"]["gender"].lower()
+
+    target_language = data["target_language"]
+
+    language_code = language_to_language_code(target_language)
+    print('language_code: ', language_code)
+
+    speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
+    speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
+    narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
+
     # add a subdirectory to the directory
     os.makedirs(f"{directory}/audio", exist_ok=True)
 
     text = data["title"]
-    elevenlabs_tts(text, f"{directory}/audio/{"title"}.mp3", narrator_voice_id)
+    gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{"title"}.mp3")
 
     # Process speaker names
     for speaker_key, speaker_info in data["speakers"].items():
         text = speaker_info["name"]
         mp3_title = f"speakers_{speaker_key}_name"
-        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+        gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
-        current_speaker_voice_id = speaker_1_voice_id if i % 2 == 0 else speaker_2_voice_id
+        current_speaker_voice = speaker_1_voice if i % 2 == 0 else speaker_2_voice
+        current_speaker_voice_1 = print("1") if i % 2 == 0 else print("2")
+        print('current_speaker_voice: ', current_speaker_voice_1)
+        print('speaker_1_voice: ', speaker_1_voice)
+        print('speaker_2_voice: ', speaker_2_voice)
 
         text = sentence["native_language"]
         mp3_title = f"dialogue_{i}_{"native_language"}"
-        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+        gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         text = sentence["target_language"]
         mp3_title = f"dialogue_{i}_{"target_language"}"
-        elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
+        gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         for key in ["narrator_explanation", "narrator_fun_fact"]:
             text = sentence[key]
             mp3_title = f"dialogue_{i}_{key}"
-            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
             text = split_sentence["narrator_fun_fact"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"narrator_fun_fact"}"
-            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             text = split_sentence["native_language"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
-            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", narrator_voice_id)
+            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             text = split_sentence["target_language"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
-            elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
+            gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             for index, value in enumerate(split_words(split_sentence['target_language'])):
                 text = value
                 mp3_title = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
-                elevenlabs_tts(text, f"{directory}/audio/{mp3_title}.mp3", current_speaker_voice_id)
+                gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
 
-example_JSON = {}
-directory = ""
-parse_and_convert_to_speech(example_JSON, directory)
+example_JSON = {
+  "title": "Understanding Viveka Chudamani",
+  "all_turns": [
+    {
+      "target_language": "Shankaracharya, \u00bfqu\u00e9 significa realmente la viveka?",
+      "native_language": "Shankaracharya, what does viveka really mean?"
+    },
+    {
+      "target_language": "Viveka es la capacidad para discriminar entre lo real y lo irreal.",
+      "native_language": "Viveka is the ability to discriminate between what is real and what is unreal."
+    },
+    {
+      "target_language": "\u00bfY cu\u00e1l es el papel de la paciencia en este aprendizaje?",
+      "native_language": "And what is the role of patience in this learning?"
+    },
+    {
+      "target_language": "La paciencia es clave. Te permite profundizar en la comprensi\u00f3n sin prisa.",
+      "native_language": "Patience is key. It allows you to deepen understanding without haste."
+    }
+  ],
+  "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
+  "keywords": ["discrimination", "patience"],
+  "native_language": "English",
+  "target_language": "Spanish (Mexico)",
+  "language_level": "C2",
+  "speakers": { "speaker_1": { "name": "Rafael", "gender": "m" }, "speaker_2": { "name": "Sof\u00eda", "gender": "f" } },
+  "dialogue": [
+    {
+      "speaker": "speaker_1",
+      "turn_nr": 1,
+      "target_language": "Shankaracharya, \u00bfqu\u00e9 significa realmente la viveka?",
+      "native_language": "Shankaracharya, what does viveka really mean?",
+      "narrator_explanation": "Rafael is asking Sof\u00eda, who represents Shankaracharya, about the deep meaning of viveka.",
+      "narrator_fun_fact": "Viveka Chudamani is a Sanskrit text attributed to Adi Shankaracharya, focusing on discrimination between the eternal and the ephemeral.",
+      "split_sentence": [
+        {
+          "target_language": "Shankaracharya, \u00bfqu\u00e9 significa",
+          "native_language": "Shankaracharya, what does mean",
+          "narrator_fun_fact": "||Shankaracharya|| is the name of a revered philosopher in Indian tradition."
+        },
+        {
+          "target_language": "realmente la viveka?",
+          "native_language": "really the viveka?",
+          "narrator_fun_fact": "The phrase ||realmente la viveka|| queries the true essence of ||viveka||, meaning discernment."
+        }
+      ]
+    },
+    {
+      "speaker": "speaker_2",
+      "turn_nr": 2,
+      "target_language": "Viveka es la capacidad para discriminar entre lo real y lo irreal.",
+      "native_language": "Viveka is the ability to discriminate between what is real and what is unreal.",
+      "narrator_explanation": "Sof\u00eda explains the concept of viveka as an essential discriminative faculty.",
+      "narrator_fun_fact": "The concept of ||viveka|| is central in many philosophical discussions within Hinduism.",
+      "split_sentence": [
+        {
+          "target_language": "Viveka es la capacidad",
+          "native_language": "Viveka is the ability",
+          "narrator_fun_fact": "||Viveka|| signifying 'discrimination' or 'discernment' plays a crucial role in spiritual teachings."
+        },
+        {
+          "target_language": "para discriminar entre lo real",
+          "native_language": "to discriminate between what is real",
+          "narrator_fun_fact": "Discrimination here refers to philosophical discernment, not social or racial discrimination."
+        },
+        {
+          "target_language": "y lo irreal.",
+          "native_language": "and what is unreal.",
+          "narrator_fun_fact": "The real versus unreal discussion points to metaphysical debates in Vedanta philosophy."
+        }
+      ]
+    }
+  ],
+  "model_used": "gpt-4-turbo-2024-04-09"
+}
+
+directory = "other/Arjuna_gpt-4-turbo-2024-04-09_04.30.17.16.45"
+# parse_and_convert_to_speech(example_JSON, directory)
 script = parse_and_create_script(example_JSON)
 
 print(script)
