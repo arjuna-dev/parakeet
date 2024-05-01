@@ -253,7 +253,7 @@ def parse_and_create_script(data):
     return script
 
 # matching language to language code
-from language_codes import language_codes
+from functions.google_tts_language_codes import language_codes
 
 def language_to_language_code(language):
     print('language: ', language)
