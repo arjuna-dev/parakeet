@@ -147,6 +147,10 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this
     # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
 
+class TTS_PROVIDERS(Enum):
+    GOOGLE = 1
+    ELEVENLABS = 2
+
 @https_fn.on_request(
     cors=options.CorsOptions(
       cors_origins=["*"],
@@ -217,8 +221,7 @@ speaker_2_voice_id = "5Q0t7uMcjvnagumLfvZi"
 def parse_and_create_script(data):
     script = []
 
-    narrator_title = data["title"]
-    intro_sequence = intro_sequence_1(narrator_title)
+    intro_sequence = intro_sequence_1("title")
     script.extend(intro_sequence)
 
     for i, sentence in enumerate(data["dialogue"]):
@@ -262,19 +265,30 @@ def language_to_language_code(language):
     else:
         return "Language not found"
 
-def parse_and_convert_to_speech(data, directory, tts_function):
-    
-    target_language = data["target_language"]
-    speaker_1_gender = data["speakers"]["speaker_1"]["gender"].lower()
-    speaker_2_gender = data["speakers"]["speaker_2"]["gender"].lower()
+def parse_and_convert_to_speech(data, directory, tts_provider):
 
-    target_language = data["target_language"]
+    if tts_provider == TTS_PROVIDERS.GOOGLE:
+        target_language = data["target_language"]
+        speaker_1_gender = data["speakers"]["speaker_1"]["gender"].lower()
+        speaker_2_gender = data["speakers"]["speaker_2"]["gender"].lower()
 
-    language_code = language_to_language_code(target_language)
+        target_language = data["target_language"]
 
-    speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
-    speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
-    narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
+        language_code = language_to_language_code(target_language)
+
+        speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
+        speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
+        narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
+
+        tts_function = gcloud_tts.synthesize_text
+
+    elif tts_provider == TTS_PROVIDERS.ELEVENLABS:
+        narrator_voice = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
+        speaker_1_voice = "LcfcDJNUP1GQjkzn1xUU"
+        speaker_2_voice = "5Q0t7uMcjvnagumLfvZi"
+
+        tts_function = elevenlabs_tts
+
 
     # add a subdirectory to the directory
     os.makedirs(f"{directory}/audio", exist_ok=True)

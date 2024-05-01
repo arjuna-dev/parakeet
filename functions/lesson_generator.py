@@ -17,10 +17,10 @@ def get_audio_segment(key, lesson_script_audio_segments):
         return lesson_script_audio_segments.get(key)
 
 # Function to generate the full lesson audio
-def generate_lesson(script, directory):
+def generate_lesson(script, save_directory, new_audio_files_directory):
     
     #name of the combined audio file
-    filename = f'{directory}/lesson_final.mp3'
+    filename = f'{save_directory}/lesson_final.mp3'
     
     #Create audio segments from the lesson_script
     lesson_script_audio_segments = {}
@@ -29,7 +29,10 @@ def generate_lesson(script, directory):
             try:
                 lesson_script_audio_segments[step] = AudioSegment.from_mp3(f"{audio_files_directory}/{step}.mp3")
             except:
-                print(f"Warning: Could not create audio segment. Missing audio file for {step}")
+                try:
+                    lesson_script_audio_segments[step] = AudioSegment.from_mp3(f"{new_audio_files_directory}/{step}.mp3")
+                except:
+                    print(f"Warning: Could not create audio segment. Missing audio file for {step}")
 
     # Combine audio segments in the specified sequence
     combined = AudioSegment.silent(duration=0)  # Start with a silent segment
