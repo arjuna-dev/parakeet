@@ -291,7 +291,6 @@ def parse_and_convert_to_speech(data, directory, tts_function):
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
         current_speaker_voice = speaker_1_voice if i % 2 == 0 else speaker_2_voice
-        current_speaker_voice_1 = print("1") if i % 2 == 0 else print("2")
 
         text = sentence["native_language"]
         mp3_title = f"dialogue_{i}_{"native_language"}"
