@@ -1,32 +1,34 @@
-def synthesize_text(conversation, output_path):
-    """Synthesizes speech from the input string of text."""
-    from google.cloud import texttospeech
+from google.cloud import texttospeech
 
-    client = texttospeech.TextToSpeechClient()
-    print(client.list_voices())
-
-    input_text = texttospeech.SynthesisInput(text=conversation.text)
-
-    # Note: the voice can also be specified by name.
-    # Names of voices can be retrieved with client.list_voices().
-    
-    # check if the speaker is the narrator
-    if "narrator" in output_path:
+def choose_voice(language_code, gender, specific_voice=None): # specific_voice = "en-US-Standard-C" for narrator
+    if gender == "m": 
+        ssml_gender = texttospeech.SsmlVoiceGender.MALE
+    elif gender == "f":
+        ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
+        
+    if specific_voice == None:
+        print('specific_voice == None: ', specific_voice == None)
         voice = texttospeech.VoiceSelectionParams(
-            language_code="en-US",
-            name="en-US-Standard-C",
-            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
-        )
-    else:
-        if conversation.gender == "male": 
-            ssml_gender = texttospeech.SsmlVoiceGender.MALE
-        else:
-            ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
-            
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=conversation.language_code, # this ensures 
+            language_code=language_code,
             ssml_gender=ssml_gender
         )
+    else:
+        print('specific_voice != None: ', specific_voice)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code=language_code,
+            ssml_gender=ssml_gender,
+            name=specific_voice
+        )
+    return voice
+
+
+def synthesize_text(text, voice, output_path):
+    """Synthesizes speech from the input string of text."""
+
+    client = texttospeech.TextToSpeechClient()
+    # print(client.list_voices())
+
+    input_text = texttospeech.SynthesisInput(text=text)
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3
@@ -37,8 +39,8 @@ def synthesize_text(conversation, output_path):
     )
 
     # The response's audio_content is binary.
-    with open(f"{output_path}.mp3", "wb") as out:
+    with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
-        print('Audio content written to file "output.mp3"')
+        print(f'Audio content written to file {output_path}.mp3')
 
-synthesize_text("Hello, World!")
+# synthesize_text("Hello, World!")
