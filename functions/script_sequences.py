@@ -1,8 +1,11 @@
 
 
-def intro_sequence_1(native, target, narrator_explanation, narrator_fun_fact):
+def intro_sequence_1(narrator_title):
     script_part = [
-         
+            "narrator_opening_phrases_5_0",
+            "narrator_opening_phrases_5_1",
+            narrator_title,
+            "narrator_navigation_phrases_7"  #listen
         ]
     return script_part
 
