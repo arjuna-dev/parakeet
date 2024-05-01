@@ -6,7 +6,7 @@ from firebase_functions import firestore_fn, https_fn, options # type: ignore
 from firebase_admin import initialize_app, firestore # type: ignore
 import google.cloud.firestore # type: ignore
 import string
-from elevenlabs_api import elevenlabs_tts, get_voices
+from elevenlabs_api import elevenlabs_tts
 import datetime # type: ignore
 from lesson_generator import generate_lesson
 from enum import Enum
@@ -156,8 +156,8 @@ class GPT_MODEL(Enum):
 @https_fn.on_request()
 def full_API_workflow(gpt_model, req: https_fn.Request) -> https_fn.Response:
     chatGPT_response = chatGPT_API_call(gpt_model, req)
-    parse_and_convert_to_speech(chatGPT_response, directory)
-    parse_and_create_script(chatGPT_response, directory)
+    # parse_and_convert_to_speech(chatGPT_response, directory, tts_functions)
+    # parse_and_create_script(chatGPT_response, directory)
 
 def chatGPT_API_call(gpt_model, req):
     request_data = json.loads(req.data)
@@ -253,7 +253,7 @@ def parse_and_create_script(data):
     return script
 
 # matching language to language code
-from functions.google_tts_language_codes import language_codes
+from google_tts_language_codes import language_codes
 
 def language_to_language_code(language):
     print('language: ', language)
@@ -262,9 +262,7 @@ def language_to_language_code(language):
     else:
         return "Language not found"
 
-
-
-def parse_and_convert_to_speech(data, directory):
+def parse_and_convert_to_speech(data, directory, tts_function):
     
     target_language = data["target_language"]
     speaker_1_gender = data["speakers"]["speaker_1"]["gender"].lower()
@@ -273,7 +271,6 @@ def parse_and_convert_to_speech(data, directory):
     target_language = data["target_language"]
 
     language_code = language_to_language_code(target_language)
-    print('language_code: ', language_code)
 
     speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
     speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
@@ -283,53 +280,50 @@ def parse_and_convert_to_speech(data, directory):
     os.makedirs(f"{directory}/audio", exist_ok=True)
 
     text = data["title"]
-    gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{"title"}.mp3")
+    tts_function(text, narrator_voice, f"{directory}/audio/{"title"}.mp3")
 
     # Process speaker names
     for speaker_key, speaker_info in data["speakers"].items():
         text = speaker_info["name"]
         mp3_title = f"speakers_{speaker_key}_name"
-        gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
+        tts_function(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
         current_speaker_voice = speaker_1_voice if i % 2 == 0 else speaker_2_voice
         current_speaker_voice_1 = print("1") if i % 2 == 0 else print("2")
-        print('current_speaker_voice: ', current_speaker_voice_1)
-        print('speaker_1_voice: ', speaker_1_voice)
-        print('speaker_2_voice: ', speaker_2_voice)
 
         text = sentence["native_language"]
         mp3_title = f"dialogue_{i}_{"native_language"}"
-        gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
+        tts_function(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         text = sentence["target_language"]
         mp3_title = f"dialogue_{i}_{"target_language"}"
-        gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
+        tts_function(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         for key in ["narrator_explanation", "narrator_fun_fact"]:
             text = sentence[key]
             mp3_title = f"dialogue_{i}_{key}"
-            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
             text = split_sentence["narrator_fun_fact"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"narrator_fun_fact"}"
-            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             text = split_sentence["native_language"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
-            gcloud_tts.synthesize_text(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             text = split_sentence["target_language"]
             mp3_title = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
-            gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
+            tts_function(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
             
             for index, value in enumerate(split_words(split_sentence['target_language'])):
                 text = value
                 mp3_title = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
-                gcloud_tts.synthesize_text(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
+                tts_function(text, current_speaker_voice, f"{directory}/audio/{mp3_title}.mp3")
 
 example_JSON = {
   "title": "Understanding Viveka Chudamani",
@@ -377,38 +371,12 @@ example_JSON = {
           "narrator_fun_fact": "The phrase ||realmente la viveka|| queries the true essence of ||viveka||, meaning discernment."
         }
       ]
-    },
-    {
-      "speaker": "speaker_2",
-      "turn_nr": 2,
-      "target_language": "Viveka es la capacidad para discriminar entre lo real y lo irreal.",
-      "native_language": "Viveka is the ability to discriminate between what is real and what is unreal.",
-      "narrator_explanation": "Sof\u00eda explains the concept of viveka as an essential discriminative faculty.",
-      "narrator_fun_fact": "The concept of ||viveka|| is central in many philosophical discussions within Hinduism.",
-      "split_sentence": [
-        {
-          "target_language": "Viveka es la capacidad",
-          "native_language": "Viveka is the ability",
-          "narrator_fun_fact": "||Viveka|| signifying 'discrimination' or 'discernment' plays a crucial role in spiritual teachings."
-        },
-        {
-          "target_language": "para discriminar entre lo real",
-          "native_language": "to discriminate between what is real",
-          "narrator_fun_fact": "Discrimination here refers to philosophical discernment, not social or racial discrimination."
-        },
-        {
-          "target_language": "y lo irreal.",
-          "native_language": "and what is unreal.",
-          "narrator_fun_fact": "The real versus unreal discussion points to metaphysical debates in Vedanta philosophy."
-        }
-      ]
     }
-  ],
-  "model_used": "gpt-4-turbo-2024-04-09"
+    ]
 }
 
 directory = "other/Arjuna_gpt-4-turbo-2024-04-09_04.30.17.16.45"
-# parse_and_convert_to_speech(example_JSON, directory)
+# parse_and_convert_to_speech(example_JSON, directory, gcloud_tts.synthesize_text)
 script = parse_and_create_script(example_JSON)
 
 print(script)

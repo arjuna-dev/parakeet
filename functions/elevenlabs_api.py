@@ -43,7 +43,7 @@ def get_voices():
 # get_voices()
 
 
-def elevenlabs_tts(text, output_path, voice_id):
+def elevenlabs_tts(text, voice_id, output_path):
     
     # Define constants for the script
     CHUNK_SIZE = 1024  # Size of chunks to read/write at a time
