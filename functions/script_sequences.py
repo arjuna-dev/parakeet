@@ -1,5 +1,12 @@
 
 
+def intro_sequence_1(native, target, narrator_explanation, narrator_fun_fact):
+    script_part = [
+         
+        ]
+    return script_part
+
+
 def sentence_sequence_1(native, target, narrator_explanation, narrator_fun_fact):
     script_part = [
             narrator_explanation,
