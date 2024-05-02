@@ -1,13 +1,13 @@
 import os
 import requests
 import json
-import openai # type: ignore
-from firebase_functions import firestore_fn, https_fn, options # type: ignore
-from firebase_admin import initialize_app, firestore # type: ignore
-import google.cloud.firestore # type: ignore
+import openai
+from firebase_functions import firestore_fn, https_fn, options
+from firebase_admin import initialize_app, firestore
+import google.cloud.firestore
 import string
 from elevenlabs_api import elevenlabs_tts
-import datetime # type: ignore
+import datetime
 from lesson_generator import generate_lesson
 from enum import Enum
 from script_sequences import sentence_sequence_1, chunk_sequence_1, intro_sequence_1
