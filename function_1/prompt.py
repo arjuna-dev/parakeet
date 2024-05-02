@@ -9,115 +9,45 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue. If no keywords are provided leave the field empty. If there are spelling mistakes in the content request, fix them. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The more advanced language levels could have more than one sentence per turn. The sentence of each turn should be split in chunks of maximum 4 words that have grammatical cohesion and make sense. The main original dialogue happens in the target_language, the translations of it should be as literal as possible as well as in the  the split sentences. Skip introductions between speakers unless specified and go straight to the topic of conversation. The narrator_explanation and narrator_fun_fact keys are always in native_language, when quoting the target language the text should be enclosed in double vertical bars (||). The following is an example of a JSON file enclosed in triple equals symbols:
+The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The more advanced language levels could have more than one sentence per turn. The sentence of each turn should be split in small parts of 2 to 4 words that have grammatical cohesion and make sense. The main original dialogue happens in the target_language, the translations of it should be as literal as possible. Skip introductions between speakers unless specified and go straight to the topic of conversation. With the following data as an example:
+```
+"requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
+"keywords": ["discrimination", "patience"],
+"native_language": "English",
+"target_language": "Spanish",
+"language_level": "C2",
+```
 
-JSON: ===
+You would generate the following JSON enclosed in triple equals symbols:
+
+JSON:
+===
 {{
-    "title": "Learning Electrical Engineering",
+    "title": "Understanding Viveka Chudamani",
+    "speakers": {{
+        "speaker_1":{{ "name": "Mateo", "gender": "m" }},
+        "speaker_2": {{ "name": "Shankaracharya", "gender": "m" }}
+        }}
     "all_turns": [
         {{
-            "target_language": "Primero, coloca el pcb con cuidado.",
-            "native_language": "First, place the pcb carefully."
+            "target_language": "Shankaracharya, \u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
+            "native_language": "Shankaracharya, what exactly does viveka mean in the context of Viveka Chudamani?"
+            "turn_nr": "1",
         }},
         {{
-            "target_language": "¿Debo conectar los cables ahora?",
-            "native_language": "Should I connect the wires now?"
+            "target_language": "Viveka es la capacidad de discriminar entre lo real y lo no real.",
+            "native_language": "Viveka is the ability to discriminate between the real and the unreal."
+            "turn_nr": "2",
         }},
         {{
-            "target_language": "Sí, sigue el diagrama para el cableado.",
-            "native_language": "Yes, follow the diagram for the wiring."
+            "target_language": "\u00bfY c\u00f3mo se desarrolla esta discriminaci\u00f3n?",
+            "native_language": "And how does one develop this discrimination?"
+            "turn_nr": "3",
         }},
         {{
-            "target_language": "¿Está esta la orientación correcta?",
-            "native_language": "Is this the correct orientation?"
-        }},
-        {{
-            "target_language": "Ajústalo un poco a la izquierda.",
-            "native_language": "Adjust it slightly to the left."
-        }},
-        {{
-            "target_language": "¿Así?",
-            "native_language": "Like this?"
-        }}
-    ],
-    "requested_scenario": "I am being taught electrical engineering",
-    "keywords": [
-        "instructions",
-        "pcb"
-    ],
-    "native_language": "English",
-    "target_language": "Spanish",
-    "language_level": "A1",
-    "speakers": {{
-        "speaker_1": {{
-            "name": "Carlos",
-            "gender": "m"
-        }},
-        "speaker_2": {{
-            "name": "Elena",
-            "gender": "f"
-        }}
-    }},
-    "dialogue": [
-        {{
-            "speaker": "speaker_1",
-            "turn_nr": 1,
-            "target_language": "Primero, coloca el pcb con cuidado.",
-            "native_language": "First, place the pcb carefully.",
-            "narrator_explanation": "Carlos is giving instructions on how to handle the pcb.",
-            "narrator_fun_fact": "PCB stands for 'printed circuit board', which is called ||placa de circuito impreso|| in Spanish.",
-            "split_sentence": [
-                {{
-                    "target_language": "Primero",
-                    "native_language": "First",
-                    "narrator_fun_fact": "||Primero|| is commonly used to begin a series of instructions."
-                }},
-                {{
-                    "target_language": "coloca",
-                    "native_language": "place",
-                    "narrator_fun_fact": "||Coloca|| is an imperative form of ||colocar||, meaning to place or put."
-                }},
-                {{
-                    "target_language": "el pcb",
-                    "native_language": "the pcb",
-                    "narrator_fun_fact": "In Spanish, ||el pcb|| directly translates to 'the pcb', maintaining the abbreviation."
-                }},
-                {{
-                    "target_language": "con cuidado",
-                    "native_language": "carefully",
-                    "narrator_fun_fact": "||Con cuidado|| is a phrase used to indicate that something should be done with care."
-                }}
-            ]
-        }},
-        {{
-            "speaker": "speaker_2",
-            "turn_nr": 2,
-            "target_language": "¿Debo conectar los cables ahora?",
-            "native_language": "Should I connect the wires now?",
-            "narrator_explanation": "Elena is asking for further instructions about wiring.",
-            "narrator_fun_fact": "Asking questions is crucial in learning, ensuring clarity and proper process.",
-            "split_sentence": [
-                {{
-                    "target_language": "¿Debo",
-                    "native_language": "Should I",
-                    "narrator_fun_fact": "||¿Debo|| is from the verb ||deber|| which means 'should' or 'must' in this context."
-                }},
-                {{
-                    "target_language": "conectar",
-                    "native_language": "connect",
-                    "narrator_fun_fact": "||Conectar|| means to connect, commonly used in technical and everyday contexts."
-                }},
-                {{
-                    "target_language": "los cables",
-                    "native_language": "the wires",
-                    "narrator_fun_fact": "||Los cables|| directly translates to 'the wires'."
-                }},
-                {{
-                    "target_language": "ahora",
-                    "native_language": "now",
-                    "narrator_fun_fact": "||Ahora|| translates directly to 'now', indicating immediate or current action."
-                }}
-            ]
+            "target_language": "Se desarrolla a trav\u00e9s de la pr\u00e1ctica constante y la paciencia.",
+            "native_language": "It develops through constant practice and patience."
+            "turn_nr": "4",
         }}
     ]
 }}
