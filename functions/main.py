@@ -214,10 +214,6 @@ def split_words(sentence):
   words = [word.strip(punctuation) for word in words]
   return words
 
-narrator_voice_id = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
-speaker_1_voice_id = "LcfcDJNUP1GQjkzn1xUU"
-speaker_2_voice_id = "5Q0t7uMcjvnagumLfvZi"
-
 def parse_and_create_script(data):
     script = []
 
