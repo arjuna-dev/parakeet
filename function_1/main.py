@@ -3,6 +3,7 @@ from firebase_admin import initialize_app
 import openai
 import json
 from prompt import prompt
+from enum import Enum
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode. Preview model.
