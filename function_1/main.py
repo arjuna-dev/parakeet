@@ -18,13 +18,12 @@ initialize_app()
 @https_fn.on_request(
     cors=options.CorsOptions(
       cors_origins=["*"],
-      cors_methods=["GET", "POST"],
+      cors_methods=["GET", "POST"]
   )
 )
 
-# @https_fn.on_call()
 @https_fn.on_request()
-def on_request_example(req: https_fn.Request) -> https_fn.Response:
+def chatGPT_API_call_0(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
     requested_scenario = request_data.get("requested_scenario")
     native_language = request_data.get("native_language")
@@ -66,5 +65,4 @@ def on_request_example(req: https_fn.Request) -> https_fn.Response:
         return
 
     data["user_ID"] = user_ID
-    # return data
-    return https_fn.Response(data)
+    return data
