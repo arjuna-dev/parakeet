@@ -1,10 +1,8 @@
 import os
-import requests
 import json
 import openai
-from firebase_functions import firestore_fn, https_fn, options
-from firebase_admin import initialize_app, firestore
-import google.cloud.firestore
+from firebase_functions import https_fn, options
+from firebase_admin import initialize_app
 import string
 from elevenlabs_api import elevenlabs_tts
 import datetime
@@ -12,133 +10,10 @@ from lesson_generator import generate_lesson
 from enum import Enum
 from script_sequences import sentence_sequence_1, chunk_sequence_1, intro_sequence_1
 import gcloud_text_to_speech_api as gcloud_tts
-
+from google_tts_language_codes import language_codes
+from prompt import prompt
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
-
-def prompt(requested_scenario, native_language, target_language, language_level, keywords, length):
-   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 characters. You will be using the the following content:
-
-requested_scenario: {requested_scenario}
-keywords: {keywords} 
-target_language: {target_language}
-native_language: {native_language}
-language_level: {language_level}
-
-The keywords should be used in the dialogue. If no keywords are provided leave the field empty. If there are spelling mistakes in the content request, fix them. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The more advanced language levels could have more than one sentence per turn. The sentence of each turn should be split in chunks of maximum 4 words that have grammatical cohesion and make sense. The main original dialogue happens in the target_language, the translations of it should be as literal as possible as well as in the  the split sentences. Skip introductions between speakers unless specified and go straight to the topic of conversation. The narrator_explanation and narrator_fun_fact keys are always in native_language, when quoting the target language the text should be enclosed in double vertical bars (||). The following is an example of a JSON file enclosed in triple equals symbols:
-
-JSON: ===
-{{
-    "title": "Learning Electrical Engineering",
-    "all_turns": [
-        {{
-            "target_language": "Primero, coloca el pcb con cuidado.",
-            "native_language": "First, place the pcb carefully."
-        }},
-        {{
-            "target_language": "¿Debo conectar los cables ahora?",
-            "native_language": "Should I connect the wires now?"
-        }},
-        {{
-            "target_language": "Sí, sigue el diagrama para el cableado.",
-            "native_language": "Yes, follow the diagram for the wiring."
-        }},
-        {{
-            "target_language": "¿Está esta la orientación correcta?",
-            "native_language": "Is this the correct orientation?"
-        }},
-        {{
-            "target_language": "Ajústalo un poco a la izquierda.",
-            "native_language": "Adjust it slightly to the left."
-        }},
-        {{
-            "target_language": "¿Así?",
-            "native_language": "Like this?"
-        }}
-    ],
-    "requested_scenario": "I am being taught electrical engineering",
-    "keywords": [
-        "instructions",
-        "pcb"
-    ],
-    "native_language": "English",
-    "target_language": "Spanish",
-    "language_level": "A1",
-    "speakers": {{
-        "speaker_1": {{
-            "name": "Carlos",
-            "gender": "m"
-        }},
-        "speaker_2": {{
-            "name": "Elena",
-            "gender": "f"
-        }}
-    }},
-    "dialogue": [
-        {{
-            "speaker": "speaker_1",
-            "turn_nr": 1,
-            "target_language": "Primero, coloca el pcb con cuidado.",
-            "native_language": "First, place the pcb carefully.",
-            "narrator_explanation": "Carlos is giving instructions on how to handle the pcb.",
-            "narrator_fun_fact": "PCB stands for 'printed circuit board', which is called ||placa de circuito impreso|| in Spanish.",
-            "split_sentence": [
-                {{
-                    "target_language": "Primero",
-                    "native_language": "First",
-                    "narrator_fun_fact": "||Primero|| is commonly used to begin a series of instructions."
-                }},
-                {{
-                    "target_language": "coloca",
-                    "native_language": "place",
-                    "narrator_fun_fact": "||Coloca|| is an imperative form of ||colocar||, meaning to place or put."
-                }},
-                {{
-                    "target_language": "el pcb",
-                    "native_language": "the pcb",
-                    "narrator_fun_fact": "In Spanish, ||el pcb|| directly translates to 'the pcb', maintaining the abbreviation."
-                }},
-                {{
-                    "target_language": "con cuidado",
-                    "native_language": "carefully",
-                    "narrator_fun_fact": "||Con cuidado|| is a phrase used to indicate that something should be done with care."
-                }}
-            ]
-        }},
-        {{
-            "speaker": "speaker_2",
-            "turn_nr": 2,
-            "target_language": "¿Debo conectar los cables ahora?",
-            "native_language": "Should I connect the wires now?",
-            "narrator_explanation": "Elena is asking for further instructions about wiring.",
-            "narrator_fun_fact": "Asking questions is crucial in learning, ensuring clarity and proper process.",
-            "split_sentence": [
-                {{
-                    "target_language": "¿Debo",
-                    "native_language": "Should I",
-                    "narrator_fun_fact": "||¿Debo|| is from the verb ||deber|| which means 'should' or 'must' in this context."
-                }},
-                {{
-                    "target_language": "conectar",
-                    "native_language": "connect",
-                    "narrator_fun_fact": "||Conectar|| means to connect, commonly used in technical and everyday contexts."
-                }},
-                {{
-                    "target_language": "los cables",
-                    "native_language": "the wires",
-                    "narrator_fun_fact": "||Los cables|| directly translates to 'the wires'."
-                }},
-                {{
-                    "target_language": "ahora",
-                    "native_language": "now",
-                    "narrator_fun_fact": "||Ahora|| translates directly to 'now', indicating immediate or current action."
-                }}
-            ]
-        }}
-    ]
-}}
-===
-'''
 
 app = initialize_app()
 
@@ -154,7 +29,7 @@ class TTS_PROVIDERS(Enum):
 @https_fn.on_request(
     cors=options.CorsOptions(
       cors_origins=["*"],
-      cors_methods=["GET", "POST"],
+      cors_methods=["GET", "POST"]
   )
 )
 @https_fn.on_request()
@@ -250,9 +125,6 @@ def parse_and_create_script(data):
             script.extend(chunk_sequence)
 
     return script
-
-# matching language to language code
-from google_tts_language_codes import language_codes
 
 def language_to_language_code(language):
     print('language: ', language)
