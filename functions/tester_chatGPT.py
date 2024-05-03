@@ -36,6 +36,7 @@ def chatGPT_API_call(gpt_model, request_data):
     requested_scenario = request_data.get("requested_scenario")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
+    length = request_data.get("length")
     try:
         language_level = request_data.get("language_level")
     except:
