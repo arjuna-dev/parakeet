@@ -30,23 +30,27 @@ JSON:
     "all_turns": [
         {{
             "target_language": "Shankaracharya, \u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
-            "native_language": "Shankaracharya, what exactly does viveka mean in the context of Viveka Chudamani?"
+            "native_language": "Shankaracharya, what exactly does viveka mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
+            "speaker": "speaker_1"
         }},
         {{
             "target_language": "Viveka es la capacidad de discriminar entre lo real y lo no real.",
-            "native_language": "Viveka is the ability to discriminate between the real and the unreal."
+            "native_language": "Viveka is the ability to discriminate between the real and the unreal.",
             "turn_nr": "2",
+            "speaker": "speaker_2"
         }},
         {{
             "target_language": "\u00bfY c\u00f3mo se desarrolla esta discriminaci\u00f3n?",
-            "native_language": "And how does one develop this discrimination?"
+            "native_language": "And how does one develop this discrimination?",
             "turn_nr": "3",
+            "speaker": "speaker_1"
         }},
         {{
             "target_language": "Se desarrolla a trav\u00e9s de la pr\u00e1ctica constante y la paciencia.",
-            "native_language": "It develops through constant practice and patience."
+            "native_language": "It develops through constant practice and patience.",
             "turn_nr": "4",
+            "speaker": "speaker_2"
         }}
     ]
 }}
