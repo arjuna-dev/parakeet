@@ -10,7 +10,9 @@ class Library extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Library'),
       ),
-      bottomNavigationBar: const BottomMenuBar(),
+      bottomNavigationBar: const BottomMenuBar(
+        currentRoute: '/library',
+      ),
     );
   }
 }

@@ -21,7 +21,7 @@ class Home extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: const BottomMenuBar(),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:auralearn/screens/confirm_script_screen.dart';
 import 'package:auralearn/Navigation/bottom_menu_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -180,6 +181,7 @@ class _CreateLessonState extends State<CreateLesson> {
             ],
           ),
         ),
-        bottomNavigationBar: const BottomMenuBar());
+        bottomNavigationBar:
+            const BottomMenuBar(currentRoute: '/create_lesson'));
   }
 }
