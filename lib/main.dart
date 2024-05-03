@@ -3,9 +3,10 @@ import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'screens/homepage.dart';
+import 'screens/create_lesson_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
-import 'screens/search_screen.dart';
+import 'screens/library_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +39,7 @@ class MyApp extends StatelessWidget {
                     return const AuthScreen();
                   } else {
                     // If the user is logged in, show the Home page
-                    return const HomePage(title: 'Parakeet Home page');
+                    return const Home();
                   }
                 }
 
@@ -46,8 +47,10 @@ class MyApp extends StatelessWidget {
                 return const CircularProgressIndicator();
               },
             ),
+        '/create_lesson': (context) =>
+            const CreateLesson(title: 'Create your lesson!!'),
         '/login': (context) => const AuthScreen(),
-        '/search': (context) => const SearchScreen(),
+        '/library': (context) => const Library(),
       },
     );
   }
