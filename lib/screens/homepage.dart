@@ -120,10 +120,15 @@ class _MyHomePageState extends State<HomePage> {
                   );
                   if (response.statusCode == 200) {
                     final Map<String, dynamic> data = jsonDecode(response.body);
-                    await FirebaseFirestore.instance
-                        .collection('jsonFiles')
-                        .add(data);
+
+                    DocumentReference docRef = FirebaseFirestore.instance
+                        .collection('chatGPT_responses')
+                        .doc();
+                    CollectionReference subcollectionRef =
+                        docRef.collection('only_target_sentences');
+                    await subcollectionRef.add(data);
                     print(data);
+                    // IMPORTANT: need to parse docRef.id to the second api to store it in the correct place in the db
                   } else {
                     throw Exception('Failed to load API data');
                   }

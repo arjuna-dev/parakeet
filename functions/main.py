@@ -36,15 +36,20 @@ class TTS_PROVIDERS(Enum):
   )
 )
 @https_fn.on_request()
-def full_API_workflow(gpt_model, req: https_fn.Request) -> https_fn.Response:
+def full_API_workflow(gpt_model, req: https_fn.Request, response_db_id) -> https_fn.Response:
+    response = {}
     chatGPT_response = chatGPT_API_call(gpt_model, req)
     # storing chatGPT_response in Firestore
     db = firestore.client()
-    doc_ref = db.collection('chatGPT_responses_full_breakdown').document(now)
-    doc_ref.set(chatGPT_response)
+    doc_ref = db.collection('chatGPT_responses').collection(response_db_id)
+    subcollection_ref = doc_ref.collection('all_breakdowns')
+    subcollection_ref.document().set(chatGPT_response).set(chatGPT_response)
     
-    # parse_and_convert_to_speech(chatGPT_response, directory, tts_functions)
-    # parse_and_create_script(chatGPT_response, directory)
+    parse_and_convert_to_speech(chatGPT_response, "", tts_functions)
+    script = parse_and_create_script(chatGPT_response)
+    response["script"] = script
+    response["link_to_audio_files"] = "https://storage.googleapis.com/..."
+    return response
 
 def chatGPT_API_call(gpt_model, req):
     request_data = json.loads(req.data)
