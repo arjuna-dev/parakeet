@@ -29,28 +29,44 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) => StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-                if (snapshot.connectionState == ConnectionState.active) {
-                  if (snapshot.data == null) {
-                    // If the user is not logged in, redirect to AuthScreen
-                    return const AuthScreen();
-                  } else {
-                    // If the user is logged in, show the Home page
-                    return const Home();
+      onGenerateRoute: (RouteSettings settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (context) => StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+                  if (snapshot.connectionState == ConnectionState.active) {
+                    if (snapshot.data == null) {
+                      // If the user is not logged in, redirect to AuthScreen
+                      return const AuthScreen();
+                    } else {
+                      // If the user is logged in, show the Home page
+                      return const Home();
+                    }
                   }
-                }
 
-                // While the connection state is not active, show a loading spinner
-                return const CircularProgressIndicator();
-              },
-            ),
-        '/create_lesson': (context) =>
-            const CreateLesson(title: 'Create your lesson!!'),
-        '/login': (context) => const AuthScreen(),
-        '/library': (context) => const Library(),
+                  // While the connection state is not active, show a loading spinner
+                  return const CircularProgressIndicator();
+                },
+              ),
+            );
+          case '/create_lesson':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  const CreateLesson(title: 'Create your lesson!!'),
+            );
+          case '/login':
+            return MaterialPageRoute(
+              builder: (context) => const AuthScreen(),
+            );
+          case '/library':
+            return MaterialPageRoute(
+              builder: (context) => const Library(),
+            );
+          default:
+            return null;
+        }
       },
     );
   }
