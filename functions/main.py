@@ -21,9 +21,12 @@ now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
 
 class GPT_MODEL(Enum):
-    GPT_4_TURBO = "gpt-4-1106-preview" # Supports JSON mode
+    GPT_4_TURBO_ = "gpt-4-1106-preview" # Supports JSON mode
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this
+
     # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
+
+gpt_model = GPT_MODEL.GPT_4_TURBO_V
 
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1
@@ -36,7 +39,14 @@ class TTS_PROVIDERS(Enum):
   )
 )
 @https_fn.on_request()
-def full_API_workflow(gpt_model, req: https_fn.Request, response_db_id) -> https_fn.Response:
+def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
+    request_data = json.loads(req.data)
+    response_db_id = request_data.get("response_db_id")
+    dialogue = request_data.get("dialogue")
+
+    if not all([response_db_id, dialogue]):
+        return {'error': 'Missing required parameters in request data'}
+
     response = {}
     chatGPT_response = chatGPT_API_call(gpt_model, req)
     # storing chatGPT_response in Firestore
@@ -45,30 +55,13 @@ def full_API_workflow(gpt_model, req: https_fn.Request, response_db_id) -> https
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response).set(chatGPT_response)
     
-    parse_and_convert_to_speech(chatGPT_response, "", tts_functions)
+    parse_and_convert_to_speech(chatGPT_response, "audio", tts_functions)
     script = parse_and_create_script(chatGPT_response)
     response["script"] = script
     response["link_to_audio_files"] = "https://storage.googleapis.com/..."
     return response
 
-def chatGPT_API_call(gpt_model, req):
-    request_data = json.loads(req.data)
-    requested_scenario = request_data.get("requested_scenario")
-    native_language = request_data.get("native_language")
-    target_language = request_data.get("target_language")
-    length = request_data.get("length")
-    username = request_data.get("username")
-    try:
-        language_level = request_data.get("language_level")
-    except:
-        language_level = "A1"
-    try:
-        keywords = request_data.get("keywords")
-    except:
-        keywords = ""
-
-    if not all([requested_scenario, native_language, target_language, language_level]):
-        return {'error': 'Missing required parameters in request data'}
+def chatGPT_API_call(gpt_model, dialogue):
 
     client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
@@ -78,7 +71,7 @@ def chatGPT_API_call(gpt_model, req):
         #   stream=True,
         messages=[
             {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
-            {"role": "user", "content": prompt(requested_scenario, native_language, target_language, language_level, keywords, length)}
+            {"role": "user", "content": prompt(dialogue, native_language, target_language, language_level, length)}
         ],
         response_format={'type': 'json_object'}
     )
