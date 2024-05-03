@@ -1,5 +1,5 @@
 import os
-import requests
+import random
 import json
 import openai
 from firebase_functions import firestore_fn, https_fn, options
@@ -10,7 +10,7 @@ from elevenlabs_api import elevenlabs_tts
 import datetime
 from lesson_generator import generate_lesson
 from enum import Enum
-from script_sequences import sentence_sequence_1, chunk_sequence_1, intro_sequence_1
+import script_sequences as sequences
 import gcloud_text_to_speech_api as gcloud_tts
 
 
@@ -217,7 +217,8 @@ def split_words(sentence):
 def parse_and_create_script(data):
     script = []
 
-    intro_sequence = intro_sequence_1("title")
+    index = random.randint(0, len(sequences.intro_sequences) - 1)
+    intro_sequence = sequences.intro_sequences[index]("title", "target_language")
     script.extend(intro_sequence)
 
     for i, sentence in enumerate(data["dialogue"]):
@@ -232,8 +233,10 @@ def parse_and_create_script(data):
         narrator_explanation = f"dialogue_{i}_{"narrator_explanation"}"
         narrator_fun_fact = f"dialogue_{i}_{"narrator_fun_fact"}"
         
-        sentence_sequence = sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
+        index = random.randint(0, len(sequences.sentence_sequences) - 1)
+        sentence_sequence = sequences.sentence_sequences[index](native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
         script.extend(sentence_sequence)
+        print("Sentence sequence: ", index+1)
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
@@ -246,8 +249,10 @@ def parse_and_create_script(data):
                 target_word = f"dialogue_{i}_split_sentence_{j}_target_language_{index}"
                 words.append(target_word)
 
-            chunk_sequence = chunk_sequence_1(split_narrator_fun_fact, split_native, split_target, words)
+            index = random.randint(0, len(sequences.chunk_sequences) - 1)
+            chunk_sequence = sequences.chunk_sequences[index](split_narrator_fun_fact, split_native, split_target, words)
             script.extend(chunk_sequence)
+            print("Chunk sequence: ", index+1)
 
     return script
 
