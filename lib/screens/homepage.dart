@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -79,16 +80,43 @@ class _MyHomePageState extends State<HomePage> {
               FloatingActionButton(
                 onPressed: () async {
                   print('pressed');
+                  // try {
+                  //   final result = await FirebaseFunctions.instanceFor(
+                  //           region: 'us-central1')
+                  //       .httpsCallable('chatGPT_API_call_0')
+                  //       .call(
+                  //     {
+                  //       "requested_scenario": topic,
+                  //       "keywords": keywords,
+                  //       "native_language": nativeLanguage,
+                  //       "target_language": learningLanguage,
+                  //       "length": "4",
+                  //       "user_ID": "1",
+                  //       "language_level": "A1",
+                  //     },
+                  //   );
+                  //   print(result.data);
+                  // } on FirebaseFunctionsException catch (e) {
+                  //   print('Firebase Functions error: ${e.code}\n${e.details}');
+                  // } catch (e) {
+                  //   print('General error: $e');
+                  // }
                   final response = await http.post(
-                    Uri.parse('https://parakeetapi-hma7fmdqza-uc.a.run.app'),
+                    Uri.parse(
+                        'https://us-central1-noble-descent-420612.cloudfunctions.net/chatGPT_API_call_0'),
                     headers: <String, String>{
                       'Content-Type': 'application/json; charset=UTF-8',
+                      "Access-Control-Allow-Origin":
+                          "*", // Required for CORS support to work
                     },
                     body: jsonEncode(<String, String>{
-                      'topic': topic,
-                      'keywords': keywords,
-                      'native_language': nativeLanguage,
-                      'learning_language': learningLanguage,
+                      "requested_scenario": topic,
+                      "keywords": keywords,
+                      "native_language": nativeLanguage,
+                      "target_language": learningLanguage,
+                      "length": "4",
+                      "user_ID": "1",
+                      "language_level": "A1",
                     }),
                   );
                   if (response.statusCode == 200) {
