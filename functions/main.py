@@ -2,7 +2,9 @@ import os
 import json
 import openai
 from firebase_functions import https_fn, options
-from firebase_admin import initialize_app
+from firebase_admin import initialize_app, firestore
+
+
 import string
 from elevenlabs_api import elevenlabs_tts
 import datetime
@@ -35,6 +37,11 @@ class TTS_PROVIDERS(Enum):
 @https_fn.on_request()
 def full_API_workflow(gpt_model, req: https_fn.Request) -> https_fn.Response:
     chatGPT_response = chatGPT_API_call(gpt_model, req)
+    # storing chatGPT_response in Firestore
+    db = firestore.client()
+    doc_ref = db.collection('chatGPT_responses_full_breakdown').document(now)
+    doc_ref.set(chatGPT_response)
+    
     # parse_and_convert_to_speech(chatGPT_response, directory, tts_functions)
     # parse_and_create_script(chatGPT_response, directory)
 
