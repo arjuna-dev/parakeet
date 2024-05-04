@@ -5,7 +5,7 @@ from firebase_admin import initialize_app, firestore
 import datetime
 from enum import Enum
 from prompt import prompt
-from json_parsers import parse_and_create_script, parse_and_convert_to_speech
+from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
@@ -15,8 +15,6 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode.
     GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
-
-
     # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
 
 gpt_model = GPT_MODEL.GPT_4_TURBO.value
@@ -51,7 +49,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
-    parse_and_convert_to_speech(chatGPT_response, "audio", 1, native_language, target_language, dialogue)
+    parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, dialogue)
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
@@ -59,7 +57,6 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     # Create final response with link to audio files and script
     response = {}
     response["script"] = script
-    response["link_to_audio_files"] = "https://storage.googleapis.com/..."
     return response
 
 def chatGPT_API_call(dialogue, native_language, target_language, language_level, length):

@@ -1,4 +1,4 @@
-from google.cloud import texttospeech
+from google.cloud import texttospeech, storage
 
 def choose_voice(language_code, gender, specific_voice=None): # specific_voice = "en-US-Standard-C" for narrator
     if gender == "m": 
@@ -39,6 +39,24 @@ def synthesize_text(text, voice, output_path):
     # The response's audio_content is binary.
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
+
+        # Print the URL of the uploaded audio file
+        # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
         print(f'Audio content written to file {output_path}.mp3')
 
-# synthesize_text("Hello, World!")
+    bucket_name = "all_audio_files"
+    blob_name = f"{output_path}.mp3"
+
+    # Create a storage client
+    client = storage.Client()
+
+    # Upload the audio file to the bucket
+    bucket = client.get_bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_filename(output_path)
+    
+    # Make the blob publicly accessible
+    blob.make_public()
+
+# narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
+# synthesize_text("Hello, World!", narrator_voice, "folder/file")

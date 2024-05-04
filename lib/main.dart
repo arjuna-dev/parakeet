@@ -3,9 +3,10 @@ import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'screens/homepage.dart';
+import 'screens/create_lesson_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
-import 'screens/search_screen.dart';
+import 'screens/library_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,26 +29,44 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) => StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-                if (snapshot.connectionState == ConnectionState.active) {
-                  if (snapshot.data == null) {
-                    // If the user is not logged in, redirect to AuthScreen
-                    return const AuthScreen();
-                  } else {
-                    // If the user is logged in, show the Home page
-                    return const HomePage(title: 'Parakeet Home page');
+      onGenerateRoute: (RouteSettings settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (context) => StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+                  if (snapshot.connectionState == ConnectionState.active) {
+                    if (snapshot.data == null) {
+                      // If the user is not logged in, redirect to AuthScreen
+                      return const AuthScreen();
+                    } else {
+                      // If the user is logged in, show the Home page
+                      return const Home();
+                    }
                   }
-                }
 
-                // While the connection state is not active, show a loading spinner
-                return const CircularProgressIndicator();
-              },
-            ),
-        '/login': (context) => const AuthScreen(),
-        '/search': (context) => const SearchScreen(),
+                  // While the connection state is not active, show a loading spinner
+                  return const CircularProgressIndicator();
+                },
+              ),
+            );
+          case '/create_lesson':
+            return MaterialPageRoute(
+              builder: (context) =>
+                  const CreateLesson(title: 'Create your lesson!!'),
+            );
+          case '/login':
+            return MaterialPageRoute(
+              builder: (context) => const AuthScreen(),
+            );
+          case '/library':
+            return MaterialPageRoute(
+              builder: (context) => const Library(),
+            );
+          default:
+            return null;
+        }
       },
     );
   }
