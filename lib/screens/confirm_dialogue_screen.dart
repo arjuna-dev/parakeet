@@ -48,7 +48,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     ),
                     ListView.builder(
                       shrinkWrap: true,
-                      itemCount: widget.dialogue['all_turns']?.length,
+                      itemCount: widget.dialogue['all_turns'].length,
                       itemBuilder: (context, index) {
                         final turn = widget.dialogue['all_turns'][index];
                         return ListTile(

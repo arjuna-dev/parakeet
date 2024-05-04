@@ -60,7 +60,7 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         data = json.loads(chatGPT_JSON_response)
         # storing chatGPT_response in Firestore
         db = firestore.client()
-        doc_ref = db.collection('chatGPT_responses').collection()
+        doc_ref = db.collection('chatGPT_responses').document()
         subcollection_ref = doc_ref.collection('only_target_sentences')
         subcollection_ref.document().set(data)
     except Exception as e:
