@@ -45,7 +45,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # storing chatGPT_response in Firestore
     db = firestore.client()
-    doc_ref = db.collection('chatGPT_responses').collection(response_db_id)
+    doc_ref = db.collection('chatGPT_responses').document(response_db_id)
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response)
 

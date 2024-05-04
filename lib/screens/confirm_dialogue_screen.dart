@@ -6,19 +6,20 @@ import 'package:http/http.dart' as http;
 // import 'package:firebase_auth/firebase_auth.dart';
 
 class ConfirmDialogue extends StatefulWidget {
-  const ConfirmDialogue(
-      {super.key,
-      required this.dialogue,
-      required this.nativeLanguage,
-      required this.targetLanguage,
-      required this.length,
-      required this.languageLevel});
+  const ConfirmDialogue({
+    super.key,
+    required this.dialogue,
+    required this.nativeLanguage,
+    required this.targetLanguage,
+    required this.languageLevel,
+    required this.length,
+  });
 
   final Map<String, dynamic> dialogue;
   final String nativeLanguage;
   final String targetLanguage;
-  final String length;
   final String languageLevel;
+  final String length;
 
   @override
   State<ConfirmDialogue> createState() => _ConfirmDialogueState();
@@ -47,7 +48,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     ),
                     ListView.builder(
                       shrinkWrap: true,
-                      itemCount: widget.dialogue['all_turns'].length,
+                      itemCount: widget.dialogue['all_turns']?.length,
                       itemBuilder: (context, index) {
                         final turn = widget.dialogue['all_turns'][index];
                         return ListTile(
