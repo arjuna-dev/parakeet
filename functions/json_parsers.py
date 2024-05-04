@@ -86,15 +86,15 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
     title = metadata["title"]
 
     # add a subdirectory to the directory
-    os.makedirs(f"{directory}/audio", exist_ok=True)
+    os.makedirs(f"{directory}", exist_ok=True)
 
-    tts_function(title, narrator_voice, f"{directory}/audio/{"title"}.mp3")
+    tts_function(title, narrator_voice, f"{directory}/title.mp3")
 
     # Process speaker names
     for speaker_key, speaker_info in metadata["speakers"].items():
         text = speaker_info["name"]
         speaker = f"speakers_{speaker_key}_name"
-        tts_function(text, narrator_voice, f"{directory}/audio/{speaker}.mp3")
+        tts_function(text, narrator_voice, f"{directory}/{speaker}.mp3")
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
@@ -102,36 +102,36 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
 
         text = sentence["native_language"]
         native = f"dialogue_{i}_{"native_language"}"
-        tts_function(text, narrator_voice, f"{directory}/audio/{native}.mp3")
+        tts_function(text, narrator_voice, f"{directory}/{native}.mp3")
 
         text = sentence["target_language"]
         target = f"dialogue_{i}_{"target_language"}"
-        tts_function(text, current_speaker_voice, f"{directory}/audio/{target}.mp3")
+        tts_function(text, current_speaker_voice, f"{directory}/{target}.mp3")
 
         for key in ["narrator_explanation", "narrator_fun_fact"]:
             text = sentence[key]
             narrator = f"dialogue_{i}_{key}"
-            tts_function(text, narrator_voice, f"{directory}/audio/{narrator}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/{narrator}.mp3")
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
             text = split_sentence["narrator_translation"]
             fun_fact = f"dialogue_{i}_split_sentence_{j}_{"narrator_translation"}"
-            tts_function(text, narrator_voice, f"{directory}/audio/{fun_fact}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/{fun_fact}.mp3")
             
             text = split_sentence["native_language"]
             native_chunk = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
-            tts_function(text, narrator_voice, f"{directory}/audio/{native_chunk}.mp3")
+            tts_function(text, narrator_voice, f"{directory}/{native_chunk}.mp3")
             
             text = split_sentence["target_language"]
             target_chunk = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
-            tts_function(text, current_speaker_voice, f"{directory}/audio/{target_chunk}.mp3")
+            tts_function(text, current_speaker_voice, f"{directory}/{target_chunk}.mp3")
             
             for index, word in enumerate(split_sentence['words']):
                 word_text = word["target_language"]
                 narrator_translation_text = word["narrator_translation"]
                 word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
                 narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
-                tts_function(word_text, current_speaker_voice, f"{directory}/audio/{word_file_name}.mp3")
-                tts_function(narrator_translation_text, narrator_voice, f"{directory}/audio/{narrator_translation_file_name}.mp3")
+                tts_function(word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3")
+                tts_function(narrator_translation_text, narrator_voice, f"{directory}/{narrator_translation_file_name}.mp3")
 
