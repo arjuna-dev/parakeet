@@ -1,5 +1,5 @@
 from firebase_functions import https_fn, options
-from firebase_admin import initialize_app
+from firebase_admin import initialize_app, firestore
 import openai
 import json
 from prompt import prompt
@@ -58,11 +58,17 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     chatGPT_JSON_response = completion.choices[0].message.content
     try:
         data = json.loads(chatGPT_JSON_response)
+        # storing chatGPT_response in Firestore
+        db = firestore.client()
+        doc_ref = db.collection('chatGPT_responses').collection()
+        subcollection_ref = doc_ref.collection('only_target_sentences')
+        subcollection_ref.document().set(data)
     except Exception as e:
         print(chatGPT_JSON_response)
         print(f"Error parsing JSON response from chatGPT: {e}")
         #TODO: log error and failed JSON in DB and ask the user to try again
         return
 
+    data["response_db_id"] = doc_ref.id
     data["user_ID"] = user_ID
     return data

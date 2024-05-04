@@ -1,8 +1,10 @@
-import 'package:auralearn/screens/confirm_script_screen.dart';
+// import 'dart:ui';
+
+import 'package:auralearn/screens/confirm_dialogue_screen.dart';
 import 'package:auralearn/Navigation/bottom_menu_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 
@@ -22,12 +24,12 @@ class _CreateLessonState extends State<CreateLesson> {
 
   var nativeLanguage = '';
 
-  var learningLanguage = '';
+  var targetLanguage = '';
 
   var length = '';
   var languageLevel = 'A1';
 
-  Map<String, dynamic> script = {};
+  Map<String, dynamic> dialogue = {};
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +84,7 @@ class _CreateLessonState extends State<CreateLesson> {
                 ),
                 onChanged: (value) {
                   setState(() {
-                    learningLanguage = value;
+                    targetLanguage = value;
                   });
                 },
               ),
@@ -144,7 +146,7 @@ class _CreateLessonState extends State<CreateLesson> {
                         "requested_scenario": topic,
                         "keywords": keywords,
                         "native_language": nativeLanguage,
-                        "target_language": learningLanguage,
+                        "target_language": targetLanguage,
                         "length": length,
                         "user_ID":
                             FirebaseAuth.instance.currentUser!.uid.toString(),
@@ -155,11 +157,8 @@ class _CreateLessonState extends State<CreateLesson> {
                     if (response.statusCode == 200) {
                       final Map<String, dynamic> data =
                           jsonDecode(response.body);
-                      await FirebaseFirestore.instance
-                          .collection('jsonFiles')
-                          .add(data);
                       print(data);
-                      script = data;
+                      dialogue = data;
                     } else {
                       throw Exception('Failed to load API data');
                     }
@@ -170,7 +169,12 @@ class _CreateLessonState extends State<CreateLesson> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ConfirmScript(script: script),
+                        builder: (context) => ConfirmDialogue(
+                            dialogue: dialogue,
+                            nativeLanguage: nativeLanguage,
+                            targetLanguage: targetLanguage,
+                            languageLevel: languageLevel,
+                            length: length),
                       ),
                     );
                   }
