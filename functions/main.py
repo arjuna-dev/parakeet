@@ -1,36 +1,25 @@
-import os
-import random
 import json
 import openai
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
-
-
-import string
-from elevenlabs_api import elevenlabs_tts
 import datetime
-from lesson_generator import generate_lesson
 from enum import Enum
-import script_sequences as sequences
-import gcloud_text_to_speech_api as gcloud_tts
-from google_tts_language_codes import language_codes
 from prompt import prompt
+from json_parsers import parse_and_create_script, parse_and_convert_to_speech
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
 app = initialize_app()
 
 class GPT_MODEL(Enum):
-    GPT_4_TURBO_ = "gpt-4-1106-preview" # Supports JSON mode
-    GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this
+    GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
+    GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode.
+    GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
+
 
     # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
 
-gpt_model = GPT_MODEL.GPT_4_TURBO_V
-
-class TTS_PROVIDERS(Enum):
-    GOOGLE = 1
-    ELEVENLABS = 2
+gpt_model = GPT_MODEL.GPT_4_TURBO.value
 
 @https_fn.on_request(
     cors=options.CorsOptions(
@@ -43,25 +32,37 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
     response_db_id = request_data.get("response_db_id")
     dialogue = request_data.get("dialogue")
+    native_language = request_data.get("native_language")
+    target_language = request_data.get("target_language")
+    language_level = request_data.get("language_level")
+    length = request_data.get("length")
 
     if not all([response_db_id, dialogue]):
         return {'error': 'Missing required parameters in request data'}
 
-    response = {}
-    chatGPT_response = chatGPT_API_call(gpt_model, req)
+
+    # ChatGPT API call
+    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length)
+
     # storing chatGPT_response in Firestore
     db = firestore.client()
     doc_ref = db.collection('chatGPT_responses').collection(response_db_id)
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response).set(chatGPT_response)
-    
-    parse_and_convert_to_speech(chatGPT_response, "audio", tts_functions)
+
+    # Parse chatGPT_response and store in Firebase Storage
+    parse_and_convert_to_speech(chatGPT_response, "audio", 1)
+
+    # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
+
+    # Create final response with link to audio files and script
+    response = {}
     response["script"] = script
     response["link_to_audio_files"] = "https://storage.googleapis.com/..."
     return response
 
-def chatGPT_API_call(gpt_model, dialogue):
+def chatGPT_API_call(dialogue, native_language, target_language, language_level, length):
 
     client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
@@ -85,7 +86,6 @@ def chatGPT_API_call(gpt_model, dialogue):
         #TODO: log error and failed JSON in DB and ask the user to try again
         return
 
-    data["username"] = username
     return data
 
 def split_words(sentence):
