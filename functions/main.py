@@ -48,7 +48,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     db = firestore.client()
     doc_ref = db.collection('chatGPT_responses').collection(response_db_id)
     subcollection_ref = doc_ref.collection('all_breakdowns')
-    subcollection_ref.document().set(chatGPT_response).set(chatGPT_response)
+    subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
     parse_and_convert_to_speech(chatGPT_response, "audio", 1)
