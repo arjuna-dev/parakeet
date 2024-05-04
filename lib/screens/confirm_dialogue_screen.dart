@@ -84,7 +84,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                 try {
                   final response = await http.post(
                     Uri.parse(
-                        'https://us-central1-noble-descent-420612.cloudfunctions.net/chatGPT_API_call_0'),
+                        'https://us-central1-noble-descent-420612.cloudfunctions.net/full_API_workflow'), // need the function url here
                     headers: <String, String>{
                       'Content-Type': 'application/json; charset=UTF-8',
                       "Access-Control-Allow-Origin":
