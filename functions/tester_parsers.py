@@ -1,7 +1,7 @@
 import os
 import datetime
 from lesson_generator import generate_lesson
-from main import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVIDERS
+from json_parsers import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVIDERS
 
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
