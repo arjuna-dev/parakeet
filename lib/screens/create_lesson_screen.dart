@@ -123,6 +123,7 @@ class _CreateLessonState extends State<CreateLesson> {
               const SizedBox(height: 10),
               FloatingActionButton(
                 onPressed: () async {
+                  print("pressed");
                   showDialog(
                     context: context,
                     barrierDismissible: false,
@@ -136,7 +137,7 @@ class _CreateLessonState extends State<CreateLesson> {
                   try {
                     final response = await http.post(
                       Uri.parse(
-                          'https://us-central1-noble-descent-420612.cloudfunctions.net/chatGPT_API_call_0'),
+                          'https://us-central1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
                       headers: <String, String>{
                         'Content-Type': 'application/json; charset=UTF-8',
                         "Access-Control-Allow-Origin":
