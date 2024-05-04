@@ -51,7 +51,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response).set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
-    parse_and_convert_to_speech(chatGPT_response, "audio", 1)
+    parse_and_convert_to_speech(chatGPT_response, "audio", 1, native_language, target_language, dialogue)
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
