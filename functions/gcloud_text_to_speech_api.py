@@ -45,7 +45,7 @@ def synthesize_text(text, voice, output_path):
         print(f'Audio content written to file {output_path}.mp3')
 
     bucket_name = "all_audio_files"
-    blob_name = f"{output_path}.mp3"
+    blob_name = f"{output_path}"
 
     # Create a storage client
     client = storage.Client()
