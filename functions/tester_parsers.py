@@ -58,11 +58,11 @@ example_JSON = {
 
 # create a directory
 os.mkdir(f"other/test_{now}")
-directory = f"other/test_{now}"
+full_lesson_directory = f"other/test_{now}"
 
-new_audio_directory = f"{directory}/audio"
-parse_and_convert_to_speech(example_JSON, directory, TTS_PROVIDERS.ELEVENLABS)
+directory_for_new_audio = f"audio"
+parse_and_convert_to_speech(example_JSON, directory_for_new_audio, TTS_PROVIDERS.ELEVENLABS)
 script = parse_and_create_script(example_JSON)
 
 print(script)
-generate_lesson(script, directory, new_audio_directory)
+generate_lesson(script, full_lesson_directory, directory_for_new_audio)
