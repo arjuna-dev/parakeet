@@ -19,6 +19,7 @@ class GPT_MODEL(Enum):
 
 gpt_model = GPT_MODEL.GPT_4_TURBO.value
 
+# @storage_fn.on_object_finalized(timeout_sec=500)
 @https_fn.on_request(
     cors=options.CorsOptions(
       cors_origins=["*"],
@@ -28,14 +29,14 @@ gpt_model = GPT_MODEL.GPT_4_TURBO.value
 @https_fn.on_request()
 def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
-    response_db_id = request_data.get("response_db_id")
     dialogue = request_data.get("dialogue")
+    response_db_id = request_data.get("response_db_id")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
 
-    if not all([response_db_id, dialogue]):
+    if not all([dialogue, response_db_id, native_language, target_language, language_level, length]):
         return {'error': 'Missing required parameters in request data'}
 
 
