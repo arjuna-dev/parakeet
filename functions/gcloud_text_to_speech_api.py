@@ -48,10 +48,12 @@ def synthesize_text(text, voice, output_path):
     blob_name = f"{output_path}"
 
     # Create a storage client
-    client = storage.Client()
+    storage_client = storage.Client()
+    
 
     # Upload the audio file to the bucket
-    bucket = client.get_bucket(bucket_name)
+    bucket = storage_client.get_bucket(bucket_name)
+    bucket.reload(timeout=300)
     blob = bucket.blob(blob_name)
     blob.upload_from_filename(output_path)
     
