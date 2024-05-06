@@ -20,7 +20,7 @@ def choose_voice(language_code, gender, specific_voice=None): # specific_voice =
     return voice
 
 
-def synthesize_text(text, voice, output_path):
+def synthesize_text(text, voice, output_path, bucket_name="conversations_audio_files"):
     """Synthesizes speech from the input string of text."""
 
     client = texttospeech.TextToSpeechClient()
@@ -44,12 +44,6 @@ def synthesize_text(text, voice, output_path):
         # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
         print(f'Audio content written to file {output_path}')
 
-   
-        if output_path.startswith("narrator_"):
-            bucket_name = "narrator_audio_files"
-        else:
-            bucket_name = "conversations_audio_files"
-            
         blob_name = f"{output_path}"
 
         # Create a storage client
