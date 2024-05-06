@@ -40,6 +40,7 @@ dependencies:
   firebase_auth: ^4.19.2
   http: ^1.2.0
   google_sign_in: ^6.2.1
+  just_audio: ^0.9.37
 
 dev_dependencies:
   flutter_test:

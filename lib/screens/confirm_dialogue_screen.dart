@@ -118,7 +118,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FinalScript(script: script)),
+                        builder: (context) => FinalScript(
+                            script: script,
+                            responseDbId: widget.dialogue["response_db_id"])),
                   );
                 }
               },
