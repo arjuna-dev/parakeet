@@ -133,7 +133,7 @@ os.mkdir(f"other/test_{now}")
 full_lesson_directory = f"other/test_{now}"
 
 directory_for_new_audio = f"{full_lesson_directory}/audio"
-parse_and_convert_to_speech(example_JSON, directory_for_new_audio, TTS_PROVIDERS.ELEVENLABS.value, "English", "Spanish (Mexico)", example_dialogue)
+parse_and_convert_to_speech(example_JSON, directory_for_new_audio, TTS_PROVIDERS.ELEVENLABS.value, "English", "Spanish (Mexico)", example_dialogue, local_run=True)
 script = parse_and_create_script(example_JSON)
 
 print(script)

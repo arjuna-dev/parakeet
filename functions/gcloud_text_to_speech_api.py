@@ -20,8 +20,7 @@ def choose_voice(language_code, gender, specific_voice=None): # specific_voice =
     return voice
 
 
-def synthesize_text(text, voice, output_path, bucket_name="conversations_audio_files"):
-    """Synthesizes speech from the input string of text."""
+def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
 
     client = texttospeech.TextToSpeechClient()
 
@@ -39,24 +38,19 @@ def synthesize_text(text, voice, output_path, bucket_name="conversations_audio_f
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
 
-        # Print the URL of the uploaded audio file
-        # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
-        print(f'Audio content written to file {output_path}')
-
-        blob_name = f"{output_path}"
-
-        # Create a storage client
-        storage_client = storage.Client()
-        
-
-        # Upload the audio file to the bucket
-        bucket = storage_client.get_bucket(bucket_name)
-        bucket.reload(timeout=300)
-        blob = bucket.blob(blob_name)
-        blob.upload_from_filename(output_path)
-        
-        # Make the blob publicly accessible
-        blob.make_public()
+        if local_run:
+            return f"Audio content written to file {output_path}"
+        else:
+            # Upload the audio file to the bucket
+            blob_name = f"{output_path}"
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket(bucket_name)
+            bucket.reload(timeout=300)
+            blob = bucket.blob(blob_name)
+            blob.upload_from_filename(output_path)
+            
+            # Make the blob publicly accessible
+            blob.make_public()
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")

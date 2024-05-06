@@ -1,5 +1,5 @@
 import requests
-import re
+from google.cloud import storage
 
 #       ___                                   ___             __                
 #      /\_ \                                 /\_ \           /\ \               
@@ -55,12 +55,21 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
 
     # Check if the request was successful
     if response.ok:
-        # Open the output file in write-binary mode
-        with open(OUTPUT_PATH, "wb") as f:
-            # Read the response in chunks and write to the file
+        with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 f.write(chunk)
-        # Inform the user of success
-        print("Audio stream saved successfully.")
+        if local_run:
+            return f"Audio content written to file {output_path}"
+        else:
+            # Upload the audio file to the bucket
+            blob_name = f"{output_path}"
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket(bucket_name)
+            bucket.reload(timeout=300)
+            blob = bucket.blob(blob_name)
+            blob.upload_from_filename(output_path)
+            
+            # Make the blob publicly accessible
+            blob.make_public()
     else:
         print(response.text)
