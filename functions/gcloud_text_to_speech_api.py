@@ -24,7 +24,6 @@ def synthesize_text(text, voice, output_path, bucket_name="conversations_audio_f
     """Synthesizes speech from the input string of text."""
 
     client = texttospeech.TextToSpeechClient()
-    # print(client.list_voices())
 
     input_text = texttospeech.SynthesisInput(text=text)
 
