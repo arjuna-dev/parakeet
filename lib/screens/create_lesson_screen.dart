@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 // import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
+import 'package:auralearn/utils/google_tts_language_codes.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -22,9 +23,9 @@ class _CreateLessonState extends State<CreateLesson> {
 
   var keywords = '';
 
-  var nativeLanguage = '';
+  var nativeLanguage = 'English';
 
-  var targetLanguage = '';
+  var targetLanguage = 'German (Germany)';
 
   var length = '';
   var languageLevel = 'A1';
@@ -65,28 +66,44 @@ class _CreateLessonState extends State<CreateLesson> {
                 },
               ),
               const SizedBox(height: 10),
-              TextField(
+              DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Native Language',
                 ),
+                value: nativeLanguage,
                 onChanged: (value) {
                   setState(() {
-                    nativeLanguage = value;
+                    nativeLanguage = value.toString();
                   });
                 },
+                items: <String>['English']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 10),
-              TextField(
+              DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Learning Language',
                 ),
+                value: targetLanguage,
                 onChanged: (value) {
                   setState(() {
-                    targetLanguage = value;
+                    targetLanguage = value.toString();
                   });
                 },
+                items: languageCodes.keys
+                    .map<DropdownMenuItem<String>>((String key) {
+                  return DropdownMenuItem<String>(
+                    value: key,
+                    child: Text(key),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 10),
               TextField(
