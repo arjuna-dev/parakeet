@@ -45,10 +45,10 @@ def synthesize_text(text, voice, output_path):
         print(f'Audio content written to file {output_path}')
 
    
-        if "narrator_" in output_path:
+        if output_path.startswith("narrator_"):
             bucket_name = "narrator_audio_files"
         else:
-            bucket_name = "all_audio_files"
+            bucket_name = "conversations_audio_files"
             
         blob_name = f"{output_path}"
 

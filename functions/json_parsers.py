@@ -12,7 +12,7 @@ class TTS_PROVIDERS(Enum):
     GOOGLE = 1
     ELEVENLABS = 2
 
-def parse_and_create_script(data):
+def parse_and_create_script (data):
     script = []
 
     index = random.randint(0, len(sequences.intro_sequences) - 1)
