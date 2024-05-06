@@ -42,7 +42,7 @@ def synthesize_text(text, voice, output_path):
 
         # Print the URL of the uploaded audio file
         # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
-        print(f'Audio content written to file {output_path}.mp3')
+        print(f'Audio content written to file {output_path}')
 
     bucket_name = "all_audio_files"
     blob_name = f"{output_path}"

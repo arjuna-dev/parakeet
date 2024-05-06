@@ -54,6 +54,10 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
+    
+    #save script to Firestore
+    subcollection_ref = doc_ref.collection('scripts')
+    subcollection_ref.document().set(script)
 
     # Create final response with link to audio files and script
     response = {}
