@@ -43,9 +43,10 @@ def synthesize_text(text, voice, output_path):
         # Print the URL of the uploaded audio file
         # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
         print(f'Audio content written to file {output_path}')
+        filename = output_path.split("/")[-1]
 
    
-        if output_path.startswith("narrator_"):
+        if filename.startswith("narrator_"):
             bucket_name = "narrator_audio_files"
         else:
             bucket_name = "conversations_audio_files"
