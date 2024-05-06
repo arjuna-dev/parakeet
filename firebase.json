@@ -3,22 +3,13 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": [
-        "venv",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
+      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log"],
+      "timeoutSeconds": 300
     },
     {
       "source": "function_1",
       "codebase": "function_1",
-      "ignore": [
-        "venv",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
+      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log"]
     }
   ],
   "flutter": {
