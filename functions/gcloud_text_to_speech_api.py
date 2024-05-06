@@ -44,21 +44,26 @@ def synthesize_text(text, voice, output_path):
         # print(f"Audio file uploaded to: gs://{bucket_name}/{blob_name}")
         print(f'Audio content written to file {output_path}')
 
-    bucket_name = "all_audio_files"
-    blob_name = f"{output_path}"
+   
+        if "narrator_" in output_path:
+            bucket_name = "narrator_audio_files"
+        else:
+            bucket_name = "all_audio_files"
+            
+        blob_name = f"{output_path}"
 
-    # Create a storage client
-    storage_client = storage.Client()
-    
+        # Create a storage client
+        storage_client = storage.Client()
+        
 
-    # Upload the audio file to the bucket
-    bucket = storage_client.get_bucket(bucket_name)
-    bucket.reload(timeout=300)
-    blob = bucket.blob(blob_name)
-    blob.upload_from_filename(output_path)
-    
-    # Make the blob publicly accessible
-    blob.make_public()
+        # Upload the audio file to the bucket
+        bucket = storage_client.get_bucket(bucket_name)
+        bucket.reload(timeout=300)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(output_path)
+        
+        # Make the blob publicly accessible
+        blob.make_public()
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")
