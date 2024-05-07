@@ -73,3 +73,6 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
             blob.make_public()
     else:
         print(response.text)
+
+# narrator_voice = "GoZIEyk9z3H2szw545o8"
+# elevenlabs_tts("German", narrator_voice, "target_language.mp3", local_run=True)
