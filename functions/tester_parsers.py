@@ -132,9 +132,14 @@ example_dialogue = {"all_turns":[{"native_language":"Albert, I am curious to bet
 os.mkdir(f"other/test_{now}")
 full_lesson_directory = f"other/test_{now}"
 
-directory_for_new_audio = f"{full_lesson_directory}/audio"
-parse_and_convert_to_speech(example_JSON, directory_for_new_audio, TTS_PROVIDERS.ELEVENLABS.value, "English", "Spanish (Mexico)", example_dialogue, local_run=True)
+audio_files_directory = f"other/Bahy_05.07.09.11.04/audio_elevenlabs"
+os.mkdir(f"{audio_files_directory}")
+
+parse_and_convert_to_speech(example_JSON, audio_files_directory, TTS_PROVIDERS.ELEVENLABS.value, "English", "German", example_dialogue, local_run=True, use_concurrency=False)
 script = parse_and_create_script(example_JSON)
 
 print(script)
-generate_lesson(script, full_lesson_directory, directory_for_new_audio)
+
+narrator_audio_files_directory = "other/narrator_audio_files"
+save_directory = f"other/Bahy_05.07.09.11.04"
+generate_lesson(script, save_directory, audio_files_directory, narrator_audio_files_directory)
