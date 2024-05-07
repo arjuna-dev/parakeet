@@ -3,8 +3,7 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log"],
-      "timeoutSeconds": 300
+      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log"]
     },
     {
       "source": "function_1",
