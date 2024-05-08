@@ -2,13 +2,13 @@ import json
 import openai
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
-from firebase_functions.params import StringParam
 import datetime
 from enum import Enum
 from prompt import prompt
+import os
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
 
-OPEN_AI_API_KEY = StringParam("OPEN_AI_API_KEY")
+OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
