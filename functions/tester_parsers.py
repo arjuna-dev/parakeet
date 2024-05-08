@@ -129,12 +129,17 @@ example_JSON = {
 
 example_dialogue = {"all_turns":[{"native_language":"Albert, I am curious to better understand how you conceived the theory of relativity.","speaker":"speaker_1","target_language":"Albert, tengo curiosidad por entender mejor c\u00f3mo concebiste la teor\u00eda de la relatividad.","turn_nr":"1"},{"native_language":"The basic idea is that space and time are not absolute, but depend on the motion of the observer.","speaker":"speaker_2","target_language":"La idea b\u00e1sica es que el espacio y el tiempo no son absolutos, sino que dependen del movimiento del observador.","turn_nr":"2"},{"native_language":"So, does this suggest that reality can vary for different observers?","speaker":"speaker_1","target_language":"Entonces, \u00bfesto sugiere que la realidad puede variar para diferentes observadores?","turn_nr":"3"},{"native_language":"Exactly, each observer can experience different versions of space-time depending on their state of motion.","speaker":"speaker_2","target_language":"Exactamente, cada observador puede experimentar diferentes versiones del espacio-tiempo dependiendo de su estado de movimiento.","turn_nr":"4"},{"native_language":"How has this discovery influenced current physics?","speaker":"speaker_1","target_language":"\u00bfC\u00f3mo influy\u00f3 este descubrimiento en la f\u00edsica actual?","turn_nr":"5"},{"native_language":"It has completely transformed our understanding of the universe, allowing us to explore everything from black holes to string theories.","speaker":"speaker_2","target_language":"Ha transformado completamente nuestra comprensi\u00f3n del universo, permiti\u00e9ndonos explorar desde agujeros negros hasta teor\u00edas de cuerdas.","turn_nr":"6"}],"speakers":{"speaker_1":{"gender":"m","name":"Shiva"},"speaker_2":{"gender":"m","name":"Albert Einstein"}},"title":"Conversaci\u00f3n sobre la Relatividad","user_ID":"2"}
 # create a directory
-os.mkdir(f"other/test_{now}")
-full_lesson_directory = f"other/test_{now}"
+# os.mkdir(f"other/test_{now}")
+# full_lesson_directory = f"other/test_{now}"
 
-directory_for_new_audio = f"{full_lesson_directory}/audio"
-parse_and_convert_to_speech(example_JSON, directory_for_new_audio, TTS_PROVIDERS.ELEVENLABS.value, "English", "Spanish (Mexico)", example_dialogue)
+audio_files_directory = f"other/Bahy_05.07.09.11.04/audio_elevenlabs"
+os.mkdir(f"{audio_files_directory}")
+
+parse_and_convert_to_speech(example_JSON, audio_files_directory, TTS_PROVIDERS.ELEVENLABS.value, "English", "German", example_dialogue, local_run=True, use_concurrency=False)
 script = parse_and_create_script(example_JSON)
 
 print(script)
-generate_lesson(script, full_lesson_directory, directory_for_new_audio)
+
+narrator_audio_files_directory = "other/narrator_audio_files"
+save_directory = f"other/Bahy_05.07.09.11.04"
+generate_lesson(script, save_directory, audio_files_directory, narrator_audio_files_directory)
