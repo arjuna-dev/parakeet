@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
-  final Map<String, dynamic> script;
+  final List script;
   final String responseDbId;
 
   const AudioPlayerScreen(
@@ -30,22 +30,24 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<AudioSource> sources = [];
     try {
       // Iterate over the script to create sources in order
-      for (var fileName in widget.script["script"]) {
-        if (fileName == 'one_second_break') {
-          sources.add(SilenceAudioSource(duration: const Duration(seconds: 1)));
-        } else if (fileName == 'five_second_break') {
-          sources.add(SilenceAudioSource(duration: const Duration(seconds: 5)));
+      for (var fileName in widget.script) {
+        String fileUrl;
+        if (fileName.startsWith("narrator_") ||
+            fileName == "one_second_break" ||
+            fileName == "five_second_break") {
+          fileUrl =
+              "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
         } else {
-          String fileUrl;
-          if (fileName.startsWith("narrator_")) {
-            fileUrl =
-                "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
-          } else {
-            fileUrl =
-                "https://storage.googleapis.com/conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
-          }
-          sources.add(AudioSource.uri(Uri.parse(fileUrl)));
+          fileUrl =
+              "https://storage.googleapis.com/conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
         }
+
+        // Skip iteration if fileUrl is not a valid link
+        if (!Uri.parse(fileUrl).isAbsolute) {
+          continue;
+        }
+
+        sources.add(AudioSource.uri(Uri.parse(fileUrl)));
       }
 
       playlist = ConcatenatingAudioSource(children: sources);
