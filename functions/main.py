@@ -1,7 +1,7 @@
 import json
-import openai
-from firebase_functions import https_fn, options
-from firebase_admin import initialize_app, firestore
+import openai # type: ignore
+from firebase_functions import https_fn, options # type: ignore
+from firebase_admin import initialize_app, firestore  # type: ignore
 import datetime
 from enum import Enum
 from prompt import prompt

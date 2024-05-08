@@ -62,7 +62,7 @@ class MyApp extends StatelessWidget {
             );
           case '/library':
             return MaterialPageRoute(
-              builder: (context) => const Library(),
+              builder: (context) => Library(),
             );
           default:
             return null;

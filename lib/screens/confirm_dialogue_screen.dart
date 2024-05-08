@@ -119,7 +119,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     context,
                     MaterialPageRoute(
                         builder: (context) => AudioPlayerScreen(
-                            script: script,
+                            script: script['script'],
                             responseDbId: widget.dialogue["response_db_id"])),
                   );
                 }
