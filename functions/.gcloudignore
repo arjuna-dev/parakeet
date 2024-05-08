@@ -1,0 +1,6 @@
+_local_tester_parsers.py
+_local_tester_chatGPT.py
+_local_requirements-dev.txt
+_local_narrator_pool.json
+_local_narrator_audio_gen.py
+_local_lesson_generator.py
