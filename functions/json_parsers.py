@@ -62,7 +62,7 @@ def language_to_language_code(language):
     else:
         return "Language not found"
 
-def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata):
+def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata, local_run=False, use_concurrency=True):
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
         speaker_1_gender = metadata["speakers"]["speaker_1"]["gender"].lower()
@@ -88,59 +88,67 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
     # add a subdirectory to the directory
     os.makedirs(f"{directory}", exist_ok=True)
 
-    tts_function(title, narrator_voice, f"{directory}/title.mp3")
+    tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run)
+    tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run)
+    tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run)
+
+
+    futures = []
+    executor = concurrent.futures.ThreadPoolExecutor() if use_concurrency else None
+
+    def execute_task(func, *args):
+        nonlocal executor
+        if use_concurrency:
+            if executor._shutdown:
+                executor = concurrent.futures.ThreadPoolExecutor()
+            return executor.submit(func, *args)
+        else:
+            return func(*args)  # Execute the function directly
 
     # Process speaker names
     for speaker_key, speaker_info in metadata["speakers"].items():
         text = speaker_info["name"]
         speaker = f"speakers_{speaker_key}_name"
+        futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{speaker}.mp3", local_run))
 
-        # Process speaker names
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            speaker_files = []
-            for speaker_key, speaker_info in metadata["speakers"].items():
-                text = speaker_info["name"]
-                speaker = f"speakers_{speaker_key}_name"
-                speaker_files.append(executor.submit(tts_function, text, narrator_voice, f"{directory}/{speaker}.mp3"))
-            for speaker_file in concurrent.futures.as_completed(speaker_files):
-                result = speaker_file.result()
+    for i, sentence in enumerate(data["dialogue"]):
+        current_speaker_voice = speaker_1_voice if i % 2 == 0 else speaker_2_voice
+        text = sentence["native_language"]
+        native = f"dialogue_{i}_native_language"
+        futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native}.mp3", local_run))
+        text = sentence["target_language"]
+        target = f"dialogue_{i}_target_language"
+        futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target}.mp3", local_run))
+        for key in ["narrator_explanation", "narrator_fun_fact"]:
+            text = sentence[key]
+            narrator = f"dialogue_{i}_{key}"
+            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator}.mp3", local_run))
+        # Process split_sentence items
+        for j, split_sentence in enumerate(sentence["split_sentence"]):
+            text = split_sentence["narrator_translation"]
+            fun_fact = f"dialogue_{i}_split_sentence_{j}_narrator_translation"
+            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{fun_fact}.mp3", local_run))
+            text = split_sentence["native_language"]
+            native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
+            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
+            text = split_sentence["target_language"]
+            target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
+            futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
+            for index, word in enumerate(split_sentence['words']):
+                word_text = word["target_language"]
+                narrator_translation_text = word["narrator_translation"]
+                word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
+                futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
+                futures.append(execute_task(tts_function, narrator_translation_text, narrator_voice, f"{directory}/{narrator_translation_file_name}.mp3", local_run))
 
-        # Process each turn in the dialogue
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            dialogue_files = []
-            for i, sentence in enumerate(data["dialogue"]):
-                current_speaker_voice = speaker_1_voice if i % 2 == 0 else speaker_2_voice
-                text = sentence["native_language"]
-                native = f"dialogue_{i}_native_language"
-                dialogue_files.append(executor.submit(tts_function, text, narrator_voice, f"{directory}/{native}.mp3"))
-                text = sentence["target_language"]
-                target = f"dialogue_{i}_target_language"
-                dialogue_files.append(executor.submit(tts_function, text, current_speaker_voice, f"{directory}/{target}.mp3"))
-                for key in ["narrator_explanation", "narrator_fun_fact"]:
-                    text = sentence[key]
-                    narrator = f"dialogue_{i}_{key}"
-                    dialogue_files.append(executor.submit(tts_function, text, narrator_voice, f"{directory}/{narrator}.mp3"))
-                # Process split_sentence items
-                for j, split_sentence in enumerate(sentence["split_sentence"]):
-                    text = split_sentence["narrator_translation"]
-                    fun_fact = f"dialogue_{i}_split_sentence_{j}_narrator_translation"
-                    dialogue_files.append(executor.submit(tts_function, text, narrator_voice, f"{directory}/{fun_fact}.mp3"))
-                    text = split_sentence["native_language"]
-                    native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
-                    dialogue_files.append(executor.submit(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3"))
-                    text = split_sentence["target_language"]
-                    target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
-                    dialogue_files.append(executor.submit(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3"))
-                    for index, word in enumerate(split_sentence['words']):
-                        word_text = word["target_language"]
-                        narrator_translation_text = word["narrator_translation"]
-                        word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                        narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
-                        dialogue_files.append(executor.submit(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3"))
-                        dialogue_files.append(executor.submit(tts_function, narrator_translation_text, narrator_voice, f"{directory}/{narrator_translation_file_name}.mp3"))
+        if use_concurrency:
+            # If concurrency is used, wait for all futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+            executor.shutdown()
+        else:
+            result = "Parsed without concurrency"
 
-        for dialogue_file in concurrent.futures.as_completed(dialogue_files):
-            result = dialogue_file.result()
-            
     print (result)
 
