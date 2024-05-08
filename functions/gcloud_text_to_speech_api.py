@@ -40,6 +40,7 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
 
         if local_run:
             return f"Audio content written to file {output_path}"
+
         else:
             # Upload the audio file to the bucket
             blob_name = f"{output_path}"
