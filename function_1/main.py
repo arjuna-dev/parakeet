@@ -1,9 +1,12 @@
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
+from firebase_functions.params import StringParam
 import openai
 import json
 from prompt import prompt
 from enum import Enum
+
+OPEN_AI_API_KEY = StringParam("OPEN_AI_API_KEY")
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode. Preview model.
@@ -62,7 +65,7 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     return chatGPT_response
 
 def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords):
-    client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
+    client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
     # Create the chat completion
     completion = client.chat.completions.create(
