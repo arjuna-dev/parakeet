@@ -2,10 +2,13 @@ import json
 import openai
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
+from firebase_functions.params import StringParam
 import datetime
 from enum import Enum
 from prompt import prompt
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
+
+OPEN_AI_API_KEY = StringParam("OPEN_AI_API_KEY")
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
@@ -68,7 +71,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
 def chatGPT_API_call(dialogue, native_language, target_language, language_level, length):
 
-    client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
+    client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
     # Create the chat completion
     completion = client.chat.completions.create(
