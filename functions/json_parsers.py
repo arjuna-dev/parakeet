@@ -97,7 +97,10 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
     executor = concurrent.futures.ThreadPoolExecutor() if use_concurrency else None
 
     def execute_task(func, *args):
+        nonlocal executor
         if use_concurrency:
+            if executor._shutdown:
+                executor = concurrent.futures.ThreadPoolExecutor()
             return executor.submit(func, *args)
         else:
             return func(*args)  # Execute the function directly
