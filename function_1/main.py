@@ -1,12 +1,12 @@
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
-from firebase_functions.params import StringParam
 import openai
 import json
 from prompt import prompt
 from enum import Enum
+import os
 
-OPEN_AI_API_KEY = StringParam("OPEN_AI_API_KEY")
+OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode. Preview model.

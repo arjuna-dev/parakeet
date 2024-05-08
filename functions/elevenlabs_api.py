@@ -1,6 +1,6 @@
 import requests
 from google.cloud import storage
-from firebase_functions.params import StringParam
+import os
 
 #       ___                                   ___             __                
 #      /\_ \                                 /\_ \           /\ \               
@@ -11,7 +11,7 @@ from firebase_functions.params import StringParam
 #  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
 
 
-ELEVENLABS_API_KEY = StringParam("ELEVENLABS_API_KEY")
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
