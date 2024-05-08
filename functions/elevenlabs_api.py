@@ -1,5 +1,6 @@
 import requests
 from google.cloud import storage
+from firebase_functions.params import StringParam
 
 #       ___                                   ___             __                
 #      /\_ \                                 /\_ \           /\ \               
@@ -10,7 +11,7 @@ from google.cloud import storage
 #  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
 
 
-XI_API_KEY = "b9a5cc8dfd7e9ffa3f8e7451f1713ae0"
+ELEVENLABS_API_KEY = StringParam("ELEVENLABS_API_KEY")
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
@@ -18,7 +19,7 @@ def get_voices():
 
   headers = {
     "Accept": "application/json",
-    "xi-api-key": XI_API_KEY,
+    "xi-api-key": ELEVENLABS_API_KEY,
     "Content-Type": "application/json"
   }
 
