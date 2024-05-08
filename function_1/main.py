@@ -41,7 +41,27 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length]):
         return {'error': 'Missing required parameters in request data'}
+    
+    chatGPT_response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords)
 
+    try:
+        chatGPT_response = json.loads(chatGPT_response)
+        # storing chatGPT_response in Firestore
+        db = firestore.client()
+        doc_ref = db.collection('chatGPT_responses').document()
+        subcollection_ref = doc_ref.collection('only_target_sentences')
+        subcollection_ref.document().set(chatGPT_response)
+    except Exception as e:
+        print(chatGPT_response)
+        print(f"Error parsing JSON response from chatGPT: {e}")
+        #TODO: log error and failed JSON in DB and ask the user to try again
+        return
+
+    chatGPT_response["response_db_id"] = doc_ref.id
+    chatGPT_response["user_ID"] = user_ID
+    return chatGPT_response
+
+def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords):
     client = openai.OpenAI(api_key='sk-proj-tSgG8JbXLbsQ3pTkVAnzT3BlbkFJxThD8az2IkfsWN6lodsM')
 
     # Create the chat completion
@@ -56,19 +76,5 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     )
 
     chatGPT_JSON_response = completion.choices[0].message.content
-    try:
-        data = json.loads(chatGPT_JSON_response)
-        # storing chatGPT_response in Firestore
-        db = firestore.client()
-        doc_ref = db.collection('chatGPT_responses').document()
-        subcollection_ref = doc_ref.collection('only_target_sentences')
-        subcollection_ref.document().set(data)
-    except Exception as e:
-        print(chatGPT_JSON_response)
-        print(f"Error parsing JSON response from chatGPT: {e}")
-        #TODO: log error and failed JSON in DB and ask the user to try again
-        return
 
-    data["response_db_id"] = doc_ref.id
-    data["user_ID"] = user_ID
-    return data
+    return chatGPT_JSON_response
