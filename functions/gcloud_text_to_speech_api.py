@@ -38,20 +38,22 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
 
-        if local_run:
-            return f"Audio content written to file {output_path}"
+    if local_run:
+        return f"Audio content written to file {output_path}"
 
-        else:
-            # Upload the audio file to the bucket
-            blob_name = f"{output_path}"
-            storage_client = storage.Client()
-            bucket = storage_client.get_bucket(bucket_name)
-            bucket.reload(timeout=300)
-            blob = bucket.blob(blob_name)
-            blob.upload_from_filename(output_path)
-            
-            # Make the blob publicly accessible
-            blob.make_public()
+    else:
+        # Upload the audio file to the bucket
+        blob_name = f"{output_path}"
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        try:
+            blob.upload_from_filename(output_path, timeout = 600)
+        except Exception as e:
+            print(f'Error uploading file: {e}')    
+        
+        # Make the blob publicly accessible
+        blob.make_public()
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")
