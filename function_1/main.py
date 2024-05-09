@@ -1,10 +1,13 @@
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
+import firebase_functions.options as options
 import openai
 import json
 from prompt import prompt
 from enum import Enum
 import os
+
+options.set_global_options(region="europe-west1", memory=256, timeout_sec=501)
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
