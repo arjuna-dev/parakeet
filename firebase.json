@@ -3,12 +3,12 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log", "other"]
+      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log", "other", "_local_*"]
     },
     {
       "source": "function_1",
       "codebase": "function_1",
-      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+      "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log", "other"]
     }
   ],
   "flutter": {
