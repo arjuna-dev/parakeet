@@ -11,7 +11,7 @@ for section_key, section in narrator_pool.items():
     for key, value in section.items():
         file_name = f"{section_key}_{key}.mp3"
         # elevenlabs_tts(value, f"audio/{file_name}")
-        gcloud_tts.synthesize_text(value, narrator_voice, f"google_tts/narrator_english/{file_name}", local_run=True, bucket="narrator_audio_files")
+        gcloud_tts.synthesize_text(value, narrator_voice, f"google_tts/narrator_english/{file_name}",  bucket_name="narrator_audio_files")
 
 # narrator_voice = "GoZIEyk9z3H2szw545o8" 
 # elevenlabs_tts("Text to generate",narrator_voice, f"audio/{"file_name"}.mp3")

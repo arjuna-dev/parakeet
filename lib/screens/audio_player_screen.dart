@@ -36,18 +36,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             fileName == "one_second_break" ||
             fileName == "five_second_break") {
           fileUrl =
-              "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+              "https://storage.cloud.google.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
         } else {
           fileUrl =
-              "https://storage.googleapis.com/conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
+              "https://storage.cloud.google.com/conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
         }
 
         // Skip iteration if fileUrl is not a valid link
         if (!Uri.parse(fileUrl).isAbsolute) {
           continue;
         }
-
-        sources.add(AudioSource.uri(Uri.parse(fileUrl)));
+        Uri uri = Uri.parse(fileUrl);
+        print('Source URI: $uri');
+        sources.add(ProgressiveAudioSource(Uri.parse(fileUrl)));
       }
 
       playlist = ConcatenatingAudioSource(children: sources);
@@ -97,6 +98,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (index != null && index < playlist.children.length) {
         setState(() {
           currentTrack = playlist.children[index] as String;
+          print(currentTrack);
         });
       }
     });
