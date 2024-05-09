@@ -1,12 +1,15 @@
-import json
-import openai
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
+import firebase_functions.options as options
+import json
+import openai
 import datetime
 from enum import Enum
 from prompt import prompt
 import os
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
+
+options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
