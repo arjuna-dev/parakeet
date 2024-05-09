@@ -38,7 +38,7 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
 
     headers = {
     "Accept": "application/json",
-    "xi-api-key": XI_API_KEY
+    "xi-api-key": ELEVENLABS_API_KEY
     }
 
     data = {
