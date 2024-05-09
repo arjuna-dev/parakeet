@@ -154,7 +154,7 @@ class _CreateLessonState extends State<CreateLesson> {
                   try {
                     final response = await http.post(
                       Uri.parse(
-                          'https://us-central1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
+                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
                       headers: <String, String>{
                         'Content-Type': 'application/json; charset=UTF-8',
                         "Access-Control-Allow-Origin":
