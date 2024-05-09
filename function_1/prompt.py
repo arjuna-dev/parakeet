@@ -9,7 +9,8 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The more advanced language levels could have more than one sentence per turn. The main original dialogue happens in the target_language, the translations of it should be as literal as possible. Skip introductions between speakers unless specified and go straight to the topic of conversation. With the following data as an example enclosed in || and ||:
+The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The more advanced language levels could have more than one sentence per turn. The main original dialogue happens in the target_language, the translations of it should be as literal as possible. Skip introductions between speakers unless specified and go straight to the topic of conversation. With the following data as an example enclosed in double vertical lines (||):
+
 ||
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
 "keywords": ["discrimination", "patience"],
@@ -17,6 +18,7 @@ The keywords should be used in the dialogue if they are provided. If there are s
 "target_language": "Spanish",
 "language_level": "C2",
 ||
+
 You would generate the following JSON enclosed in triple equals symbols (===):
 
 JSON:
@@ -26,7 +28,7 @@ JSON:
     "speakers": {{
         "speaker_1":{{ "name": "Mateo", "gender": "m" }},
         "speaker_2": {{ "name": "Shankaracharya", "gender": "m" }}
-        }}
+        }},
     "all_turns": [
         {{
             "target_language": "Shankaracharya, \u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
