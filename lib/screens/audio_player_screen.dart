@@ -34,7 +34,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initPlaylist() async {
     List<Future<AudioSource?>> futureSources =
         widget.script.map((fileName) async {
-      String fileUrl = await _constructUrl(fileName);
+      List<dynamic> urlData = await _constructUrl(fileName);
+      String fileUrl = urlData[0];
+      Duration duration =
+          Duration(seconds: int.parse(urlData[1].split('.')[0]));
+      totalDuration += duration;
+      print(totalDuration);
       if (!Uri.parse(fileUrl).isAbsolute) return null;
       return ProgressiveAudioSource(Uri.parse(fileUrl));
     }).toList();
@@ -50,17 +55,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // catch load errors: 404, invalid url ...
       print("An error occurred while loading audio source: $e");
     } // This sets the audio source and prepares it for playback.
-    player.durationStream.listen((duration) {
-      if (duration != null) {
-        setState(() {
-          totalDuration = duration;
-        });
-      }
-      print(totalDuration);
-    });
   }
 
-  Future<String> _constructUrl(String fileName) async {
+  Future<List> _constructUrl(String fileName) async {
     String filePath;
     if (fileName.startsWith("narrator_") ||
         fileName == "one_second_break" ||
@@ -77,11 +74,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       Reference ref = FirebaseStorage.instance.ref().child(filePath);
       // Get the download URL
       String fileUrl = await ref.getDownloadURL();
-      print('File URL: $fileUrl'); // Add this line
-      return fileUrl;
+      final metadata = await ref.getMetadata();
+
+      return [fileUrl, metadata.customMetadata!['duration']];
     } catch (e) {
       print("Failed to get file URL: $e");
-      return '';
+      return ["", ""];
     }
   }
 
@@ -117,7 +115,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 children: [
                   Slider(
                     min: 0.0,
-                    max: positionData.duration.inMilliseconds.toDouble(),
+                    max: totalDuration.inMilliseconds.toDouble(),
                     value: positionData.position.inMilliseconds
                         .clamp(0.0,
                             positionData.duration.inMilliseconds.toDouble())
