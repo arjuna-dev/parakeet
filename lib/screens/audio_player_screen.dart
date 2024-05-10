@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script;
@@ -31,14 +32,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
-    List<AudioSource> sources = widget.script
-        .map((fileName) {
-          String fileUrl = _constructUrl(fileName);
-          if (!Uri.parse(fileUrl).isAbsolute) return null;
-          return ProgressiveAudioSource(Uri.parse(fileUrl));
-        })
-        .whereType<AudioSource>()
-        .toList();
+    List<Future<AudioSource?>> futureSources =
+        widget.script.map((fileName) async {
+      String fileUrl = await _constructUrl(fileName);
+      if (!Uri.parse(fileUrl).isAbsolute) return null;
+      return ProgressiveAudioSource(Uri.parse(fileUrl));
+    }).toList();
+
+    List<AudioSource> sources =
+        (await Future.wait(futureSources)).whereType<AudioSource>().toList();
 
     playlist = ConcatenatingAudioSource(children: sources);
 
@@ -58,13 +60,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
-  String _constructUrl(String fileName) {
+  Future<String> _constructUrl(String fileName) async {
+    String filePath;
     if (fileName.startsWith("narrator_") ||
         fileName == "one_second_break" ||
         fileName == "five_second_break") {
-      return "https://storage.cloud.google.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+      filePath =
+          "gs://narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else {
-      return "https://storage.cloud.google.com/conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
+      filePath =
+          "gs://conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
+    }
+
+    try {
+      // Get the reference to the file in Firebase Storage
+      Reference ref = FirebaseStorage.instance.ref().child(filePath);
+      // Get the download URL
+      String fileUrl = await ref.getDownloadURL();
+      print('File URL: $fileUrl'); // Add this line
+      return fileUrl;
+    } catch (e) {
+      print("Failed to get file URL: $e");
+      return '';
     }
   }
 
