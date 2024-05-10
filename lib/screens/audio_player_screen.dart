@@ -110,7 +110,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     },
                   ),
                   Text(
-                    "${formatDuration(positionData!.position)} / ${formatDuration(positionData.duration)}",
+                    "${formatDuration(positionData.position)} / ${formatDuration(positionData.duration)}",
                   ),
                 ],
               );
