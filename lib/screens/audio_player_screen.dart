@@ -42,8 +42,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     playlist = ConcatenatingAudioSource(children: sources);
 
-    player.setAudioSource(
-        playlist); // This sets the audio source and prepares it for playback.
+    try {
+      await player.setAudioSource(playlist);
+    } catch (e) {
+      // catch load errors: 404, invalid url ...
+      print("An error occurred while loading audio source: $e");
+    } // This sets the audio source and prepares it for playback.
     player.durationStream.listen((duration) {
       if (duration != null) {
         setState(() {
@@ -89,20 +93,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             stream: _positionDataStream,
             builder: (context, snapshot) {
               final positionData = snapshot.data;
+              if (positionData == null) {
+                return const CircularProgressIndicator();
+              }
               return Column(
                 children: [
-                  if (positionData != null)
-                    Slider(
-                      min: 0.0,
-                      max: positionData.duration.inMilliseconds.toDouble(),
-                      value: positionData.position.inMilliseconds
-                          .clamp(0.0,
-                              positionData.duration.inMilliseconds.toDouble())
-                          .toDouble(),
-                      onChanged: (value) {
-                        player.seek(Duration(milliseconds: value.toInt()));
-                      },
-                    ),
+                  Slider(
+                    min: 0.0,
+                    max: positionData.duration.inMilliseconds.toDouble(),
+                    value: positionData.position.inMilliseconds
+                        .clamp(0.0,
+                            positionData.duration.inMilliseconds.toDouble())
+                        .toDouble(),
+                    onChanged: (value) {
+                      player.seek(Duration(milliseconds: value.toInt()));
+                    },
+                  ),
                   Text(
                     "${formatDuration(positionData!.position)} / ${formatDuration(positionData.duration)}",
                   ),
@@ -161,7 +167,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.seek(Duration.zero);
     setState(() {
       isPlaying = false;
-      currentTrack = widget.script[0];
+      //currentTrack = widget.script[0];
     });
   }
 
