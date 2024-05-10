@@ -42,6 +42,7 @@ dependencies:
   google_sign_in: ^6.2.1
   just_audio: ^0.9.37
   rxdart: ^0.27.7
+  firebase_storage: ^11.7.5
 
 dev_dependencies:
   flutter_test:
