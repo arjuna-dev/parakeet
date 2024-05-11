@@ -109,7 +109,7 @@ def chunk_sequence_1(narrator_fun_fact, native_language, target_language, word_o
             "narrator_navigation_phrases_11", #It means
             native_language,
             "one_second_break",
-            narrator_fun_fact,
+            *narrator_fun_fact,
             "narrator_repetition_phrases_4",
             target_language,
             "five_second_break",
@@ -137,7 +137,7 @@ def chunk_sequence_2(narrator_fun_fact, native_language, target_language, word_o
             "narrator_navigation_phrases_11", #It means
             native_language,
             "one_second_break",
-            narrator_fun_fact,
+            *narrator_fun_fact,
             "narrator_repetition_phrases_5", #Try to echo what they say. Say it out loud.
             target_language,
             "five_second_break",
@@ -165,7 +165,7 @@ def chunk_sequence_3(narrator_fun_fact, native_language, target_language, word_o
             "narrator_navigation_phrases_11", #It means
             native_language,
             "one_second_break",
-            narrator_fun_fact,
+            *narrator_fun_fact,
             "narrator_repetition_phrases_4", #Listen and repeat
             target_language,
             "five_second_break",
@@ -200,7 +200,7 @@ def chunk_sequence_3rep(narrator_fun_fact, native_language, target_language, wor
             "five_second_break",
             target_language,
             "five_second_break",
-            narrator_fun_fact,
+            *narrator_fun_fact,
             "narrator_repetition_phrases_4",
             target_language,
             "five_second_break",
@@ -230,7 +230,7 @@ def chunk_sequence_3rep_new(narrator_fun_fact, native_language, target_language,
             "narrator_navigation_phrases_11", #It means
             native_language,
             "one_second_break",
-            narrator_fun_fact,
+            *narrator_fun_fact,
             "narrator_repetition_phrases_12_0", #Repeat the phrase
             target_language,
             "five_second_break",
@@ -243,7 +243,7 @@ chunk_sequences.append(chunk_sequence_3rep_new)
 def words_2_reps(word_objects):
     script_part = []
     for word_object in word_objects:
-        script_part.append(word_object["translation"])
+        script_part.extend(word_object["translation"])
         "narrator_repetition_phrases_4"
         script_part.append(word_object["word"])
         script_part.append("five_second_break")
@@ -254,7 +254,7 @@ def words_2_reps(word_objects):
 def words_3_reps(word_objects):
     script_part = []
     for word_object in word_objects:
-        script_part.append(word_object["translation"])
+        script_part.extend(word_object["translation"])
         "narrator_repetition_phrases_4"
         script_part.append(word_object["word"])
         script_part.append("five_second_break")
