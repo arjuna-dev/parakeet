@@ -1,5 +1,6 @@
 import requests
 from google.cloud import storage
+from utilities import is_running_locally
 import os
 
 #       ___                                   ___             __                
@@ -11,7 +12,14 @@ import os
 #  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
 
 
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+if is_running_locally():
+    from dotenv import load_dotenv
+    load_dotenv()
+    ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
+else:
+    ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+
+assert ELEVENLABS_API_KEY, "ELEVENLABS_API_KEY is not set in the environment variables"
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
@@ -38,7 +46,7 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
 
     headers = {
     "Accept": "application/json",
-    "xi-api-key": XI_API_KEY
+    "xi-api-key": ELEVENLABS_API_KEY
     }
 
     data = {
@@ -52,25 +60,26 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
         }
     }
 
+    if os.path.exists(output_path):
+        print(f"File {output_path} already exists")
+        return
+
     response = requests.post(tts_url, headers=headers, json=data, stream=True)
 
-    # Check if the request was successful
     if response.ok:
         with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 f.write(chunk)
         if local_run:
-            return f"Audio content written to file {output_path}"
+            print(f"Audio content written to file {output_path}")
+            return
         else:
-            # Upload the audio file to the bucket
             blob_name = f"{output_path}"
             storage_client = storage.Client()
             bucket = storage_client.get_bucket(bucket_name)
             bucket.reload(timeout=300)
             blob = bucket.blob(blob_name)
             blob.upload_from_filename(output_path)
-            
-            # Make the blob publicly accessible
             blob.make_public()
     else:
         print(response.text)

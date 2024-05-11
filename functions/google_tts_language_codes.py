@@ -17,6 +17,7 @@ language_codes = {
 "German (Germany)": "de-DE",
 "Greek (Greece)":"el-GR",
 "Hindi (India)":"hi-IN",
+"Hungarian (Hungary)": "hu-HU",
 "Italian (Italy)": "it-IT",
 "Japanese (Japan)": "ja-JP",
 "Korean (South Korea)": "ko-KR",
