@@ -58,6 +58,10 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
         }
     }
 
+    if os.path.exists(output_path):
+        print(f"File {output_path} already exists")
+        return
+
     response = requests.post(tts_url, headers=headers, json=data, stream=True)
 
     # Check if the request was successful
