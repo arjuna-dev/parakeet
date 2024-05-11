@@ -7,6 +7,7 @@ from elevenlabs_api import elevenlabs_tts
 import gcloud_text_to_speech_api as gcloud_tts
 from enum import Enum
 import concurrent.futures
+from elevenlabs_api_voices import elevenlabs_voices
 
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1
@@ -62,6 +63,17 @@ def language_to_language_code(language):
     else:
         return "Language not found"
 
+def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
+    for voice in voices:
+        print('voice[language]: ', voice['language'])
+        print('language : ', language )
+        print('voice[gender]: ', voice['gender'])
+        print('gender: ', gender)
+        if (voice['language'] == language and voice['gender'] == gender and
+                voice['voice_id'] != exclude_voice_id):
+            return voice['voice_id']
+    return None
+
 def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata, local_run=False, use_concurrency=True):
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
@@ -78,8 +90,15 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
 
     elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
         narrator_voice = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
-        speaker_1_voice = "LcfcDJNUP1GQjkzn1xUU"
-        speaker_2_voice = "5Q0t7uMcjvnagumLfvZi"
+
+        speaker_1_voice = find_voice_elevenlabs(elevenlabs_voices, target_language, speaker_1_gender)
+        speaker_2_voice = find_voice_elevenlabs(elevenlabs_voices, target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice)
+
+        if speaker_1_voice is None:
+            speaker_1_voice = find_voice_elevenlabs(elevenlabs_voices, "English (United States)", speaker_1_gender)
+
+        if speaker_2_voice is None:
+            speaker_2_voice = find_voice_elevenlabs(elevenlabs_voices, "English (United States)", speaker_2_gender, exclude_voice_id=speaker_1_voice)
 
         tts_function = elevenlabs_tts
 
