@@ -6,10 +6,18 @@ import json
 from prompt import prompt
 from enum import Enum
 import os
+from utilities import is_running_locally
 
-options.set_global_options(region="europe-west1", memory=256, timeout_sec=501)
+if is_running_locally():
+    from dotenv import load_dotenv
+    load_dotenv()
+    ELEVENLABS_API_KEY = os.getenv('OPEN_AI_API_KEY')
+else:
+    OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
+
+options.set_global_options(region="europe-west1", memory=256, timeout_sec=501)
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode. Preview model.

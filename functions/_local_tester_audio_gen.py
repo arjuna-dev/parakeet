@@ -1,6 +1,6 @@
 import os
 import datetime
-from lesson_generator import generate_lesson
+from _local_lesson_generator import generate_lesson
 from json_parsers import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVIDERS
 
 
