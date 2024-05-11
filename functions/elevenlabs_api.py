@@ -64,7 +64,6 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
 
     response = requests.post(tts_url, headers=headers, json=data, stream=True)
 
-    # Check if the request was successful
     if response.ok:
         with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
@@ -79,8 +78,6 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
             bucket.reload(timeout=300)
             blob = bucket.blob(blob_name)
             blob.upload_from_filename(output_path)
-            
-            # Make the blob publicly accessible
             blob.make_public()
     else:
         print(response.text)
