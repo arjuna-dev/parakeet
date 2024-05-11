@@ -1,5 +1,6 @@
 import requests
 from google.cloud import storage
+from utilities import is_running_locally
 import os
 
 #       ___                                   ___             __                
@@ -11,7 +12,12 @@ import os
 #  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
 
 
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+if is_running_locally():
+    from dotenv import load_dotenv
+    load_dotenv()
+    ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
+else:
+    ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
