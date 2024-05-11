@@ -23,7 +23,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
   var keywords = '';
 
-  var nativeLanguage = 'English';
+  var nativeLanguage = 'English (United States)';
 
   var targetLanguage = 'German (Germany)';
 
@@ -77,7 +77,7 @@ class _CreateLessonState extends State<CreateLesson> {
                     nativeLanguage = value.toString();
                   });
                 },
-                items: <String>['English']
+                items: <String>['English (United States)']
                     .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
