@@ -19,6 +19,8 @@ if is_running_locally():
 else:
     ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 
+assert ELEVENLABS_API_KEY, "ELEVENLABS_API_KEY is not set in the environment variables"
+
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
   url = "https://api.elevenlabs.io/v1/voices"
