@@ -138,13 +138,9 @@ JSON: ===
           ]
         }}
       ]
-    }},
-    {{
-      "speaker": "speaker_1",
-      "turn_nr": 3,
-      (continues...)
     }}
   ]
 }}
 ===
+Continue adding turns until you reach {length} turns.
 '''
