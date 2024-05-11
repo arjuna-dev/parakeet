@@ -81,7 +81,6 @@ def parse_and_create_script (data):
             index = random.randint(0, len(sequences.chunk_sequences) - 1)
             chunk_sequence = sequences.chunk_sequence_3rep_new(narrator_translations, split_native, split_target, word_objects)
             script.extend(chunk_sequence)
-            print("Chunk sequence: ", index+1)
 
     return script
 
@@ -189,12 +188,10 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
                 if part['enclosed']:
                     text = part['text']
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    print("narrator_translation1: ", narrator_translation)
                     futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
                 elif not part['enclosed']:
                     text = part['text']
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    print("narrator_translation2: ", narrator_translation)
                     futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
 
             text = split_sentence["native_language"]
