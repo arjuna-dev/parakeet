@@ -49,7 +49,6 @@ def parse_and_create_script (data):
         index = random.randint(0, len(sequences.sentence_sequences) - 1)
         sentence_sequence = sequences.sentence_sequences[index](native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
         script.extend(sentence_sequence)
-        print("Sentence sequence: ", index+1)
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
