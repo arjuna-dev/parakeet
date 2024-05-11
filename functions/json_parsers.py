@@ -13,6 +13,20 @@ class TTS_PROVIDERS(Enum):
     GOOGLE = 1
     ELEVENLABS = 2
 
+def extract_and_classify_enclosed_words(input_string):
+    parts = input_string.split('||')
+    
+    result = []
+    
+    is_enclosed = False
+    
+    for part in parts:
+        if part:
+            result.append({'text': part, 'enclosed': is_enclosed})
+        is_enclosed = not is_enclosed
+    
+    return result
+
 def parse_and_create_script (data):
     script = []
 
@@ -39,18 +53,33 @@ def parse_and_create_script (data):
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
-            split_narrator_fun_fact = f"dialogue_{i}_split_sentence_{j}_{"narrator_translation"}"
+            text = split_sentence["narrator_translation"]
+
+            # Classify and process the text into parts enclosed by || (target_language text)
+            classified_text = extract_and_classify_enclosed_words(text)
+            narrator_translations = []
+            for index, part in enumerate(classified_text):
+                narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                narrator_translations.append(narrator_translation)
+
             split_native = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
             split_target = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
 
             word_objects = []
             for index, words in enumerate(split_sentence['words']):
                 word = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
-                word_objects.append({"word": word, "translation": translation})
+
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text = extract_and_classify_enclosed_words(text)
+                narrator_translations = []
+                for index2, part in enumerate(classified_text):
+                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                    narrator_translations.append(narrator_translation)
+
+                word_objects.append({"word": word, "translation": narrator_translations})
 
             index = random.randint(0, len(sequences.chunk_sequences) - 1)
-            chunk_sequence = sequences.chunk_sequence_3rep_new(split_narrator_fun_fact, split_native, split_target, word_objects)
+            chunk_sequence = sequences.chunk_sequence_3rep_new(narrator_translations, split_native, split_target, word_objects)
             script.extend(chunk_sequence)
             print("Chunk sequence: ", index+1)
 
@@ -76,9 +105,17 @@ def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
 
 def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata, local_run=False, use_concurrency=True):
 
+    speaker_1_gender = metadata["speakers"]["speaker_1"]["gender"].lower()
+    speaker_2_gender = metadata["speakers"]["speaker_2"]["gender"].lower()
+
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
-        speaker_1_gender = metadata["speakers"]["speaker_1"]["gender"].lower()
-        speaker_2_gender = metadata["speakers"]["speaker_2"]["gender"].lower()
+        # Check if native_language and target_language are keys in the language_codes dictionary
+        if native_language not in language_codes:
+            print(f"Native language {native_language} not found in language codes")
+            return
+        if target_language not in language_codes:
+            print(f"Target language {target_language} not found in language codes")
+            return
 
         language_code = language_to_language_code(target_language)
 
@@ -144,22 +181,49 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
             futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator}.mp3", local_run))
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
+
             text = split_sentence["narrator_translation"]
-            fun_fact = f"dialogue_{i}_split_sentence_{j}_narrator_translation"
-            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{fun_fact}.mp3", local_run))
+            # Classify and process the text into parts enclosed by || (target_language text)
+            classified_text = extract_and_classify_enclosed_words(text)
+            for index, part in enumerate(classified_text):
+                if part['enclosed']:
+                    text = part['text']
+                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                    print("narrator_translation1: ", narrator_translation)
+                    futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                elif not part['enclosed']:
+                    text = part['text']
+                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                    print("narrator_translation2: ", narrator_translation)
+                    futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+
             text = split_sentence["native_language"]
             native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
             futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
+
             text = split_sentence["target_language"]
             target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
             futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
+
             for index, word in enumerate(split_sentence['words']):
                 word_text = word["target_language"]
                 narrator_translation_text = word["narrator_translation"]
                 word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
                 narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
+
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text = extract_and_classify_enclosed_words(narrator_translation_text)
+                for index2, part in enumerate(classified_text):
+                    if part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                        futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                    elif not part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                        futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+
                 futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
-                futures.append(execute_task(tts_function, narrator_translation_text, narrator_voice, f"{directory}/{narrator_translation_file_name}.mp3", local_run))
 
         if use_concurrency:
             # If concurrency is used, wait for all futures to complete
@@ -170,4 +234,3 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
             result = "Parsed without concurrency"
 
     print (result)
-
