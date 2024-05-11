@@ -70,9 +70,9 @@ def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="co
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 f.write(chunk)
         if local_run:
-            return f"Audio content written to file {output_path}"
+            print(f"Audio content written to file {output_path}")
+            return
         else:
-            # Upload the audio file to the bucket
             blob_name = f"{output_path}"
             storage_client = storage.Client()
             bucket = storage_client.get_bucket(bucket_name)
