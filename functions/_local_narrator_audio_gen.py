@@ -4,7 +4,7 @@ import gcloud_text_to_speech_api as gcloud_tts
 
 narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
 
-with open('narrator_pool.json', 'r') as file:
+with open('_local_narrator_pool.json', 'r') as file:
     narrator_pool = json.load(file)
 
 for section_key, section in narrator_pool.items():
