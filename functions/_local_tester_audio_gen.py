@@ -1,145 +1,52 @@
 import os
 import datetime
 from _local_lesson_generator import generate_lesson
-from json_parsers import parse_and_convert_to_speech, parse_and_create_script, TTS_PROVIDERS
-
+from json_parsers import parse_and_convert_to_speech, parse_and_create_script
+import json
+from utilities import TTS_PROVIDERS
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
+dir_name = "Andrew_05.06.21.16.43"
 
-example_JSON = {
-  "dialogue": [
-    {
-      "speaker": "speaker_1",
-      "turn_nr": "1",
-      "target_language": "Albert, tengo curiosidad por entender mejor c\u00f3mo concebiste la teor\u00eda de la relatividad.",
-      "native_language": "Albert, I am curious to better understand how you conceived the theory of relativity.",
-      "narrator_explanation": "Shiva is expressing curiosity in understanding the development of the theory of relativity.",
-      "narrator_fun_fact": "The theory of relativity was introduced by Albert Einstein in the early 20th century, altering the basics of physics.",
-      "split_sentence": [
-        {
-          "target_language": "Albert, tengo curiosidad",
-          "native_language": "Albert, I am curious",
-          "narrator_translation": "||Albert, tengo curiosidad|| translates as 'Albert, I am curious'.",
-          "words": [
-            { "target_language": "Albert,", "narrator_translation": "||Albert|| is a direct address." },
-            { "target_language": "tengo", "narrator_translation": "||Tengo|| means 'I have'." },
-            { "target_language": "curiosidad", "narrator_translation": "||Curiosidad|| means 'curiosity'." }
-          ]
-        },
-        {
-          "target_language": "por entender mejor c\u00f3mo",
-          "native_language": "to better understand how",
-          "narrator_translation": "'To better understand how' is expressed as ||por entender mejor c\u00f3mo||.",
-          "words": [
-            { "target_language": "por", "narrator_translation": "||Por|| translates to 'for/to'." },
-            { "target_language": "entender", "narrator_translation": "||Entender|| means 'understand'." },
-            { "target_language": "mejor", "narrator_translation": "||Mejor|| means 'better'." },
-            { "target_language": "c\u00f3mo", "narrator_translation": "||C\u00f3mo|| translates to 'how'." }
-          ]
-        },
-        {
-          "target_language": "concebiste la teor\u00eda",
-          "native_language": "you conceived the theory",
-          "narrator_translation": "'You conceived the theory' is translated as ||concebiste la teor\u00eda||.",
-          "words": [
-            { "target_language": "concebiste", "narrator_translation": "||Concebiste|| means 'you conceived'." },
-            { "target_language": "la", "narrator_translation": "||La|| translates to 'the'." },
-            { "target_language": "teor\u00eda", "narrator_translation": "||Teor\u00eda|| means 'theory'." }
-          ]
-        },
-        {
-          "target_language": "de la relatividad.",
-          "native_language": "of relativity.",
-          "narrator_translation": "'Of relativity' is shown as ||de la relatividad.||",
-          "words": [
-            { "target_language": "de", "narrator_translation": "||De|| translates to 'of'." },
-            { "target_language": "la", "narrator_translation": "||La|| translates to 'the'." },
-            { "target_language": "relatividad", "narrator_translation": "||Relatividad|| means 'relativity'." }
-          ]
-        }
-      ]
-    },
-    {
-      "speaker": "speaker_2",
-      "turn_nr": "2",
-      "target_language": "La idea b\u00e1sica es que el espacio y el tiempo no son absolutos, sino que dependen del movimiento del observador.",
-      "native_language": "The basic idea is that space and time are not absolute, but depend on the motion of the observer.",
-      "narrator_explanation": "Albert explains the fundamental aspect of the theory of relativity regarding space and time.",
-      "narrator_fun_fact": "Einstein's theory proposed a radical departure from traditional Newtonian physics.",
-      "split_sentence": [
-        {
-          "target_language": "La idea b\u00e1sica es que",
-          "native_language": "The basic idea is that",
-          "narrator_translation": "'The basic idea is that' translates to ||La idea b\u00e1sica es que||.",
-          "words": [
-            { "target_language": "La", "narrator_translation": "||La|| translates to 'the'." },
-            { "target_language": "idea", "narrator_translation": "||Idea|| means 'idea'." },
-            { "target_language": "b\u00e1sica", "narrator_translation": "||B\u00e1sica|| translates to 'basic'." },
-            { "target_language": "es", "narrator_translation": "||Es|| means 'is'." },
-            { "target_language": "que", "narrator_translation": "||Que|| translates to 'that'." }
-          ]
-        },
-        {
-          "target_language": "el espacio y el tiempo",
-          "native_language": "space and time",
-          "narrator_translation": "'Space and time' is expressed as ||el espacio y el tiempo|| in Spanish.",
-          "words": [
-            { "target_language": "el", "narrator_translation": "||El|| translates to 'the'." },
-            { "target_language": "espacio", "narrator_translation": "||Espacio|| means 'space'." },
-            { "target_language": "y", "narrator_translation": "||Y|| means 'and'." },
-            { "target_language": "el", "narrator_translation": "||El|| translates to 'the'." },
-            { "target_language": "tiempo", "narrator_translation": "||Tiempo|| means 'time'." }
-          ]
-        },
-        {
-          "target_language": "no son absolutos,",
-          "native_language": "are not absolute,",
-          "narrator_translation": "'Are not absolute,' is translated to ||no son absolutos,||.",
-          "words": [
-            { "target_language": "no", "narrator_translation": "||No|| translates to 'not'." },
-            { "target_language": "son", "narrator_translation": "||Son|| means 'are'." },
-            { "target_language": "absolutos,", "narrator_translation": "||Absolutos,|| means 'absolute,'." }
-          ]
-        },
-        {
-          "target_language": "sino que dependen del movimiento",
-          "native_language": "but depend on the motion",
-          "narrator_translation": "'But depend on the motion' is phrased as ||sino que dependen del movimiento|| in Spanish.",
-          "words": [
-            { "target_language": "sino", "narrator_translation": "||Sino|| translates to 'but'." },
-            { "target_language": "que", "narrator_translation": "||Que|| translates to 'that'." },
-            { "target_language": "dependen", "narrator_translation": "||Dependen|| means 'depend'." },
-            { "target_language": "del", "narrator_translation": "||Del|| translates to 'of the'." },
-            { "target_language": "movimiento", "narrator_translation": "||Movimiento|| means 'motion'." }
-          ]
-        },
-        {
-          "target_language": "del observador.",
-          "native_language": "of the observer.",
-          "narrator_translation": "'Of the observer' translates to ||del observador.||",
-          "words": [
-            { "target_language": "del", "narrator_translation": "||Del|| translates to 'of the'." },
-            { "target_language": "observador", "narrator_translation": "||Observador|| means 'observer'." }
-          ]
-        }
-      ]
-    }
-  ]
-}
+# Load JSON files
+with open(f'other/{dir_name}/chatGPT_response.json', 'r') as file:
+    chatGPT_response = json.load(file)
 
-example_dialogue = {"all_turns":[{"native_language":"Albert, I am curious to better understand how you conceived the theory of relativity.","speaker":"speaker_1","target_language":"Albert, tengo curiosidad por entender mejor c\u00f3mo concebiste la teor\u00eda de la relatividad.","turn_nr":"1"},{"native_language":"The basic idea is that space and time are not absolute, but depend on the motion of the observer.","speaker":"speaker_2","target_language":"La idea b\u00e1sica es que el espacio y el tiempo no son absolutos, sino que dependen del movimiento del observador.","turn_nr":"2"},{"native_language":"So, does this suggest that reality can vary for different observers?","speaker":"speaker_1","target_language":"Entonces, \u00bfesto sugiere que la realidad puede variar para diferentes observadores?","turn_nr":"3"},{"native_language":"Exactly, each observer can experience different versions of space-time depending on their state of motion.","speaker":"speaker_2","target_language":"Exactamente, cada observador puede experimentar diferentes versiones del espacio-tiempo dependiendo de su estado de movimiento.","turn_nr":"4"},{"native_language":"How has this discovery influenced current physics?","speaker":"speaker_1","target_language":"\u00bfC\u00f3mo influy\u00f3 este descubrimiento en la f\u00edsica actual?","turn_nr":"5"},{"native_language":"It has completely transformed our understanding of the universe, allowing us to explore everything from black holes to string theories.","speaker":"speaker_2","target_language":"Ha transformado completamente nuestra comprensi\u00f3n del universo, permiti\u00e9ndonos explorar desde agujeros negros hasta teor\u00edas de cuerdas.","turn_nr":"6"}],"speakers":{"speaker_1":{"gender":"m","name":"Shiva"},"speaker_2":{"gender":"m","name":"Albert Einstein"}},"title":"Conversaci\u00f3n sobre la Relatividad","user_ID":"2"}
-# create a directory
-# os.mkdir(f"other/test_{now}")
-# full_lesson_directory = f"other/test_{now}"
+with open(f'other/{dir_name}/dialogue.json', 'r') as file:
+    dialogue = json.load(file)
 
-audio_files_directory = f"other/Bahy_05.07.09.11.04/audio_elevenlabs"
-os.mkdir(f"{audio_files_directory}")
 
-parse_and_convert_to_speech(example_JSON, audio_files_directory, TTS_PROVIDERS.ELEVENLABS.value, "English", "German", example_dialogue, local_run=True, use_concurrency=False)
-script = parse_and_create_script(example_JSON)
+selected_tts = input(f"Which TTS provider do you want to use? ({TTS_PROVIDERS.GOOGLE.value}: {TTS_PROVIDERS.GOOGLE.name}, {TTS_PROVIDERS.ELEVENLABS.value}: {TTS_PROVIDERS.ELEVENLABS.name}): ")
+selected_tts = int(selected_tts)
 
+assert selected_tts in [TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.ELEVENLABS.value], "Invalid TTS provider"
+
+# Create needed directories
+if selected_tts == TTS_PROVIDERS.GOOGLE.value:
+  if not os.path.exists(f"other/{dir_name}/audio_google"):
+    os.mkdir(f"other/{dir_name}/audio_google")
+  audio_files_directory = f"other/{dir_name}/audio_google"
+
+elif selected_tts == TTS_PROVIDERS.ELEVENLABS.value:
+  if not os.path.exists(f"other/{dir_name}/audio_elevenlabs"):
+    os.mkdir(f"other/{dir_name}/audio_elevenlabs")
+  audio_files_directory = f"other/{dir_name}/audio_elevenlabs"
+
+use_concurrency = False if selected_tts == TTS_PROVIDERS.ELEVENLABS.value else True
+
+# Convert to speech
+# parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", dialogue, local_run=True, use_concurrency=use_concurrency)
+
+# Create script
+script = parse_and_create_script(chatGPT_response)
 print(script)
 
+# Create needed directories
+if not os.path.exists("other/narrator_audio_files"):
+  os.mkdir("other/narrator_audio_files")
 narrator_audio_files_directory = "other/narrator_audio_files"
-save_directory = f"other/Bahy_05.07.09.11.04"
-generate_lesson(script, save_directory, audio_files_directory, narrator_audio_files_directory)
+
+# Generate lesson
+save_directory = f"other/{dir_name}"
+save_as = f"lesson_{now}"
+generate_lesson(script, save_directory, save_as, audio_files_directory, narrator_audio_files_directory)
