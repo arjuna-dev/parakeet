@@ -4,8 +4,8 @@ import 'package:rxdart/rxdart.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
-  final List<dynamic> script;
-  final String responseDbId;
+  final List<dynamic> script; //List of audio file names
+  final String responseDbId; // Database ID for the response
 
   const AudioPlayerScreen(
       {Key? key, required this.script, required this.responseDbId})
@@ -22,8 +22,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool isPlaying = false;
   Duration totalDuration = Duration.zero;
   Duration currentPosition = Duration.zero;
-  Duration cumulativeTimeBeforeCurrent = Duration.zero;
-  List<Duration> trackDurations = [];
+  Duration cumulativeTimeBeforeCurrent =
+      Duration.zero; // Cumulative time before the current track
+  List<Duration> trackDurations = []; // List of durations for each track
 
   @override
   void initState() {
@@ -34,19 +35,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
-    print(widget.script);
     List<AudioSource> sources = [];
 
+    //Loop over each file name in the script and construct the URL
     for (var fileName in widget.script) {
       List<dynamic> urlData = await _constructUrl(fileName);
       String fileUrl = urlData[0];
       Duration duration = Duration(
           milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
-      print("$fileUrl : $duration");
       totalDuration += duration;
       print(totalDuration);
       trackDurations.add(duration); // Store each track's duration
-      // print(trackDurations[0]);
       if (!Uri.parse(fileUrl).isAbsolute) continue;
       sources.add(ProgressiveAudioSource(Uri.parse(fileUrl)));
     }
@@ -91,6 +90,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .fold(Duration.zero, (sum, d) => sum + d);
   }
 
+  // Create a stream of position data
   Stream<PositionData> get _positionDataStream =>
       Rx.combineLatest3<Duration, Duration, int, PositionData>(
           player.positionStream,
@@ -114,15 +114,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           );
         }
       }).distinct((prev, current) => prev.position == current.position);
-
-  Duration calculateSumOfPreviousDurations(int currentIndex) {
-    return Duration(
-        milliseconds: playlist.children
-            .take(currentIndex)
-            .map((source) =>
-                (source as ProgressiveAudioSource).duration!.inMilliseconds)
-            .fold(0, (sum, element) => sum + element));
-  }
 
   int findTrackIndexForPosition(double milliseconds) {
     int cumulative = 0;
@@ -178,7 +169,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             },
           ),
           Text('Now Playing: $currentTrack'),
-          controlButtons(), // It's cleaner to move control buttons to a separate method
+          controlButtons(), // Play, pause, stop, skip buttons
         ],
       ),
     );
@@ -226,10 +217,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _stop() {
     player.stop();
-    player.seek(Duration.zero);
+    player.seek(Duration.zero, index: 0);
     setState(() {
       isPlaying = false;
-      //currentTrack = widget.script[0];
+      currentTrack = widget.script[0];
     });
   }
 
