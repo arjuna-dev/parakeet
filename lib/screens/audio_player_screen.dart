@@ -22,6 +22,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool isPlaying = false;
   Duration totalDuration = Duration.zero;
   Duration currentPosition = Duration.zero;
+  Duration cumulativeTimeBeforeCurrent = Duration.zero;
+  List<Duration> trackDurations = [];
 
   @override
   void initState() {
@@ -39,22 +41,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       Duration duration = Duration(
           milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
       totalDuration += duration;
-      print(totalDuration);
+      trackDurations.add(duration); // Store each track's duration
       if (!Uri.parse(fileUrl).isAbsolute) return null;
       return ProgressiveAudioSource(Uri.parse(fileUrl));
     }).toList();
 
     List<AudioSource> sources =
         (await Future.wait(futureSources)).whereType<AudioSource>().toList();
-
     playlist = ConcatenatingAudioSource(children: sources);
 
     try {
       await player.setAudioSource(playlist);
     } catch (e) {
-      // catch load errors: 404, invalid url ...
       print("An error occurred while loading audio source: $e");
-    } // This sets the audio source and prepares it for playback.
+    }
   }
 
   Future<List> _constructUrl(String fileName) async {
@@ -83,16 +83,46 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  Duration cumulativeDurationUpTo(int currentIndex) {
+    return trackDurations
+        .take(currentIndex)
+        .fold(Duration.zero, (sum, d) => sum + d);
+  }
+
   Stream<PositionData> get _positionDataStream =>
-      Rx.combineLatest3<Duration, Duration, Duration, PositionData>(
+      Rx.combineLatest3<Duration, Duration, int, PositionData>(
           player.positionStream,
-          player.bufferedPositionStream,
           player.durationStream.whereType<Duration>(),
-          (position, bufferedPosition, duration) => PositionData(
-                position,
-                bufferedPosition,
-                duration,
-              ));
+          player.currentIndexStream.whereType<int>().startWith(0),
+          (position, duration, index) {
+        Duration cumulativeDuration = cumulativeDurationUpTo(index);
+        return PositionData(
+          position,
+          position + duration, // Buffered position might not be needed as is
+          duration,
+          cumulativeDuration + position,
+        );
+      });
+
+  Duration calculateSumOfPreviousDurations(int currentIndex) {
+    return Duration(
+        milliseconds: playlist.children
+            .take(currentIndex)
+            .map((source) =>
+                (source as ProgressiveAudioSource).duration!.inMilliseconds)
+            .fold(0, (sum, element) => sum + element));
+  }
+
+  int findTrackIndexForPosition(double milliseconds) {
+    int cumulative = 0;
+    for (int i = 0; i < trackDurations.length; i++) {
+      cumulative += trackDurations[i].inMilliseconds;
+      if (cumulative > milliseconds) {
+        return i;
+      }
+    }
+    return trackDurations.length - 1;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,17 +145,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 children: [
                   Slider(
                     min: 0.0,
-                    max: totalDuration.inMilliseconds
-                        .toDouble(), // Use totalDuration for the max value
-                    value: player.position.inMilliseconds
+                    max: totalDuration.inMilliseconds.toDouble(),
+                    value: positionData.cumulativePosition.inMilliseconds
                         .clamp(0, totalDuration.inMilliseconds)
                         .toDouble(),
                     onChanged: (value) {
-                      player.seek(Duration(milliseconds: value.toInt()));
+                      final trackIndex = findTrackIndexForPosition(value);
+                      player.seek(
+                          Duration(
+                              milliseconds: value.toInt() -
+                                  cumulativeDurationUpTo(trackIndex)
+                                      .inMilliseconds),
+                          index: trackIndex);
                     },
                   ),
                   Text(
-                    "${formatDuration(player.position)} / ${formatDuration(totalDuration)}", // Update to show total duration
+                    "${formatDuration(positionData.cumulativePosition)} / ${formatDuration(totalDuration)}",
                   ),
                 ],
               );
@@ -202,9 +237,11 @@ String formatDuration(Duration d) {
 }
 
 class PositionData {
-  final Duration position;
+  final Duration position; // Current position within the track
   final Duration bufferedPosition;
-  final Duration duration;
+  final Duration duration; // Duration of the current track
+  final Duration cumulativePosition; // Cumulative position across all tracks
 
-  PositionData(this.position, this.bufferedPosition, this.duration);
+  PositionData(this.position, this.bufferedPosition, this.duration,
+      this.cumulativePosition);
 }
