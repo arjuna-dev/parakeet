@@ -11,8 +11,8 @@
     "5_1": "Today's lesson is...",
     "6_0": "Welcome to Parakeet's language lesson. Today, you'll be engaging with a real conversation, the topic is:...",
     "6_1": "...listen carefully and repeat the key phrases out loud.",
-    "7":"Let's first listen to the whole conversation",
-    "8":"Now just listen to the whole conversation"
+    "7": "Let's first listen to the whole conversation",
+    "8": "Now just listen to the whole conversation"
   },
   "narrator_navigation_phrases": {
     "0": "Listen to the next sentence in the conversation.",
@@ -41,7 +41,9 @@
     "18": "You just listened to the full conversation.",
     "19": "Now, let's go through the dialog",
     "20": "For now, just listen",
-    "21": "Now listen to the next sentence. Just listen" 
+    "21": "Now listen to the next sentence. Just listen",
+    "22": "Just listen",
+    "23": "Now, let's go to the next part of the sentence"
   },
   "narrator_repetition_phrases": {
     "0_0": "Listen to how they say...",
@@ -79,9 +81,9 @@
     "21": "Let's break it down. Listen to the phrase, and repeat it.",
     "22": "What's the word for...?",
     "23_0": "How to say...",
-    "23_1": "...in",
-    "24_0": "Try saying...",
-    "24_1": "...again, as you heard it.",
+    "23_1": "in",
+    "24_0": "Try saying",
+    "24_1": "again, as you heard it.",
     "25": "pay attention to the pronunciation and try saying it just like that."
   },
   "narrator_closing_phrases": {
