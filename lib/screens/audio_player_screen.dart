@@ -36,8 +36,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         widget.script.map((fileName) async {
       List<dynamic> urlData = await _constructUrl(fileName);
       String fileUrl = urlData[0];
-      Duration duration =
-          Duration(seconds: int.parse(urlData[1].split('.')[0]));
+      Duration duration = Duration(
+          milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
       totalDuration += duration;
       print(totalDuration);
       if (!Uri.parse(fileUrl).isAbsolute) return null;
@@ -115,50 +115,51 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 children: [
                   Slider(
                     min: 0.0,
-                    max: totalDuration.inMilliseconds.toDouble(),
-                    value: positionData.position.inMilliseconds
-                        .clamp(0.0,
-                            positionData.duration.inMilliseconds.toDouble())
+                    max: totalDuration.inMilliseconds
+                        .toDouble(), // Use totalDuration for the max value
+                    value: player.position.inMilliseconds
+                        .clamp(0, totalDuration.inMilliseconds)
                         .toDouble(),
                     onChanged: (value) {
                       player.seek(Duration(milliseconds: value.toInt()));
                     },
                   ),
                   Text(
-                    "${formatDuration(positionData.position)} / ${formatDuration(positionData.duration)}",
+                    "${formatDuration(player.position)} / ${formatDuration(totalDuration)}", // Update to show total duration
                   ),
                 ],
               );
             },
           ),
           Text('Now Playing: $currentTrack'),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.skip_previous),
-                onPressed:
-                    player.hasPrevious ? () => player.seekToPrevious() : null,
-              ),
-              IconButton(
-                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                onPressed: isPlaying ? _pause : _play,
-              ),
-              IconButton(
-                icon: const Icon(Icons.stop),
-                onPressed: isPlaying ? _stop : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next),
-                onPressed: player.hasNext ? () => player.seekToNext() : null,
-              ),
-            ],
-          ),
-          // Control buttons as before
+          controlButtons(), // It's cleaner to move control buttons to a separate method
         ],
       ),
     );
   }
+
+  Widget controlButtons() => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.skip_previous),
+            onPressed:
+                player.hasPrevious ? () => player.seekToPrevious() : null,
+          ),
+          IconButton(
+            icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+            onPressed: isPlaying ? _pause : _play,
+          ),
+          IconButton(
+            icon: const Icon(Icons.stop),
+            onPressed: isPlaying ? _stop : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_next),
+            onPressed: player.hasNext ? () => player.seekToNext() : null,
+          ),
+        ],
+      );
 
   void _play() async {
     setState(() => isPlaying = true);
