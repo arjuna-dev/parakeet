@@ -5,13 +5,9 @@ import script_sequences as sequences
 from google_tts_language_codes import language_codes
 from elevenlabs_api import elevenlabs_tts
 import gcloud_text_to_speech_api as gcloud_tts
-from enum import Enum
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
-
-class TTS_PROVIDERS(Enum):
-    GOOGLE = 1
-    ELEVENLABS = 2
+from utilities import TTS_PROVIDERS
 
 def extract_and_classify_enclosed_words(input_string):
     parts = input_string.split('||')
