@@ -34,20 +34,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
-    List<Future<AudioSource?>> futureSources =
-        widget.script.map((fileName) async {
+    print(widget.script);
+    List<AudioSource> sources = [];
+
+    for (var fileName in widget.script) {
       List<dynamic> urlData = await _constructUrl(fileName);
       String fileUrl = urlData[0];
       Duration duration = Duration(
           milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
+      print("$fileUrl : $duration");
       totalDuration += duration;
+      print(totalDuration);
       trackDurations.add(duration); // Store each track's duration
-      if (!Uri.parse(fileUrl).isAbsolute) return null;
-      return ProgressiveAudioSource(Uri.parse(fileUrl));
-    }).toList();
-
-    List<AudioSource> sources =
-        (await Future.wait(futureSources)).whereType<AudioSource>().toList();
+      // print(trackDurations[0]);
+      if (!Uri.parse(fileUrl).isAbsolute) continue;
+      sources.add(ProgressiveAudioSource(Uri.parse(fileUrl)));
+    }
     playlist = ConcatenatingAudioSource(children: sources);
 
     try {
@@ -96,13 +98,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           player.currentIndexStream.whereType<int>().startWith(0),
           (position, duration, index) {
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
-        return PositionData(
-          position,
-          position + duration, // Buffered position might not be needed as is
-          duration,
-          cumulativeDuration + position,
-        );
-      });
+        if (position < duration) {
+          return PositionData(
+            position,
+            position + duration, // Buffered position might not be needed as is
+            duration,
+            cumulativeDuration + position,
+          );
+        } else {
+          return PositionData(
+            position,
+            position + duration, // Buffered position might not be needed as is
+            duration,
+            cumulativeDuration + duration,
+          );
+        }
+      }).distinct((prev, current) => prev.position == current.position);
 
   Duration calculateSumOfPreviousDurations(int currentIndex) {
     return Duration(
