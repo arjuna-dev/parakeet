@@ -13,9 +13,11 @@ from utilities import is_running_locally
 if is_running_locally():
     from dotenv import load_dotenv
     load_dotenv()
-    ELEVENLABS_API_KEY = os.getenv('OPEN_AI_API_KEY')
+    OPEN_AI_API_KEY = os.getenv('OPEN_AI_API_KEY')
 else:
     OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
+
+assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
 
 
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
