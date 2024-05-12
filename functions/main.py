@@ -4,7 +4,6 @@ import firebase_functions.options as options
 import json
 import openai
 import datetime
-from enum import Enum
 from prompt import prompt
 import os
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
