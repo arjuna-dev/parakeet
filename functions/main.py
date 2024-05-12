@@ -8,7 +8,7 @@ from enum import Enum
 from prompt import prompt
 import os
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
-from utilities import is_running_locally
+from utilities import is_running_locally, GPT_MODEL
 
 if is_running_locally():
     from dotenv import load_dotenv
@@ -26,12 +26,6 @@ options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
 app = initialize_app()
-
-class GPT_MODEL(Enum):
-    GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
-    GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode.
-    GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
-    # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
 
 gpt_model = GPT_MODEL.GPT_4_TURBO_V.value
 
