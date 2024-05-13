@@ -30,14 +30,19 @@ class Library extends StatelessWidget {
             itemBuilder: (context, index) {
               return ListTile(
                   title: Text(documents[index].reference.parent.parent!.id),
-                  onTap: () {
+                  onTap: () async {
+                    QuerySnapshot targetSentencesSnapshot = await _firestore
+                        .collectionGroup('only_target_sentences')
+                        .get();
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => AudioPlayerScreen(
                             script: documents[index].get('script'),
                             responseDbId:
-                                documents[index].reference.parent.parent!.id),
+                                documents[index].reference.parent.parent!.id,
+                            dialogue: (targetSentencesSnapshot.docs[index]
+                                .data() as Map<String, dynamic>)),
                       ),
                     );
                   });
