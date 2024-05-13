@@ -1,4 +1,3 @@
-
 import os
 import random
 import script_sequences as sequences
@@ -23,7 +22,7 @@ def extract_and_classify_enclosed_words(input_string):
     
     return result
 
-def parse_and_create_script (data):
+def parse_and_create_script(data):
     script = []
 
     random_i = random.randint(0, len(sequences.intro_sequences) - 1)
@@ -52,9 +51,9 @@ def parse_and_create_script (data):
             text = split_sentence["narrator_translation"]
 
             # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text = extract_and_classify_enclosed_words(text)
+            classified_text_1 = extract_and_classify_enclosed_words(text)
             narrator_translations_chunk = []
-            for index, part in enumerate(classified_text):
+            for index, part in enumerate(classified_text_1):
                 narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
                 narrator_translations_chunk.append(narrator_translation)
 
@@ -62,23 +61,25 @@ def parse_and_create_script (data):
             split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
 
             word_objects = []
-            for index, words in enumerate(split_sentence['words']):
-                word = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+            for index, word in enumerate(split_sentence['words']):
+                word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                text = word["narrator_translation"]
 
                 # Classify and process the text into parts enclosed by || (target_language text)
-                classified_text = extract_and_classify_enclosed_words(text)
+                classified_text_2 = extract_and_classify_enclosed_words(text)
                 narrator_translations = []
-                for index2, part in enumerate(classified_text):
+                for index2, part in enumerate(classified_text_2):
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
                     narrator_translations.append(narrator_translation)
 
-                word_objects.append({"word": word, "translation": narrator_translations})
+                word_objects.append({"word": word_file, "translation": narrator_translations})
 
             chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
             script.extend(chunk_sequence)
 
         random_sentence_i = random.randint(0, i)
-        random_chunk_i = random.randint(0, j)
+        number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
+        random_chunk_i = random.randint(0, number_of_chunks)
         target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
         native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
         active_recall_sequence = sequences.active_recall_sequence_1(native, target)
@@ -95,10 +96,6 @@ def language_to_language_code(language):
 
 def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
     for voice in voices:
-        print('voice[language]: ', voice['language'])
-        print('language : ', language )
-        print('voice[gender]: ', voice['gender'])
-        print('gender: ', gender)
         if (voice['language'] == language and voice['gender'] == gender and
                 voice['voice_id'] != exclude_voice_id):
             return voice['voice_id']
