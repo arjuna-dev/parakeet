@@ -38,9 +38,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initPlaylist() async {
     List<AudioSource> sources = [];
 
-    //Loop over each file name in the script and construct the URL
-    for (var fileName in widget.script) {
-      List<dynamic> urlData = await _constructUrl(fileName);
+    // Create a list of futures
+    List<Future<List>> futures =
+        widget.script.map((fileName) => _constructUrl(fileName)).toList();
+
+    // Wait for all futures to complete
+    List<List<dynamic>> allUrlData = await Future.wait(futures);
+
+    //Loop over each urlData and add it to the sources list
+    for (var urlData in allUrlData) {
       String fileUrl = urlData[0];
       Duration duration = Duration(
           milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
