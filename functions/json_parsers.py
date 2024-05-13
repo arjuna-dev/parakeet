@@ -1,12 +1,13 @@
 import os
 import random
 import script_sequences as sequences
-from google_tts_language_codes import language_codes
 from elevenlabs_api import elevenlabs_tts
+from google_tts_voices import google_tts_voices
 import gcloud_text_to_speech_api as gcloud_tts
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
 from utilities import TTS_PROVIDERS
+
 
 def extract_and_classify_enclosed_words(input_string):
     parts = input_string.split('||')
@@ -94,6 +95,11 @@ def language_to_language_code(language):
     else:
         return "Language not found"
 
+def find_voice_google(language, gender, exclude_voice_id=None):
+    for voice in google_tts_voices:
+        if voice.get('language') == language and voice.get('gender') == gender and voice.get('voice_id') != exclude_voice_id:
+            return voice
+
 def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
     for voice in voices:
         if (voice['language'] == language and voice['gender'] == gender and
@@ -107,19 +113,13 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
     speaker_2_gender = metadata["speakers"]["speaker_2"]["gender"].lower()
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
-        # Check if native_language and target_language are keys in the language_codes dictionary
-        if native_language not in language_codes:
-            print(f"Native language {native_language} not found in language codes")
-            return
-        if target_language not in language_codes:
-            print(f"Target language {target_language} not found in language codes")
-            return
 
-        language_code = language_to_language_code(target_language)
+        speaker_1_voice = find_voice_google(target_language, speaker_1_gender)
+        assert speaker_1_voice is not None, f"Voice not found for {target_language} and {speaker_1_gender}"
+        speaker_2_voice = find_voice_google(target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice)
+        assert speaker_2_voice is not None, f"Voice not found for {target_language} and {speaker_2_gender}"
 
-        speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
-        speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
-        narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
+        narrator_voice = find_voice_google("English", "f")
 
         tts_function = gcloud_tts.synthesize_text
 
