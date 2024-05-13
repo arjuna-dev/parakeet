@@ -32,6 +32,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       Duration.zero; // Cumulative time before the current track
   List<Duration> trackDurations = []; // List of durations for each track
   bool _isPaused = false; // Whether the player is paused
+  int? _lastMatchedIndex;
 
   @override
   void initState() {
@@ -154,6 +155,31 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.dialogue["all_turns"].length,
+              itemBuilder: (context, index) {
+                String dialogue =
+                    widget.dialogue["all_turns"][index]["target_language"];
+                bool isMatch = currentTrack.split('_').length >= 2 &&
+                    currentTrack.split('_').take(2).join('_') ==
+                        "dialogue_$index";
+                if (isMatch) {
+                  _lastMatchedIndex = index;
+                }
+                return Text(
+                  dialogue,
+                  style: TextStyle(
+                    color:
+                        index == _lastMatchedIndex ? Colors.red : Colors.black,
+                    fontWeight: index == _lastMatchedIndex
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                );
+              },
+            ),
+          ),
           StreamBuilder<PositionData>(
             stream: _positionDataStream,
             builder: (context, snapshot) {
