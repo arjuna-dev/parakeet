@@ -7,9 +7,13 @@ import 'package:firebase_storage/firebase_storage.dart';
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
+  final Map<String, dynamic> dialogue;
 
   const AudioPlayerScreen(
-      {Key? key, required this.script, required this.responseDbId})
+      {Key? key,
+      required this.script,
+      required this.responseDbId,
+      required this.dialogue})
       : super(key: key);
 
   @override
@@ -34,6 +38,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     super.initState();
     player = AudioPlayer();
     currentTrack = widget.script[0];
+    print(widget.dialogue);
     _initPlaylist(); // Initialize the playlist
   }
 
