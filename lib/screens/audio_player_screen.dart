@@ -198,7 +198,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         ],
       );
 
-  void _play() async {
+  Future<void> _play() async {
     setState(() => isPlaying = true);
     await player.play();
     player.currentIndexStream.listen((index) {
@@ -210,12 +210,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
-  void _pause() {
+  Future<void> _pause() async {
     player.pause();
     setState(() => isPlaying = false);
   }
 
-  void _stop() {
+  Future<void> _stop() async {
     player.stop();
     player.seek(Duration.zero, index: 0);
     setState(() {
