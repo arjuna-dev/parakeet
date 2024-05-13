@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+// This is the main screen for the audio player
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
@@ -16,25 +17,27 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  late AudioPlayer player;
-  late ConcatenatingAudioSource playlist;
-  String currentTrack = '';
-  bool isPlaying = false;
-  Duration totalDuration = Duration.zero;
-  Duration currentPosition = Duration.zero;
+  late AudioPlayer player; // The audio player
+  late ConcatenatingAudioSource playlist; // The playlist
+  String currentTrack = ''; // The current track
+  bool isPlaying = false; // Whether the player is playing
+  Duration totalDuration = Duration.zero; // The total duration of all tracks
+  Duration currentPosition =
+      Duration.zero; // The current position within the track
   Duration cumulativeTimeBeforeCurrent =
       Duration.zero; // Cumulative time before the current track
   List<Duration> trackDurations = []; // List of durations for each track
-  bool _isPaused = false;
+  bool _isPaused = false; // Whether the player is paused
 
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
     currentTrack = widget.script[0];
-    _initPlaylist();
+    _initPlaylist(); // Initialize the playlist
   }
 
+  // This method initializes the playlist
   Future<void> _initPlaylist() async {
     List<AudioSource> sources = [];
 
@@ -51,7 +54,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       Duration duration = Duration(
           milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
       totalDuration += duration;
-      print(totalDuration);
       trackDurations.add(duration); // Store each track's duration
       if (!Uri.parse(fileUrl).isAbsolute) continue;
       sources.add(ProgressiveAudioSource(Uri.parse(fileUrl)));
@@ -65,6 +67,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  // This method constructs the URL for a file
   Future<List> _constructUrl(String fileName) async {
     String filePath;
     if (fileName.startsWith("narrator_") ||
@@ -91,13 +94,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  // This method calculates the cumulative duration up to a certain index
   Duration cumulativeDurationUpTo(int currentIndex) {
     return trackDurations
         .take(currentIndex)
         .fold(Duration.zero, (sum, d) => sum + d);
   }
 
-  // Create a stream of position data
+  // This method creates a stream of position data
   Stream<PositionData> get _positionDataStream =>
       Rx.combineLatest3<Duration, Duration, int, PositionData>(
           player.positionStream.where((_) => !_isPaused),
@@ -122,6 +126,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
       }).distinct((prev, current) => prev.position == current.position);
 
+  // This method finds the track index for a position
   int findTrackIndexForPosition(double milliseconds) {
     int cumulative = 0;
     for (int i = 0; i < trackDurations.length; i++) {
@@ -133,6 +138,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return trackDurations.length - 1;
   }
 
+  // This method builds the widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -188,6 +194,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
+  // This method creates the control buttons
   Widget controlButtons() => Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
@@ -211,6 +218,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         ],
       );
 
+  // This method plays the audio
   Future<void> _play() async {
     setState(() {
       isPlaying = true;
@@ -226,6 +234,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
+  // This method pauses the audio
   Future<void> _pause() async {
     player.pause();
     setState(() {
@@ -234,6 +243,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
+  // This method stops the audio
   Future<void> _stop() async {
     player.stop();
     player.seek(Duration.zero, index: 0);
@@ -243,6 +253,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
+  // This method disposes the player when the widget is disposed
   @override
   void dispose() {
     player.dispose();
@@ -250,6 +261,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 }
 
+// This method formats a duration as a string
 String formatDuration(Duration d) {
   String twoDigits(int n) => n.toString().padLeft(2, "0");
   String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
@@ -257,6 +269,7 @@ String formatDuration(Duration d) {
   return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
 }
 
+// This class represents the position data
 class PositionData {
   final Duration position; // Current position within the track
   final Duration bufferedPosition;
