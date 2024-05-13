@@ -25,6 +25,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Duration cumulativeTimeBeforeCurrent =
       Duration.zero; // Cumulative time before the current track
   List<Duration> trackDurations = []; // List of durations for each track
+  bool _isPaused = false;
 
   @override
   void initState() {
@@ -93,7 +94,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Create a stream of position data
   Stream<PositionData> get _positionDataStream =>
       Rx.combineLatest3<Duration, Duration, int, PositionData>(
-          player.positionStream,
+          player.positionStream.where((_) => !_isPaused),
           player.durationStream.whereType<Duration>(),
           player.currentIndexStream.whereType<int>().startWith(0),
           (position, duration, index) {
@@ -159,6 +160,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                   cumulativeDurationUpTo(trackIndex)
                                       .inMilliseconds),
                           index: trackIndex);
+                      if (_isPaused) {
+                        setState(() {
+                          positionData.cumulativePosition =
+                              Duration(milliseconds: value.toInt());
+                        });
+                      }
                     },
                   ),
                   Text(
@@ -199,7 +206,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       );
 
   Future<void> _play() async {
-    setState(() => isPlaying = true);
+    setState(() {
+      isPlaying = true;
+      _isPaused = false;
+    });
     await player.play();
     player.currentIndexStream.listen((index) {
       if (index != null && index < widget.script.length) {
@@ -212,7 +222,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<void> _pause() async {
     player.pause();
-    setState(() => isPlaying = false);
+    setState(() {
+      isPlaying = false;
+      _isPaused = true;
+    });
   }
 
   Future<void> _stop() async {
@@ -242,7 +255,7 @@ class PositionData {
   final Duration position; // Current position within the track
   final Duration bufferedPosition;
   final Duration duration; // Duration of the current track
-  final Duration cumulativePosition; // Cumulative position across all tracks
+  Duration cumulativePosition; // Cumulative position across all tracks
 
   PositionData(this.position, this.bufferedPosition, this.duration,
       this.cumulativePosition);
