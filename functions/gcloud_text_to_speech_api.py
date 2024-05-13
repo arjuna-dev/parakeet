@@ -1,21 +1,19 @@
 from google.cloud import texttospeech, storage
 
 def choose_voice(language_code, gender, specific_voice=None): # specific_voice = "en-US-Standard-C" for narrator
-    if gender == "m": 
-        ssml_gender = texttospeech.SsmlVoiceGender.MALE
-    elif gender == "f":
-        ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
         
-    if specific_voice == None:
+    if specific_voice:
+        voice = texttospeech.VoiceSelectionParams(
+            name=specific_voice
+        )
+    else:
+        if gender == "m": 
+            ssml_gender = texttospeech.SsmlVoiceGender.MALE
+        elif gender == "f":
+            ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
         voice = texttospeech.VoiceSelectionParams(
             language_code=language_code,
             ssml_gender=ssml_gender
-        )
-    else:
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=language_code,
-            ssml_gender=ssml_gender,
-            name=specific_voice
         )
     return voice
 
