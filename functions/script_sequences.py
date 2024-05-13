@@ -77,8 +77,6 @@ def active_recall_sequence_1(native, target):
     script_part = [
             "narrator_navigation_phrases_8_0", # do you remember how to say...
             native,
-            "narrator_navigation_phrases_8_1" , #in
-            "target_language",
             "five_second_break",
             target,
             "five_second_break",
@@ -90,7 +88,8 @@ active_recall_sequences.append(sentence_sequence_1)
 
 chunk_sequences = []
 def chunk_sequence_1(narrator_fun_fact, native_language, target_language, word_objects, chunk_number):
-    words = words_2_reps(word_objects)
+    words_reps = words_2_reps(word_objects)
+    words_spaced = spaced_words(word_objects)
     if chunk_number == 0:
         first_phrase = "narrator_navigation_phrases_17" #"Now, let's break down the sentence"
     else:
@@ -100,17 +99,15 @@ def chunk_sequence_1(narrator_fun_fact, native_language, target_language, word_o
             "narrator_navigation_phrases_22", # Just listen
             target_language,
             "one_second_break",
-            *words,
+            *words_reps,
             "narrator_navigation_phrases_8_0", # Do you remember how to say..
             native_language,
             "five_second_break",
             target_language,
             "five_second_break",
-            "narrator_repetition_phrases_25", #"pay attention to the pronouncitation and try saying it just like that."
-            target_language,
+            "narrator_repetition_phrases_25", # Pay attention to the pronunciation and try saying it just like that.
+            *words_spaced,
             "five_second_break",
-            "narrator_navigation_phrases_11", #It means
-            native_language,
             *narrator_fun_fact,
             "narrator_repetition_phrases_4", #Listen and repeat
             target_language,
@@ -131,6 +128,13 @@ def words_2_reps(word_objects):
         script_part.append("five_second_break")
         script_part.append(word_object["word"])
         script_part.append("five_second_break")
+    return script_part
+
+def spaced_words(word_objects):
+    script_part = []
+    for i, word_object in enumerate(word_objects):
+        script_part.append(word_object["word"])
+        script_part.append("one_second_break")
     return script_part
 
 def words_3_reps(word_objects):
