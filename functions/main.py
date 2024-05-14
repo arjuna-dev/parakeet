@@ -31,9 +31,10 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode.
     GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
+    GPT_4_O = "gpt-4o"
     # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
 
-gpt_model = GPT_MODEL.GPT_4_TURBO_V.value
+gpt_model = GPT_MODEL.GPT_4_O.value
 
 # @storage_fn.on_object_finalized(timeout_sec=500)
 @https_fn.on_request(
