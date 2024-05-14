@@ -24,8 +24,9 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this one as of today.
     GPT_4_TURBO = "gpt-4-turbo" # Supports JSON mode. This points to some other one.
     GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode, results were not good.
+    GPT_4_O = "gpt-4o" # the latest model
 
-gpt_model = GPT_MODEL.GPT_4_TURBO.value
+gpt_model = GPT_MODEL.GPT_4_O.value
 
 initialize_app()
 
