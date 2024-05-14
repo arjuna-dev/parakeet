@@ -29,11 +29,8 @@ class Library extends StatelessWidget {
             itemCount: documents.length,
             itemBuilder: (context, index) {
               return ListTile(
-                  title: Text(documents[index].reference.parent.parent!.id),
+                  title: Text(documents[index].get('title')),
                   onTap: () async {
-                    QuerySnapshot targetSentencesSnapshot = await _firestore
-                        .collectionGroup('only_target_sentences')
-                        .get();
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -41,8 +38,7 @@ class Library extends StatelessWidget {
                             script: documents[index].get('script'),
                             responseDbId:
                                 documents[index].reference.parent.parent!.id,
-                            dialogue: (targetSentencesSnapshot.docs[index]
-                                .data() as Map<String, dynamic>)),
+                            dialogue: documents[index].get('dialogue')),
                       ),
                     );
                   });
