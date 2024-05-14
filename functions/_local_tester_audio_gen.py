@@ -35,11 +35,11 @@ elif selected_tts == TTS_PROVIDERS.ELEVENLABS.value:
 use_concurrency = False if selected_tts == TTS_PROVIDERS.ELEVENLABS.value else True
 
 # Convert to speech
-# parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English (United States)", "German (Germany)", dialogue, local_run=True, use_concurrency=use_concurrency)
+parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", dialogue, local_run=True, use_concurrency=use_concurrency)
 
 # Create script
-script = parse_and_create_script(chatGPT_response)
-print(script)
+# script = parse_and_create_script(chatGPT_response)
+# print(script)
 
 # Create needed directories
 if not os.path.exists("other/narrator_audio_files"):
@@ -49,4 +49,4 @@ narrator_audio_files_directory = "other/narrator_audio_files"
 # Generate lesson
 save_directory = f"other/{dir_name}"
 save_as = f"lesson_{now}"
-generate_lesson(script, save_directory, save_as, audio_files_directory, narrator_audio_files_directory)
+# generate_lesson(script, save_directory, save_as, audio_files_directory, narrator_audio_files_directory)

@@ -1,9 +1,9 @@
 import os
 import random
 import script_sequences as sequences
-from elevenlabs_api import elevenlabs_tts
+from elevenlabs_api import elevenlabs_tts, find_voice_elevenlabs
 from google_tts_voices import google_tts_voices
-import gcloud_text_to_speech_api as gcloud_tts
+from gcloud_text_to_speech_api import find_matching_voice_google, google_synthesize_text, create_google_voice
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
 from utilities import TTS_PROVIDERS
@@ -89,23 +89,10 @@ def parse_and_create_script(data):
     return script
 
 def language_to_language_code(language):
-    print('language: ', language)
-    if language in language_codes:
-        return language_codes[language]
-    else:
-        return "Language not found"
-
-def find_voice_google(language, gender, exclude_voice_id=None):
     for voice in google_tts_voices:
-        if voice.get('language') == language and voice.get('gender') == gender and voice.get('voice_id') != exclude_voice_id:
-            return voice
-
-def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
-    for voice in voices:
-        if (voice['language'] == language and voice['gender'] == gender and
-                voice['voice_id'] != exclude_voice_id):
-            return voice['voice_id']
-    return None
+        if voice['language'] == language:
+            return voice['language_code']
+    raise Exception(f"Language code not found for {language}")
 
 def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata, local_run=False, use_concurrency=True):
 
@@ -114,14 +101,26 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
 
-        speaker_1_voice = find_voice_google(target_language, speaker_1_gender)
-        assert speaker_1_voice is not None, f"Voice not found for {target_language} and {speaker_1_gender}"
-        speaker_2_voice = find_voice_google(target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice)
-        assert speaker_2_voice is not None, f"Voice not found for {target_language} and {speaker_2_gender}"
+        target_language_code = language_to_language_code(target_language)
+        native_language_code = language_to_language_code(native_language)
 
-        narrator_voice = find_voice_google("English", "f")
+        speaker_1_voice_id = find_matching_voice_google(target_language, speaker_1_gender)
+        speaker_2_voice_id = find_matching_voice_google(target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice_id)
+        narrator_voice_id = find_matching_voice_google(native_language, "f")
 
-        tts_function = gcloud_tts.synthesize_text
+        print('speaker_1_voice_id: ', speaker_1_voice_id)
+        print('speaker_2_voice_id: ', speaker_2_voice_id)
+        print('narrator_voice_id: ', narrator_voice_id)
+        print('target_language_code: ', target_language_code)
+        print('native_language_code: ', native_language_code)
+
+        speaker_1_voice = create_google_voice(target_language_code, speaker_1_voice_id)
+        speaker_2_voice = create_google_voice(target_language_code, speaker_2_voice_id)
+        narrator_voice = create_google_voice(native_language_code, narrator_voice_id)
+        speaker_1_voice = narrator_voice
+        speaker_2_voice = narrator_voice
+
+        tts_function = google_synthesize_text
 
     elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
         narrator_voice = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow
