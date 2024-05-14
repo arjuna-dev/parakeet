@@ -95,7 +95,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       return [fileUrl, metadata.customMetadata!['duration']];
     } catch (e) {
-      print("Failed to get file URL: $e");
+      print("Failed to get file URL: $e: $fileName");
       return ["", ""];
     }
   }

@@ -59,6 +59,8 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # ChatGPT API call
     chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length)
+    
+    print(chatGPT_response)
 
     # storing chatGPT_response in Firestore
     db = firestore.client()
@@ -77,6 +79,12 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     # Create final response with link to audio files and script
     response = {}
     response["script"] = script
+    response["native_language"] = native_language
+    response["target_language"] = target_language
+    response["language_level"] = language_level
+    response["dialogue"] = dialogue
+    response["title"] = chatGPT_response["title"]
+    response["userID"] = chatGPT_response["user_ID"]
     #save script to Firestore
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
