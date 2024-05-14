@@ -7,6 +7,8 @@ def choose_voice(language_code, gender, specific_voice=None): # specific_voice =
         ssml_gender = texttospeech.SsmlVoiceGender.MALE
     elif gender == "f":
         ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
+    else:
+        ssml_gender = texttospeech.SsmlVoiceGender.SSML_VOICE_GENDER_UNSPECIFIED
         
     if specific_voice == None:
         voice = texttospeech.VoiceSelectionParams(
