@@ -17,10 +17,10 @@ def get_audio_segment(key, lesson_script_audio_segments):
         return lesson_script_audio_segments.get(key)
 
 # Function to generate the full lesson audio
-def generate_lesson(script, save_directory, audio_files_directory, narrator_audio_files_directory):
+def generate_lesson(script, save_directory, output_name, audio_files_directory, narrator_audio_files_directory):
 
     #name of the combined audio file
-    filename = f'{save_directory}/lesson_final.mp3'
+    filename = f'{save_directory}/{output_name}.mp3'
     
     #Create audio segments from the lesson_script
     lesson_script_audio_segments = {}
