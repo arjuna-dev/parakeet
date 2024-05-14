@@ -1,3 +1,4 @@
+from enum import Enum
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
