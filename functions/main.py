@@ -4,11 +4,10 @@ import firebase_functions.options as options
 import json
 import openai
 import datetime
-from enum import Enum
 from prompt import prompt
 import os
 from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
-from utilities import is_running_locally
+from utilities import is_running_locally, GPT_MODEL
 
 if is_running_locally():
     from dotenv import load_dotenv
@@ -26,6 +25,7 @@ options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
 app = initialize_app()
+
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
