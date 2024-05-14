@@ -1,17 +1,12 @@
-
 import os
 import random
 import script_sequences as sequences
 from google_tts_language_codes import language_codes
 from elevenlabs_api import elevenlabs_tts
 import gcloud_text_to_speech_api as gcloud_tts
-from enum import Enum
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
-
-class TTS_PROVIDERS(Enum):
-    GOOGLE = 1
-    ELEVENLABS = 2
+from utilities import TTS_PROVIDERS
 
 def extract_and_classify_enclosed_words(input_string):
     parts = input_string.split('||')
@@ -27,27 +22,28 @@ def extract_and_classify_enclosed_words(input_string):
     
     return result
 
-def parse_and_create_script (data):
+def parse_and_create_script(data):
     script = []
 
-    index = random.randint(0, len(sequences.intro_sequences) - 1)
-    intro_sequence = sequences.intro_sequences[index]()
+    random_i = random.randint(0, len(sequences.intro_sequences) - 1)
+    intro_sequence = sequences.intro_sequences[random_i]()
     script.extend(intro_sequence)
 
     for i, sentence in enumerate(data["dialogue"]):
-        script.append(f"dialogue_{i}_{"target_language"}")
+        script.append(f"dialogue_{i}_target_language")
+
+    script.extend(sequences.intro_outro_sequence_1())
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
 
-        native_sentence = f"dialogue_{i}_{"native_language"}"
-        target_sentence = f"dialogue_{i}_{"target_language"}"
+        native_sentence = f"dialogue_{i}_native_language"
+        target_sentence = f"dialogue_{i}_target_language"
 
-        narrator_explanation = f"dialogue_{i}_{"narrator_explanation"}"
-        narrator_fun_fact = f"dialogue_{i}_{"narrator_fun_fact"}"
+        narrator_explanation = f"dialogue_{i}_narrator_explanation"
+        narrator_fun_fact = f"dialogue_{i}_narrator_fun_fact"
         
-        index = random.randint(0, len(sequences.sentence_sequences) - 1)
-        sentence_sequence = sequences.sentence_sequences[index](native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
+        sentence_sequence = sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact, is_first_sentence=True) if i == 0 else sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
         script.extend(sentence_sequence)
 
         # Process split_sentence items
@@ -55,31 +51,39 @@ def parse_and_create_script (data):
             text = split_sentence["narrator_translation"]
 
             # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text = extract_and_classify_enclosed_words(text)
-            narrator_translations = []
-            for index, part in enumerate(classified_text):
+            classified_text_1 = extract_and_classify_enclosed_words(text)
+            narrator_translations_chunk = []
+            for index, part in enumerate(classified_text_1):
                 narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                narrator_translations.append(narrator_translation)
+                narrator_translations_chunk.append(narrator_translation)
 
-            split_native = f"dialogue_{i}_split_sentence_{j}_{"native_language"}"
-            split_target = f"dialogue_{i}_split_sentence_{j}_{"target_language"}"
+            split_native = f"dialogue_{i}_split_sentence_{j}_native_language"
+            split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
 
             word_objects = []
-            for index, words in enumerate(split_sentence['words']):
-                word = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+            for index, word in enumerate(split_sentence['words']):
+                word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                text = word["narrator_translation"]
 
                 # Classify and process the text into parts enclosed by || (target_language text)
-                classified_text = extract_and_classify_enclosed_words(text)
+                classified_text_2 = extract_and_classify_enclosed_words(text)
                 narrator_translations = []
-                for index2, part in enumerate(classified_text):
+                for index2, part in enumerate(classified_text_2):
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
                     narrator_translations.append(narrator_translation)
 
-                word_objects.append({"word": word, "translation": narrator_translations})
+                word_objects.append({"word": word_file, "translation": narrator_translations})
 
-            index = random.randint(0, len(sequences.chunk_sequences) - 1)
-            chunk_sequence = sequences.chunk_sequence_3rep_new(narrator_translations, split_native, split_target, word_objects)
+            chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
             script.extend(chunk_sequence)
+
+        random_sentence_i = random.randint(0, i)
+        number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
+        random_chunk_i = random.randint(0, number_of_chunks)
+        target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
+        native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
+        active_recall_sequence = sequences.active_recall_sequence_1(native, target)
+        script.extend(active_recall_sequence)
 
     return script
 
@@ -92,10 +96,6 @@ def language_to_language_code(language):
 
 def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
     for voice in voices:
-        print('voice[language]: ', voice['language'])
-        print('language : ', language )
-        print('voice[gender]: ', voice['gender'])
-        print('gender: ', gender)
         if (voice['language'] == language and voice['gender'] == gender and
                 voice['voice_id'] != exclude_voice_id):
             return voice['voice_id']
