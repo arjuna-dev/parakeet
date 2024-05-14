@@ -64,6 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
     storageBucket: 'noble-descent-420612.appspot.com',
+    androidClientId: '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
+    iosClientId: '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
     iosBundleId: 'com.example.auralearn',
   );
 
@@ -73,16 +75,19 @@ class DefaultFirebaseOptions {
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
     storageBucket: 'noble-descent-420612.appspot.com',
+    androidClientId: '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
+    iosClientId: '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
     iosBundleId: 'com.example.auralearn',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyACluIm0NV4m_R_3Ba146Ywf8OALzYzACs',
-    appId: '1:104439269977:web:d38ab3f9ce2073b464bf48',
+    appId: '1:104439269977:web:1aa2cf2c5307032b64bf48',
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
     authDomain: 'noble-descent-420612.firebaseapp.com',
     storageBucket: 'noble-descent-420612.appspot.com',
-    measurementId: 'G-EVJ3WSXG3D',
+    measurementId: 'G-QYD2HYDHZ9',
   );
+
 }

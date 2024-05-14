@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:auralearn/screens/final_script.dart';
+import 'package:auralearn/screens/audio_player_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 // import 'package:cloud_firestore/cloud_firestore.dart';
@@ -118,8 +118,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FinalScript(
-                            script: script,
+                        builder: (context) => AudioPlayerScreen(
+                            script: script['script'],
+                            dialogue: widget.dialogue,
                             responseDbId: widget.dialogue["response_db_id"])),
                   );
                 }
