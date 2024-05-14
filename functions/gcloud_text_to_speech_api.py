@@ -1,4 +1,6 @@
 from google.cloud import texttospeech, storage
+from pydub import AudioSegment # type: ignore
+
 
 def choose_voice(language_code, gender, specific_voice=None): # specific_voice = "en-US-Standard-C" for narrator
     if gender == "m": 
@@ -42,13 +44,24 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
         return f"Audio content written to file {output_path}"
 
     else:
+        # Load audio file
+        audio = AudioSegment.from_file(output_path)
+        
+        # Get duration of audio file
+        duration = len(audio) / 1000
+        
         # Upload the audio file to the bucket
         blob_name = f"{output_path}"
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
-        bucket.reload(timeout=300)
         blob = bucket.blob(blob_name)
-        blob.upload_from_filename(output_path)
+        try:
+            blob.upload_from_filename(output_path, timeout = 600)
+        except Exception as e:
+            print(f'Error uploading file: {e}')    
+            
+        blob.metadata = {'duration' : str(duration)}
+        blob.patch()
         
         # Make the blob publicly accessible
         blob.make_public()

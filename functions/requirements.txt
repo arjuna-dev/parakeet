@@ -1,3 +1,5 @@
 firebase_functions~=0.1.0
 openai
 google-cloud-texttospeech
+pydub
+python-dotenv
