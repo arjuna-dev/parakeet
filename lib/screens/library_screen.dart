@@ -28,20 +28,28 @@ class Library extends StatelessWidget {
           return ListView.builder(
             itemCount: documents.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                  title: Text(documents[index].get('title')),
-                  onTap: () async {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AudioPlayerScreen(
-                            script: documents[index].get('script'),
-                            responseDbId:
-                                documents[index].reference.parent.parent!.id,
-                            dialogue: documents[index].get('dialogue')),
-                      ),
-                    );
-                  });
+              return Card(
+                  child: ListTile(
+                      title: Text(documents[index].get('title')),
+                      subtitle: Text(
+                          "Learning language: ${documents[index].get('target_language')} \n"
+                          "Difficulty: ${documents[index].get('language_level')} level \n"),
+                      leading: const Icon(Icons.audio_file),
+                      onTap: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                                script: documents[index].get('script'),
+                                responseDbId: documents[index]
+                                    .reference
+                                    .parent
+                                    .parent!
+                                    .id,
+                                dialogue: documents[index].get('dialogue')),
+                          ),
+                        );
+                      }));
             },
           );
         },
