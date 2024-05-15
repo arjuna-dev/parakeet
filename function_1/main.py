@@ -24,8 +24,9 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode. The default points to this one as of today.
     GPT_4_TURBO = "gpt-4-turbo" # Supports JSON mode. This points to some other one.
     GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode, results were not good.
+    GPT_4_O = "gpt-4o" # the latest model
 
-gpt_model = GPT_MODEL.GPT_4_TURBO.value
+gpt_model = GPT_MODEL.GPT_4_O.value
 
 initialize_app()
 
@@ -56,13 +57,15 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length]):
         return {'error': 'Missing required parameters in request data'}
     
-    chatGPT_response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords)
+    chatGPT_response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, length, keywords)
 
     try:
         chatGPT_response = json.loads(chatGPT_response)
         # storing chatGPT_response in Firestore
         db = firestore.client()
         doc_ref = db.collection('chatGPT_responses').document()
+        chatGPT_response["response_db_id"] = doc_ref.id
+        chatGPT_response["user_ID"] = user_ID
         subcollection_ref = doc_ref.collection('only_target_sentences')
         subcollection_ref.document().set(chatGPT_response)
     except Exception as e:
@@ -71,11 +74,9 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         #TODO: log error and failed JSON in DB and ask the user to try again
         return
 
-    chatGPT_response["response_db_id"] = doc_ref.id
-    chatGPT_response["user_ID"] = user_ID
     return chatGPT_response
 
-def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords):
+def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, length, keywords):
     client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
     # Create the chat completion
@@ -90,5 +91,6 @@ def chatGPT_API_call(requested_scenario, native_language, target_language, langu
     )
 
     chatGPT_JSON_response = completion.choices[0].message.content
+    
 
     return chatGPT_JSON_response
