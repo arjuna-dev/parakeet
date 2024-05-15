@@ -141,10 +141,16 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
 
     # add a subdirectory to the directory
     os.makedirs(f"{directory}", exist_ok=True)
-
-    tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run)
-    tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run)
-    tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run)
+    fileDurations = {}
+    
+    if (tts_provider == TTS_PROVIDERS.GOOGLE.value):
+        fileDurations.add(tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run))
+        fileDurations.add(tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run))
+        fileDurations.add(tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run))
+    else:
+        tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run)
+        tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run)
+        tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run)
 
 
     futures = []
@@ -225,8 +231,10 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
             # If concurrency is used, wait for all futures to complete
             for future in concurrent.futures.as_completed(futures):
                 result = future.result()
+                fileDurations.add(result)
             executor.shutdown()
         else:
             result = "Parsed without concurrency"
 
     print (result)
+    return fileDurations
