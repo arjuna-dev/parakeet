@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 // This is the main screen for the audio player
+// ignore: must_be_immutable
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
-  final Map<String, dynamic> dialogue;
+  final List<dynamic> dialogue;
+  Map<String, dynamic> audioDurations;
 
-  const AudioPlayerScreen(
+  AudioPlayerScreen(
       {Key? key,
       required this.script,
       required this.responseDbId,
-      required this.dialogue})
+      required this.dialogue,
+      required this.audioDurations})
       : super(key: key);
 
   @override
@@ -39,65 +41,53 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     super.initState();
     player = AudioPlayer();
     currentTrack = widget.script[0];
-    print(widget.dialogue);
     _initPlaylist(); // Initialize the playlist
   }
 
   // This method initializes the playlist
   Future<void> _initPlaylist() async {
-    List<AudioSource> sources = [];
-
-    // Create a list of futures
-    List<Future<List>> futures =
+    List<Future<String?>> fileUrls =
         widget.script.map((fileName) => _constructUrl(fileName)).toList();
+    List<String?> results = await Future.wait(fileUrls);
+    List<AudioSource> audioSources = results
+        .where((url) => url != null)
+        .map((url) => AudioSource.uri(Uri.parse(url!)))
+        .toList();
+    playlist = ConcatenatingAudioSource(children: audioSources);
+    player.setAudioSource(playlist);
 
-    // Wait for all futures to complete
-    List<List<dynamic>> allUrlData = await Future.wait(futures);
-
-    //Loop over each urlData and add it to the sources list
-    for (var urlData in allUrlData) {
-      String fileUrl = urlData[0];
-      Duration duration = Duration(
-          milliseconds: (double.parse(urlData[1].toString()) * 1000).round());
+    // Calculate totalDuration and update trackDurations
+    totalDuration = Duration.zero;
+    trackDurations = List<Duration>.filled(widget.script.length, Duration.zero);
+    for (int i = 0; i < widget.script.length; i++) {
+      String fileName = widget.script[i];
+      double durationInSeconds;
+      if (widget.audioDurations[fileName].runtimeType == String) {
+        durationInSeconds = double.parse(widget.audioDurations[fileName]);
+      } else {
+        durationInSeconds = widget.audioDurations[fileName] as double;
+      }
+      Duration duration =
+          Duration(milliseconds: (durationInSeconds * 1000).round());
       totalDuration += duration;
-      trackDurations.add(duration); // Store each track's duration
-      if (!Uri.parse(fileUrl).isAbsolute) continue;
-      sources.add(ProgressiveAudioSource(Uri.parse(fileUrl)));
-    }
-    playlist = ConcatenatingAudioSource(children: sources);
-
-    try {
-      await player.setAudioSource(playlist);
-    } catch (e) {
-      print("An error occurred while loading audio source: $e");
+      trackDurations[i] = duration;
     }
   }
 
   // This method constructs the URL for a file
-  Future<List> _constructUrl(String fileName) async {
-    String filePath;
+  Future<String> _constructUrl(String fileName) async {
+    String fileUrl;
     if (fileName.startsWith("narrator_") ||
         fileName == "one_second_break" ||
         fileName == "five_second_break") {
-      filePath =
-          "gs://narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+      fileUrl =
+          "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/${fileName}.mp3";
     } else {
-      filePath =
-          "gs://conversations_audio_files/${widget.responseDbId}/$fileName.mp3";
+      fileUrl =
+          "https://storage.googleapis.com/conversations_audio_files/${widget.responseDbId}/${fileName}.mp3";
     }
 
-    try {
-      // Get the reference to the file in Firebase Storage
-      Reference ref = FirebaseStorage.instance.ref().child(filePath);
-      // Get the download URL
-      String fileUrl = await ref.getDownloadURL();
-      final metadata = await ref.getMetadata();
-
-      return [fileUrl, metadata.customMetadata!['duration']];
-    } catch (e) {
-      print("Failed to get file URL: $e: $fileName");
-      return ["", ""];
-    }
+    return fileUrl;
   }
 
   // This method calculates the cumulative duration up to a certain index
@@ -157,10 +147,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         children: <Widget>[
           Expanded(
             child: ListView.builder(
-              itemCount: widget.dialogue["all_turns"].length,
+              itemCount: widget.dialogue.length,
               itemBuilder: (context, index) {
-                String dialogue =
-                    widget.dialogue["all_turns"][index]["target_language"];
+                String dialogue = widget.dialogue[index]["target_language"];
                 bool isMatch = currentTrack.split('_').length >= 2 &&
                     currentTrack.split('_').take(2).join('_') ==
                         "dialogue_$index";

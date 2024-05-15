@@ -57,13 +57,15 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length]):
         return {'error': 'Missing required parameters in request data'}
     
-    chatGPT_response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords)
+    chatGPT_response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, length, keywords)
 
     try:
         chatGPT_response = json.loads(chatGPT_response)
         # storing chatGPT_response in Firestore
         db = firestore.client()
         doc_ref = db.collection('chatGPT_responses').document()
+        chatGPT_response["response_db_id"] = doc_ref.id
+        chatGPT_response["user_ID"] = user_ID
         subcollection_ref = doc_ref.collection('only_target_sentences')
         subcollection_ref.document().set(chatGPT_response)
     except Exception as e:
@@ -72,11 +74,9 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         #TODO: log error and failed JSON in DB and ask the user to try again
         return
 
-    chatGPT_response["response_db_id"] = doc_ref.id
-    chatGPT_response["user_ID"] = user_ID
     return chatGPT_response
 
-def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, user_ID, length, keywords):
+def chatGPT_API_call(requested_scenario, native_language, target_language, language_level, length, keywords):
     client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
     # Create the chat completion
@@ -91,5 +91,6 @@ def chatGPT_API_call(requested_scenario, native_language, target_language, langu
     )
 
     chatGPT_JSON_response = completion.choices[0].message.content
+    
 
     return chatGPT_JSON_response
