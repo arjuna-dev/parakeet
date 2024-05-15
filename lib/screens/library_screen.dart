@@ -35,10 +35,12 @@ class Library extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => AudioPlayerScreen(
-                            script: documents[index].get('script'),
-                            responseDbId:
-                                documents[index].reference.parent.parent!.id,
-                            dialogue: documents[index].get('dialogue')),
+                          script: documents[index].get('script'),
+                          responseDbId:
+                              documents[index].reference.parent.parent!.id,
+                          dialogue: documents[index].get('dialogue'),
+                          audioDurations: documents[index].get('fileDurations'),
+                        ),
                       ),
                     );
                   });
