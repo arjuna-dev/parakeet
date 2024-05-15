@@ -93,7 +93,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     },
                     body: jsonEncode(<String, dynamic>{
                       "response_db_id": widget.dialogue["response_db_id"],
-                      "dialogue": widget.dialogue,
+                      "dialogue": widget.dialogue["all_turns"],
+                      "title": widget.dialogue["title"],
+                      "speakers": widget.dialogue["speakers"],
+                      "user_ID": widget.dialogue["user_ID"],
                       "native_language": widget.nativeLanguage,
                       "target_language": widget.targetLanguage,
                       "length": widget.length,
