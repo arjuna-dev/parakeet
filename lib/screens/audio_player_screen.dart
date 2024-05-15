@@ -7,7 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
-  final Map<String, dynamic> dialogue;
+  final List<dynamic> dialogue;
 
   const AudioPlayerScreen(
       {Key? key,
@@ -157,10 +157,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         children: <Widget>[
           Expanded(
             child: ListView.builder(
-              itemCount: widget.dialogue["all_turns"].length,
+              itemCount: widget.dialogue.length,
               itemBuilder: (context, index) {
-                String dialogue =
-                    widget.dialogue["all_turns"][index]["target_language"];
+                String dialogue = widget.dialogue[index]["target_language"];
                 bool isMatch = currentTrack.split('_').length >= 2 &&
                     currentTrack.split('_').take(2).join('_') ==
                         "dialogue_$index";
