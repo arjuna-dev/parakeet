@@ -68,7 +68,7 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
         # Make the blob publicly accessible
         blob.make_public()
         
-        return {output_path.split("/")[1]: duration}
+        return {output_path.split("/")[1].replace('.mp3', ''): duration}
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")

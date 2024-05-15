@@ -83,7 +83,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
         metadata = blob.metadata
         if metadata and 'duration' in metadata:
-            fileDurations[blob.name] = metadata['duration']
+            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
         
     
    
