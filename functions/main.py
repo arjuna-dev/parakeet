@@ -62,7 +62,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
 
     # ChatGPT API call
-    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length)
+    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers)
     
     print(chatGPT_response)
 
