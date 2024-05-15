@@ -2,6 +2,7 @@ from enum import Enum
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
+from google.cloud import storage
 import json
 import openai
 import datetime
@@ -49,17 +50,20 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
     dialogue = request_data.get("dialogue")
     response_db_id = request_data.get("response_db_id")
+    user_ID = request_data.get("user_ID")
+    title = request_data.get("title")
+    speakers = request_data.get("speakers")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
 
-    if not all([dialogue, response_db_id, native_language, target_language, language_level, length]):
+    if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length]):
         return {'error': 'Missing required parameters in request data'}
 
 
     # ChatGPT API call
-    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length)
+    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers)
     
     print(chatGPT_response)
 
@@ -70,7 +74,21 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
-    parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, dialogue)
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title)
+    
+    # get all the file durations from narrator_audio_files bucket metadata
+    client = storage.Client()
+    bucket = client.get_bucket("narrator_audio_files")
+    
+    for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
+        metadata = blob.metadata
+        if metadata and 'duration' in metadata:
+            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
+        
+    
+   
+    
+    
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
@@ -84,15 +102,18 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     response["target_language"] = target_language
     response["language_level"] = language_level
     response["dialogue"] = dialogue
-    response["title"] = chatGPT_response["title"]
-    response["userID"] = chatGPT_response["user_ID"]
+    response["speakers"] = speakers
+    response["title"] = title
+    response["userID"] = user_ID
+    response["fileDurations"] = fileDurations
+
     #save script to Firestore
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
     
     return response
 
-def chatGPT_API_call(dialogue, native_language, target_language, language_level, length):
+def chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers):
 
     client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
@@ -102,7 +123,7 @@ def chatGPT_API_call(dialogue, native_language, target_language, language_level,
         #   stream=True,
         messages=[
             {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
-            {"role": "user", "content": prompt(dialogue, native_language, target_language, language_level, length)}
+            {"role": "user", "content": prompt(dialogue, native_language, target_language, language_level, length, speakers)}
         ],
         response_format={'type': 'json_object'}
     )
