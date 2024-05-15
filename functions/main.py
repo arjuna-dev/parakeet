@@ -2,6 +2,7 @@ from enum import Enum
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
+from google.cloud import storage
 import json
 import openai
 import datetime
@@ -74,6 +75,20 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # Parse chatGPT_response and store in Firebase Storage
     fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title)
+    
+    # get all the file durations from narrator_audio_files bucket metadata
+    client = storage.Client()
+    bucket = client.get_bucket("narrator_audio_files")
+    
+    for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
+        metadata = blob.metadata
+        if metadata and 'duration' in metadata:
+            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
+        
+    
+   
+    
+    
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
