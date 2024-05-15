@@ -70,7 +70,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
-    parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, dialogue)
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, dialogue)
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
@@ -86,6 +86,8 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     response["dialogue"] = dialogue
     response["title"] = chatGPT_response["title"]
     response["userID"] = chatGPT_response["user_ID"]
+    response["fileDurations"] = fileDurations
+
     #save script to Firestore
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
