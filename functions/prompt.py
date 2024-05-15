@@ -1,7 +1,7 @@
 
 
-def prompt(dialogue, native_language, target_language, language_level, length):
-   return f'''Please generate a JSON using this information:\n {dialogue} \n Language level is {language_level}. You will write turns from 1 to {length}. You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in {native_language}, when quoting in {target_language} the text should be enclosed in double vertical bars (||). The {target_language} sentence of each turn should be split in smaller parts of maximum 4 words that have grammatical cohesion and make sense and then translated as literally as possible to {native_language}. For the narrator_translation key avoid grammatical explanations, avoid explaining gender and number of articles for example. Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
+def prompt(dialogue, native_language, target_language, language_level, length, speakers):
+   return f'''Please generate a JSON using this information:\n {dialogue} \n Language level is {language_level}. You will write turns from 1 to {length}. You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in {native_language}, when quoting in {target_language} the text should be enclosed in double vertical bars (||). The {target_language} sentence of each turn should be split in smaller parts of maximum 4 words that have grammatical cohesion and make sense and then translated as literally as possible to {native_language}. Use {speakers} to get the name of the speakers and always use their names. For the narrator_translation key avoid grammatical explanations, avoid explaining gender and number of articles for example. Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
 
 JSON: ===
 {{

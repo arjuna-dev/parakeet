@@ -12,7 +12,20 @@
           "package_name": "com.example.auralearn"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.auralearn",
+            "certificate_hash": "d1714e82d716acd34ecdcf989e0e76ec5f77c819"
+          }
+        },
+        {
+          "client_id": "104439269977-1u9c1ansm0vhg0fdh7c7odekvbv89r8j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBWenp03TlyOyt_3N4L9AWRCw2XK3uV8FA"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "104439269977-1u9c1ansm0vhg0fdh7c7odekvbv89r8j.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.auralearn"
+              }
+            }
+          ]
         }
       }
     }
