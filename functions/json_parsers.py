@@ -94,10 +94,10 @@ def language_to_language_code(language):
             return voice['language_code']
     raise Exception(f"Language code not found for {language}")
 
-def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, metadata, local_run=False, use_concurrency=True):
+def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, speakers, title, local_run=False, use_concurrency=True):
 
-    speaker_1_gender = metadata["speakers"]["speaker_1"]["gender"].lower()
-    speaker_2_gender = metadata["speakers"]["speaker_2"]["gender"].lower()
+    speaker_1_gender = speakers["speaker_1"]["gender"].lower()
+    speaker_2_gender = speakers["speaker_2"]["gender"].lower()
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
 
@@ -136,14 +136,19 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
 
         tts_function = elevenlabs_tts
 
-    title = metadata["title"]
 
     # add a subdirectory to the directory
     os.makedirs(f"{directory}", exist_ok=True)
-
-    tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run)
-    tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run)
-    tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run)
+    fileDurations = {}
+    
+    if (tts_provider == TTS_PROVIDERS.GOOGLE.value):
+        fileDurations.update(tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run))
+        fileDurations.update(tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run))
+        fileDurations.update(tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run))
+    else:
+        tts_function(title, narrator_voice, f"{directory}/title.mp3", local_run)
+        tts_function(native_language, narrator_voice, f"{directory}/native_language.mp3", local_run)
+        tts_function(target_language, narrator_voice, f"{directory}/target_language.mp3", local_run)
 
 
     futures = []
@@ -159,7 +164,7 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
             return func(*args)  # Execute the function directly
 
     # Process speaker names
-    for speaker_key, speaker_info in metadata["speakers"].items():
+    for speaker_key, speaker_info in speakers.items():
         text = speaker_info["name"]
         speaker = f"speakers_{speaker_key}_name"
         futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{speaker}.mp3", local_run))
@@ -224,8 +229,10 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
             # If concurrency is used, wait for all futures to complete
             for future in concurrent.futures.as_completed(futures):
                 result = future.result()
+                fileDurations.update(result)
             executor.shutdown()
         else:
             result = "Parsed without concurrency"
 
     print (result)
+    return fileDurations

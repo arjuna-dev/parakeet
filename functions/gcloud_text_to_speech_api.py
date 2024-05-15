@@ -1,4 +1,5 @@
 from google.cloud import texttospeech, storage
+from pydub import AudioSegment
 from google_tts_voices import google_tts_voices
 
 def find_matching_voice_google(language, gender, exclude_voice_id=None):
@@ -12,7 +13,7 @@ def find_matching_voice_google(language, gender, exclude_voice_id=None):
 def create_google_voice(language_code, voice_id):
     voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id)
     print('voice: ', voice)
-    return voice
+
 
 def google_synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
 
@@ -39,16 +40,29 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
         return f"Audio content written to file {output_path}"
 
     else:
+        # Load audio file
+        audio = AudioSegment.from_file(output_path)
+        
+        # Get duration of audio file
+        duration = len(audio) / 1000
+        
         # Upload the audio file to the bucket
         blob_name = f"{output_path}"
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
-        bucket.reload(timeout=300)
         blob = bucket.blob(blob_name)
-        blob.upload_from_filename(output_path)
+        try:
+            blob.upload_from_filename(output_path, timeout = 600)
+        except Exception as e:
+            print(f'Error uploading file: {e}')    
+            
+        blob.metadata = {'duration' : str(duration)}
+        blob.patch()
         
         # Make the blob publicly accessible
         blob.make_public()
+        
+        return {output_path.split("/")[1]: duration}
 
 def list_voices(language_code=None):
     client = tts.TextToSpeechClient()
