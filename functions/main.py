@@ -49,12 +49,15 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
     dialogue = request_data.get("dialogue")
     response_db_id = request_data.get("response_db_id")
+    user_ID = request_data.get("user_ID")
+    title = request_data.get("title")
+    speakers = request_data.get("speakers")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
 
-    if not all([dialogue, response_db_id, native_language, target_language, language_level, length]):
+    if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length]):
         return {'error': 'Missing required parameters in request data'}
 
 
@@ -70,7 +73,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and store in Firebase Storage
-    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, dialogue)
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title)
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
@@ -84,8 +87,9 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     response["target_language"] = target_language
     response["language_level"] = language_level
     response["dialogue"] = dialogue
-    response["title"] = chatGPT_response["title"]
-    response["userID"] = chatGPT_response["user_ID"]
+    response["speakers"] = speakers
+    response["title"] = title
+    response["userID"] = user_ID
     response["fileDurations"] = fileDurations
 
     #save script to Firestore
