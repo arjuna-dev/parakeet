@@ -1,7 +1,9 @@
 import 'package:auralearn/Navigation/bottom_menu_bar.dart';
 import 'package:auralearn/screens/audio_player_screen.dart';
+import 'package:auralearn/services/home_screen_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class Library extends StatelessWidget {
   Library({super.key});
@@ -35,6 +37,14 @@ class Library extends StatelessWidget {
                           "Learning language: ${documents[index].get('target_language')} \n"
                           "Difficulty: ${documents[index].get('language_level')} level \n"),
                       leading: const Icon(Icons.audio_file),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.home),
+                        onPressed: () {
+                          // Add the audio file to the home screen
+                          Provider.of<HomeScreenModel>(context, listen: false)
+                              .addAudioFile(documents[index]);
+                        },
+                      ),
                       onTap: () async {
                         Navigator.push(
                           context,
