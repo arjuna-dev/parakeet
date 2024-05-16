@@ -5,8 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   const Home({super.key});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Load the audio files
+    Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +44,7 @@ class Home extends StatelessWidget {
             itemCount: model.selectedAudioFiles.length,
             itemBuilder: (context, index) {
               final audioFile = model.selectedAudioFiles[index];
+              print(audioFile);
               return Card(
                   child: ListTile(
                       title: Text(audioFile.get('title')),
