@@ -19,6 +19,9 @@ class _HomeState extends State<Home> {
 
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+
+    Provider.of<HomeScreenModel>(context, listen: false)
+        .loadNowPlayingFromPreference();
   }
 
   @override
@@ -37,14 +40,42 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: Consumer<HomeScreenModel>(
-        // Replace the body with this
-        builder: (context, model, child) {
-          return ListView.builder(
-            itemCount: model.selectedAudioFiles.length,
+      body: Column(
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Now playing',
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
+          const SizedBox(
+            height: 10,
+          ),
+          nowPlayingList(),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Favorite Audio', style: TextStyle(fontSize: 18)),
+          ),
+          const SizedBox(
+            height: 10,
+          ),
+          favoriteAudioList(),
+        ],
+      ),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
+    );
+  }
+
+  Consumer<HomeScreenModel> nowPlayingList() {
+    return Consumer<HomeScreenModel>(
+      // Replace the body with this
+      builder: (context, model, child) {
+        return Expanded(
+          child: ListView.builder(
+            itemCount: model.nowPlayingFiles.length,
             itemBuilder: (context, index) {
-              final audioFile = model.selectedAudioFiles[index];
-              print(audioFile);
+              final audioFile = model.nowPlayingFiles[index];
               return Card(
                   child: ListTile(
                       title: Text(audioFile.get('title')),
@@ -68,10 +99,49 @@ class _HomeState extends State<Home> {
                         );
                       }));
             },
-          );
-        },
-      ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
+          ),
+        );
+      },
+    );
+  }
+
+  Consumer<HomeScreenModel> favoriteAudioList() {
+    return Consumer<HomeScreenModel>(
+      // Replace the body with this
+      builder: (context, model, child) {
+        return Expanded(
+          child: ListView.builder(
+            itemCount: model.favoriteAudioFiles.length,
+            itemBuilder: (context, index) {
+              final audioFile = model.favoriteAudioFiles[index];
+              return Card(
+                child: ListTile(
+                  title: Text(audioFile.get('title')),
+                  subtitle: Text(
+                    "Learning language: ${audioFile.get('target_language')} \n"
+                    "Difficulty: ${audioFile.get('language_level')} level \n",
+                  ),
+                  leading: const Icon(Icons.favorite),
+                  onTap: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AudioPlayerScreen(
+                          script: audioFile.get('script'),
+                          responseDbId: audioFile.reference.parent.parent!.id,
+                          dialogue: audioFile.get('dialogue'),
+                          userID: FirebaseAuth.instance.currentUser!.uid,
+                          audioDurations: audioFile.get('fileDurations'),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
