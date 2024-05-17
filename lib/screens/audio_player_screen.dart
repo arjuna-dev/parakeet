@@ -8,6 +8,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
   final List<dynamic> dialogue;
+  final String userID;
   Map<String, dynamic> audioDurations;
 
   AudioPlayerScreen(
@@ -15,6 +16,7 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.script,
       required this.responseDbId,
       required this.dialogue,
+      required this.userID,
       required this.audioDurations})
       : super(key: key);
 

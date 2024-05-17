@@ -61,6 +61,7 @@ class _HomeState extends State<Home> {
                               responseDbId:
                                   audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
+                              userID: FirebaseAuth.instance.currentUser!.uid,
                               audioDurations: audioFile.get('fileDurations'),
                             ),
                           ),
