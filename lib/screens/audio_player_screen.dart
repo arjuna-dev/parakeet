@@ -295,6 +295,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // This method stops the audio
   Future<void> _stop() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove('savedPosition_${widget.userID}');
+    prefs.remove('savedTrackIndex_${widget.userID}');
+
     player.stop();
     player.seek(Duration.zero, index: 0);
     setState(() {
