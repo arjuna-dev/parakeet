@@ -54,11 +54,12 @@ class _LibraryState extends State<Library> {
                               "Difficulty: ${documents[index].get('language_level')} level \n"),
                           leading: const Icon(Icons.audio_file),
                           trailing: ValueListenableBuilder(
-                              valueListenable: model.audioFileIdsNotifier,
-                              builder:
-                                  (context, List<dynamic> audioFileIds, child) {
+                              valueListenable:
+                                  model.favoriteAudioFileIdsNotifier,
+                              builder: (context,
+                                  List<dynamic> favoriteAudioFileIds, child) {
                                 return IconButton(
-                                  icon: model.audioFileIds.any((file) =>
+                                  icon: model.favoriteAudioFileIds.any((file) =>
                                           file['docId'] ==
                                               documents[index].reference.id &&
                                           file['parentId'] ==
@@ -83,7 +84,7 @@ class _LibraryState extends State<Library> {
                                         .id;
                                     String docId =
                                         documents[index].reference.id;
-                                    if (model.audioFileIds.any((file) =>
+                                    if (model.favoriteAudioFileIds.any((file) =>
                                         file['docId'] ==
                                             documents[index].reference.id &&
                                         file['parentId'] ==
