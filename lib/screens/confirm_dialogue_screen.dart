@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:auralearn/screens/audio_player_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 // import 'package:cloud_firestore/cloud_firestore.dart';
@@ -125,6 +127,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               script: script['script'],
                               dialogue: widget.dialogue["all_turns"],
                               responseDbId: widget.dialogue["response_db_id"],
+                              userID: FirebaseAuth.instance.currentUser!.uid,
                               audioDurations: script['fileDurations'],
                             )),
                   );
