@@ -260,8 +260,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       currentIndex = index ?? 0;
     });
 
-    await prefs.setInt('savedPosition_${widget.userID}', currentPosition);
-    await prefs.setInt('savedTrackIndex_${widget.userID}', currentIndex);
+    await prefs.setInt('savedPosition_${widget.responseDbId}_${widget.userID}',
+        currentPosition);
+    await prefs.setInt(
+        'savedTrackIndex_${widget.responseDbId}_${widget.userID}',
+        currentIndex);
+    await prefs.setBool(
+        "now_playing_${widget.responseDbId}_${widget.userID}", true);
 
     player.pause();
     setState(() {
@@ -273,8 +278,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 // This method plays the audio
   Future<void> _play() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPosition = prefs.getInt('savedPosition_${widget.userID}');
-    final savedTrackIndex = prefs.getInt('savedTrackIndex_${widget.userID}');
+    final savedPosition =
+        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+    final savedTrackIndex =
+        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
     if (savedPosition != null && savedTrackIndex != null) {
       await player.seek(Duration(milliseconds: savedPosition),
           index: savedTrackIndex);
@@ -296,8 +303,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method stops the audio
   Future<void> _stop() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.remove('savedPosition_${widget.userID}');
-    prefs.remove('savedTrackIndex_${widget.userID}');
+    prefs.remove('savedPosition_${widget.responseDbId}_${widget.userID}');
+    prefs.remove('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+    prefs.remove("now_playing_${widget.responseDbId}_${widget.userID}");
 
     player.stop();
     player.seek(Duration.zero, index: 0);
@@ -310,8 +318,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method gets the saved position from shared preferences
   Future<int> _getSavedPosition() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPosition = prefs.getInt('savedPosition_${widget.userID}');
-    final savedIndex = prefs.getInt('savedTrackIndex_${widget.userID}');
+    final savedPosition =
+        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+    final savedIndex =
+        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
     final position =
         savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
     return position;
