@@ -45,6 +45,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player = AudioPlayer();
     currentTrack = widget.script[0];
     _initPlaylist(); // Initialize the playlist
+
+    // Listen to the playerSequenceCompleteStream
+    player.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
+        _stop();
+      }
+    });
   }
 
   // This method initializes the playlist
@@ -267,6 +274,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         currentIndex);
     await prefs.setBool(
         "now_playing_${widget.responseDbId}_${widget.userID}", true);
+    final nowPlayingKey = "now_playing_${widget.userID}";
+    final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
+    if (!nowPlayingList.contains(widget.responseDbId)) {
+      nowPlayingList.add(widget.responseDbId);
+    }
+    await prefs.setStringList(nowPlayingKey, nowPlayingList);
 
     player.pause();
     setState(() {
@@ -306,6 +319,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     prefs.remove('savedPosition_${widget.responseDbId}_${widget.userID}');
     prefs.remove('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
     prefs.remove("now_playing_${widget.responseDbId}_${widget.userID}");
+    await prefs.setStringList("now_playing_${widget.userID}", []);
 
     player.stop();
     player.seek(Duration.zero, index: 0);

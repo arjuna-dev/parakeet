@@ -1,28 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreenModel extends ChangeNotifier {
-  List<DocumentSnapshot> selectedAudioFiles = [];
-  List<dynamic> audioFileIds = [];
-  ValueNotifier<List<dynamic>> audioFileIdsNotifier = ValueNotifier([]);
+  List<DocumentSnapshot> favoriteAudioFiles = [];
+  List<DocumentSnapshot> nowPlayingFiles = [];
+  List<dynamic> favoriteAudioFileIds = [];
+  List<dynamic> nowPlayingIds = [];
+  ValueNotifier<List<dynamic>> favoriteAudioFileIdsNotifier = ValueNotifier([]);
+  ValueNotifier<List<dynamic>> nowPlayingIdsNotifier = ValueNotifier([]);
 
   void addAudioFile(DocumentSnapshot audioFile) {
-    selectedAudioFiles.add(audioFile);
-    audioFileIds.add({
+    favoriteAudioFiles.add(audioFile);
+    favoriteAudioFileIds.add({
       'docId': audioFile.id,
       'parentId': audioFile.reference.parent.parent!.id,
     });
-    audioFileIdsNotifier.value = List.from(audioFileIds); // Update the notifier
+    favoriteAudioFileIdsNotifier.value =
+        List.from(favoriteAudioFileIds); // Update the notifier
     notifyListeners();
   }
 
   void removeAudioFile(DocumentSnapshot audioFile) {
-    selectedAudioFiles.remove(audioFile);
-    audioFileIds.removeWhere((file) =>
+    favoriteAudioFiles.remove(audioFile);
+    favoriteAudioFileIds.removeWhere((file) =>
         file['docId'] == audioFile.id &&
         file['parentId'] == audioFile.reference.parent.parent!.id);
-    audioFileIdsNotifier.value = List.from(audioFileIds); // Update the notifier
+    favoriteAudioFileIdsNotifier.value =
+        List.from(favoriteAudioFileIds); // Update the notifier
     notifyListeners();
   }
 
@@ -31,10 +37,15 @@ class HomeScreenModel extends ChangeNotifier {
     final userDocRef =
         FirebaseFirestore.instance.collection('users').doc(user!.uid);
     final userDoc = await userDocRef.get();
-    audioFileIds = userDoc.get('selectedAudioFiles') as List<dynamic>;
-    audioFileIdsNotifier.value = audioFileIds;
+    if (userDoc.data()!.containsKey('selectedAudioFiles')) {
+      favoriteAudioFileIds =
+          userDoc.get('selectedAudioFiles') as List<dynamic>? ?? [];
+    }
 
-    selectedAudioFiles = await Future.wait(audioFileIds.map((map) async {
+    favoriteAudioFileIdsNotifier.value = favoriteAudioFileIds;
+
+    favoriteAudioFiles =
+        await Future.wait(favoriteAudioFileIds.map((map) async {
       final scriptDocRef = FirebaseFirestore.instance
           .collection('chatGPT_responses')
           .doc(map['parentId'])
@@ -42,6 +53,29 @@ class HomeScreenModel extends ChangeNotifier {
           .doc(map['docId']);
       final scriptDoc = await scriptDocRef.get();
       return scriptDoc;
+    }));
+
+    notifyListeners();
+  }
+
+  Future<void> loadNowPlayingFromPreference() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+    nowPlayingIds = prefs.getStringList('now_playing_${user!.uid}')!;
+
+    nowPlayingIdsNotifier.value = nowPlayingIds;
+
+    nowPlayingFiles = await Future.wait(nowPlayingIds.map((id) async {
+      final scriptCollectionRef = FirebaseFirestore.instance
+          .collection('chatGPT_responses')
+          .doc(id)
+          .collection('scripts');
+      final scriptDocs = await scriptCollectionRef.get();
+      if (scriptDocs.docs.isNotEmpty) {
+        return scriptDocs.docs.first;
+      } else {
+        throw Exception('No document found in the scripts collection');
+      }
     }));
 
     notifyListeners();
