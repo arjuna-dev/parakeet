@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // This is the main screen for the audio player
 // ignore: must_be_immutable
@@ -240,8 +241,35 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         ],
       );
 
-  // This method plays the audio
+// This method pauses the audio
+  Future<void> _pause() async {
+    final prefs = await SharedPreferences.getInstance();
+    final positionData = await player.positionStream.first;
+    final currentPosition = positionData.inMilliseconds;
+    int currentIndex = 0;
+    player.currentIndexStream.listen((index) {
+      currentIndex = index ?? 0;
+    });
+
+    await prefs.setInt('savedPosition_${widget.userID}', currentPosition);
+    await prefs.setInt('savedTrackIndex_${widget.userID}', currentIndex);
+
+    player.pause();
+    setState(() {
+      isPlaying = false;
+      _isPaused = true;
+    });
+  }
+
+// This method plays the audio
   Future<void> _play() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPosition = prefs.getInt('savedPosition_${widget.userID}');
+    final savedTrackIndex = prefs.getInt('savedTrackIndex_${widget.userID}');
+    if (savedPosition != null && savedTrackIndex != null) {
+      await player.seek(Duration(milliseconds: savedPosition),
+          index: savedTrackIndex);
+    }
     setState(() {
       isPlaying = true;
       _isPaused = false;
@@ -253,15 +281,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           currentTrack = widget.script[index];
         });
       }
-    });
-  }
-
-  // This method pauses the audio
-  Future<void> _pause() async {
-    player.pause();
-    setState(() {
-      isPlaying = false;
-      _isPaused = true;
     });
   }
 
