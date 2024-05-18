@@ -23,15 +23,27 @@ class AuthScreen extends StatelessWidget {
                 // Sign in with Google
                 User? user = await AuthService().signInWithGoogle();
                 if (user != null) {
-                  // Store user to Firestore
-                  await FirebaseFirestore.instance
+                  // Get reference to the user's document in Firestore
+                  DocumentReference userDocRef = FirebaseFirestore.instance
                       .collection('users')
-                      .doc(user.uid)
-                      .set({
-                    'name': user.displayName,
-                    'email': user.email,
-                    // Add more user data as needed
-                  });
+                      .doc(user.uid);
+
+                  // Check if user already exists in Firestore
+                  DocumentSnapshot userDocSnapshot = await userDocRef.get();
+                  if (userDocSnapshot.exists) {
+                    // User already exists, retrieve data
+                    Map<String, dynamic> userData =
+                        userDocSnapshot.data() as Map<String, dynamic>;
+                    print(userData);
+                    // Use userData as needed
+                  } else {
+                    // User does not exist, create new document
+                    await userDocRef.set({
+                      'name': user.displayName,
+                      'email': user.email,
+                      // Add more user data as needed
+                    });
+                  }
 
                   Navigator.pushReplacementNamed(context, '/');
                 }

@@ -10,6 +10,7 @@ class HomeScreenModel extends ChangeNotifier {
   List<dynamic> nowPlayingIds = [];
   ValueNotifier<List<dynamic>> favoriteAudioFileIdsNotifier = ValueNotifier([]);
   ValueNotifier<List<dynamic>> nowPlayingIdsNotifier = ValueNotifier([]);
+  final user = FirebaseAuth.instance.currentUser;
 
   void addAudioFile(DocumentSnapshot audioFile) {
     favoriteAudioFiles.add(audioFile);
@@ -33,7 +34,6 @@ class HomeScreenModel extends ChangeNotifier {
   }
 
   Future<void> loadAudioFiles() async {
-    final user = FirebaseAuth.instance.currentUser;
     final userDocRef =
         FirebaseFirestore.instance.collection('users').doc(user!.uid);
     final userDoc = await userDocRef.get();
@@ -59,7 +59,6 @@ class HomeScreenModel extends ChangeNotifier {
   }
 
   Future<void> loadNowPlayingFromPreference() async {
-    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
     nowPlayingIds = prefs.getStringList('now_playing_${user!.uid}')!;
 
