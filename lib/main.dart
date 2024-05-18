@@ -49,7 +49,10 @@ class MyApp extends StatelessWidget {
                       return const AuthScreen();
                     } else {
                       // If the user is logged in, show the Home page
-                      return const Home();
+                      return ChangeNotifierProvider(
+                        create: (context) => HomeScreenModel(),
+                        child: const Home(),
+                      );
                     }
                   }
 
@@ -69,7 +72,10 @@ class MyApp extends StatelessWidget {
             );
           case '/library':
             return MaterialPageRoute(
-              builder: (context) => Library(),
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const Library(),
+              ),
             );
           default:
             return null;
