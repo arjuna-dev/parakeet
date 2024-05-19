@@ -67,13 +67,13 @@ def parse_and_create_script(data, words_to_repeat):
                 text = word["narrator_translation"]
 
                 # Classify and process the text into parts enclosed by || (target_language text)
-                classified_text_2 = extract_and_classify_enclosed_words(text)
+                classified_text_2 = extra_filect_and_classify_enclosed_words(text)
                 narrator_translations = []
                 for index2, part in enumerate(classified_text_2):
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
                     narrator_translations.append(narrator_translation)
 
-                if word_file in words_to_repeat:
+                if word["target_language"] in words_to_repeat:
                     word_objects.append({"word": word_file, "translation": narrator_translations})
 
             chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
