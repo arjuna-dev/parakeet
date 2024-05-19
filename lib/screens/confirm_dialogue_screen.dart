@@ -138,8 +138,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       "length": widget.length,
                       "language_level": widget.languageLevel,
                       "words_to_repeat": selectedWords.entries
-                          .where((entry) => entry.value as bool == true)
-                          .map((entry) => entry.key)
+                          .expand((entry) => entry.value.entries)
+                          .where((innerEntry) => innerEntry.value == true)
+                          .map((innerEntry) => innerEntry.key)
                           .toList(),
                     }),
                   );
