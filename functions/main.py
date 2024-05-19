@@ -40,10 +40,10 @@ gpt_model = GPT_MODEL.GPT_4_O.value
 
 # @storage_fn.on_object_finalized(timeout_sec=500)
 @https_fn.on_request(
-    cors=options.CorsOptions(
-      cors_origins=["*"],
-      cors_methods=["GET", "POST"]
-  )
+        cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
 )
 @https_fn.on_request()
 def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
