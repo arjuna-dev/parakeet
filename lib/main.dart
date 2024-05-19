@@ -1,4 +1,6 @@
+import 'package:auralearn/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,7 +15,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => HomeScreenModel(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -42,7 +49,10 @@ class MyApp extends StatelessWidget {
                       return const AuthScreen();
                     } else {
                       // If the user is logged in, show the Home page
-                      return const Home();
+                      return ChangeNotifierProvider(
+                        create: (context) => HomeScreenModel(),
+                        child: const Home(),
+                      );
                     }
                   }
 
@@ -62,7 +72,10 @@ class MyApp extends StatelessWidget {
             );
           case '/library':
             return MaterialPageRoute(
-              builder: (context) => Library(),
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const Library(),
+              ),
             );
           default:
             return null;
