@@ -72,6 +72,10 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
+    number_of_audio_files = len(script)
+
+    # Parse chatGPT_response and store in Firebase Storage
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files)
 
     # Create final response with link to audio files and script
     response = {}
@@ -89,11 +93,6 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
 
-    number_of_audio_files = len(script)
-
-    # Parse chatGPT_response and store in Firebase Storage
-    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files)
-    
     # get all the file durations from narrator_audio_files bucket metadata
     client = storage.Client()
     bucket = client.get_bucket("narrator_audio_files")
