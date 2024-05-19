@@ -28,9 +28,6 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
     response = client.synthesize_speech(
         request={"input": input_text, "voice": voice, "audio_config": audio_config}
     )
-#     response = client.synthesize_speech(
-#     input=input_text, voice=voice, audio_config=audio_config
-#     )
 
     # The response's audio_content is binary.
     with open(f"{output_path}", "wb") as out:
