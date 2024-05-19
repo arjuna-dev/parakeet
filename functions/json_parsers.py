@@ -108,19 +108,9 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
         speaker_2_voice_id = find_matching_voice_google(target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice_id)
         narrator_voice_id = find_matching_voice_google(native_language, "f")
 
-        # print('speaker_1_voice_id: ', speaker_1_voice_id)
-        # print('speaker_2_voice_id: ', speaker_2_voice_id)
-        # print('narrator_voice_id: ', narrator_voice_id)
-        # print('target_language_code: ', target_language_code)
-        # print('native_language_code: ', native_language_code)
-
         speaker_1_voice = create_google_voice(target_language_code, speaker_1_voice_id)
         speaker_2_voice = create_google_voice(target_language_code, speaker_2_voice_id)
         narrator_voice = create_google_voice(native_language_code, narrator_voice_id)
-        
-        # print('speaker_1_voice: ', speaker_1_voice)
-        # print('speaker_2_voice: ', speaker_2_voice)
-        # print('narrator_voice: ', narrator_voice)
 
         tts_function = google_synthesize_text
 
