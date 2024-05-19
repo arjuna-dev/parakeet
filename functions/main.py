@@ -71,6 +71,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response)
 
+    print(words_to_repeat)
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response, words_to_repeat)
     number_of_audio_files = len(script)
