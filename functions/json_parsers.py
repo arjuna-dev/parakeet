@@ -23,7 +23,7 @@ def extract_and_classify_enclosed_words(input_string):
     
     return result
 
-def parse_and_create_script(data):
+def parse_and_create_script(data, words_to_repeat):
     script = []
 
     random_i = random.randint(0, len(sequences.intro_sequences) - 1)
@@ -73,7 +73,8 @@ def parse_and_create_script(data):
                     narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
                     narrator_translations.append(narrator_translation)
 
-                word_objects.append({"word": word_file, "translation": narrator_translations})
+                if word_file in words_to_repeat:
+                    word_objects.append({"word": word_file, "translation": narrator_translations})
 
             chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
             script.extend(chunk_sequence)

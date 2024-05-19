@@ -57,6 +57,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
+    words_to_repeat = request_data.get("words_to_repeat")
 
     if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length]):
         return {'error': 'Missing required parameters in request data'}
@@ -71,7 +72,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(chatGPT_response)
 
     # Parse chatGPT_response and create script
-    script = parse_and_create_script(chatGPT_response)
+    script = parse_and_create_script(chatGPT_response, words_to_repeat)
     number_of_audio_files = len(script)
 
     # Parse chatGPT_response and store in Firebase Storage
