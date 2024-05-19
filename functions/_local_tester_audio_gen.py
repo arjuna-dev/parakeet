@@ -37,7 +37,7 @@ elif selected_tts == TTS_PROVIDERS.ELEVENLABS.value:
 use_concurrency = False if selected_tts == TTS_PROVIDERS.ELEVENLABS.value else True
 
 # Convert to speech
-parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", speakers, "Some title", local_run=True, use_concurrency=use_concurrency)
+parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", speakers, "Some title", None, local_run=True, use_concurrency=use_concurrency)
 
 # Create script
 # script = parse_and_create_script(chatGPT_response)

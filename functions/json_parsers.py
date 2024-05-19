@@ -2,7 +2,7 @@ import os
 import random
 import script_sequences as sequences
 from elevenlabs_api import elevenlabs_tts, find_voice_elevenlabs
-from google_tts_voices import google_tts_voices
+from google_tts_voices import google_tts_voices, sleep_time_according_to_rate_limit
 from gcloud_text_to_speech_api import find_matching_voice_google, google_synthesize_text, create_google_voice
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
@@ -94,7 +94,7 @@ def language_to_language_code(language):
             return voice['language_code']
     raise Exception(f"Language code not found for {language}")
 
-def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, speakers, title, local_run=False, use_concurrency=True):
+def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, speakers, title, number_of_audio_files, local_run=False, use_concurrency=True):
 
     speaker_1_gender = speakers["speaker_1"]["gender"].lower()
     speaker_2_gender = speakers["speaker_2"]["gender"].lower()
@@ -111,6 +111,9 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
         speaker_1_voice = create_google_voice(target_language_code, speaker_1_voice_id)
         speaker_2_voice = create_google_voice(target_language_code, speaker_2_voice_id)
         narrator_voice = create_google_voice(native_language_code, narrator_voice_id)
+
+        # TODO: Implement rate limiting if needed
+        # sleep_time = sleep_time_according_to_rate_limit(speaker_1_voice, number_of_audio_files)
 
         tts_function = google_synthesize_text
 

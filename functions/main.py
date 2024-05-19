@@ -61,11 +61,8 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length]):
         return {'error': 'Missing required parameters in request data'}
 
-
     # ChatGPT API call
     chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers)
-    
-    print(chatGPT_response)
 
     # storing chatGPT_response in Firestore
     db = firestore.client()
@@ -73,27 +70,8 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response)
 
-    # Parse chatGPT_response and store in Firebase Storage
-    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title)
-    
-    # get all the file durations from narrator_audio_files bucket metadata
-    client = storage.Client()
-    bucket = client.get_bucket("narrator_audio_files")
-    
-    for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
-        metadata = blob.metadata
-        if metadata and 'duration' in metadata:
-            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
-        
-    
-   
-    
-    
-
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response)
-    
-    
 
     # Create final response with link to audio files and script
     response = {}
@@ -110,6 +88,21 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     #save script to Firestore
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
+
+    number_of_audio_files = len(script)
+
+    # Parse chatGPT_response and store in Firebase Storage
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files)
+    
+    # get all the file durations from narrator_audio_files bucket metadata
+    client = storage.Client()
+    bucket = client.get_bucket("narrator_audio_files")
+    
+    for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
+        metadata = blob.metadata
+        if metadata and 'duration' in metadata:
+            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
+
     
     return response
 
