@@ -1,12 +1,13 @@
 import os
 import random
 import script_sequences as sequences
-from google_tts_language_codes import language_codes
-from elevenlabs_api import elevenlabs_tts
-import gcloud_text_to_speech_api as gcloud_tts
+from elevenlabs_api import elevenlabs_tts, find_voice_elevenlabs
+from google_tts_voices import google_tts_voices, sleep_time_according_to_rate_limit
+from gcloud_text_to_speech_api import find_matching_voice_google, google_synthesize_text, create_google_voice
 import concurrent.futures
 from elevenlabs_api_voices import elevenlabs_voices
 from utilities import TTS_PROVIDERS
+
 
 def extract_and_classify_enclosed_words(input_string):
     parts = input_string.split('||')
@@ -88,40 +89,33 @@ def parse_and_create_script(data):
     return script
 
 def language_to_language_code(language):
-    print('language: ', language)
-    if language in language_codes:
-        return language_codes[language]
-    else:
-        return "Language not found"
+    for voice in google_tts_voices:
+        if voice['language'] == language:
+            return voice['language_code']
+    raise Exception(f"Language code not found for {language}")
 
-def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
-    for voice in voices:
-        if (voice['language'] == language and voice['gender'] == gender and
-                voice['voice_id'] != exclude_voice_id):
-            return voice['voice_id']
-    return None
-
-def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, speakers, title, local_run=False, use_concurrency=True):
+def parse_and_convert_to_speech(data, directory, tts_provider, native_language, target_language, speakers, title, number_of_audio_files, local_run=False, use_concurrency=True):
 
     speaker_1_gender = speakers["speaker_1"]["gender"].lower()
     speaker_2_gender = speakers["speaker_2"]["gender"].lower()
 
     if tts_provider == TTS_PROVIDERS.GOOGLE.value:
-        # Check if native_language and target_language are keys in the language_codes dictionary
-        if native_language not in language_codes:
-            print(f"Native language {native_language} not found in language codes")
-            return
-        if target_language not in language_codes:
-            print(f"Target language {target_language} not found in language codes")
-            return
 
-        language_code = language_to_language_code(target_language)
+        target_language_code = language_to_language_code(target_language)
+        native_language_code = language_to_language_code(native_language)
 
-        speaker_1_voice = gcloud_tts.choose_voice(language_code, speaker_1_gender)
-        speaker_2_voice = gcloud_tts.choose_voice(language_code, speaker_2_gender)
-        narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
+        speaker_1_voice_id = find_matching_voice_google(target_language, speaker_1_gender)
+        speaker_2_voice_id = find_matching_voice_google(target_language, speaker_2_gender, exclude_voice_id=speaker_1_voice_id)
+        narrator_voice_id = find_matching_voice_google(native_language, "f")
 
-        tts_function = gcloud_tts.synthesize_text
+        speaker_1_voice = create_google_voice(target_language_code, speaker_1_voice_id)
+        speaker_2_voice = create_google_voice(target_language_code, speaker_2_voice_id)
+        narrator_voice = create_google_voice(native_language_code, narrator_voice_id)
+
+        # TODO: Implement rate limiting if needed
+        # sleep_time = sleep_time_according_to_rate_limit(speaker_1_voice, number_of_audio_files)
+
+        tts_function = google_synthesize_text
 
     elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
         narrator_voice = "GoZIEyk9z3H2szw545o8" #Ava - Calm and slow

@@ -88,8 +88,8 @@ active_recall_sequences.append(sentence_sequence_1)
 
 chunk_sequences = []
 def chunk_sequence_1(narrator_fun_fact, native_language, target_language, word_objects, chunk_number):
-    words_reps = words_2_reps(word_objects)
-    words_spaced = spaced_words(word_objects)
+    words_reps = words_2_reps_fix_elevenlabs_lonely_words(word_objects)
+    words_spaced = spaced_words_fix_elevenlabs_lonely_words(word_objects)
     if chunk_number == 0:
         first_phrase = "narrator_navigation_phrases_17" #"Now, let's break down the sentence"
     else:
@@ -100,7 +100,7 @@ def chunk_sequence_1(narrator_fun_fact, native_language, target_language, word_o
             target_language,
             "one_second_break",
             *words_reps,
-            "narrator_navigation_phrases_8_0", # Do you remember how to say..
+            "narrator_navigation_phrases_15", # Now try to say..
             native_language,
             "five_second_break",
             target_language,
@@ -130,10 +130,29 @@ def words_2_reps(word_objects):
         script_part.append("five_second_break")
     return script_part
 
+def words_2_reps_fix_elevenlabs_lonely_words(word_objects):
+    script_part = []
+    for i, word_object in enumerate(word_objects):
+        script_part.extend(word_object["translation"])
+        if i == 0:
+            script_part.append("narrator_repetition_phrases_4") # Listen and repeat
+        script_part.append(word_object["translation"][0])
+        script_part.append("five_second_break")
+        script_part.append(word_object["translation"][0])
+        script_part.append("five_second_break")
+    return script_part
+
 def spaced_words(word_objects):
     script_part = []
     for i, word_object in enumerate(word_objects):
         script_part.append(word_object["word"])
+        script_part.append("one_second_break")
+    return script_part
+
+def spaced_words_fix_elevenlabs_lonely_words(word_objects):
+    script_part = []
+    for i, word_object in enumerate(word_objects):
+        script_part.append(word_object["translation"][0])
         script_part.append("one_second_break")
     return script_part
 
