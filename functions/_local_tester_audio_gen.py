@@ -15,6 +15,8 @@ with open(f'other/{dir_name}/chatGPT_response.json', 'r') as file:
 with open(f'other/{dir_name}/dialogue.json', 'r') as file:
     dialogue = json.load(file)
 
+speakers = dialogue.get("speakers")
+dialogue = dialogue.get("all_turns")
 
 selected_tts = input(f"Which TTS provider do you want to use? ({TTS_PROVIDERS.GOOGLE.value}: {TTS_PROVIDERS.GOOGLE.name}, {TTS_PROVIDERS.ELEVENLABS.value}: {TTS_PROVIDERS.ELEVENLABS.name}): ")
 selected_tts = int(selected_tts)
@@ -35,7 +37,7 @@ elif selected_tts == TTS_PROVIDERS.ELEVENLABS.value:
 use_concurrency = False if selected_tts == TTS_PROVIDERS.ELEVENLABS.value else True
 
 # Convert to speech
-parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", dialogue, local_run=True, use_concurrency=use_concurrency)
+parse_and_convert_to_speech(chatGPT_response, audio_files_directory, selected_tts, "English", "German", speakers, "Some title", local_run=True, use_concurrency=use_concurrency)
 
 # Create script
 # script = parse_and_create_script(chatGPT_response)
