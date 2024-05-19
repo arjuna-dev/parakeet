@@ -77,7 +77,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     number_of_audio_files = len(script)
 
     # Parse chatGPT_response and store in Firebase Storage
-    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files)
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files, words_to_repeat)
 
     # Create final response with link to audio files and script
     response = {}
