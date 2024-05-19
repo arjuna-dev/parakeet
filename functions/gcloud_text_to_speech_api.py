@@ -12,7 +12,7 @@ def find_matching_voice_google(language, gender, exclude_voice_id=None):
 
 def create_google_voice(language_code, voice_id):
     voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id)
-    print('voice: ', voice)
+    return voice
 
 
 def google_synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
@@ -37,7 +37,7 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
         out.write(response.audio_content)
 
     if local_run:
-        return f"Audio content written to file {output_path}"
+        return {output_path: 0}
 
     else:
         # Load audio file
