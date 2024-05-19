@@ -1,30 +1,21 @@
 from google.cloud import texttospeech, storage
-from pydub import AudioSegment # type: ignore
+from pydub import AudioSegment
+from google_tts_voices import google_tts_voices
 
+def find_matching_voice_google(language, gender, exclude_voice_id=None):
+    voice_id = None
+    for voice in google_tts_voices:
+        if voice.get('language') == language and voice.get('gender') == gender and voice.get('voice_id') != exclude_voice_id:
+            voice_id = voice.get('voice_id')
+            return voice_id
+    raise Exception("No matching voice found")
 
-def choose_voice(language_code, gender, specific_voice=None): # specific_voice = "en-US-Standard-C" for narrator
-    if gender == "m": 
-        ssml_gender = texttospeech.SsmlVoiceGender.MALE
-    elif gender == "f":
-        ssml_gender = texttospeech.SsmlVoiceGender.FEMALE
-    else:
-        ssml_gender = texttospeech.SsmlVoiceGender.SSML_VOICE_GENDER_UNSPECIFIED
-        
-    if specific_voice == None:
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=language_code,
-            ssml_gender=ssml_gender
-        )
-    else:
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=language_code,
-            ssml_gender=ssml_gender,
-            name=specific_voice
-        )
+def create_google_voice(language_code, voice_id):
+    voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id)
     return voice
 
 
-def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
+def google_synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
 
     client = texttospeech.TextToSpeechClient()
 
@@ -43,7 +34,7 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
         out.write(response.audio_content)
 
     if local_run:
-        return f"Audio content written to file {output_path}"
+        return {output_path: 0}
 
     else:
         # Load audio file
@@ -69,6 +60,19 @@ def synthesize_text(text, voice, output_path, local_run=False, bucket_name="conv
         blob.make_public()
         
         return {output_path.split("/")[1].replace('.mp3', ''): duration}
+
+def list_voices(language_code=None):
+    client = tts.TextToSpeechClient()
+    response = client.list_voices(language_code=language_code)
+    voices = sorted(response.voices, key=lambda voice: voice.name)
+
+    print(f" Voices: {len(voices)} ".center(60, "-"))
+    for voice in voices:
+        languages = ", ".join(voice.language_codes)
+        name = voice.name
+        gender = tts.SsmlVoiceGender(voice.ssml_gender).name
+        rate = voice.natural_sample_rate_hertz
+        print(f"{languages:<8} | {name:<24} | {gender:<8} | {rate:,} Hz")
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")
