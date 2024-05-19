@@ -1,4 +1,21 @@
 google_tts_voices =  [
+    # Commented as these voices have a very restricted quota
+    # {
+    #   "language": "English",
+    #   "gender": "m",
+    #   "voice_id": "en-US-Journey-D",
+    #   "voice_category": "Premium",
+    #   "voice_type": "Journey",
+    #   "language_code": "en-US"
+    # },
+    # {
+    #   "language": "English",
+    #   "gender": "f",
+    #   "voice_id": "en-US-Journey-F",
+    #   "voice_category": "Premium",
+    #   "voice_type": "Journey",
+    #   "language_code": "en-US"
+    # },
     {
       "language": "English",
       "gender": "m",
