@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // This is the main screen for the audio player
 // ignore: must_be_immutable
@@ -8,6 +9,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
   final String responseDbId; // Database ID for the response
   final List<dynamic> dialogue;
+  final String userID;
   Map<String, dynamic> audioDurations;
 
   AudioPlayerScreen(
@@ -15,6 +17,7 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.script,
       required this.responseDbId,
       required this.dialogue,
+      required this.userID,
       required this.audioDurations})
       : super(key: key);
 
@@ -42,6 +45,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player = AudioPlayer();
     currentTrack = widget.script[0];
     _initPlaylist(); // Initialize the playlist
+
+    // Listen to the playerSequenceCompleteStream
+    player.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
+        _stop();
+      }
+    });
   }
 
   // This method initializes the playlist
@@ -137,80 +147,89 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method builds the widget
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Audio Player'),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Expanded(
-            child: ListView.builder(
-              itemCount: widget.dialogue.length,
-              itemBuilder: (context, index) {
-                String dialogue = widget.dialogue[index]["target_language"];
-                bool isMatch = currentTrack.split('_').length >= 2 &&
-                    currentTrack.split('_').take(2).join('_') ==
-                        "dialogue_$index";
-                if (isMatch) {
-                  _lastMatchedIndex = index;
-                }
-                return Text(
-                  dialogue,
-                  style: TextStyle(
-                    color:
-                        index == _lastMatchedIndex ? Colors.red : Colors.black,
-                    fontWeight: index == _lastMatchedIndex
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                );
-              },
-            ),
+    return FutureBuilder<int>(
+      builder: (context, snapshot) {
+        int savedPosition = snapshot.data ?? 0;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Audio Player'),
           ),
-          StreamBuilder<PositionData>(
-            stream: _positionDataStream,
-            builder: (context, snapshot) {
-              final positionData = snapshot.data;
-              if (positionData == null) {
-                return const CircularProgressIndicator();
-              }
-              return Column(
-                children: [
-                  Slider(
-                    min: 0.0,
-                    max: totalDuration.inMilliseconds.toDouble(),
-                    value: positionData.cumulativePosition.inMilliseconds
-                        .clamp(0, totalDuration.inMilliseconds)
-                        .toDouble(),
-                    onChanged: (value) {
-                      final trackIndex = findTrackIndexForPosition(value);
-                      player.seek(
-                          Duration(
-                              milliseconds: value.toInt() -
-                                  cumulativeDurationUpTo(trackIndex)
-                                      .inMilliseconds),
-                          index: trackIndex);
-                      if (_isPaused) {
-                        setState(() {
-                          positionData.cumulativePosition =
-                              Duration(milliseconds: value.toInt());
-                        });
-                      }
-                    },
-                  ),
-                  Text(
-                    "${formatDuration(positionData.cumulativePosition)} / ${formatDuration(totalDuration)}",
-                  ),
-                ],
-              );
-            },
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(
+                child: ListView.builder(
+                  itemCount: widget.dialogue.length,
+                  itemBuilder: (context, index) {
+                    String dialogue = widget.dialogue[index]["target_language"];
+                    bool isMatch = currentTrack.split('_').length >= 2 &&
+                        currentTrack.split('_').take(2).join('_') ==
+                            "dialogue_$index";
+                    if (isMatch) {
+                      _lastMatchedIndex = index;
+                    }
+                    return Text(
+                      dialogue,
+                      style: TextStyle(
+                        color: index == _lastMatchedIndex
+                            ? Colors.red
+                            : Colors.black,
+                        fontWeight: index == _lastMatchedIndex
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              StreamBuilder<PositionData>(
+                stream: _positionDataStream,
+                builder: (context, snapshot) {
+                  final positionData = snapshot.data;
+                  if (positionData == null) {
+                    return const CircularProgressIndicator();
+                  }
+                  return Column(
+                    children: [
+                      Slider(
+                        min: 0.0,
+                        max: totalDuration.inMilliseconds.toDouble(),
+                        value: isPlaying
+                            ? positionData.cumulativePosition.inMilliseconds
+                                .clamp(0, totalDuration.inMilliseconds)
+                                .toDouble()
+                            : savedPosition.toDouble(),
+                        onChanged: (value) {
+                          final trackIndex = findTrackIndexForPosition(value);
+                          player.seek(
+                              Duration(
+                                  milliseconds: value.toInt() -
+                                      cumulativeDurationUpTo(trackIndex)
+                                          .inMilliseconds),
+                              index: trackIndex);
+                          if (_isPaused) {
+                            setState(() {
+                              positionData.cumulativePosition =
+                                  Duration(milliseconds: value.toInt());
+                            });
+                          }
+                        },
+                      ),
+                      Text(
+                        "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(totalDuration)}",
+                      ),
+                    ],
+                  );
+                },
+              ),
+              Text('Now Playing: $currentTrack'),
+              controlButtons(), // Play, pause, stop, skip buttons
+            ],
           ),
-          Text('Now Playing: $currentTrack'),
-          controlButtons(), // Play, pause, stop, skip buttons
-        ],
-      ),
+        );
+      },
+      future: _getSavedPosition(),
     );
   }
 
@@ -238,8 +257,48 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         ],
       );
 
-  // This method plays the audio
+// This method pauses the audio
+  Future<void> _pause() async {
+    final prefs = await SharedPreferences.getInstance();
+    final positionData = await player.positionStream.first;
+    final currentPosition = positionData.inMilliseconds;
+    int currentIndex = 0;
+    player.currentIndexStream.listen((index) {
+      currentIndex = index ?? 0;
+    });
+
+    await prefs.setInt('savedPosition_${widget.responseDbId}_${widget.userID}',
+        currentPosition);
+    await prefs.setInt(
+        'savedTrackIndex_${widget.responseDbId}_${widget.userID}',
+        currentIndex);
+    await prefs.setBool(
+        "now_playing_${widget.responseDbId}_${widget.userID}", true);
+    final nowPlayingKey = "now_playing_${widget.userID}";
+    final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
+    if (!nowPlayingList.contains(widget.responseDbId)) {
+      nowPlayingList.add(widget.responseDbId);
+    }
+    await prefs.setStringList(nowPlayingKey, nowPlayingList);
+
+    player.pause();
+    setState(() {
+      isPlaying = false;
+      _isPaused = true;
+    });
+  }
+
+// This method plays the audio
   Future<void> _play() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPosition =
+        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+    final savedTrackIndex =
+        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+    if (savedPosition != null && savedTrackIndex != null) {
+      await player.seek(Duration(milliseconds: savedPosition),
+          index: savedTrackIndex);
+    }
     setState(() {
       isPlaying = true;
       _isPaused = false;
@@ -254,23 +313,32 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
-  // This method pauses the audio
-  Future<void> _pause() async {
-    player.pause();
-    setState(() {
-      isPlaying = false;
-      _isPaused = true;
-    });
-  }
-
   // This method stops the audio
   Future<void> _stop() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove('savedPosition_${widget.responseDbId}_${widget.userID}');
+    prefs.remove('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+    prefs.remove("now_playing_${widget.responseDbId}_${widget.userID}");
+    await prefs.setStringList("now_playing_${widget.userID}", []);
+
     player.stop();
     player.seek(Duration.zero, index: 0);
     setState(() {
       isPlaying = false;
       currentTrack = widget.script[0];
     });
+  }
+
+  // This method gets the saved position from shared preferences
+  Future<int> _getSavedPosition() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPosition =
+        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+    final savedIndex =
+        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+    final position =
+        savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
+    return position;
   }
 
   // This method disposes the player when the widget is disposed
