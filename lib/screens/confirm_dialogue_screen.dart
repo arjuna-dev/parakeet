@@ -28,6 +28,18 @@ class ConfirmDialogue extends StatefulWidget {
 
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   Map<String, dynamic> script = {};
+  Map<int, Map<String, bool>> selectedWords = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (int i = 0; i < widget.dialogue['all_turns'].length; i++) {
+      final turn = widget.dialogue['all_turns'][i];
+      final targetLanguageSentence = turn['target_language'] ?? "";
+      final words = targetLanguageSentence.split(' ');
+      selectedWords[i] = {for (var word in words) word: true};
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +59,17 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       title: const Text('Topic'),
                       subtitle: Text(widget.dialogue['title'] ?? "No title"),
                     ),
+                    const ListTile(
+                      title: Text(
+                          'Select words that you want to repeat in your audio'),
+                    ),
                     ListView.builder(
                       shrinkWrap: true,
                       itemCount: widget.dialogue['all_turns'].length,
                       itemBuilder: (context, index) {
                         final turn = widget.dialogue['all_turns'][index];
+                        final words =
+                            (turn['target_language'] ?? "").split(' ');
                         return ListTile(
                           title: Text('Sentence Number: ${turn['turn_nr']}'),
                           subtitle: Column(
@@ -59,8 +77,25 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             children: [
                               Text(turn['native_language'] ??
                                   "No native language"),
-                              Text(turn['target_language'] ??
-                                  "No target language"),
+                              Wrap(
+                                children: words.map<Widget>((word) {
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Checkbox(
+                                        value: selectedWords[index]![word],
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            selectedWords[index]![word] =
+                                                value!;
+                                          });
+                                        },
+                                      ),
+                                      Text(word),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
                             ],
                           ),
                         );
@@ -102,6 +137,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       "target_language": widget.targetLanguage,
                       "length": widget.length,
                       "language_level": widget.languageLevel,
+                      "words_to_repeat": selectedWords.entries
+                          .expand((entry) => entry.value.entries)
+                          .where((innerEntry) => innerEntry.value == true)
+                          .map((innerEntry) => innerEntry.key)
+                          .toList(),
                     }),
                   );
 
