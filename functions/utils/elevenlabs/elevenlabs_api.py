@@ -32,19 +32,19 @@ def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
-  url = "https://api.elevenlabs.io/v1/voices"
+    url = "https://api.elevenlabs.io/v1/voices"
 
-  headers = {
+    headers = {
     "Accept": "application/json",
     "xi-api-key": ELEVENLABS_API_KEY,
     "Content-Type": "application/json"
-  }
+    }
 
-  response = requests.get(url, headers=headers)
-  data = response.json()
+    response = requests.get(url, headers=headers)
+    data = response.json()
 
-  for voice in data['voices']:
-    print(f"{voice['name']}; {voice['voice_id']}")
+    for voice in data['voices']:
+        print(f"{voice['name']}; {voice['voice_id']}")
 
 
 def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="conversations_audio_files"):
