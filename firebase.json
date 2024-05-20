@@ -10,6 +10,7 @@
 				"firebase-debug.*.log",
 				"other",
 				"_local_*",
+				"local_scripts",
 				".env",
 				".gitignore"
 			]
