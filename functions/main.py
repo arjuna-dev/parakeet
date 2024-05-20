@@ -49,8 +49,9 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
+    words_to_repeat = request_data.get("words_to_repeat")
 
-    if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length]):
+    if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length, words_to_repeat]):
         return {'error': 'Missing required parameters in request data'}
 
     # ChatGPT API call
@@ -62,12 +63,13 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response)
 
+    print(words_to_repeat)
     # Parse chatGPT_response and create script
-    script = parse_and_create_script(chatGPT_response)
+    script = parse_and_create_script(chatGPT_response, words_to_repeat)
     number_of_audio_files = len(script)
 
     # Parse chatGPT_response and store in Firebase Storage
-    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files)
+    fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files, words_to_repeat)
 
     # Create final response with link to audio files and script
     response = {}
