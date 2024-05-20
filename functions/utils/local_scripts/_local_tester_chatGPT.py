@@ -1,12 +1,13 @@
-from enum import Enum
-from prompt import prompt
-import os
 import json
-import datetime
-from main import chatGPT_API_call
+from datetime import datetime
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from prompt import prompt
+import chatGPT_API_call
 
 
-now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
+now = datetime.now().strftime("%m.%d.%H.%M.%S")
 
 user_name = input("Enter the user name: ")
 native_language = input("Enter the native language: ")

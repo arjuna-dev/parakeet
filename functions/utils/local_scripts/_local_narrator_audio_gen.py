@@ -1,6 +1,9 @@
 import json
-from elevenlabs_api import elevenlabs_tts
-import gcloud_text_to_speech_api as gcloud_tts
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from elevenlabs.elevenlabs_api import elevenlabs_tts
+import google_tts.gcloud_text_to_speech_api as gcloud_tts
 
 narrator_voice = gcloud_tts.choose_voice('en-US', "f", "en-US-Standard-C")
 
