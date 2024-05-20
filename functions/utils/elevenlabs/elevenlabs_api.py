@@ -1,7 +1,9 @@
 import requests
 from google.cloud import storage
-from utilities import is_running_locally
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utilities import is_running_locally
 
 #       ___                                   ___             __                
 #      /\_ \                                 /\_ \           /\ \               
