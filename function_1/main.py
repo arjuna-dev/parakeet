@@ -32,9 +32,9 @@ initialize_app()
 
 @https_fn.on_request(
     cors=options.CorsOptions(
-      cors_origins=["*"],
-      cors_methods=["GET", "POST"]
-  )
+    cors_origins=["*"],
+    cors_methods=["GET", "POST"]
+)
 )
 
 @https_fn.on_request()
