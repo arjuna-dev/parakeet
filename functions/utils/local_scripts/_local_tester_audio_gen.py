@@ -1,9 +1,12 @@
-import os
 import datetime
 from _local_lesson_generator import generate_lesson
 from json_parsers import parse_and_convert_to_speech, parse_and_create_script
 import json
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utilities import TTS_PROVIDERS
+
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 dir_name = "Andrew_05.06.21.16.43"

@@ -1,11 +1,11 @@
 import os
 import random
 import script_sequences as sequences
-from elevenlabs_api import elevenlabs_tts, find_voice_elevenlabs
-from google_tts_voices import google_tts_voices, sleep_time_according_to_rate_limit
-from gcloud_text_to_speech_api import find_matching_voice_google, google_synthesize_text, create_google_voice
+from elevenlabs.elevenlabs_api import elevenlabs_tts, find_voice_elevenlabs
+from elevenlabs.elevenlabs_api_voices import elevenlabs_voices
+from google_tts.google_tts_voices import google_tts_voices, sleep_time_according_to_rate_limit
+from google_tts.gcloud_text_to_speech_api import find_matching_voice_google, google_synthesize_text, create_google_voice
 import concurrent.futures
-from elevenlabs_api_voices import elevenlabs_voices
 from utilities import TTS_PROVIDERS
 
 
