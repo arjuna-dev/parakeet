@@ -3,34 +3,61 @@ from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
 from google.cloud import storage
 import json
-import openai
 import datetime
-from utils.prompt import prompt
+from utils.prompts import prompt_dialogue, prompt_big_JSON
 import os
 from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
-from utils.utilities import is_running_locally, GPT_MODEL, TTS_PROVIDERS
+from utils.utilities import GPT_MODEL, TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 
-if is_running_locally():
-    from dotenv import load_dotenv
-    load_dotenv()
-    OPEN_AI_API_KEY = os.getenv('OPEN_AI_API_KEY')
-else:
-    OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
-
-assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
-
-
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
-
-
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
-
 app = initialize_app()
+gpt_model = GPT_MODEL.GPT_4o.value
 
-gpt_model = GPT_MODEL.GPT_4_O.value
+@https_fn.on_request(
+        cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
+)
+@https_fn.on_request()
+def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
+    request_data = json.loads(req.data)
+    requested_scenario = request_data.get("requested_scenario")
+    native_language = request_data.get("native_language")
+    target_language = request_data.get("target_language")
+    length = request_data.get("length")
+    user_ID = request_data.get("user_ID")
+    try:
+        language_level = request_data.get("language_level")
+    except:
+        language_level = "A1"
+    try:
+        keywords = request_data.get("keywords")
+    except:
+        keywords = ""
 
-# @storage_fn.on_object_finalized(timeout_sec=500)
+    if not all([requested_scenario, native_language, target_language, language_level, user_ID, length]):
+        return {'error': 'Missing required parameters in request data'}
+
+    prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+    
+    chatGPT_response = chatGPT_API_call(prompt)
+
+    try:
+        # storing chatGPT_response in Firestore
+        db = firestore.client()
+        doc_ref = db.collection('chatGPT_responses').document()
+        chatGPT_response["response_db_id"] = doc_ref.id
+        chatGPT_response["user_ID"] = user_ID
+        subcollection_ref = doc_ref.collection('only_target_sentences')
+        subcollection_ref.document().set(chatGPT_response)
+    except Exception as e:
+        raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
+
+    return chatGPT_response
+
 @https_fn.on_request(
         cors=options.CorsOptions(
         cors_origins=["*"],
@@ -54,8 +81,9 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length, words_to_repeat]):
         return {'error': 'Missing required parameters in request data'}
 
+    prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
     # ChatGPT API call
-    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers)
+    chatGPT_response = chatGPT_API_call(prompt)
 
     # storing chatGPT_response in Firestore
     db = firestore.client()
