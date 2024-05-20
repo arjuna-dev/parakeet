@@ -3,8 +3,8 @@ from enum import Enum
 
 def is_running_locally():
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_dir, '_local_tester_chatGPT.py')
-    return os.path.isfile(file_path)
+    file_path = os.path.join(current_dir, 'local_scripts')
+    return os.path.isdir(file_path)
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
