@@ -1,12 +1,13 @@
-from enum import Enum
-from prompt import prompt
-import os
 import json
-import datetime
-from main import chatGPT_API_call
+from datetime import datetime
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from prompts import prompt_big_JSON
+import chatGPT_API_call
 
 
-now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
+now = datetime.now().strftime("%m.%d.%H.%M.%S")
 
 user_name = input("Enter the user name: ")
 native_language = input("Enter the native language: ")
@@ -24,10 +25,11 @@ os.makedirs(directory, exist_ok=True)
 
 language_levels = ["A1"]
 for level in language_levels:
-    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length)
+    prompt = prompt_big_JSON(dialogue['all_turns'], native_language, target_language, language_level, len(dialogue['all_turns']), dialogue['speakers'])
+    chatGPT_response = chatGPT_API_call(prompt)
 
     with open(f"{directory}/chatGPT_response.json", "w") as file:
         json.dump(chatGPT_response, file)
 
 with open(f"{directory}/prompt.txt", "w") as file:
-    file.write(prompt(dialogue, native_language, target_language, language_level, length))
+    file.write(prompt_big_JSON(dialogue, native_language, target_language, language_level, length))

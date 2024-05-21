@@ -1,7 +1,10 @@
 import json
-from elevenlabs_api import elevenlabs_tts
-from gcloud_text_to_speech_api import google_synthesize_text, create_google_voice
+import sys
+import os
 from google.cloud import firestore
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from elevenlabs.elevenlabs_api import elevenlabs_tts
+from google_tts.gcloud_text_to_speech_api import google_synthesize_text, create_google_voice
 
 narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
 narrator_file_durations = {}

@@ -1,6 +1,6 @@
 from google.cloud import texttospeech, storage
 from pydub import AudioSegment
-from google_tts_voices import google_tts_voices
+from .google_tts_voices import google_tts_voices
 
 def find_matching_voice_google(language, gender, exclude_voice_id=None):
     voice_id = None

@@ -1,7 +1,10 @@
-from main import chatGPT_API_call
 import datetime
-import os
 import json
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from prompts import prompt_dialogue
+import chatGPT_API_call
 
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 
@@ -13,7 +16,8 @@ language_level = input("Language level: ")
 length = input("Length: ")
 keywords = input("Keywords: ")
 
-response = chatGPT_API_call(requested_scenario, native_language, target_language, language_level, "user_ID", length, keywords)
+prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, "user_ID", length, keywords)
+response = chatGPT_API_call(prompt)
 
 print("response: ",response)
 
