@@ -98,6 +98,20 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     # Parse chatGPT_response and store in Firebase Storage
     fileDurations = parse_and_convert_to_speech(chatGPT_response, response_db_id, TTS_PROVIDERS.GOOGLE.value, native_language, target_language, speakers, title, number_of_audio_files, words_to_repeat)
+    
+    
+        
+    # get narrator_audio_files_durations from Firestore
+    collection_name_narrator = "narrator_audio_files_durations/google_tts/narrator_english"
+    coll_ref_narrator= db.collection(collection_name_narrator)
+    
+    docs = coll_ref_narrator.stream()
+    first_doc = next(docs, None)
+    
+    if first_doc:
+        fileDurations.update(first_doc.to_dict())
+    else:
+        print("No such document!")
 
     # Create final response with link to audio files and script
     response = {}
@@ -111,18 +125,8 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     response["userID"] = user_ID
     response["fileDurations"] = fileDurations
 
-    #save script to Firestore
+    #save script to Firestore inside the chatGPT_responses document
     subcollection_ref = doc_ref.collection('scripts')
     subcollection_ref.document().set(response)
-
-    # get all the file durations from narrator_audio_files bucket metadata
-    client = storage.Client()
-    bucket = client.get_bucket("narrator_audio_files")
-    
-    for blob in bucket.list_blobs(prefix="google_tts/narrator_english"):
-        metadata = blob.metadata
-        if metadata and 'duration' in metadata:
-            fileDurations[blob.name.split('/')[2].replace('.mp3', '')] = metadata['duration']
-
-    
+ 
     return response
