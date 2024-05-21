@@ -1,44 +1,63 @@
-from enum import Enum
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
 from google.cloud import storage
 import json
-import openai
 import datetime
-from prompt import prompt
+from utils.prompts import prompt_dialogue, prompt_big_JSON
 import os
-from json_parsers import parse_and_create_script, parse_and_convert_to_speech, TTS_PROVIDERS
-from utilities import is_running_locally, GPT_MODEL
-
-if is_running_locally():
-    from dotenv import load_dotenv
-    load_dotenv()
-    OPEN_AI_API_KEY = os.getenv('OPEN_AI_API_KEY')
-else:
-    OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
-
-assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
-
+from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
+from utils.utilities import GPT_MODEL, TTS_PROVIDERS
+from utils.chatGPT_API_call import chatGPT_API_call
 
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
-
-
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
-
 app = initialize_app()
+gpt_model = GPT_MODEL.GPT_4o.value
 
+@https_fn.on_request(
+        cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
+)
+@https_fn.on_request()
+def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
+    request_data = json.loads(req.data)
+    requested_scenario = request_data.get("requested_scenario")
+    native_language = request_data.get("native_language")
+    target_language = request_data.get("target_language")
+    length = request_data.get("length")
+    user_ID = request_data.get("user_ID")
+    try:
+        language_level = request_data.get("language_level")
+    except:
+        language_level = "A1"
+    try:
+        keywords = request_data.get("keywords")
+    except:
+        keywords = ""
 
-class GPT_MODEL(Enum):
-    GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
-    GPT_4_TURBO_V = "gpt-4-turbo-2024-04-09" # Supports vision and JSON mode.
-    GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
-    GPT_4_O = "gpt-4o"
-    # GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
+    if not all([requested_scenario, native_language, target_language, language_level, user_ID, length]):
+        return {'error': 'Missing required parameters in request data'}
 
-gpt_model = GPT_MODEL.GPT_4_O.value
+    prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+    
+    chatGPT_response = chatGPT_API_call(prompt)
 
-# @storage_fn.on_object_finalized(timeout_sec=500)
+    try:
+        # storing chatGPT_response in Firestore
+        db = firestore.client()
+        doc_ref = db.collection('chatGPT_responses').document()
+        chatGPT_response["response_db_id"] = doc_ref.id
+        chatGPT_response["user_ID"] = user_ID
+        subcollection_ref = doc_ref.collection('only_target_sentences')
+        subcollection_ref.document().set(chatGPT_response)
+    except Exception as e:
+        raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
+
+    return chatGPT_response
+
 @https_fn.on_request(
         cors=options.CorsOptions(
         cors_origins=["*"],
@@ -62,8 +81,9 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length, words_to_repeat]):
         return {'error': 'Missing required parameters in request data'}
 
+    prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
     # ChatGPT API call
-    chatGPT_response = chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers)
+    chatGPT_response = chatGPT_API_call(prompt)
 
     # storing chatGPT_response in Firestore
     db = firestore.client()
@@ -110,29 +130,3 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref.document().set(response)
  
     return response
-
-def chatGPT_API_call(dialogue, native_language, target_language, language_level, length, speakers):
-
-    client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
-
-    # Create the chat completion
-    completion = client.chat.completions.create(
-        model=gpt_model,
-        #   stream=True,
-        messages=[
-            {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
-            {"role": "user", "content": prompt(dialogue, native_language, target_language, language_level, length, speakers)}
-        ],
-        response_format={'type': 'json_object'}
-    )
-
-    chatGPT_JSON_response = completion.choices[0].message.content
-    try:
-        data = json.loads(chatGPT_JSON_response)
-    except Exception as e:
-        print(chatGPT_JSON_response)
-        print(f"Error parsing JSON response from chatGPT: {e}")
-        #TODO: log error and failed JSON in DB and ask the user to try again
-        return
-
-    return data

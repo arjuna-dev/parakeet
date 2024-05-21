@@ -10,19 +10,7 @@
 				"firebase-debug.*.log",
 				"other",
 				"_local_*",
-				".env",
-				".gitignore"
-			]
-		},
-		{
-			"source": "function_1",
-			"codebase": "function_1",
-			"ignore": [
-				"venv",
-				".git",
-				"firebase-debug.log",
-				"firebase-debug.*.log",
-				"other",
+				"local_scripts",
 				".env",
 				".gitignore"
 			]
