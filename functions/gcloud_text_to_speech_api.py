@@ -59,7 +59,10 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
         # Make the blob publicly accessible
         blob.make_public()
         
-        return {output_path.split("/")[1].replace('.mp3', ''): duration}
+        if bucket_name == "conversations_audio_files":
+            return {output_path.split("/")[1].replace('.mp3', ''): duration}
+        else:
+            return {output_path.split("/")[2].replace('.mp3', ''): duration}
 
 def list_voices(language_code=None):
     client = tts.TextToSpeechClient()
