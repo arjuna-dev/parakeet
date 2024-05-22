@@ -172,6 +172,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     throw Exception('Failed to load API data');
                   }
                 } catch (e) {
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Something went wrong! Please try again.'),
