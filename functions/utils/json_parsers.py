@@ -87,8 +87,8 @@ def parse_and_create_script(data, words_to_repeat):
             else:
                 chunk_number_exclude_list.append(j)
 
-        if len(chunk_number_exclude_list) != len(sentence["split_sentence"]):
-            random_sentence_i = random.choice([index for index in range(i + 1) if index not in sentence_number_exclude_list])
+        if len(chunk_number_exclude_list) != len(sentence["split_sentence"]) or i != 0:
+            random_sentence_i = random.choice([index for index in range(i) if index not in sentence_number_exclude_list])
             number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
             random_chunk_i = random.choice([index for index in range(number_of_chunks) if index not in chunk_number_exclude_list])
             target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
