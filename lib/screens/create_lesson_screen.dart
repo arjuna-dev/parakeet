@@ -218,6 +218,7 @@ class _CreateLessonState extends State<CreateLesson> {
                           throw Exception('Failed to load API data');
                         }
                       } catch (e) {
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content:
