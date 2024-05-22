@@ -29,6 +29,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
   var length = '';
   var languageLevel = 'A1';
+  final _formKey = GlobalKey<FormState>();
 
   Map<String, dynamic> dialogue = {};
 
@@ -39,167 +40,201 @@ class _CreateLessonState extends State<CreateLesson> {
           title: Text(widget.title!),
         ),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              TextField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Topic',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    topic = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Keywords',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    keywords = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Native Language',
-                ),
-                value: nativeLanguage,
-                onChanged: (value) {
-                  setState(() {
-                    nativeLanguage = value.toString();
-                  });
-                },
-                items: <String>['English']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Learning Language',
-                ),
-                value: targetLanguage,
-                onChanged: (value) {
-                  setState(() {
-                    targetLanguage = value.toString();
-                  });
-                },
-                items: languageCodes.keys
-                    .map<DropdownMenuItem<String>>((String key) {
-                  return DropdownMenuItem<String>(
-                    value: key,
-                    child: Text(key),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Number of sentences',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    length = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Language Level',
-                ),
-                value: languageLevel,
-                onChanged: (value) {
-                  setState(() {
-                    languageLevel = value.toString();
-                  });
-                },
-                items: <String>['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              FloatingActionButton(
-                onPressed: () async {
-                  print("pressed");
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (BuildContext context) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    },
-                  );
-
-                  try {
-                    final response = await http.post(
-                      Uri.parse(
-                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
-                      headers: <String, String>{
-                        'Content-Type': 'application/json; charset=UTF-8',
-                        "Access-Control-Allow-Origin":
-                            "*", // Required for CORS support to work
-                      },
-                      body: jsonEncode(<String, String>{
-                        "requested_scenario": topic,
-                        "keywords": keywords,
-                        "native_language": nativeLanguage,
-                        "target_language": targetLanguage,
-                        "length": length,
-                        "user_ID":
-                            FirebaseAuth.instance.currentUser!.uid.toString(),
-                        "language_level": languageLevel,
-                      }),
-                    );
-
-                    if (response.statusCode == 200) {
-                      final Map<String, dynamic> data =
-                          jsonDecode(response.body);
-                      print(data);
-                      dialogue = data;
-                    } else {
-                      throw Exception('Failed to load API data');
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                TextFormField(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Topic',
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      topic = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a topic';
                     }
-                  } catch (e) {
-                    print('Error: $e');
-                  } finally {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ConfirmDialogue(
-                            dialogue: dialogue,
-                            nativeLanguage: nativeLanguage,
-                            targetLanguage: targetLanguage,
-                            languageLevel: languageLevel,
-                            length: length),
-                      ),
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Keywords',
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      keywords = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Native Language',
+                  ),
+                  value: nativeLanguage,
+                  onChanged: (value) {
+                    setState(() {
+                      nativeLanguage = value.toString();
+                    });
+                  },
+                  items: <String>['English']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
                     );
-                  }
-                },
-                child: const Icon(Icons.add),
-              ),
-            ],
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Learning Language',
+                  ),
+                  value: targetLanguage,
+                  onChanged: (value) {
+                    setState(() {
+                      targetLanguage = value.toString();
+                    });
+                  },
+                  items: languageCodes.keys
+                      .map<DropdownMenuItem<String>>((String key) {
+                    return DropdownMenuItem<String>(
+                      value: key,
+                      child: Text(key),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Number of sentences',
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      length = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter number of sentences';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Language Level',
+                  ),
+                  value: languageLevel,
+                  onChanged: (value) {
+                    setState(() {
+                      languageLevel = value.toString();
+                    });
+                  },
+                  items: <String>['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      print("pressed");
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        },
+                      );
+
+                      try {
+                        final response = await http.post(
+                          Uri.parse(
+                              'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
+                          headers: <String, String>{
+                            'Content-Type': 'application/json; charset=UTF-8',
+                            "Access-Control-Allow-Origin":
+                                "*", // Required for CORS support to work
+                          },
+                          body: jsonEncode(<String, String>{
+                            "requested_scenario": topic,
+                            "keywords": keywords,
+                            "native_language": nativeLanguage,
+                            "target_language": targetLanguage,
+                            "length": length,
+                            "user_ID": FirebaseAuth.instance.currentUser!.uid
+                                .toString(),
+                            "language_level": languageLevel,
+                          }),
+                        );
+
+                        if (response.statusCode == 200) {
+                          final Map<String, dynamic> data =
+                              jsonDecode(response.body);
+                          print(data);
+                          dialogue = data;
+                        } else {
+                          throw Exception('Failed to load API data');
+                        }
+                      } catch (e) {
+                        print("Error: $e");
+                      } finally {
+                        if (dialogue.isNotEmpty &&
+                            dialogue.containsKey('title')) {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ConfirmDialogue(
+                                  dialogue: dialogue,
+                                  nativeLanguage: nativeLanguage,
+                                  targetLanguage: targetLanguage,
+                                  languageLevel: languageLevel,
+                                  length: length),
+                            ),
+                          );
+                        } else {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Something went wrong! Please try again.'),
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Icon(Icons.add),
+                ),
+              ],
+            ),
           ),
         ),
         bottomNavigationBar:
