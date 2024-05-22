@@ -34,6 +34,8 @@ def parse_and_create_script(data, words_to_repeat):
         script.append(f"dialogue_{i}_target_language")
 
     script.extend(sequences.intro_outro_sequence_1())
+    
+    sentence_number_exclude_list = []
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
@@ -46,11 +48,12 @@ def parse_and_create_script(data, words_to_repeat):
         
         sentence_sequence = sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact, is_first_sentence=True) if i == 0 else sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
         script.extend(sentence_sequence)
-
+        
+        chunk_number_exclude_list = []
+        
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
-            chunk_number_exclude_list = []
-            sentence_number_exclude_list = []
+            
             
             #check if user wants to repeat the split sentence (only if at least one word they want is there)
             if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
@@ -87,16 +90,21 @@ def parse_and_create_script(data, words_to_repeat):
             else:
                 chunk_number_exclude_list.append(j)
 
-        if len(chunk_number_exclude_list) != len(sentence["split_sentence"]) or i != 0:
-            random_sentence_i = random.choice([index for index in range(i) if index not in sentence_number_exclude_list])
-            number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
-            random_chunk_i = random.choice([index for index in range(number_of_chunks) if index not in chunk_number_exclude_list])
-            target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
-            native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
-            active_recall_sequence = sequences.active_recall_sequence_1(native, target)
-            script.extend(active_recall_sequence)
-        else:
+        # active recall sequence
+        if i != 0:
+            if len(chunk_number_exclude_list) != len(sentence["split_sentence"]):
+                random_sentence_i = random.choice([index for index in range(i + 1) if index not in sentence_number_exclude_list])
+                number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
+                random_chunk_i = random.choice([index for index in range(number_of_chunks) if index not in chunk_number_exclude_list])
+                target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
+                native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
+                active_recall_sequence = sequences.active_recall_sequence_1(native, target)
+                script.extend(active_recall_sequence)
+            else:
+                sentence_number_exclude_list.append(i)
+        elif len(chunk_number_exclude_list) == len(sentence["split_sentence"]):
             sentence_number_exclude_list.append(i)
+        print (f"Sentence number exclude list: {sentence_number_exclude_list}")
 
     return script
 
