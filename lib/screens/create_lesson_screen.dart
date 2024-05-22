@@ -196,38 +196,35 @@ class _CreateLessonState extends State<CreateLesson> {
                               jsonDecode(response.body);
                           print(data);
                           dialogue = data;
+                          if (dialogue.isNotEmpty &&
+                              dialogue.containsKey('title')) {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ConfirmDialogue(
+                                    dialogue: dialogue,
+                                    nativeLanguage: nativeLanguage,
+                                    targetLanguage: targetLanguage,
+                                    languageLevel: languageLevel,
+                                    length: length),
+                              ),
+                            );
+                          } else {
+                            throw Exception(
+                                'Proper data not received from API');
+                          }
                         } else {
                           throw Exception('Failed to load API data');
                         }
                       } catch (e) {
-                        print("Error: $e");
-                      } finally {
-                        if (dialogue.isNotEmpty &&
-                            dialogue.containsKey('title')) {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ConfirmDialogue(
-                                  dialogue: dialogue,
-                                  nativeLanguage: nativeLanguage,
-                                  targetLanguage: targetLanguage,
-                                  languageLevel: languageLevel,
-                                  length: length),
-                            ),
-                          );
-                        } else {
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Something went wrong! Please try again.'),
-                              duration: Duration(seconds: 3),
-                            ),
-                          );
-                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Something went wrong! Please try again.'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
                       }
                     }
                   },
