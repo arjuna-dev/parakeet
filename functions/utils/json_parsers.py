@@ -191,47 +191,50 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
 
-            text = split_sentence["narrator_translation"]
-            # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text = extract_and_classify_enclosed_words(text)
-            for index, part in enumerate(classified_text):
-                if part['enclosed']:
-                    text = part['text']
-                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
-                elif not part['enclosed']:
-                    text = part['text']
-                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+            #check if user wants to repeat the split sentence (only if at least one word they want is there)
+            if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
+                
+                text = split_sentence["narrator_translation"]
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text = extract_and_classify_enclosed_words(text)
+                for index, part in enumerate(classified_text):
+                    if part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                        futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                    elif not part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                        futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
 
-            text = split_sentence["native_language"]
-            native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
-            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
+                text = split_sentence["native_language"]
+                native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
+                futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
 
-            text = split_sentence["target_language"]
-            target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
-            futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
+                text = split_sentence["target_language"]
+                target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
+                futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
 
-            for index, word in enumerate(split_sentence['words']):
-                if (word["target_language"] in words_to_repeat):
-                    word_text = word["target_language"]
-                    narrator_translation_text = word["narrator_translation"]
-                    word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                    narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
+                for index, word in enumerate(split_sentence['words']):
+                    if (word["target_language"] in words_to_repeat):
+                        word_text = word["target_language"]
+                        narrator_translation_text = word["narrator_translation"]
+                        word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                        narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
 
-                    # Classify and process the text into parts enclosed by || (target_language text)
-                    classified_text = extract_and_classify_enclosed_words(narrator_translation_text)
-                    for index2, part in enumerate(classified_text):
-                        if part['enclosed']:
-                            text = part['text']
-                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                            futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
-                        elif not part['enclosed']:
-                            text = part['text']
-                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                        # Classify and process the text into parts enclosed by || (target_language text)
+                        classified_text = extract_and_classify_enclosed_words(narrator_translation_text)
+                        for index2, part in enumerate(classified_text):
+                            if part['enclosed']:
+                                text = part['text']
+                                narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                                futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                            elif not part['enclosed']:
+                                text = part['text']
+                                narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                                futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
 
-                    futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
+                        futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
 
         if use_concurrency:
             # If concurrency is used, wait for all futures to complete
