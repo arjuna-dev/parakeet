@@ -147,42 +147,37 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
 
                   if (response.statusCode == 200) {
                     final Map<String, dynamic> data = jsonDecode(response.body);
-                    // await FirebaseFirestore.instance
-                    //     .collection('jsonFiles')
-                    //     .add(data);
                     print(data);
                     script = data;
+
+                    if (script.isNotEmpty && script.containsKey('script')) {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                                  script: script['script'],
+                                  dialogue: widget.dialogue["all_turns"],
+                                  responseDbId:
+                                      widget.dialogue["response_db_id"],
+                                  userID:
+                                      FirebaseAuth.instance.currentUser!.uid,
+                                  audioDurations: script['fileDurations'],
+                                )),
+                      );
+                    } else {
+                      throw Exception('Proper data not received from API');
+                    }
                   } else {
                     throw Exception('Failed to load API data');
                   }
                 } catch (e) {
-                  print("Error: $e");
-                } finally {
-                  if (script.isNotEmpty && script.containsKey('script')) {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => AudioPlayerScreen(
-                                script: script['script'],
-                                dialogue: widget.dialogue["all_turns"],
-                                responseDbId: widget.dialogue["response_db_id"],
-                                userID: FirebaseAuth.instance.currentUser!.uid,
-                                audioDurations: script['fileDurations'],
-                              )),
-                    );
-                  } else {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Something went wrong! Please try again.'),
-                        duration: Duration(seconds: 4),
-                      ),
-                    );
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Something went wrong! Please try again.'),
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
                 }
               },
               child: const Text('Confirm'),
