@@ -49,6 +49,8 @@ def parse_and_create_script(data, words_to_repeat):
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
+            chunk_number_exclude_list = []
+            sentence_number_exclude_list = []
             
             #check if user wants to repeat the split sentence (only if at least one word they want is there)
             if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
@@ -82,14 +84,19 @@ def parse_and_create_script(data, words_to_repeat):
 
                 chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
                 script.extend(chunk_sequence)
+            else:
+                chunk_number_exclude_list.append(j)
 
-        random_sentence_i = random.randint(0, i)
-        number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
-        random_chunk_i = random.randint(0, number_of_chunks)
-        target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
-        native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
-        active_recall_sequence = sequences.active_recall_sequence_1(native, target)
-        script.extend(active_recall_sequence)
+        if len(chunk_number_exclude_list) != len(sentence["split_sentence"]):
+            random_sentence_i = random.choice([i for i in range(len(data["dialogue"])) if i not in sentence_number_exclude_list])
+            number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
+            random_chunk_i = random.choice([i for i in range(number_of_chunks) if i not in chunk_number_exclude_list])
+            target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
+            native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
+            active_recall_sequence = sequences.active_recall_sequence_1(native, target)
+            script.extend(active_recall_sequence)
+            
+        sentence_number_exclude_list.append(i)
 
     return script
 
