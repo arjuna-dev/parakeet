@@ -49,35 +49,39 @@ def parse_and_create_script(data, words_to_repeat):
 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
-            text = split_sentence["narrator_translation"]
+            
+            #check if user wants to repeat the split sentence (only if at least one word they want is there)
+            if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
+            
+                text = split_sentence["narrator_translation"]
 
-            # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text_1 = extract_and_classify_enclosed_words(text)
-            narrator_translations_chunk = []
-            for index, part in enumerate(classified_text_1):
-                narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                narrator_translations_chunk.append(narrator_translation)
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text_1 = extract_and_classify_enclosed_words(text)
+                narrator_translations_chunk = []
+                for index, part in enumerate(classified_text_1):
+                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                    narrator_translations_chunk.append(narrator_translation)
 
-            split_native = f"dialogue_{i}_split_sentence_{j}_native_language"
-            split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
+                split_native = f"dialogue_{i}_split_sentence_{j}_native_language"
+                split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
 
-            word_objects = []
-            for index, word in enumerate(split_sentence['words']):
-                if word["target_language"] in words_to_repeat:
-                    word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                    text = word["narrator_translation"]
+                word_objects = []
+                for index, word in enumerate(split_sentence['words']):
+                    if word["target_language"] in words_to_repeat:
+                        word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                        text = word["narrator_translation"]
 
-                    # Classify and process the text into parts enclosed by || (target_language text)
-                    classified_text_2 = extract_and_classify_enclosed_words(text)
-                    narrator_translations = []
-                    for index2, part in enumerate(classified_text_2):
-                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                        narrator_translations.append(narrator_translation)
+                        # Classify and process the text into parts enclosed by || (target_language text)
+                        classified_text_2 = extract_and_classify_enclosed_words(text)
+                        narrator_translations = []
+                        for index2, part in enumerate(classified_text_2):
+                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                            narrator_translations.append(narrator_translation)
 
-                    word_objects.append({"word": word_file, "translation": narrator_translations})
+                        word_objects.append({"word": word_file, "translation": narrator_translations})
 
-            chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
-            script.extend(chunk_sequence)
+                chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
+                script.extend(chunk_sequence)
 
         random_sentence_i = random.randint(0, i)
         number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
