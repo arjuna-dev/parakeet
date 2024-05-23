@@ -1,3 +1,4 @@
+import 'package:auralearn/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
@@ -10,6 +11,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String responseDbId; // Database ID for the response
   final List<dynamic> dialogue;
   final String userID;
+  final String title;
   Map<String, dynamic> audioDurations;
 
   AudioPlayerScreen(
@@ -18,6 +20,7 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.responseDbId,
       required this.dialogue,
       required this.userID,
+      required this.title,
       required this.audioDurations})
       : super(key: key);
 
@@ -152,7 +155,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         int savedPosition = snapshot.data ?? 0;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Audio Player'),
+            leading: IconButton(
+              icon: const Icon(Icons.home),
+              onPressed: () {
+                dispose();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          const Home()), // replace HomeScreen with your actual home screen widget
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+            title: Text(widget.title),
           ),
           body: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -344,6 +359,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method disposes the player when the widget is disposed
   @override
   void dispose() {
+    if (isPlaying) {
+      _pause();
+    }
     player.dispose();
     super.dispose();
   }
