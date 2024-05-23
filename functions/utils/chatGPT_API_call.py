@@ -3,7 +3,7 @@ import os
 import json
 from .utilities import is_running_locally, GPT_MODEL
 
-if is_running_locally():
+if is_running_locally:
     from dotenv import load_dotenv
     load_dotenv()
     OPEN_AI_API_KEY = os.getenv('OPEN_AI_API_KEY')

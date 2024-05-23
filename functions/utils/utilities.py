@@ -1,10 +1,6 @@
 import os
 from enum import Enum
-
-def is_running_locally():
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_dir, 'local_scripts')
-    return os.path.isdir(file_path)
+from google_tts.gcloud_text_to_speech_api import find_matching_voice_google, create_google_voice
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
@@ -16,3 +12,10 @@ class GPT_MODEL(Enum):
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1
     ELEVENLABS = 2
+
+def check_if_running_locally():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, 'local_scripts')
+    return os.path.isdir(file_path)
+
+is_running_locally = check_if_running_locally()
