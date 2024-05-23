@@ -4,7 +4,7 @@ import 'package:auralearn/screens/confirm_dialogue_screen.dart';
 import 'package:auralearn/Navigation/bottom_menu_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:auralearn/utils/google_tts_language_codes.dart';
@@ -152,6 +152,10 @@ class _CreateLessonState extends State<CreateLesson> {
                   );
 
                   try {
+                     final FirebaseFirestore firestore =
+                        FirebaseFirestore.instance;
+                    final DocumentReference docRef =
+                        firestore.collection('chatGPT_responses').doc();
                     final response = await http.post(
                       Uri.parse(
                           'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
@@ -169,6 +173,7 @@ class _CreateLessonState extends State<CreateLesson> {
                         "user_ID":
                             FirebaseAuth.instance.currentUser!.uid.toString(),
                         "language_level": languageLevel,
+                        "document_id": docRef.id,
                       }),
                     );
 
