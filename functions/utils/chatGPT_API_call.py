@@ -27,13 +27,4 @@ def chatGPT_API_call(prompt, use_stream):
         response_format={'type': 'json_object'}
     )
 
-    chatGPT_JSON_response = completion.choices[0].message.content
-    try:
-        data = json.loads(chatGPT_JSON_response)
-    except Exception as e:
-        print(chatGPT_JSON_response)
-        print(f"Error parsing JSON response from chatGPT: {e}")
-        #TODO: log error and failed JSON in DB and ask the user to try again
-        raise Exception("Error parsing JSON response from chatGPT")
-
-    return data
+    return completion
