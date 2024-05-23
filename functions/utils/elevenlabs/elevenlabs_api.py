@@ -14,7 +14,7 @@ from utilities import is_running_locally
 #  \/____/\/____/\/____/ \/__/   \/____/\/_/\/_/\/____/\/__/\/_/ \/___/  \/___/ 
 
 
-if is_running_locally():
+if is_running_locally:
     from dotenv import load_dotenv
     load_dotenv()
     ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
