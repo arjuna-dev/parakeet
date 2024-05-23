@@ -162,6 +162,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       widget.dialogue["response_db_id"],
                                   userID:
                                       FirebaseAuth.instance.currentUser!.uid,
+                                  title: script['title'],
                                   audioDurations: script['fileDurations'],
                                 )),
                       );
