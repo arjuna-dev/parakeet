@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+import json
 from google_tts.gcloud_text_to_speech_api import find_matching_voice_google, create_google_voice
 
 class GPT_MODEL(Enum):
@@ -19,3 +20,10 @@ def check_if_running_locally():
     return os.path.isdir(file_path)
 
 is_running_locally = check_if_running_locally()
+
+def convert_string_to_JSON(string):
+    try:
+        json_object = json.loads(string)
+    except Exception as e:
+        raise Exception(f"Error converting string to JSON: {e}")
+    return json_object
