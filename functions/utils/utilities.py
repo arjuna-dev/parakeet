@@ -27,3 +27,18 @@ def convert_string_to_JSON(string):
     except Exception as e:
         raise Exception(f"Error converting string to JSON: {e}")
     return json_object
+
+def voice_finder(gender, target_language, tts_provider, exclude_voice_id=None):
+
+    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+
+        target_language_code = language_to_language_code(target_language)
+        speaker_voice_id = find_matching_voice_google(target_language, gender, exclude_voice_id)
+        speaker_voice = create_google_voice(target_language_code, speaker_voice_id)
+
+        return speaker_voice, speaker_voice_id
+
+    elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
+        # TODO: Implement for elevenlabs
+
+        speaker_voice = find_voice_elevenlabs(elevenlabs_voices, target_language, gender, exclude_voice_id)
