@@ -34,6 +34,8 @@ def parse_and_create_script(data, words_to_repeat):
         script.append(f"dialogue_{i}_target_language")
 
     script.extend(sequences.intro_outro_sequence_1())
+    
+    sentence_number_exclude_list = []
 
     # Process each turn in the dialogue
     for i, sentence in enumerate(data["dialogue"]):
@@ -46,46 +48,63 @@ def parse_and_create_script(data, words_to_repeat):
         
         sentence_sequence = sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact, is_first_sentence=True) if i == 0 else sequences.sentence_sequence_1(native_sentence, target_sentence, narrator_explanation, narrator_fun_fact)
         script.extend(sentence_sequence)
-
+        
+        chunk_number_exclude_list = []
+        
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
-            text = split_sentence["narrator_translation"]
+            
+            
+            #check if user wants to repeat the split sentence (only if at least one word they want is there)
+            if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
+            
+                text = split_sentence["narrator_translation"]
 
-            # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text_1 = extract_and_classify_enclosed_words(text)
-            narrator_translations_chunk = []
-            for index, part in enumerate(classified_text_1):
-                narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                narrator_translations_chunk.append(narrator_translation)
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text_1 = extract_and_classify_enclosed_words(text)
+                narrator_translations_chunk = []
+                for index, part in enumerate(classified_text_1):
+                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                    narrator_translations_chunk.append(narrator_translation)
 
-            split_native = f"dialogue_{i}_split_sentence_{j}_native_language"
-            split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
+                split_native = f"dialogue_{i}_split_sentence_{j}_native_language"
+                split_target = f"dialogue_{i}_split_sentence_{j}_target_language"
 
-            word_objects = []
-            for index, word in enumerate(split_sentence['words']):
-                if word["target_language"] in words_to_repeat:
-                    word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                    text = word["narrator_translation"]
+                word_objects = []
+                for index, word in enumerate(split_sentence['words']):
+                    if word["target_language"] in words_to_repeat:
+                        word_file = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                        text = word["narrator_translation"]
 
-                    # Classify and process the text into parts enclosed by || (target_language text)
-                    classified_text_2 = extract_and_classify_enclosed_words(text)
-                    narrator_translations = []
-                    for index2, part in enumerate(classified_text_2):
-                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                        narrator_translations.append(narrator_translation)
+                        # Classify and process the text into parts enclosed by || (target_language text)
+                        classified_text_2 = extract_and_classify_enclosed_words(text)
+                        narrator_translations = []
+                        for index2, part in enumerate(classified_text_2):
+                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                            narrator_translations.append(narrator_translation)
 
-                    word_objects.append({"word": word_file, "translation": narrator_translations})
+                        word_objects.append({"word": word_file, "translation": narrator_translations})
 
-            chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
-            script.extend(chunk_sequence)
+                chunk_sequence = sequences.chunk_sequence_1(narrator_translations_chunk, split_native, split_target, word_objects, j)
+                script.extend(chunk_sequence)
+            else:
+                chunk_number_exclude_list.append(j)
 
-        random_sentence_i = random.randint(0, i)
-        number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
-        random_chunk_i = random.randint(0, number_of_chunks)
-        target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
-        native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
-        active_recall_sequence = sequences.active_recall_sequence_1(native, target)
-        script.extend(active_recall_sequence)
+        # active recall sequence
+        if i != 0:
+            if len(chunk_number_exclude_list) != len(sentence["split_sentence"]):
+                random_sentence_i = random.choice([index for index in range(i + 1) if index not in sentence_number_exclude_list])
+                number_of_chunks = len(data["dialogue"][random_sentence_i]["split_sentence"])-1
+                random_chunk_i = random.choice([index for index in range(number_of_chunks) if index not in chunk_number_exclude_list])
+                target = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_target_language"
+                native = f"dialogue_{random_sentence_i}_split_sentence_{random_chunk_i}_native_language"
+                active_recall_sequence = sequences.active_recall_sequence_1(native, target)
+                script.extend(active_recall_sequence)
+            else:
+                sentence_number_exclude_list.append(i)
+        elif len(chunk_number_exclude_list) == len(sentence["split_sentence"]):
+            sentence_number_exclude_list.append(i)
+        print (f"Sentence number exclude list: {sentence_number_exclude_list}")
 
     return script
 
@@ -180,47 +199,50 @@ def parse_and_convert_to_speech(data, directory, tts_provider, native_language, 
         # Process split_sentence items
         for j, split_sentence in enumerate(sentence["split_sentence"]):
 
-            text = split_sentence["narrator_translation"]
-            # Classify and process the text into parts enclosed by || (target_language text)
-            classified_text = extract_and_classify_enclosed_words(text)
-            for index, part in enumerate(classified_text):
-                if part['enclosed']:
-                    text = part['text']
-                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
-                elif not part['enclosed']:
-                    text = part['text']
-                    narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
-                    futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+            #check if user wants to repeat the split sentence (only if at least one word they want is there)
+            if any(element in split_sentence["target_language"].split(' ') for element in words_to_repeat):
+                
+                text = split_sentence["narrator_translation"]
+                # Classify and process the text into parts enclosed by || (target_language text)
+                classified_text = extract_and_classify_enclosed_words(text)
+                for index, part in enumerate(classified_text):
+                    if part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                        futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                    elif not part['enclosed']:
+                        text = part['text']
+                        narrator_translation = f"dialogue_{i}_split_sentence_{j}_narrator_translation_{index}"
+                        futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
 
-            text = split_sentence["native_language"]
-            native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
-            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
+                text = split_sentence["native_language"]
+                native_chunk = f"dialogue_{i}_split_sentence_{j}_native_language"
+                futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{native_chunk}.mp3", local_run))
 
-            text = split_sentence["target_language"]
-            target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
-            futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
+                text = split_sentence["target_language"]
+                target_chunk = f"dialogue_{i}_split_sentence_{j}_target_language"
+                futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{target_chunk}.mp3", local_run))
 
-            for index, word in enumerate(split_sentence['words']):
-                if (word["target_language"] in words_to_repeat):
-                    word_text = word["target_language"]
-                    narrator_translation_text = word["narrator_translation"]
-                    word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
-                    narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
+                for index, word in enumerate(split_sentence['words']):
+                    if (word["target_language"] in words_to_repeat):
+                        word_text = word["target_language"]
+                        narrator_translation_text = word["narrator_translation"]
+                        word_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_target_language"
+                        narrator_translation_file_name = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation"
 
-                    # Classify and process the text into parts enclosed by || (target_language text)
-                    classified_text = extract_and_classify_enclosed_words(narrator_translation_text)
-                    for index2, part in enumerate(classified_text):
-                        if part['enclosed']:
-                            text = part['text']
-                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                            futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
-                        elif not part['enclosed']:
-                            text = part['text']
-                            narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
-                            futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                        # Classify and process the text into parts enclosed by || (target_language text)
+                        classified_text = extract_and_classify_enclosed_words(narrator_translation_text)
+                        for index2, part in enumerate(classified_text):
+                            if part['enclosed']:
+                                text = part['text']
+                                narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                                futures.append(execute_task(tts_function, text, current_speaker_voice, f"{directory}/{narrator_translation}.mp3", local_run))
+                            elif not part['enclosed']:
+                                text = part['text']
+                                narrator_translation = f"dialogue_{i}_split_sentence_{j}_words_{index}_narrator_translation_{index2}"
+                                futures.append(execute_task(tts_function, text, narrator_voice, f"{directory}/{narrator_translation}.mp3", local_run))
 
-                    futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
+                        futures.append(execute_task(tts_function, word_text, current_speaker_voice, f"{directory}/{word_file_name}.mp3", local_run))
 
         if use_concurrency:
             # If concurrency is used, wait for all futures to complete
