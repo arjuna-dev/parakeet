@@ -70,7 +70,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
               Map<String, dynamic> data =
                   document.data() as Map<String, dynamic>;
               return ListTile(
-                title: Text(data["native"] as String),
+                title: Text(data["target"] as String),
+                subtitle: Text(data["native"] as String),
                 // Add more fields as needed
               );
             }).toList(),
