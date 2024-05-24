@@ -9,6 +9,7 @@ import os
 from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
 from utils.utilities import GPT_MODEL, TTS_PROVIDERS, convert_string_to_JSON, is_running_locally, voice_finder
 from utils.chatGPT_API_call import chatGPT_API_call
+from partialjson.json_parser import JSONParser
 
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
@@ -58,17 +59,13 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     doc_ref = db.collection('chatGPT_responses').document(document_id)
     subcollection_ref = doc_ref.collection('only_target_sentences')
 
-
     compiled_response = ""
-    native_language_sentence = ""
-    target_language_sentence = ""
     turn_nr = 0
     current_gender = ""
     last_few_chunks = []
     few_chunks_length = 6
-    JSON_response = {}
-    parsing_native_language = False
-    parsing_target_language = False
+
+    parser = JSONParser()
     for chunk in chatGPT_response:
 
         is_finished = chunk.choices[0].finish_reason
@@ -77,38 +74,23 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
         a_chunk = chunk.choices[0].delta.content
         compiled_response += a_chunk
-        last_few_chunks.append(a_chunk)
-        if len(last_few_chunks) > few_chunks_length:
-            last_few_chunks.pop(0)
 
-        joined_last_few_chunks = "".join(last_few_chunks)
+        rectified_JSON = parser.parse(compiled_response)
 
-        if '"native_language": "' in joined_last_few_chunks:
-            print("parsing native language")
-            parsing_native_language = True
-        if '"target_language": "' in joined_last_few_chunks:
-            parsing_target_language = True
+        try:
+            target_sentence = rectified_JSON["all_turns"][turn_nr+1]
+            print('target_sentence: ', rectified_JSON["all_turns"][turn_nr])
+            turn_nr += 1
+        except:
+            continue
 
-        if parsing_native_language:
-            native_language_sentence += a_chunk
-        if parsing_target_language:
-            target_language_sentence += a_chunk
-
-        if parsing_native_language and '",\n' in last_few_chunks:
-            parsing_native_language = False
-            print("Finished parsing native language")
-            native_language_sentence = native_language_sentence[:-2]
-            push_to_firestore({"native": native_language_sentence}, subcollection_ref)
-            # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
-
-    # dialogue_0_native_language.mp3
-    # Beginning of sentence: "native_language": "
-    # End of sentence: '",\n'
+        # push_to_firestore({"native": native_language_sentence}, subcollection_ref)
+        # # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
+        # dialogue_0_native_language.mp3
 
     JSON_response = convert_string_to_JSON(compiled_response)
     JSON_response["response_db_id"] = doc_ref.id
     JSON_response["user_ID"] = user_ID
-
 
     return JSON_response
 
