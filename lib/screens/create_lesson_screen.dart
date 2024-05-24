@@ -175,7 +175,7 @@ class _CreateLessonState extends State<CreateLesson> {
                             FirebaseFirestore.instance;
                         final DocumentReference docRef =
                             firestore.collection('chatGPT_responses').doc();
-                        await http.post(
+                        http.post(
                           Uri.parse('http://127.0.0.1:8080'),
                           headers: <String, String>{
                             'Content-Type': 'application/json; charset=UTF-8',
@@ -219,7 +219,8 @@ class _CreateLessonState extends State<CreateLesson> {
                                       nativeLanguage: nativeLanguage,
                                       targetLanguage: targetLanguage,
                                       languageLevel: languageLevel,
-                                      length: length),
+                                      length: length,
+                                      documentID: docRef.id),
                                 ),
                               );
                             } else {
