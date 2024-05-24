@@ -181,6 +181,11 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
 
     #save script to Firestore inside the chatGPT_responses document
     subcollection_ref = doc_ref.collection('scripts')
+    # Delete any existing script document
+    docs = subcollection_ref.stream()
+    for doc in docs:
+        doc.reference.delete()
+    
     subcollection_ref.document().set(response)
 
     return response
