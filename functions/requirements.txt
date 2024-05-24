@@ -3,3 +3,4 @@ openai
 google-cloud-texttospeech
 pydub
 python-dotenv
+partialjson
