@@ -16,10 +16,10 @@ app = initialize_app()
 gpt_model = GPT_MODEL.GPT_4o.value
 
 
-def push_to_firestore(JSON_response, subcollection_ref):
+def push_to_firestore(JSON_response, document):
     try:
         # storing chatGPT_response in Firestore
-        subcollection_ref.document().set(JSON_response)
+        document.set(JSON_response)
         print("Successfully stored chatGPT_response in Firestore")
     except Exception as e:
         raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
@@ -57,6 +57,7 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     db = firestore.client()
     doc_ref = db.collection('chatGPT_responses').document(document_id)
     subcollection_ref = doc_ref.collection('only_target_sentences')
+    document = subcollection_ref.document()
 
 
     compiled_response = ""
@@ -94,11 +95,13 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         if parsing_target_language:
             target_language_sentence += a_chunk
 
-        if parsing_native_language and '",\n' in last_few_chunks:
+        if parsing_target_language and '",\n' in last_few_chunks:
             parsing_native_language = False
+            parsing_target_language = False
             print("Finished parsing native language")
             native_language_sentence = native_language_sentence[:-2]
-            push_to_firestore({"native": native_language_sentence}, subcollection_ref)
+            target_language_sentence = target_language_sentence[:-2]
+            push_to_firestore({"native": native_language_sentence, "target": target_language_sentence}, document)
             # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
 
     # dialogue_0_native_language.mp3
