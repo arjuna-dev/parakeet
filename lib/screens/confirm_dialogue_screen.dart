@@ -33,7 +33,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   @override
   void initState() {
     super.initState();
-    for (int i = 0; i < widget.dialogue['all_turns'].length; i++) {
+    for (int i = 0; i < widget.dialogue['all_turns']?.length; i++) {
       final turn = widget.dialogue['all_turns'][i];
       final targetLanguageSentence = turn['target_language'] ?? "";
       final words = targetLanguageSentence.split(' ');
@@ -65,7 +65,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     ),
                     ListView.builder(
                       shrinkWrap: true,
-                      itemCount: widget.dialogue['all_turns'].length,
+                      itemCount: widget.dialogue['all_turns']?.length,
                       itemBuilder: (context, index) {
                         final turn = widget.dialogue['all_turns'][index];
                         final words =
@@ -147,28 +147,38 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
 
                   if (response.statusCode == 200) {
                     final Map<String, dynamic> data = jsonDecode(response.body);
-                    // await FirebaseFirestore.instance
-                    //     .collection('jsonFiles')
-                    //     .add(data);
                     print(data);
                     script = data;
+
+                    if (script.isNotEmpty && script.containsKey('script')) {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                                  script: script['script'],
+                                  dialogue: widget.dialogue["all_turns"],
+                                  responseDbId:
+                                      widget.dialogue["response_db_id"],
+                                  userID:
+                                      FirebaseAuth.instance.currentUser!.uid,
+                                  title: script['title'],
+                                  audioDurations: script['fileDurations'],
+                                )),
+                      );
+                    } else {
+                      throw Exception('Proper data not received from API');
+                    }
                   } else {
                     throw Exception('Failed to load API data');
                   }
                 } catch (e) {
-                  print('Error: $e');
-                } finally {
                   Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => AudioPlayerScreen(
-                              script: script['script'],
-                              dialogue: widget.dialogue["all_turns"],
-                              responseDbId: widget.dialogue["response_db_id"],
-                              userID: FirebaseAuth.instance.currentUser!.uid,
-                              audioDurations: script['fileDurations'],
-                            )),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Something went wrong! Please try again.'),
+                      duration: Duration(seconds: 4),
+                    ),
                   );
                 }
               },

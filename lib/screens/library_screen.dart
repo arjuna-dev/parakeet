@@ -132,6 +132,7 @@ class _LibraryState extends State<Library> {
                                   dialogue: documents[index].get('dialogue'),
                                   userID:
                                       FirebaseAuth.instance.currentUser!.uid,
+                                  title: documents[index].get('title'),
                                   audioDurations:
                                       documents[index].get('fileDurations'),
                                 ),
