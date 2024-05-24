@@ -175,9 +175,8 @@ class _CreateLessonState extends State<CreateLesson> {
                             FirebaseFirestore.instance;
                         final DocumentReference docRef =
                             firestore.collection('chatGPT_responses').doc();
-                        final response = await http.post(
-                          Uri.parse(
-                              'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_chatGPT_API_call'),
+                        await http.post(
+                          Uri.parse('http://127.0.0.1:8080'),
                           headers: <String, String>{
                             'Content-Type': 'application/json; charset=UTF-8',
                             "Access-Control-Allow-Origin":
@@ -195,32 +194,43 @@ class _CreateLessonState extends State<CreateLesson> {
                             "document_id": docRef.id,
                           }),
                         );
+                        int counter = 0;
+                        bool docExists = false;
+                        while (!docExists && counter < 10) {
+                          await Future.delayed(
+                              const Duration(seconds: 1)); // wait for 1 second
+                          final QuerySnapshot snapshot = await docRef
+                              .collection('only_target_sentences')
+                              .get();
+                          if (snapshot.docs.isNotEmpty) {
+                            docExists = true;
+                            final Map<String, dynamic> data =
+                                snapshot.docs.first.data()
+                                    as Map<String, dynamic>;
+                            dialogue = data;
 
-                        if (response.statusCode == 200) {
-                          final Map<String, dynamic> data =
-                              jsonDecode(response.body);
-                          print(data);
-                          dialogue = data;
-                          if (dialogue.isNotEmpty &&
-                              dialogue.containsKey('title')) {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ConfirmDialogue(
-                                    dialogue: dialogue,
-                                    nativeLanguage: nativeLanguage,
-                                    targetLanguage: targetLanguage,
-                                    languageLevel: languageLevel,
-                                    length: length),
-                              ),
-                            );
-                          } else {
-                            throw Exception(
-                                'Proper data not received from API');
+                            if (dialogue.isNotEmpty) {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ConfirmDialogue(
+                                      dialogue: dialogue,
+                                      nativeLanguage: nativeLanguage,
+                                      targetLanguage: targetLanguage,
+                                      languageLevel: languageLevel,
+                                      length: length),
+                                ),
+                              );
+                            } else {
+                              throw Exception(
+                                  'Proper data not received from API');
+                            }
                           }
-                        } else {
-                          throw Exception('Failed to load API data');
+                        }
+                        if (!docExists) {
+                          throw Exception(
+                              'Failed to find the response in firestore within 10 second');
                         }
                       } catch (e) {
                         Navigator.pop(context);
