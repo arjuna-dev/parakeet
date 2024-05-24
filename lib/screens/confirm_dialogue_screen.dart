@@ -71,7 +71,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                   document.data() as Map<String, dynamic>;
               return ListTile(
                 title: Text(data["target"] as String),
-                subtitle: Text(data["native"] as String),
                 // Add more fields as needed
               );
             }).toList(),
