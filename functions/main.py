@@ -96,12 +96,10 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
             target_language_sentence += a_chunk
 
         if parsing_target_language and '",\n' in last_few_chunks:
-            parsing_native_language = False
             parsing_target_language = False
-            print("Finished parsing native language")
-            native_language_sentence = native_language_sentence[:-2]
+            print("Finished parsing target language")
             target_language_sentence = target_language_sentence[:-2]
-            push_to_firestore({"native": native_language_sentence, "target": target_language_sentence}, document)
+            push_to_firestore({"target": target_language_sentence}, document)
             # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
 
     # dialogue_0_native_language.mp3
