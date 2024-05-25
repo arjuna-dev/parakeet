@@ -10,6 +10,7 @@ from utils.json_parsers import parse_and_create_script, parse_and_convert_to_spe
 from utils.utilities import GPT_MODEL, TTS_PROVIDERS, convert_string_to_JSON, is_running_locally, voice_finder
 from utils.chatGPT_API_call import chatGPT_API_call
 from partialjson.json_parser import JSONParser
+from utils.simulated_response import simulated_response
 
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
@@ -65,9 +66,9 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    # chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
-    from simulated_response import simulated_response
-    chatGPT_response = simulated_response
+    chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+    # Uncomment the line below to use the simulated response
+    # chatGPT_response = simulated_response
 
     # db = firestore.client()
     # doc_ref = db.collection('chatGPT_responses').document(document_id)
