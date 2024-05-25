@@ -25,6 +25,18 @@ def push_to_firestore(JSON_response, document):
     except Exception as e:
         raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
 
+def periodical_posting(JSON, last_keys):
+    current_keys = set(JSON.keys())
+    new_key = current_keys - last_keys
+    if new_key:
+        new_key_text = list(new_key)[0]
+
+    if new_key and JSON[new_key_text]:
+        last_keys = current_keys
+        # push_to_firestore({"native": native_language_sentence}, subcollection_ref)
+        print('JSON: ', JSON)
+    return last_keys
+
 @https_fn.on_request(
         cors=options.CorsOptions(
         cors_origins=["*"],
@@ -53,18 +65,21 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+    # chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+    from simulated_response import simulated_response
+    chatGPT_response = simulated_response
 
-    db = firestore.client()
-    doc_ref = db.collection('chatGPT_responses').document(document_id)
-    subcollection_ref = doc_ref.collection('only_target_sentences')
-    document = subcollection_ref.document()
+    # db = firestore.client()
+    # doc_ref = db.collection('chatGPT_responses').document(document_id)
+    # subcollection_ref = doc_ref.collection('only_target_sentences')
+    # document = subcollection_ref.document()
 
     compiled_response = ""
     turn_nr = 0
     current_gender = ""
-    last_few_chunks = []
-    few_chunks_length = 6
+    last_keys = set()
+    last_turns_length = 0
+    last_turn_keys_sets = []
 
     parser = JSONParser()
     for chunk in chatGPT_response:
@@ -77,23 +92,31 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         compiled_response += a_chunk
 
         rectified_JSON = parser.parse(compiled_response)
-
-        try:
-            target_sentence = rectified_JSON["all_turns"][turn_nr+1]
-            print('target_sentence: ', rectified_JSON["all_turns"][turn_nr])
-            turn_nr += 1
-        except:
+        if not rectified_JSON:
             continue
 
-        # push_to_firestore({"native": native_language_sentence}, subcollection_ref)
+        last_keys = periodical_posting(rectified_JSON, last_keys)
+
+        if rectified_JSON.get("all_turns") and isinstance(rectified_JSON.get("all_turns"), list):
+            all_turns = rectified_JSON.get("all_turns")
+            for i in range(len(all_turns)):
+                turns_length = len(all_turns)
+                if turns_length > last_turns_length:
+                    last_turns_length = turns_length
+                    last_turn_keys_sets.append(set())
+                # rectified_JSON_turn = parser.parse(all_turns[i])
+                last_turn_keys_sets[i] = periodical_posting(all_turns[i], last_turn_keys_sets[i])
+
         # # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
         # dialogue_0_native_language.mp3
 
-    JSON_response = convert_string_to_JSON(compiled_response)
-    JSON_response["response_db_id"] = doc_ref.id
-    JSON_response["user_ID"] = user_ID
+    # JSON_response = convert_string_to_JSON(compiled_response)
+    # print('JSON_response: ', rectified_JSON)
 
-    return JSON_response
+    # JSON_response["response_db_id"] = doc_ref.id
+    # JSON_response["user_ID"] = user_ID
+
+    return rectified_JSON
 
 
 @https_fn.on_request(
