@@ -31,7 +31,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'A1';
   final _formKey = GlobalKey<FormState>();
 
-  Map<String, dynamic> dialogue = {};
+  Map<String, dynamic> firstDialogue = {};
 
   @override
   Widget build(BuildContext context) {
@@ -207,15 +207,15 @@ class _CreateLessonState extends State<CreateLesson> {
                             final Map<String, dynamic> data =
                                 snapshot.docs.first.data()
                                     as Map<String, dynamic>;
-                            dialogue = data;
+                            firstDialogue = data;
 
-                            if (dialogue.isNotEmpty) {
+                            if (firstDialogue.isNotEmpty) {
                               Navigator.pop(context);
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => ConfirmDialogue(
-                                      dialogue: dialogue,
+                                      firstDialogue: firstDialogue,
                                       nativeLanguage: nativeLanguage,
                                       targetLanguage: targetLanguage,
                                       languageLevel: languageLevel,

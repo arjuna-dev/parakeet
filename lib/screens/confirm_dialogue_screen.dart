@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 class ConfirmDialogue extends StatefulWidget {
   const ConfirmDialogue({
     super.key,
-    required this.dialogue,
+    required this.firstDialogue,
     required this.nativeLanguage,
     required this.targetLanguage,
     required this.languageLevel,
@@ -18,7 +18,7 @@ class ConfirmDialogue extends StatefulWidget {
     required this.documentID,
   });
 
-  final Map<String, dynamic> dialogue;
+  final Map<String, dynamic> firstDialogue;
   final String nativeLanguage;
   final String targetLanguage;
   final String languageLevel;
@@ -32,17 +32,7 @@ class ConfirmDialogue extends StatefulWidget {
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   Map<String, dynamic> script = {};
   Map<int, Map<String, bool>> selectedWords = {};
-
-  @override
-  void initState() {
-    super.initState();
-    // for (int i = 0; i < widget.dialogue['all_turns']?.length; i++) {
-    //   final turn = widget.dialogue['all_turns'][i];
-    //   final targetLanguageSentence = turn['target_language'] ?? "";
-    //   final words = targetLanguageSentence.split(' ');
-    //   selectedWords[i] = {for (var word in words) word: true};
-    // }
-  }
+  Map<String, dynamic> allDialogue = {};
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +59,14 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
             child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
+                  ListTile(
+                    title: const Text('Topic'),
+                    subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
+                  ),
+                  const ListTile(
+                    title: Text(
+                        'Select words that you want to repeat in your audio:'),
+                  ),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
@@ -76,11 +74,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           Column(
                             children: snapshot.data!.docs
                                 .map((DocumentSnapshot document) {
-                              Map<String, dynamic> data =
+                              allDialogue =
                                   document.data() as Map<String, dynamic>;
                               List<dynamic> turns = [];
-                              if (data.containsKey("all_turns")) {
-                                turns = data["all_turns"];
+                              if (allDialogue.containsKey("all_turns")) {
+                                turns = allDialogue["all_turns"];
                               }
 
                               return ListView.builder(
@@ -168,11 +166,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 "*", // Required for CORS support to work
                           },
                           body: jsonEncode(<String, dynamic>{
-                            "response_db_id": widget.dialogue["response_db_id"],
-                            "dialogue": widget.dialogue["all_turns"],
-                            "title": widget.dialogue["title"],
-                            "speakers": widget.dialogue["speakers"],
-                            "user_ID": widget.dialogue["user_ID"],
+                            "response_db_id":
+                                widget.firstDialogue["response_db_id"],
+                            "dialogue": allDialogue["all_turns"],
+                            "title": widget.firstDialogue["title"],
+                            "speakers": widget.firstDialogue["speakers"],
+                            "user_ID": widget.firstDialogue["user_ID"],
                             "native_language": widget.nativeLanguage,
                             "target_language": widget.targetLanguage,
                             "length": widget.length,
@@ -199,9 +198,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               MaterialPageRoute(
                                   builder: (context) => AudioPlayerScreen(
                                         script: script['script'],
-                                        dialogue: widget.dialogue["all_turns"],
-                                        responseDbId:
-                                            widget.dialogue["response_db_id"],
+                                        dialogue: allDialogue["all_turns"],
+                                        responseDbId: widget
+                                            .firstDialogue["response_db_id"],
                                         userID: FirebaseAuth
                                             .instance.currentUser!.uid,
                                         title: script['title'],
