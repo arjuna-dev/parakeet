@@ -1,4 +1,8 @@
-List<Function> introSequences = [];
+List<Function> introSequences = [
+  introSequence1,
+  introSequence3,
+  introSequence4
+];
 
 List<String> introSequence1() {
   List<String> scriptPart = [
@@ -29,13 +33,7 @@ List<String> introSequence4() {
   return scriptPart;
 }
 
-void populateIntroSequences() {
-  introSequences.add(introSequence1);
-  introSequences.add(introSequence3);
-  introSequences.add(introSequence4);
-}
-
-List<Function> outroSequences = [];
+List<Function> outroSequences = [introOutroSequence1];
 List<String> introOutroSequence1() {
   List<String> scriptPart = [
     "one_second_break",
@@ -46,11 +44,7 @@ List<String> introOutroSequence1() {
   return scriptPart;
 }
 
-void populateOutroSequences() {
-  outroSequences.add(introOutroSequence1);
-}
-
-List<Function> sentenceSequences = [];
+List<Function> sentenceSequences = [sentenceSequence1];
 List<String> sentenceSequence1(String native, String target,
     String narratorExplanation, String narratorFunFact,
     {bool isFirstSentence = false}) {
@@ -72,11 +66,7 @@ List<String> sentenceSequence1(String native, String target,
   return scriptPart;
 }
 
-void populateSentenceSequences() {
-  sentenceSequences.add(sentenceSequence1);
-}
-
-List<Function> activeRecallSequences = [];
+List<Function> activeRecallSequences = [activeRecallSequence1];
 List<String> activeRecallSequence1(String native, String target) {
   List<String> scriptPart = [
     "narrator_navigation_phrases_8_0", // do you remember how to say...
@@ -90,11 +80,7 @@ List<String> activeRecallSequence1(String native, String target) {
   return scriptPart;
 }
 
-void populateactiveRecallSequences() {
-  activeRecallSequences.add(activeRecallSequence1);
-}
-
-List<Function> chunkSequences = [];
+List<Function> chunkSequences = [chunkSequence1];
 List<String> chunkSequence1(
     List<String> narratorFunFact,
     String nativeLanguage,
@@ -128,10 +114,6 @@ List<String> chunkSequence1(
     "five_second_break"
   ];
   return scriptPart;
-}
-
-void populateChunkSequences() {
-  chunkSequences.add(chunkSequence1);
 }
 
 List<String> words2RepsFixElevenlabsLonelyWords(
