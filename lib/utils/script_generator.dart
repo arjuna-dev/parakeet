@@ -65,7 +65,7 @@ List<String> parseAndCreateScript(
         List<String> narratorTranslationsChunk = [];
         for (int index = 0; index < classifiedText1.length; index++) {
           String narratorTranslation =
-              "dialogue_${i}_split_sentence_${j}_narrator_translation_${index}";
+              "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
           narratorTranslationsChunk.add(narratorTranslation);
         }
 
@@ -91,7 +91,7 @@ List<String> parseAndCreateScript(
             List<String> narratorTranslations = [];
             for (int index2 = 0; index2 < classifiedText2.length; index2++) {
               String narratorTranslation =
-                  "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_${index2}";
+                  "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_$index2";
               narratorTranslations.add(narratorTranslation);
             }
 
@@ -139,7 +139,6 @@ List<String> parseAndCreateScript(
         data["dialogue"][i]["split_sentence"].length) {
       sentenceNumberExcludeList.add(i);
     }
-    print("Sentence number exclude list: $sentenceNumberExcludeList");
   }
 
   return script;
