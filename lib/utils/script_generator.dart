@@ -1,0 +1,146 @@
+import 'dart:math';
+import 'script_sequences.dart' as sequences;
+
+List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
+  List<String> parts = inputString.split('||');
+
+  List<Map<String, dynamic>> result = [];
+
+  bool isEnclosed = false;
+
+  for (var part in parts) {
+    if (part.isNotEmpty) {
+      result.add({'text': part, 'enclosed': isEnclosed});
+    }
+    isEnclosed = !isEnclosed;
+  }
+
+  return result;
+}
+
+List<String> parseAndCreateScript(
+    Map<String, dynamic> data, List<String> wordsToRepeat) {
+  List<String> script = [];
+
+  int randomI = Random().nextInt(sequences.introSequences.length);
+  List<String> introSequence = sequences.introSequences[randomI]();
+  script.addAll(introSequence);
+
+  for (int i = 0; i < data["dialogue"].length; i++) {
+    script.add("dialogue_${i}_target_language");
+  }
+
+  script.addAll(sequences.introOutroSequence1());
+
+  List<int> sentenceNumberExcludeList = [];
+
+  // Process each turn in the dialogue
+  for (int i = 0; i < data["dialogue"].length; i++) {
+    String nativeSentence = "dialogue_${i}_native_language";
+    String targetSentence = "dialogue_${i}_target_language";
+
+    String narratorExplanation = "dialogue_${i}_narrator_explanation";
+    String narratorFunFact = "dialogue_${i}_narrator_fun_fact";
+
+    List<String> sentenceSequence = sequences.sentenceSequence1(
+        nativeSentence, targetSentence, narratorExplanation, narratorFunFact,
+        isFirstSentence: i == 0);
+    script.addAll(sentenceSequence);
+
+    List<int> chunkNumberExcludeList = [];
+
+    // Process split_sentence items
+    for (int j = 0; j < data["dialogue"][i]["split_sentence"].length; j++) {
+      // Check if user wants to repeat the split sentence (only if at least one word they want is there)
+      if (wordsToRepeat.any((element) => data["dialogue"][i]["split_sentence"]
+              [j]["target_language"]
+          .split(' ')
+          .contains(element))) {
+        String text =
+            data["dialogue"][i]["split_sentence"][j]["narrator_translation"];
+
+        // Classify and process the text into parts enclosed by || (target_language text)
+        List<Map<String, dynamic>> classifiedText1 =
+            extractAndClassifyEnclosedWords(text);
+        List<String> narratorTranslationsChunk = [];
+        for (int index = 0; index < classifiedText1.length; index++) {
+          String narratorTranslation =
+              "dialogue_${i}_split_sentence_${j}_narrator_translation_${index}";
+          narratorTranslationsChunk.add(narratorTranslation);
+        }
+
+        String splitNative =
+            "dialogue_${i}_split_sentence_${j}_native_language";
+        String splitTarget =
+            "dialogue_${i}_split_sentence_${j}_target_language";
+
+        List<Map<String, dynamic>> wordObjects = [];
+        for (int index = 0;
+            index < data["dialogue"][i]["split_sentence"][j]['words'].length;
+            index++) {
+          if (wordsToRepeat.contains(data["dialogue"][i]["split_sentence"][j]
+              ['words'][index]["target_language"])) {
+            String wordFile =
+                "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
+            String text = data["dialogue"][i]["split_sentence"][j]['words']
+                [index]["narrator_translation"];
+
+            // Classify and process the text into parts enclosed by || (target_language text)
+            List<Map<String, dynamic>> classifiedText2 =
+                extractAndClassifyEnclosedWords(text);
+            List<String> narratorTranslations = [];
+            for (int index2 = 0; index2 < classifiedText2.length; index2++) {
+              String narratorTranslation =
+                  "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_${index2}";
+              narratorTranslations.add(narratorTranslation);
+            }
+
+            wordObjects
+                .add({"word": wordFile, "translation": narratorTranslations});
+          }
+        }
+
+        List<String> chunkSequence = sequences.chunkSequence1(
+            narratorTranslationsChunk,
+            splitNative,
+            splitTarget,
+            wordObjects,
+            j);
+        script.addAll(chunkSequence);
+      } else {
+        chunkNumberExcludeList.add(j);
+      }
+    }
+    // Active recall sequence
+    if (i != 0) {
+      if (chunkNumberExcludeList.length !=
+          data["dialogue"][i]["split_sentence"].length) {
+        List<int> validSentences = List<int>.generate(i + 1, (index) => index)
+          ..removeWhere(
+              (element) => sentenceNumberExcludeList.contains(element));
+        int randomSentenceI =
+            validSentences[Random().nextInt(validSentences.length)];
+        int numberOfChunks =
+            data["dialogue"][randomSentenceI]["split_sentence"].length - 1;
+        List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
+          ..removeWhere((element) => chunkNumberExcludeList.contains(element));
+        int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
+        String target =
+            "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
+        String native =
+            "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
+        List<String> activeRecallSequence =
+            sequences.activeRecallSequence1(native, target);
+        script.addAll(activeRecallSequence);
+      } else {
+        sentenceNumberExcludeList.add(i);
+      }
+    } else if (chunkNumberExcludeList.length ==
+        data["dialogue"][i]["split_sentence"].length) {
+      sentenceNumberExcludeList.add(i);
+    }
+    print("Sentence number exclude list: $sentenceNumberExcludeList");
+  }
+
+  return script;
+}
