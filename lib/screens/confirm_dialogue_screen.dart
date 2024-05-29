@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:auralearn/utils/script_generator.dart' as script_generator;
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 
@@ -30,7 +31,7 @@ class ConfirmDialogue extends StatefulWidget {
 }
 
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
-  Map<String, dynamic> script = {};
+  List<String> script = [];
   Map<int, Map<String, bool>> selectedWords = {};
   Map<String, dynamic> allDialogue = {};
 
@@ -80,6 +81,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               if (allDialogue.containsKey("all_turns")) {
                                 turns = allDialogue["all_turns"];
                               }
+                              script = script_generator.createFirstScript(
+                                  allDialogue); // need to import script_generator.dart
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
@@ -157,7 +160,15 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       );
 
                       try {
-                        final response = await http.post(
+                        DocumentReference docRef = FirebaseFirestore.instance
+                            .collection('chatGPT_responses')
+                            .doc(widget.firstDialogue["response_db_id"])
+                            .collection('script')
+                            .doc();
+                        await docRef.set({"script": script});
+                        String scriptDocumentID = docRef.id;
+
+                        http.post(
                           Uri.parse(
                               'https://europe-west1-noble-descent-420612.cloudfunctions.net/full_API_workflow'), // need the function url here
                           headers: <String, String>{
@@ -176,6 +187,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             "target_language": widget.targetLanguage,
                             "length": widget.length,
                             "language_level": widget.languageLevel,
+                            "script_document_ID": scriptDocumentID,
                             "words_to_repeat": selectedWords.entries
                                 .expand((entry) => entry.value.entries)
                                 .where((innerEntry) => innerEntry.value == true)
@@ -183,36 +195,24 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 .toList(),
                           }),
                         );
-
-                        if (response.statusCode == 200) {
-                          final Map<String, dynamic> data =
-                              jsonDecode(response.body);
-                          print(data);
-                          script = data;
-
-                          if (script.isNotEmpty &&
-                              script.containsKey('script')) {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => AudioPlayerScreen(
-                                        script: script['script'],
-                                        dialogue: allDialogue["all_turns"],
-                                        responseDbId: widget
-                                            .firstDialogue["response_db_id"],
-                                        userID: FirebaseAuth
-                                            .instance.currentUser!.uid,
-                                        title: script['title'],
-                                        audioDurations: script['fileDurations'],
-                                      )),
-                            );
-                          } else {
-                            throw Exception(
-                                'Proper data not received from API');
-                          }
+                        if (script.isNotEmpty) {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => AudioPlayerScreen(
+                                      script: script,
+                                      dialogue: allDialogue["all_turns"],
+                                      responseDbId: widget
+                                          .firstDialogue["response_db_id"],
+                                      userID: FirebaseAuth
+                                          .instance.currentUser!.uid,
+                                      title: allDialogue['title'],
+                                      //audioDurations: script['fileDurations'],
+                                    )),
+                          );
                         } else {
-                          throw Exception('Failed to load API data');
+                          throw Exception('Failed to create script!');
                         }
                       } catch (e) {
                         Navigator.pop(context);
