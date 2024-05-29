@@ -13,6 +13,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String userID;
   final String title;
   Map<String, dynamic>? audioDurations;
+  String? scriptDocumentId;
 
   AudioPlayerScreen(
       {Key? key,
@@ -21,6 +22,7 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.dialogue,
       required this.userID,
       required this.title,
+      this.scriptDocumentId,
       this.audioDurations})
       : super(key: key);
 

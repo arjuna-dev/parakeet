@@ -187,7 +187,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             "target_language": widget.targetLanguage,
                             "length": widget.length,
                             "language_level": widget.languageLevel,
-                            "script_document_ID": scriptDocumentID,
                             "words_to_repeat": selectedWords.entries
                                 .expand((entry) => entry.value.entries)
                                 .where((innerEntry) => innerEntry.value == true)
@@ -208,6 +207,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
                                       title: allDialogue['title'],
+                                      scriptDocumentId: scriptDocumentID,
                                       //audioDurations: script['fileDurations'],
                                     )),
                           );
