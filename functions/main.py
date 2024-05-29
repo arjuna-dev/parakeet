@@ -15,30 +15,55 @@ from utils.simulated_response import simulated_response
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
-gpt_model = GPT_MODEL.GPT_4o.value
-
 
 def push_to_firestore(JSON_response, document):
     try:
         # storing chatGPT_response in Firestore
-        document.set(JSON_response)
-        print("Successfully stored chatGPT_response in Firestore")
+        print("JSON_response: ", JSON_response)
+        # document.set(JSON_response)
+        # print("Successfully stored chatGPT_response in Firestore")
+        pass
     except Exception as e:
         raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
 
 def periodical_posting(json_to_analyse, full_json, last_keys, document):
+    new_key_text = None
     current_keys = set(json_to_analyse.keys())
+    # print('last_keys: ', last_keys)
+    # print('current_keys: ', current_keys)
     new_key = current_keys - last_keys
     if new_key:
         new_key_text = list(new_key)[0]
 
-    if new_key and json_to_analyse[new_key_text]:
-        last_keys = current_keys
-        del json_to_analyse[new_key_text]
-        if json_to_analyse:
-            push_to_firestore(full_json, document)
+    if new_key_text and json_to_analyse[new_key_text]:
+            last_keys = current_keys
+            del json_to_analyse[new_key_text]
+            if json_to_analyse:
+                # handle_dict_API_call_1(json_to_analyse)
+                push_to_firestore(full_json, document)
     return last_keys
 
+
+def handle_key(current_line):
+    if "all_turns" in current_line:
+        print('line: ', current_line)
+    elif "speakers" in current_line:
+        print('line: ', current_line)
+    elif "title" in current_line:
+        print('line: ', current_line)
+    elif "gender" in current_line:
+        print('line: ', current_line)
+    elif "target_language" in current_line:
+        print('line: ', current_line)
+    elif "turn_nr" in current_line:
+        print('line: ', current_line)
+    elif "language_level" in current_line:
+        print('line: ', current_line)
+    elif "speaker" in current_line:
+        print('line: ', current_line)
+    else:
+        print('line key: ', current_line)
+    return None
 
 @https_fn.on_request(
         cors=options.CorsOptions(
@@ -68,14 +93,15 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+    # chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
     # Uncomment the line below to use the simulated response
-    # chatGPT_response = simulated_response
+    chatGPT_response = simulated_response
 
-    db = firestore.client()
-    doc_ref = db.collection('chatGPT_responses').document(document_id)
-    subcollection_ref = doc_ref.collection('only_target_sentences')
-    document = subcollection_ref.document('updatable_json')
+    # db = firestore.client()
+    # doc_ref = db.collection('chatGPT_responses').document(document_id)
+    # subcollection_ref = doc_ref.collection('only_target_sentences')
+    # document = subcollection_ref.document('updatable_json')
+    document = "Mock doc"
 
     compiled_response = ""
     turn_nr = 0
@@ -83,6 +109,10 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     last_keys = set()
     last_turns_length = 0
     last_turn_keys_sets = []
+    end_of_line = False
+    last_few_chunks = []
+    max_chunks_size = 6
+    current_line = []
 
     parser = JSONParser()
     for chunk in chatGPT_response:
@@ -92,7 +122,22 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
             break
 
         a_chunk = chunk.choices[0].delta.content
+
+        last_few_chunks.append(a_chunk)
+        if len(last_few_chunks) > max_chunks_size:
+            last_few_chunks.pop(0)
+
         compiled_response += a_chunk
+        if "\n" in a_chunk:
+            end_of_line = True
+
+        if end_of_line == False:
+            current_line.append(a_chunk)
+
+        if end_of_line == True:
+            handle_key(current_line)
+            end_of_line = False
+            current_line = []
 
         rectified_JSON = parser.parse(compiled_response)
         if not rectified_JSON:
@@ -102,19 +147,18 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
         if rectified_JSON.get("all_turns") and isinstance(rectified_JSON.get("all_turns"), list):
             all_turns = rectified_JSON.get("all_turns")
-            for i in range(len(all_turns)):
-                turns_length = len(all_turns)
-                if turns_length > last_turns_length:
-                    last_turns_length = turns_length
-                    last_turn_keys_sets.append(set())
-                # rectified_JSON_turn = parser.parse(all_turns[i])
-                last_turn_keys_sets[i] = periodical_posting(all_turns[i], rectified_JSON, last_turn_keys_sets[i], document)
+            turns_length = len(all_turns)
+            turn_nr = turns_length -1
+            if turns_length > last_turns_length:
+                last_turns_length = turns_length
+                last_turn_keys_sets.append(set())
+            last_turn_keys_sets[turn_nr] = periodical_posting(all_turns[turn_nr], rectified_JSON, last_turn_keys_sets[turn_nr], document)
 
         # # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
         # dialogue_0_native_language.mp3
 
-    rectified_JSON["response_db_id"] = doc_ref.id
-    rectified_JSON["user_ID"] = user_ID
+    # rectified_JSON["response_db_id"] = doc_ref.id
+    # rectified_JSON["user_ID"] = user_ID
 
     push_to_firestore(rectified_JSON, document)
     return rectified_JSON
@@ -154,7 +198,6 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     subcollection_ref = doc_ref.collection('all_breakdowns')
     subcollection_ref.document().set(chatGPT_response)
 
-    print(words_to_repeat)
     # Parse chatGPT_response and create script
     script = parse_and_create_script(chatGPT_response, words_to_repeat)
     number_of_audio_files = len(script)
