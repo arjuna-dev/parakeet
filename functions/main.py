@@ -138,6 +138,7 @@ def full_API_workflow(req: https_fn.Request) -> https_fn.Response:
     target_language = request_data.get("target_language")
     language_level = request_data.get("language_level")
     length = request_data.get("length")
+    script_document_id = request_data.get("script_document_id") # update this script document while streaming the response
     words_to_repeat = request_data.get("words_to_repeat")
 
     if not all([dialogue, response_db_id, user_ID, title, speakers, native_language, target_language, language_level, length, words_to_repeat]):
