@@ -6,11 +6,13 @@ import json
 import datetime
 from utils.prompts import prompt_dialogue, prompt_big_JSON
 import os
-from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
-from utils.utilities import GPT_MODEL, TTS_PROVIDERS, convert_string_to_JSON, is_running_locally, voice_finder
+# from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
+from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from partialjson.json_parser import JSONParser
 from utils.simulated_response import simulated_response
+from utils.google_tts.gcloud_text_to_speech_api import voice_finder_google, google_synthesize_text
+from utils.elevenlabs.elevenlabs_api import elevenlabs_tts
 
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
@@ -19,51 +21,11 @@ app = initialize_app()
 def push_to_firestore(JSON_response, document):
     try:
         # storing chatGPT_response in Firestore
-        print("JSON_response: ", JSON_response)
-        # document.set(JSON_response)
-        # print("Successfully stored chatGPT_response in Firestore")
+        document.set(JSON_response)
+        # print("Mock pushed to firestore")
         pass
     except Exception as e:
         raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
-
-def periodical_posting(json_to_analyse, full_json, last_keys, document):
-    new_key_text = None
-    current_keys = set(json_to_analyse.keys())
-    # print('last_keys: ', last_keys)
-    # print('current_keys: ', current_keys)
-    new_key = current_keys - last_keys
-    if new_key:
-        new_key_text = list(new_key)[0]
-
-    if new_key_text and json_to_analyse[new_key_text]:
-            last_keys = current_keys
-            del json_to_analyse[new_key_text]
-            if json_to_analyse:
-                # handle_dict_API_call_1(json_to_analyse)
-                push_to_firestore(full_json, document)
-    return last_keys
-
-
-def handle_key(current_line):
-    if "all_turns" in current_line:
-        print('line: ', current_line)
-    elif "speakers" in current_line:
-        print('line: ', current_line)
-    elif "title" in current_line:
-        print('line: ', current_line)
-    elif "gender" in current_line:
-        print('line: ', current_line)
-    elif "target_language" in current_line:
-        print('line: ', current_line)
-    elif "turn_nr" in current_line:
-        print('line: ', current_line)
-    elif "language_level" in current_line:
-        print('line: ', current_line)
-    elif "speaker" in current_line:
-        print('line: ', current_line)
-    else:
-        print('line key: ', current_line)
-    return None
 
 @https_fn.on_request(
         cors=options.CorsOptions(
@@ -79,6 +41,9 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     length = request_data.get("length")
     user_ID = request_data.get("user_ID")
     document_id = request_data.get("document_id")
+    tts_provider = request_data.get("tts_provider")
+    tts_provider = int(tts_provider)
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
     try:
         language_level = request_data.get("language_level")
     except:
@@ -90,25 +55,87 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length, document_id]):
         raise {'error': 'Missing required parameters in request data'}
+    
+    turn_nr = 0
+    speaker_count = 0
+    gender_count = 0
+    generating_turns = False
+    narrator_voice, narrator_voice_id = voice_finder_google("f", native_language)
+    voice_1 = None
+    voice_2 = None
+    voice_1_id = None
+    file_durations = {}
+    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+        tts_function = google_synthesize_text
+    elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
+        tts_function = elevenlabs_tts
+    else:
+        raise Exception("Invalid TTS provider")
+
+    # def mock_tts_func(*args):
+    #     for arg in args:
+    #         print('arg: ', arg)
+    # tts_function = mock_tts_func
+
+    def handle_line(current_line, full_json, document):
+        nonlocal turn_nr
+        nonlocal speaker_count
+        nonlocal gender_count
+        nonlocal generating_turns
+        nonlocal voice_1
+        nonlocal voice_2
+        nonlocal target_language
+        nonlocal tts_function
+        nonlocal voice_1_id
+        nonlocal narrator_voice
+        nonlocal file_durations
+        if '"all_turns": ' in current_line:
+            generating_turns = True
+        elif "}" in current_line:
+            if generating_turns:
+                tts_function(full_json["all_turns"][turn_nr]["native_language"], narrator_voice, f"{document_id}/dialogue_{turn_nr}_native_language.mp3")
+                voice_to_use = voice_1 if turn_nr % 2 == 0 else voice_2
+                tts_function(full_json["all_turns"][turn_nr]["target_language"], voice_to_use, f"{document_id}/dialogue_{turn_nr}target_language.mp3")
+                turn_nr += 1
+                push_to_firestore(full_json, document)
+        elif '"title": ' in current_line:
+            tts_function(full_json["title"], narrator_voice, f"{document_id}/title.mp3")
+            if generating_turns:
+                generating_turns = False
+            push_to_firestore(full_json, document)
+        elif '"speakers": ' in current_line:
+            if generating_turns:
+                generating_turns = False
+        elif '"gender": ' in current_line:
+            if generating_turns:
+                if turn_nr == 0:
+                    print('full_json["all_turns"][turn_nr]["gender"]: ', full_json["all_turns"][turn_nr]["gender"])
+                    print('target_language: ', target_language)
+                    voice_1, voice_1_id = voice_finder_google(full_json["all_turns"][turn_nr]["gender"], target_language)
+                    print('voice_1: ', voice_1)
+                if turn_nr == 1:
+                    voice_2, voice_2_id = voice_finder_google(full_json["all_turns"][turn_nr]["gender"], target_language, voice_1_id)
+                    print('voice_2: ', voice_2)
+        else:
+            pass
+        return None
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    # chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+    chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
     # Uncomment the line below to use the simulated response
-    chatGPT_response = simulated_response
+    # chatGPT_response = simulated_response
 
-    # db = firestore.client()
-    # doc_ref = db.collection('chatGPT_responses').document(document_id)
-    # subcollection_ref = doc_ref.collection('only_target_sentences')
-    # document = subcollection_ref.document('updatable_json')
-    document = "Mock doc"
+    db = firestore.client()
+    doc_ref = db.collection('chatGPT_responses').document(document_id)
+    subcollection_ref = doc_ref.collection('only_target_sentences')
+    document = subcollection_ref.document('updatable_json')
+    # document = "Mock doc"
+    subcollection_ref_durations = doc_ref.collection('file_durations')
+    document_durations = subcollection_ref_durations.document('file_durations')
 
     compiled_response = ""
     turn_nr = 0
-    current_gender = ""
-    last_keys = set()
-    last_turns_length = 0
-    last_turn_keys_sets = []
     end_of_line = False
     last_few_chunks = []
     max_chunks_size = 6
@@ -128,38 +155,28 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
             last_few_chunks.pop(0)
 
         compiled_response += a_chunk
+        rectified_JSON = parser.parse(compiled_response)
+        if not rectified_JSON:
+            print('json not rectified: ', rectified_JSON)
+            continue
+
         if "\n" in a_chunk:
+            current_line.append(a_chunk)
             end_of_line = True
 
         if end_of_line == False:
             current_line.append(a_chunk)
 
         if end_of_line == True:
-            handle_key(current_line)
+            current_line_text  = "".join(current_line)
+            handle_line(current_line_text, rectified_JSON, document)
             end_of_line = False
             current_line = []
 
-        rectified_JSON = parser.parse(compiled_response)
-        if not rectified_JSON:
-            continue
+    rectified_JSON["user_ID"] = user_ID
+    rectified_JSON["document_id"] = document_id
 
-        last_keys = periodical_posting(rectified_JSON, rectified_JSON, last_keys, document)
-
-        if rectified_JSON.get("all_turns") and isinstance(rectified_JSON.get("all_turns"), list):
-            all_turns = rectified_JSON.get("all_turns")
-            turns_length = len(all_turns)
-            turn_nr = turns_length -1
-            if turns_length > last_turns_length:
-                last_turns_length = turns_length
-                last_turn_keys_sets.append(set())
-            last_turn_keys_sets[turn_nr] = periodical_posting(all_turns[turn_nr], rectified_JSON, last_turn_keys_sets[turn_nr], document)
-
-        # # TODO: tts API calls use voice_finder(gender, target_language, tts_provider, exclude_voice_id=None) to get the 2 voices
-        # dialogue_0_native_language.mp3
-
-    # rectified_JSON["response_db_id"] = doc_ref.id
-    # rectified_JSON["user_ID"] = user_ID
-
+    push_to_firestore(file_durations, document_durations)
     push_to_firestore(rectified_JSON, document)
     return rectified_JSON
 

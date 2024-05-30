@@ -1,6 +1,26 @@
+import os
 from google.cloud import texttospeech, storage
 from pydub import AudioSegment
 from .google_tts_voices import google_tts_voices
+
+def list_voices(language_code=None):
+    client = tts.TextToSpeechClient()
+    response = client.list_voices(language_code=language_code)
+    voices = sorted(response.voices, key=lambda voice: voice.name)
+
+    print(f" Voices: {len(voices)} ".center(60, "-"))
+    for voice in voices:
+        languages = ", ".join(voice.language_codes)
+        name = voice.name
+        gender = tts.SsmlVoiceGender(voice.ssml_gender).name
+        rate = voice.natural_sample_rate_hertz
+        print(f"{languages:<8} | {name:<24} | {gender:<8} | {rate:,} Hz")
+
+def language_to_language_code(language):
+    for voice in google_tts_voices:
+        if voice['language'] == language:
+            return voice['language_code']
+    raise Exception(f"Language code not found for {language}")
 
 def find_matching_voice_google(language, gender, exclude_voice_id=None):
     voice_id = None
@@ -14,28 +34,32 @@ def create_google_voice(language_code, voice_id):
     voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id)
     return voice
 
+def voice_finder_google(gender, target_language, exclude_voice_id=None):
+    target_language_code = language_to_language_code(target_language)
+    speaker_voice_id = find_matching_voice_google(target_language, gender, exclude_voice_id)
+    speaker_voice = create_google_voice(target_language_code, speaker_voice_id)
+
+    return speaker_voice, speaker_voice_id
 
 def google_synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
 
     client = texttospeech.TextToSpeechClient()
-
-    input_text = texttospeech.SynthesisInput(text=text)
-
+    synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3
     )
 
     response = client.synthesize_speech(
-        request={"input": input_text, "voice": voice, "audio_config": audio_config}
+        input=synthesis_input, voice=voice, audio_config=audio_config
     )
 
-    # The response's audio_content is binary.
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
 
     if local_run:
-        return {output_path: 0}
-
+        return {output_path:0}
     else:
         # Load audio file
         audio = AudioSegment.from_file(output_path)
@@ -52,30 +76,14 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
             blob.upload_from_filename(output_path, timeout = 600)
         except Exception as e:
             print(f'Error uploading file: {e}')    
-            
-        blob.metadata = {'duration' : str(duration)}
+
         blob.patch()
-        
-        # Make the blob publicly accessible
         blob.make_public()
         
         if bucket_name == "conversations_audio_files":
             return {output_path.split("/")[1].replace('.mp3', ''): duration}
         else:
             return {output_path.split("/")[2].replace('.mp3', ''): duration}
-
-def list_voices(language_code=None):
-    client = tts.TextToSpeechClient()
-    response = client.list_voices(language_code=language_code)
-    voices = sorted(response.voices, key=lambda voice: voice.name)
-
-    print(f" Voices: {len(voices)} ".center(60, "-"))
-    for voice in voices:
-        languages = ", ".join(voice.language_codes)
-        name = voice.name
-        gender = tts.SsmlVoiceGender(voice.ssml_gender).name
-        rate = voice.natural_sample_rate_hertz
-        print(f"{languages:<8} | {name:<24} | {gender:<8} | {rate:,} Hz")
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")

@@ -2,6 +2,7 @@ import requests
 from google.cloud import storage
 import sys
 import os
+from .elevenlabs_api_voices import elevenlabs_voices
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utilities import is_running_locally
 
@@ -29,6 +30,9 @@ def find_voice_elevenlabs(voices, language, gender, exclude_voice_id=None):
                 voice['voice_id'] != exclude_voice_id):
             return voice['voice_id']
     raise Exception("No matching voice found")
+
+def voice_finder_elevenlabs(gender, target_language, tts_provider, exclude_voice_id=None):
+    speaker_voice = find_voice_elevenlabs(elevenlabs_voices, target_language, gender, exclude_voice_id)
 
 # Function to get the list of available voices from the Eleven Labs
 def get_voices():
