@@ -12,7 +12,8 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> dialogue;
   final String userID;
   final String title;
-  Map<String, dynamic> audioDurations;
+  Map<String, dynamic>? audioDurations;
+  String? scriptDocumentId;
 
   AudioPlayerScreen(
       {Key? key,
@@ -21,7 +22,8 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.dialogue,
       required this.userID,
       required this.title,
-      required this.audioDurations})
+      this.scriptDocumentId,
+      this.audioDurations})
       : super(key: key);
 
   @override
@@ -72,18 +74,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Calculate totalDuration and update trackDurations
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(widget.script.length, Duration.zero);
-    for (int i = 0; i < widget.script.length; i++) {
-      String fileName = widget.script[i];
-      double durationInSeconds;
-      if (widget.audioDurations[fileName].runtimeType == String) {
-        durationInSeconds = double.parse(widget.audioDurations[fileName]);
-      } else {
-        durationInSeconds = widget.audioDurations[fileName] as double;
+    if (widget.audioDurations != null) {
+      for (int i = 0; i < widget.script.length; i++) {
+        String fileName = widget.script[i];
+        double durationInSeconds;
+        if (widget.audioDurations?[fileName].runtimeType == String) {
+          durationInSeconds = double.parse(widget.audioDurations?[fileName]);
+        } else {
+          durationInSeconds = widget.audioDurations?[fileName] as double;
+        }
+        Duration duration =
+            Duration(milliseconds: (durationInSeconds * 1000).round());
+        totalDuration += duration;
+        trackDurations[i] = duration;
       }
-      Duration duration =
-          Duration(milliseconds: (durationInSeconds * 1000).round());
-      totalDuration += duration;
-      trackDurations[i] = duration;
     }
   }
 
