@@ -1,6 +1,8 @@
 import os
 from enum import Enum
 import json
+import google.api_core.exceptions
+
 
 class GPT_MODEL(Enum):
     GPT_4_TURBO_P = "gpt-4-1106-preview" # Supports JSON mode
@@ -27,3 +29,14 @@ def convert_string_to_JSON(string):
         raise Exception(f"Error converting string to JSON: {e}")
     return json_object
 
+def push_to_firestore(data, document, operation='update'):
+    try:
+        if operation == 'update':
+            document.update(data)
+        elif operation == 'overwrite':
+            document.set(data)
+    except google.api_core.exceptions.NotFound:
+        # If the document does not exist, use set instead of update
+        document.set(data)
+    except Exception as e:
+        raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
