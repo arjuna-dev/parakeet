@@ -1,7 +1,10 @@
 import os
+import sys
 from google.cloud import texttospeech, storage
 from mutagen.mp3 import MP3
 from .google_tts_voices import google_tts_voices
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utilities import push_to_firestore
 
 def list_voices(language_code=None):
     client = tts.TextToSpeechClient()
@@ -41,8 +44,8 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None):
 
     return speaker_voice, speaker_voice_id
 
-def google_synthesize_text(text, voice, output_path, local_run=False, bucket_name="conversations_audio_files"):
-
+def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files"):
+    print('text: ', text)
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
@@ -79,11 +82,10 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
 
         blob.patch()
         blob.make_public()
-        
-        if bucket_name == "conversations_audio_files":
-            return {output_path.split("/")[1].replace('.mp3', ''): duration}
-        else:
-            return {output_path.split("/")[2].replace('.mp3', ''): duration}
+
+        if doc_ref:
+            filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
+            push_to_firestore(filename_duration, doc_ref)
 
 # narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
 # synthesize_text("Hello, World!", narrator_voice, "folder/file")
