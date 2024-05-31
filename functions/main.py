@@ -5,9 +5,7 @@ from google.cloud import storage
 import json
 import datetime
 from utils.prompts import prompt_dialogue, prompt_big_JSON
-import os
-# from utils.json_parsers import parse_and_create_script, parse_and_convert_to_speech
-from utils.utilities import TTS_PROVIDERS
+from utils.utilities import TTS_PROVIDERS, push_to_firestore, convert_string_to_JSON
 from utils.chatGPT_API_call import chatGPT_API_call
 from partialjson.json_parser import JSONParser
 from utils.simulated_response import simulated_response
@@ -18,14 +16,113 @@ options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
 
-def push_to_firestore(JSON_response, document):
-    try:
-        # storing chatGPT_response in Firestore
-        document.set(JSON_response)
-        # print("Mock pushed to firestore")
-        pass
-    except Exception as e:
-        raise Exception(f"Error storing chatGPT_response in Firestore: {e}")
+class API_call_1:
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, mock=False):
+        self.turn_nr = 0
+        self.generating_turns = False
+        self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
+        self.voice_1 = None
+        self.voice_2 = None
+        self.voice_1_id = None
+        self.tts_function = None
+        self.tts_provider = tts_provider
+        self.document_id = document_id
+        self.target_language = target_language
+        self.document = document
+        self.document_durations = document_durations
+        self.select_tts_provider()
+        self.push_to_firestore = push_to_firestore
+        if mock:
+            self.tts_function = self.mock_tts
+            self.push_to_firestore = self.mock_push_to_firestore
+
+    def select_tts_provider(self):
+        if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
+            self.tts_function = google_synthesize_text
+        elif self.tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
+            self.tts_function = elevenlabs_tts
+        else:
+            raise Exception("Invalid TTS provider")
+        
+    def handle_line(self, current_line, full_json):
+        if '"all_turns": ' in current_line:
+            self.generating_turns = True
+        elif "}" in current_line:
+            if self.generating_turns:
+                print('full_json_0: ', full_json)
+                native_sentence = full_json["all_turns"][self.turn_nr]["native_language"]
+                filename = f"{self.document_id}/dialogue_{self.turn_nr}_native_language.mp3"
+                self.tts_function(native_sentence, self.narrator_voice, filename, self.document_durations)
+                voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                print('full_json_1: ', full_json)
+                target_sentence = full_json["all_turns"][self.turn_nr]["target_language"]
+                filename = f"{self.document_id}/dialogue_{self.turn_nr}_target_language.mp3"
+                self.tts_function(target_sentence, voice_to_use, filename, self.document_durations)
+                self.turn_nr += 1
+                self.push_to_firestore(full_json, self.document, operation="overwrite")
+        elif '"title": ' in current_line:
+            print('full_json_2: ', full_json)
+            self.tts_function(full_json["title"], self.narrator_voice, f"{self.document_id}/title.mp3", self.document_durations)
+            if self.generating_turns:
+                self.generating_turns = False
+            self.push_to_firestore(full_json, self.document, operation="overwrite")
+        elif '"speakers": ' in current_line:
+            if self.generating_turns:
+                self.generating_turns = False
+        elif '"gender": ' in current_line:
+            if self.generating_turns:
+                gender = full_json["all_turns"][self.turn_nr]["gender"]
+                if self.turn_nr == 0:
+                    self.voice_1, self.voice_1_id = voice_finder_google(gender, self.target_language)
+                    print('self.voice_1: ', self.voice_1)
+                if self.turn_nr == 1:
+                    self.voice_2, self.voice_2_id = voice_finder_google(gender, self.target_language, self.voice_1_id)
+                    print('self.voice_2: ', self.voice_2)
+
+    def mock_tts(self, text, voice_to_use, filename, document_durations):
+        print('mock_tts called')
+        print('text: ', text)
+        print('voice_to_use: ', voice_to_use)
+        print('filename: ', filename)
+        print('document_durations: ', document_durations)
+
+    def mock_push_to_firestore(self, full_json, document, operation="update"):
+        print('mock_push_to_firestore called')
+        print('full_json: ', full_json)
+        print('document: ', document)
+        print('operation: ', operation)
+
+
+def process_response_1(chatGPT_response, handle_line):
+    parser = JSONParser()
+    compiled_response = ""
+    end_of_line = False
+    current_line = []
+
+    for chunk in chatGPT_response:
+        is_finished = chunk.choices[0].finish_reason
+        if is_finished != None:
+            break
+
+        a_chunk = chunk.choices[0].delta.content
+        compiled_response += a_chunk
+        rectified_JSON = parser.parse(compiled_response)
+        if not rectified_JSON:
+            continue
+
+        if "\n" in a_chunk:
+            current_line.append(a_chunk)
+            end_of_line = True
+
+        if end_of_line == False:
+            current_line.append(a_chunk)
+
+        if end_of_line == True:
+            current_line_text  = "".join(current_line)
+            handle_line(current_line_text, rectified_JSON)
+            end_of_line = False
+            current_line = []
+    return rectified_JSON
 
 @https_fn.on_request(
         cors=options.CorsOptions(
@@ -56,129 +153,37 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length, document_id]):
         raise {'error': 'Missing required parameters in request data'}
     
-    turn_nr = 0
-    speaker_count = 0
-    gender_count = 0
-    generating_turns = False
-    narrator_voice, narrator_voice_id = voice_finder_google("f", native_language)
-    voice_1 = None
-    voice_2 = None
-    voice_1_id = None
-    file_durations = {}
-    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
-        tts_function = google_synthesize_text
-    elif tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
-        tts_function = elevenlabs_tts
+
+    api_call_1 = API_call_1(native_language, tts_provider, document_id, document, target_language, document_durations, mock=False)
+
+    if api_call_1.mock == True:
+        document = "Mock doc"
+        document_durations = "Mock doc 2"
     else:
-        raise Exception("Invalid TTS provider")
+        db = firestore.client()
+        doc_ref = db.collection('chatGPT_responses').document(document_id)
+        subcollection_ref = doc_ref.collection('only_target_sentences')
+        document = subcollection_ref.document('updatable_json')
 
-    # def mock_tts_func(*args):
-    #     for arg in args:
-    #         print('arg: ', arg)
-    # tts_function = mock_tts_func
+        subcollection_ref_durations = doc_ref.collection('file_durations')
+        document_durations = subcollection_ref_durations.document('file_durations')
 
-    def handle_line(current_line, full_json, document):
-        nonlocal turn_nr
-        nonlocal speaker_count
-        nonlocal gender_count
-        nonlocal generating_turns
-        nonlocal voice_1
-        nonlocal voice_2
-        nonlocal target_language
-        nonlocal tts_function
-        nonlocal voice_1_id
-        nonlocal narrator_voice
-        nonlocal file_durations
-        if '"all_turns": ' in current_line:
-            generating_turns = True
-        elif "}" in current_line:
-            if generating_turns:
-                tts_function(full_json["all_turns"][turn_nr]["native_language"], narrator_voice, f"{document_id}/dialogue_{turn_nr}_native_language.mp3")
-                voice_to_use = voice_1 if turn_nr % 2 == 0 else voice_2
-                tts_function(full_json["all_turns"][turn_nr]["target_language"], voice_to_use, f"{document_id}/dialogue_{turn_nr}target_language.mp3")
-                turn_nr += 1
-                push_to_firestore(full_json, document)
-        elif '"title": ' in current_line:
-            tts_function(full_json["title"], narrator_voice, f"{document_id}/title.mp3")
-            if generating_turns:
-                generating_turns = False
-            push_to_firestore(full_json, document)
-        elif '"speakers": ' in current_line:
-            if generating_turns:
-                generating_turns = False
-        elif '"gender": ' in current_line:
-            if generating_turns:
-                if turn_nr == 0:
-                    print('full_json["all_turns"][turn_nr]["gender"]: ', full_json["all_turns"][turn_nr]["gender"])
-                    print('target_language: ', target_language)
-                    voice_1, voice_1_id = voice_finder_google(full_json["all_turns"][turn_nr]["gender"], target_language)
-                    print('voice_1: ', voice_1)
-                if turn_nr == 1:
-                    voice_2, voice_2_id = voice_finder_google(full_json["all_turns"][turn_nr]["gender"], target_language, voice_1_id)
-                    print('voice_2: ', voice_2)
-        else:
-            pass
-        return None
+
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
-    # Uncomment the line below to use the simulated response
-    # chatGPT_response = simulated_response
+    if api_call_1.mock == True: 
+        chatGPT_response = simulated_response
+    else:
+        chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
 
-    db = firestore.client()
-    doc_ref = db.collection('chatGPT_responses').document(document_id)
-    subcollection_ref = doc_ref.collection('only_target_sentences')
-    document = subcollection_ref.document('updatable_json')
-    # document = "Mock doc"
-    subcollection_ref_durations = doc_ref.collection('file_durations')
-    document_durations = subcollection_ref_durations.document('file_durations')
+    final_response = process_response_1(chatGPT_response, api_call_1.handle_line)
 
-    compiled_response = ""
-    turn_nr = 0
-    end_of_line = False
-    last_few_chunks = []
-    max_chunks_size = 6
-    current_line = []
+    final_response["user_ID"] = user_ID
+    final_response["document_id"] = document_id
 
-    parser = JSONParser()
-    for chunk in chatGPT_response:
-
-        is_finished = chunk.choices[0].finish_reason
-        if is_finished != None:
-            break
-
-        a_chunk = chunk.choices[0].delta.content
-
-        last_few_chunks.append(a_chunk)
-        if len(last_few_chunks) > max_chunks_size:
-            last_few_chunks.pop(0)
-
-        compiled_response += a_chunk
-        rectified_JSON = parser.parse(compiled_response)
-        if not rectified_JSON:
-            print('json not rectified: ', rectified_JSON)
-            continue
-
-        if "\n" in a_chunk:
-            current_line.append(a_chunk)
-            end_of_line = True
-
-        if end_of_line == False:
-            current_line.append(a_chunk)
-
-        if end_of_line == True:
-            current_line_text  = "".join(current_line)
-            handle_line(current_line_text, rectified_JSON, document)
-            end_of_line = False
-            current_line = []
-
-    rectified_JSON["user_ID"] = user_ID
-    rectified_JSON["document_id"] = document_id
-
-    push_to_firestore(file_durations, document_durations)
-    push_to_firestore(rectified_JSON, document)
-    return rectified_JSON
+    api_call_1.push_to_firestore(final_response, document, operation="overwrite")
+    return final_response
 
 
 @https_fn.on_request(
