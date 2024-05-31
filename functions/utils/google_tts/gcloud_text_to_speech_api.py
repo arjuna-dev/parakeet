@@ -1,6 +1,6 @@
 import os
 from google.cloud import texttospeech, storage
-from pydub import AudioSegment
+from mutagen.mp3 import MP3
 from .google_tts_voices import google_tts_voices
 
 def list_voices(language_code=None):
@@ -62,10 +62,10 @@ def google_synthesize_text(text, voice, output_path, local_run=False, bucket_nam
         return {output_path:0}
     else:
         # Load audio file
-        audio = AudioSegment.from_file(output_path)
+        audio = MP3(output_path)
         
         # Get duration of audio file
-        duration = len(audio) / 1000
+        duration = audio.info.length
         
         # Upload the audio file to the bucket
         blob_name = f"{output_path}"
