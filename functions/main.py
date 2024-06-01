@@ -32,7 +32,8 @@ class FirstAPICalls:
         self.document_durations = document_durations
         self.select_tts_provider()
         self.push_to_firestore = push_to_firestore
-        if mock:
+        self.mock = mock
+        if self.mock:
             self.tts_function = self.mock_tts
             self.push_to_firestore = self.mock_push_to_firestore
 
