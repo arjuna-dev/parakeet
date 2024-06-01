@@ -16,7 +16,7 @@ options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
 
-class API_call_1:
+class FirstAPICalls:
     def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
@@ -130,7 +130,7 @@ def process_response_1(chatGPT_response, handle_line):
         cors_methods=["GET", "POST"]
     )
 )
-def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
+def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     request_data = json.loads(req.data)
     requested_scenario = request_data.get("requested_scenario")
     native_language = request_data.get("native_language")
@@ -152,11 +152,10 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
 
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length, document_id]):
         raise {'error': 'Missing required parameters in request data'}
-    
 
-    api_call_1 = API_call_1(native_language, tts_provider, document_id, document, target_language, document_durations, mock=False)
+    first_API_calls = FirstAPICalls(native_language, tts_provider, document_id, document, target_language, document_durations, mock=False)
 
-    if api_call_1.mock == True:
+    if first_API_calls.mock == True:
         document = "Mock doc"
         document_durations = "Mock doc 2"
     else:
@@ -168,21 +167,19 @@ def first_chatGPT_API_call(req: https_fn.Request) -> https_fn.Response:
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
 
-
-
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
-    if api_call_1.mock == True: 
+    if first_API_calls.mock == True: 
         chatGPT_response = simulated_response
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
 
-    final_response = process_response_1(chatGPT_response, api_call_1.handle_line)
+    final_response = process_response_1(chatGPT_response, first_API_calls.handle_line)
 
     final_response["user_ID"] = user_ID
     final_response["document_id"] = document_id
 
-    api_call_1.push_to_firestore(final_response, document, operation="overwrite")
+    first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
     return final_response
 
 
