@@ -45,7 +45,7 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None):
     return speaker_voice, speaker_voice_id
 
 def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files"):
-    print('text: ', text)
+
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
