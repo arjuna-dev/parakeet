@@ -170,7 +170,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
 
                         http.post(
                           Uri.parse(
-                              'https://europe-west1-noble-descent-420612.cloudfunctions.net/full_API_workflow'), // need the function url here
+                              'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
                           headers: <String, String>{
                             'Content-Type': 'application/json; charset=UTF-8',
                             "Access-Control-Allow-Origin":
