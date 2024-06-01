@@ -62,7 +62,6 @@ class FirstAPICalls:
                 self.turn_nr += 1
                 self.push_to_firestore(full_json, self.document, operation="overwrite")
         elif '"title": ' in current_line:
-            print('full_json_2: ', full_json)
             self.tts_function(full_json["title"], self.narrator_voice, f"{self.document_id}/title.mp3", self.document_durations)
             if self.generating_turns:
                 self.generating_turns = False
@@ -75,10 +74,8 @@ class FirstAPICalls:
                 gender = full_json["all_turns"][self.turn_nr]["gender"]
                 if self.turn_nr == 0:
                     self.voice_1, self.voice_1_id = voice_finder_google(gender, self.target_language)
-                    print('self.voice_1: ', self.voice_1)
                 if self.turn_nr == 1:
                     self.voice_2, self.voice_2_id = voice_finder_google(gender, self.target_language, self.voice_1_id)
-                    print('self.voice_2: ', self.voice_2)
 
     def mock_tts(self, text, voice_to_use, filename, document_durations):
         print('mock_tts called')
