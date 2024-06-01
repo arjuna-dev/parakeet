@@ -44,7 +44,7 @@ class FirstAPICalls:
         else:
             raise Exception("Invalid TTS provider")
         
-    def handle_line(self, current_line, full_json):
+    def handle_line_1(self, current_line, full_json):
         if '"all_turns": ' in current_line:
             self.generating_turns = True
         elif "}" in current_line:
@@ -120,7 +120,7 @@ def process_response_1(chatGPT_response, handle_line):
 
         if end_of_line == True:
             current_line_text  = "".join(current_line)
-            handle_line(current_line_text, rectified_JSON)
+                self.handle_line_1(current_line_text, rectified_JSON)
             end_of_line = False
             current_line = []
     return rectified_JSON
