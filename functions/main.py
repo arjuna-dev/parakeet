@@ -49,15 +49,16 @@ class FirstAPICalls:
             self.generating_turns = True
         elif "}" in current_line:
             if self.generating_turns:
-                print('full_json_0: ', full_json)
+                # TTS native
                 native_sentence = full_json["all_turns"][self.turn_nr]["native_language"]
                 filename = f"{self.document_id}/dialogue_{self.turn_nr}_native_language.mp3"
                 self.tts_function(native_sentence, self.narrator_voice, filename, self.document_durations)
+                # TTS target
                 voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                print('full_json_1: ', full_json)
                 target_sentence = full_json["all_turns"][self.turn_nr]["target_language"]
                 filename = f"{self.document_id}/dialogue_{self.turn_nr}_target_language.mp3"
                 self.tts_function(target_sentence, voice_to_use, filename, self.document_durations)
+                # Push JSON to firestore
                 self.turn_nr += 1
                 self.push_to_firestore(full_json, self.document, operation="overwrite")
         elif '"title": ' in current_line:
