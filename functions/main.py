@@ -91,36 +91,36 @@ class FirstAPICalls:
         print('operation: ', operation)
 
 
-def process_response_1(chatGPT_response, handle_line):
-    parser = JSONParser()
-    compiled_response = ""
-    end_of_line = False
-    current_line = []
+    def process_response_1(self, chatGPT_response):
+        parser = JSONParser()
+        compiled_response = ""
+        end_of_line = False
+        current_line = []
 
-    for chunk in chatGPT_response:
-        is_finished = chunk.choices[0].finish_reason
-        if is_finished != None:
-            break
+        for chunk in chatGPT_response:
+            is_finished = chunk.choices[0].finish_reason
+            if is_finished != None:
+                break
 
-        a_chunk = chunk.choices[0].delta.content
-        compiled_response += a_chunk
-        rectified_JSON = parser.parse(compiled_response)
-        if not rectified_JSON:
-            continue
+            a_chunk = chunk.choices[0].delta.content
+            compiled_response += a_chunk
+            rectified_JSON = parser.parse(compiled_response)
+            if not rectified_JSON:
+                continue
 
-        if "\n" in a_chunk:
-            current_line.append(a_chunk)
-            end_of_line = True
+            if "\n" in a_chunk:
+                current_line.append(a_chunk)
+                end_of_line = True
 
-        if end_of_line == False:
-            current_line.append(a_chunk)
+            if end_of_line == False:
+                current_line.append(a_chunk)
 
-        if end_of_line == True:
-            current_line_text  = "".join(current_line)
+            if end_of_line == True:
+                current_line_text  = "".join(current_line)
                 self.handle_line_1(current_line_text, rectified_JSON)
-            end_of_line = False
-            current_line = []
-    return rectified_JSON
+                end_of_line = False
+                current_line = []
+        return rectified_JSON
 
 @https_fn.on_request(
         cors=options.CorsOptions(
@@ -151,9 +151,9 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     if not all([requested_scenario, native_language, target_language, language_level, user_ID, length, document_id]):
         raise {'error': 'Missing required parameters in request data'}
 
-    first_API_calls = FirstAPICalls(native_language, tts_provider, document_id, document, target_language, document_durations, mock=False)
+    is_mock = False
 
-    if first_API_calls.mock == True:
+    if is_mock == True:
         document = "Mock doc"
         document_durations = "Mock doc 2"
     else:
@@ -165,6 +165,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
 
+    first_API_calls = FirstAPICalls(native_language, tts_provider, document_id, document, target_language, document_durations, mock=is_mock)
+
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
     
     if first_API_calls.mock == True: 
@@ -172,7 +174,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
 
-    final_response = process_response_1(chatGPT_response, first_API_calls.handle_line)
+    final_response = first_API_calls.process_response_1(chatGPT_response)
 
     final_response["user_ID"] = user_ID
     final_response["document_id"] = document_id
