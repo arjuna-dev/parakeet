@@ -32,7 +32,7 @@ JSON:
         "speaker_1":{{ "name": "Mateo", "gender": "m" }},
         "speaker_2": {{ "name": "Shankaracharya", "gender": "m" }}
         }},
-    "all_turns": [
+    "dialogue": [
         {{
             "target_language": "Shankaracharya, \u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
             "native_language": "Shankaracharya, what exactly does viveka mean in the context of Viveka Chudamani?",
