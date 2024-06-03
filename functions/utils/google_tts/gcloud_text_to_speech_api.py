@@ -56,8 +56,6 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
         input=synthesis_input, voice=voice, audio_config=audio_config
     )
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
 
