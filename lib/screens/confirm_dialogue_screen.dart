@@ -77,12 +77,15 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 .map((DocumentSnapshot document) {
                               allDialogue =
                                   document.data() as Map<String, dynamic>;
+                              print(allDialogue);
                               List<dynamic> turns = [];
-                              if (allDialogue.containsKey("all_turns")) {
-                                turns = allDialogue["all_turns"];
+                              if (allDialogue.containsKey("dialogue")) {
+                                turns = allDialogue["dialogue"];
                               }
+                              print(turns);
                               script = script_generator.createFirstScript(
                                   allDialogue); // need to import script_generator.dart
+                              print(script);
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
@@ -162,7 +165,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       try {
                         DocumentReference docRef = FirebaseFirestore.instance
                             .collection('chatGPT_responses')
-                            .doc(widget.firstDialogue["response_db_id"])
+                            .doc(widget.documentID)
                             .collection('script')
                             .doc();
                         await docRef.set({"script": script});
@@ -177,9 +180,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 "*", // Required for CORS support to work
                           },
                           body: jsonEncode(<String, dynamic>{
-                            "response_db_id":
-                                widget.firstDialogue["response_db_id"],
-                            "dialogue": allDialogue["all_turns"],
+                            "document_id":
+                                widget.documentID,
+                            "dialogue": allDialogue["dialogue"],
                             "title": widget.firstDialogue["title"],
                             "speakers": widget.firstDialogue["speakers"],
                             "user_ID": widget.firstDialogue["user_ID"],
@@ -201,9 +204,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
                                       script: script,
-                                      dialogue: allDialogue["all_turns"],
+                                      dialogue: allDialogue["dialogue"],
                                       responseDbId: widget
-                                          .firstDialogue["response_db_id"],
+                                          .documentID,
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
                                       title: allDialogue['title'],
