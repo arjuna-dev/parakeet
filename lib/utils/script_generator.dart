@@ -23,7 +23,7 @@ List<String> createFirstScript(Map<String, dynamic> data) {
   int randomI = Random().nextInt(sequences.introSequences.length);
   List<String> introSequence = sequences.introSequences[randomI]();
   script.addAll(introSequence);
-  for (int i = 0; i < data["all_turns"].length; i++) {
+  for (int i = 0; i < data["dialogue"].length; i++) {
     script.add("dialogue_${i}_target_language");
   }
 
