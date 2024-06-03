@@ -26,8 +26,8 @@ class APICalls:
         self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
         self.voice_1 = voice_1
         self.voice_2 = voice_2
-        self.self.voice_1_id = None
-        self.self.voice_2_id = None
+        self.voice_1_id = None
+        self.voice_2_id = None
         self.pending_voice_1 = None
         self.pending_voice_2 = None
         self.tts_function = None
@@ -330,10 +330,11 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
-    if first_API_calls.mock == True:
-        return final_response
-    else:
-        return
+    # if first_API_calls.mock == True:
+    #     return final_response
+    # else:
+    #     return
+    return final_response
 
 
 @https_fn.on_request(
