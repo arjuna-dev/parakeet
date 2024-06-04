@@ -89,7 +89,7 @@ class _HomeState extends State<Home> {
                           MaterialPageRoute(
                             builder: (context) => AudioPlayerScreen(
                               script: audioFile.get('script'),
-                              responseDbId:
+                              documentID:
                                   audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
                               userID: FirebaseAuth.instance.currentUser!.uid,
@@ -129,7 +129,7 @@ class _HomeState extends State<Home> {
                       MaterialPageRoute(
                         builder: (context) => AudioPlayerScreen(
                           script: audioFile.get('script'),
-                          responseDbId: audioFile.reference.parent.parent!.id,
+                          documentID: audioFile.reference.parent.parent!.id,
                           dialogue: audioFile.get('dialogue'),
                           userID: FirebaseAuth.instance.currentUser!.uid,
                           title: audioFile.get('title'),

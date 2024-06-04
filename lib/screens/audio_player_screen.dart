@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ignore: must_be_immutable
 class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> script; //List of audio file names
-  final String responseDbId; // Database ID for the response
+  final String documentID; // Database ID for the response
   final List<dynamic> dialogue;
   final String userID;
   final String title;
@@ -18,7 +18,7 @@ class AudioPlayerScreen extends StatefulWidget {
   AudioPlayerScreen(
       {Key? key,
       required this.script,
-      required this.responseDbId,
+      required this.documentID,
       required this.dialogue,
       required this.userID,
       required this.title,
@@ -101,7 +101,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/${fileName}.mp3";
     } else {
       fileUrl =
-          "https://storage.googleapis.com/conversations_audio_files/${widget.responseDbId}/${fileName}.mp3";
+          "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/${fileName}.mp3";
     }
 
     return fileUrl;
@@ -286,17 +286,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       currentIndex = index ?? 0;
     });
 
-    await prefs.setInt('savedPosition_${widget.responseDbId}_${widget.userID}',
+    await prefs.setInt('savedPosition_${widget.documentID}_${widget.userID}',
         currentPosition);
     await prefs.setInt(
-        'savedTrackIndex_${widget.responseDbId}_${widget.userID}',
+        'savedTrackIndex_${widget.documentID}_${widget.userID}',
         currentIndex);
     await prefs.setBool(
-        "now_playing_${widget.responseDbId}_${widget.userID}", true);
+        "now_playing_${widget.documentID}_${widget.userID}", true);
     final nowPlayingKey = "now_playing_${widget.userID}";
     final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
-    if (!nowPlayingList.contains(widget.responseDbId)) {
-      nowPlayingList.add(widget.responseDbId);
+    if (!nowPlayingList.contains(widget.documentID)) {
+      nowPlayingList.add(widget.documentID);
     }
     await prefs.setStringList(nowPlayingKey, nowPlayingList);
 
@@ -311,9 +311,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _play() async {
     final prefs = await SharedPreferences.getInstance();
     final savedPosition =
-        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+        prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
     final savedTrackIndex =
-        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+        prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
     if (savedPosition != null && savedTrackIndex != null) {
       await player.seek(Duration(milliseconds: savedPosition),
           index: savedTrackIndex);
@@ -335,9 +335,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method stops the audio
   Future<void> _stop() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.remove('savedPosition_${widget.responseDbId}_${widget.userID}');
-    prefs.remove('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
-    prefs.remove("now_playing_${widget.responseDbId}_${widget.userID}");
+    prefs.remove('savedPosition_${widget.documentID}_${widget.userID}');
+    prefs.remove('savedTrackIndex_${widget.documentID}_${widget.userID}');
+    prefs.remove("now_playing_${widget.documentID}_${widget.userID}");
     await prefs.setStringList("now_playing_${widget.userID}", []);
 
     player.stop();
@@ -352,9 +352,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<int> _getSavedPosition() async {
     final prefs = await SharedPreferences.getInstance();
     final savedPosition =
-        prefs.getInt('savedPosition_${widget.responseDbId}_${widget.userID}');
+        prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
     final savedIndex =
-        prefs.getInt('savedTrackIndex_${widget.responseDbId}_${widget.userID}');
+        prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
     final position =
         savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
     return position;
