@@ -14,6 +14,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String title;
   Map<String, dynamic>? audioDurations;
   String? scriptDocumentId;
+  List<String>? wordsToRepeat;
 
   AudioPlayerScreen(
       {Key? key,
@@ -23,7 +24,8 @@ class AudioPlayerScreen extends StatefulWidget {
       required this.userID,
       required this.title,
       this.scriptDocumentId,
-      this.audioDurations})
+      this.audioDurations,
+      this.wordsToRepeat})
       : super(key: key);
 
   @override
@@ -286,11 +288,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       currentIndex = index ?? 0;
     });
 
-    await prefs.setInt('savedPosition_${widget.documentID}_${widget.userID}',
-        currentPosition);
     await prefs.setInt(
-        'savedTrackIndex_${widget.documentID}_${widget.userID}',
-        currentIndex);
+        'savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
+    await prefs.setInt(
+        'savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
     await prefs.setBool(
         "now_playing_${widget.documentID}_${widget.userID}", true);
     final nowPlayingKey = "now_playing_${widget.userID}";
