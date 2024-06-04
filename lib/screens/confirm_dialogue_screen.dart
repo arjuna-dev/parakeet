@@ -180,8 +180,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 "*", // Required for CORS support to work
                           },
                           body: jsonEncode(<String, dynamic>{
-                            "document_id":
-                                widget.documentID,
+                            "document_id": widget.documentID,
                             "dialogue": bigJsonDocument["dialogue"],
                             "title": bigJsonDocument["title"],
                             "speakers": bigJsonDocument["speakers"],
@@ -208,12 +207,18 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 builder: (context) => AudioPlayerScreen(
                                       script: script,
                                       dialogue: bigJsonDocument["dialogue"],
-                                      documentID: widget
-                                          .documentID,
+                                      documentID: widget.documentID,
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
                                       title: bigJsonDocument['title'],
                                       scriptDocumentId: scriptDocumentID,
+                                      wordsToRepeat: selectedWords.entries
+                                          .expand(
+                                              (entry) => entry.value.entries)
+                                          .where((innerEntry) =>
+                                              innerEntry.value == true)
+                                          .map((innerEntry) => innerEntry.key)
+                                          .toList(),
                                       //audioDurations: script['fileDurations'],
                                     )),
                           );
