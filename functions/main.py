@@ -20,7 +20,7 @@ now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
         self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
@@ -36,6 +36,7 @@ class APICalls:
         self.target_language = target_language
         self.document = document
         self.document_durations = document_durations
+        self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
         self.push_to_firestore = push_to_firestore
         self.mock = mock
@@ -124,29 +125,29 @@ class APICalls:
 
         if '"narrator_explanation":' in current_line:
             enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-            for index, text_part in enumerate(enclosed_words_objects):
-                filename = last_value_path_string + f'_{index}' + ".mp3"
-                if text_part['enclosed']:
-                    voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
-                else:
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
+            if (enclosed_words_objects):
+                for index, text_part in enumerate(enclosed_words_objects):
+                    filename = last_value_path_string + f'_{index}' + ".mp3"
+                    if text_part['enclosed']:
+                        words = text_part['text'].split()
+                        if any(word in self.words_to_repeat for word in words):
+                            voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                            self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
+                        else:
+                            break
+                    else:
+                        self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
+            else:
+                self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"narrator_fun_fact":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"native_language":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-        elif '"narrator_translation":' in current_line:
-            enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-            for index, text_part in enumerate(enclosed_words_objects):
-                filename = last_value_path_string + f'_{index}' + ".mp3"
-                if text_part['enclosed']:
-                    voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
-                else:
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
         elif '"target_language":' in current_line:
-            voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
+            words = last_value.split()
+            if any(word in self.words_to_repeat for word in words):
+                voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
 
 
     def get_last_value_path(self, json_obj, path=None):
@@ -346,7 +347,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     request_data = req.get_json()
     dialogue = request_data.get("dialogue")
-    response_db_id = request_data.get("response_db_id")
+    documentID = request_data.get("documentID")
     user_ID = request_data.get("user_ID")
     title = request_data.get("title")
     speakers = request_data.get("speakers")
@@ -356,12 +357,13 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     length = request_data.get("length")
     voice_1_id = request_data.get("voice_1_id")
     voice_2_id = request_data.get("voice_2_id")
+    words_to_repeat = request_data.get("words_to_repeat")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
 
     if not all([dialogue, 
-                response_db_id,
+                documentID,
                 user_ID,
                 title,
                 speakers,
@@ -371,7 +373,8 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                 length,
                 tts_provider,
                 voice_1_id,
-                voice_2_id
+                voice_2_id,
+                words_to_repeat
                 ]):
         return {'error': 'Missing required parameters in request data'}
     
@@ -382,7 +385,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         document_durations = "Mock doc 2"
     else:
         db = firestore.client()
-        doc_ref = db.collection('chatGPT_responses').document(response_db_id)
+        doc_ref = db.collection('chatGPT_responses').document(documentID)
         subcollection_ref = doc_ref.collection('only_target_sentences')
         document = subcollection_ref.document('updatable_big_json')
 
@@ -395,12 +398,13 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     second_API_calls = APICalls(native_language,
                                 tts_provider,
-                                response_db_id,
+                                documentID,
                                 document,
                                 target_language,
                                 document_durations,
                                 voice_1,
                                 voice_2,
+                                words_to_repeat,
                                 mock=is_mock
                                 )
     second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
@@ -417,7 +421,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     second_API_calls.executor.shutdown(wait=True)
 
     final_response["user_ID"] = user_ID
-    final_response["document_id"] = response_db_id
+    final_response["document_id"] = documentID
     final_response["native_language"] = native_language
     final_response["target_language"] = target_language
     final_response["language_level"] = language_level

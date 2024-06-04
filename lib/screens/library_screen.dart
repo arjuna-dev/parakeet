@@ -124,7 +124,7 @@ class _LibraryState extends State<Library> {
                               MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
                                   script: documents[index].get('script'),
-                                  responseDbId: documents[index]
+                                  documentID: documents[index]
                                       .reference
                                       .parent
                                       .parent!
