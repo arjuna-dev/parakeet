@@ -33,7 +33,7 @@ class ConfirmDialogue extends StatefulWidget {
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<int, Map<String, bool>> selectedWords = {};
-  Map<String, dynamic> allDialogue = {};
+  Map<String, dynamic> bigJsonDocument = {};
 
   @override
   Widget build(BuildContext context) {
@@ -75,16 +75,16 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           Column(
                             children: snapshot.data!.docs
                                 .map((DocumentSnapshot document) {
-                              allDialogue =
+                              bigJsonDocument =
                                   document.data() as Map<String, dynamic>;
-                              print(allDialogue);
+                              print(bigJsonDocument);
                               List<dynamic> turns = [];
-                              if (allDialogue.containsKey("dialogue")) {
-                                turns = allDialogue["dialogue"];
+                              if (bigJsonDocument.containsKey("dialogue")) {
+                                turns = bigJsonDocument["dialogue"];
                               }
                               print(turns);
                               script = script_generator.createFirstScript(
-                                  allDialogue); // need to import script_generator.dart
+                                  bigJsonDocument); // need to import script_generator.dart
                               print(script);
 
                               return ListView.builder(
@@ -182,14 +182,17 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           body: jsonEncode(<String, dynamic>{
                             "document_id":
                                 widget.documentID,
-                            "dialogue": allDialogue["dialogue"],
-                            "title": widget.firstDialogue["title"],
-                            "speakers": widget.firstDialogue["speakers"],
-                            "user_ID": widget.firstDialogue["user_ID"],
+                            "dialogue": bigJsonDocument["dialogue"],
+                            "title": bigJsonDocument["title"],
+                            "speakers": bigJsonDocument["speakers"],
+                            "user_ID": bigJsonDocument["user_ID"],
                             "native_language": widget.nativeLanguage,
                             "target_language": widget.targetLanguage,
                             "length": widget.length,
                             "language_level": widget.languageLevel,
+                            "voice_1_id": bigJsonDocument["voice_1_id"],
+                            "voice_2_id": bigJsonDocument["voice_2_id"],
+                            "tts_provider": "1",
                             "words_to_repeat": selectedWords.entries
                                 .expand((entry) => entry.value.entries)
                                 .where((innerEntry) => innerEntry.value == true)
@@ -204,12 +207,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
                                       script: script,
-                                      dialogue: allDialogue["dialogue"],
-                                      responseDbId: widget
+                                      dialogue: bigJsonDocument["dialogue"],
+                                      documentID: widget
                                           .documentID,
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
-                                      title: allDialogue['title'],
+                                      title: bigJsonDocument['title'],
                                       scriptDocumentId: scriptDocumentID,
                                       //audioDurations: script['fileDurations'],
                                     )),
