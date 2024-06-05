@@ -68,14 +68,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // This method initializes the playlist
   Future<void> _initPlaylist() async {
-    List<Future<String?>> fileUrls =
+    List<String> fileUrls =
         widget.script.map((fileName) => _constructUrl(fileName)).toList();
-    List<String?> results = await Future.wait(fileUrls);
-    List<AudioSource> audioSources = results
+    List<AudioSource> audioSources = fileUrls
+        // ignore: unnecessary_null_comparison
         .where((url) => url != null)
-        .map((url) => AudioSource.uri(Uri.parse(url!)))
+        .map((url) => AudioSource.uri(Uri.parse(url)))
         .toList();
-    playlist = ConcatenatingAudioSource(children: audioSources);
+    playlist = ConcatenatingAudioSource(
+        useLazyPreparation: true, children: audioSources);
     player.setAudioSource(playlist);
 
     // Calculate totalDuration and update trackDurations
@@ -100,19 +101,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     script = script_generator.parseAndCreateScript(
-        snapshot.data!.docs[0].data() as Map<String, dynamic>,
+        snapshot.docs[0].data() as Map<String, dynamic>,
         widget.wordsToRepeat ?? []);
     print(script);
-    List<Future<String?>> fileUrls =
-        widget.script.map((fileName) => _constructUrl(fileName)).toList();
-    List<String?> results = await Future.wait(fileUrls);
-    List<AudioSource> audioSources = results
-        .where((url) => url != null)
-        .map((url) => AudioSource.uri(Uri.parse(url!)))
-        .toList();
-    playlist = ConcatenatingAudioSource(children: audioSources);
-    player.setAudioSource(playlist);
-
     // save script to firestore
     DocumentReference docRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
@@ -120,10 +111,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .collection('script')
         .doc(widget.scriptDocumentId);
     await docRef.set({"script": script});
+    print(playlist.children.length);
+    script.removeRange(0, playlist.children.length);
+    print(script);
+    // Construct URLs for the new files
+    List<String> fileUrls =
+        script.map((fileName) => _constructUrl(fileName)).toList();
+    final newTracks =
+        fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
+
+    await playlist.addAll(newTracks);
   }
 
   // This method constructs the URL for a file
-  Future<String> _constructUrl(String fileName) async {
+  String _constructUrl(String fileName) {
     String fileUrl;
     if (fileName.startsWith("narrator_") ||
         fileName == "one_second_break" ||
