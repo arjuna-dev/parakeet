@@ -1,8 +1,10 @@
 import 'package:auralearn/screens/home_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:auralearn/utils/script_generator.dart' as script_generator;
 
 // This is the main screen for the audio player
 // ignore: must_be_immutable
@@ -33,6 +35,7 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
+  FirestoreService? firestoreService;
   late AudioPlayer player; // The audio player
   late ConcatenatingAudioSource playlist; // The playlist
   String currentTrack = ''; // The current track
@@ -45,14 +48,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   List<Duration> trackDurations = []; // List of durations for each track
   bool _isPaused = false; // Whether the player is paused
   int? _lastMatchedIndex;
+  List<dynamic> script = [];
 
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
+    script = widget.script;
     currentTrack = widget.script[0];
     _initPlaylist(); // Initialize the playlist
-
+    firestoreService = FirestoreService(widget.documentID, updatePlaylist);
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
@@ -91,6 +96,30 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         trackDurations[i] = duration;
       }
     }
+  }
+
+  void updatePlaylist(snapshot) async {
+    script = script_generator.parseAndCreateScript(
+        snapshot.data!.docs[0].data() as Map<String, dynamic>,
+        widget.wordsToRepeat ?? []);
+    print(script);
+    List<Future<String?>> fileUrls =
+        widget.script.map((fileName) => _constructUrl(fileName)).toList();
+    List<String?> results = await Future.wait(fileUrls);
+    List<AudioSource> audioSources = results
+        .where((url) => url != null)
+        .map((url) => AudioSource.uri(Uri.parse(url!)))
+        .toList();
+    playlist = ConcatenatingAudioSource(children: audioSources);
+    player.setAudioSource(playlist);
+
+    // save script to firestore
+    DocumentReference docRef = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(widget.documentID)
+        .collection('script')
+        .doc(widget.scriptDocumentId);
+    await docRef.set({"script": script});
   }
 
   // This method constructs the URL for a file
@@ -367,6 +396,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (isPlaying) {
       _pause();
     }
+    firestoreService?.dispose();
     player.dispose();
     super.dispose();
   }
@@ -389,4 +419,22 @@ class PositionData {
 
   PositionData(this.position, this.bufferedPosition, this.duration,
       this.cumulativePosition);
+}
+
+class FirestoreService extends ChangeNotifier {
+  late Stream<QuerySnapshot> _stream;
+  Function updatePlaylist;
+
+  FirestoreService(String documentID, this.updatePlaylist) {
+    _stream = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(documentID)
+        .collection('all_breakdowns')
+        .snapshots();
+    _stream.listen((snapshot) {
+      updatePlaylist(snapshot);
+    });
+  }
+
+  Stream<QuerySnapshot> get stream => _stream;
 }
