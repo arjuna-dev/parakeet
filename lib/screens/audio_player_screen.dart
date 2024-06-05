@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:auralearn/utils/script_generator.dart' as script_generator;
 
 // This is the main screen for the audio player
@@ -117,10 +118,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Construct URLs for the new files
     List<String> fileUrls =
         script.map((fileName) => _constructUrl(fileName)).toList();
-    final newTracks =
-        fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
-    await playlist.addAll(newTracks);
+    for (var url in fileUrls) {
+      // ignore: unnecessary_null_comparison
+      if (url != null) {
+        bool urlExists = await _checkIfUrlExists(url);
+        while (!urlExists) {
+          await Future.delayed(const Duration(
+              seconds: 1)); // wait for 5 seconds before checking again
+          urlExists = await _checkIfUrlExists(url);
+        }
+        await playlist.add(AudioSource.uri(Uri.parse(url)));
+      }
+    }
+  }
+
+// This method checks if a URL exists
+  Future<bool> _checkIfUrlExists(String url) async {
+    final response = await http.head(Uri.parse(url));
+    return response.statusCode == 200;
   }
 
   // This method constructs the URL for a file
