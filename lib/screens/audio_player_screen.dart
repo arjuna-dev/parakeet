@@ -71,11 +71,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initPlaylist() async {
     List<String> fileUrls =
         widget.script.map((fileName) => _constructUrl(fileName)).toList();
-    List<AudioSource> audioSources = fileUrls
-        // ignore: unnecessary_null_comparison
-        .where((url) => url != null)
-        .map((url) => AudioSource.uri(Uri.parse(url)))
-        .toList();
+    List<AudioSource> audioSources = [];
+    for (var url in fileUrls) {
+      // ignore: unnecessary_null_comparison
+      if (url != null) {
+        bool urlExists = await _checkIfUrlExists(url);
+        while (!urlExists) {
+          await Future.delayed(const Duration(
+              seconds: 1)); // wait for 1 seconds before checking again
+          urlExists = await _checkIfUrlExists(url);
+        }
+        audioSources.add(AudioSource.uri(Uri.parse(url)));
+      }
+    }
     playlist = ConcatenatingAudioSource(
         useLazyPreparation: true, children: audioSources);
     player.setAudioSource(playlist);
@@ -125,7 +133,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         bool urlExists = await _checkIfUrlExists(url);
         while (!urlExists) {
           await Future.delayed(const Duration(
-              seconds: 1)); // wait for 5 seconds before checking again
+              seconds: 1)); // wait for 1 seconds before checking again
           urlExists = await _checkIfUrlExists(url);
         }
         await playlist.add(AudioSource.uri(Uri.parse(url)));
