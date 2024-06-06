@@ -12,7 +12,8 @@
 				"_local_*",
 				"local_scripts",
 				".env",
-				".gitignore"
+				".gitignore",
+				"requests.http"
 			]
 		}
 	],

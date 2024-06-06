@@ -1,0 +1,49 @@
+
+
+GET http://127.0.0.1:8080/ HTTP/1.1
+content-type: application/json
+
+{
+	"dialogue": [
+		{
+			"gender": "m",
+			"native_language": "Good day, Mr. Müller. I would like to order a catapult.",
+			"speaker": "speaker_1",
+			"target_language": "Guten Tag, Herr Müller. Ich möchte eine Katapult bestellen.",
+			"turn_nr": "1"
+		},
+		{
+			"gender": "m",
+			"native_language": "A catapult, Mr. Einstein? That is an unusual order.",
+			"speaker": "speaker_2",
+			"target_language": "Eine Katapult, Herr Einstein? Das ist eine ungewöhnliche Bestellung.",
+			"turn_nr": "2"
+		}
+	],
+
+	"document_id": "000_(¬,‿,¬)",
+	"user_ID": "iAmAUserID",
+	"title": "Einstein Orders a Catapult",
+	
+  "speakers": {
+		"speaker_1": {
+			"gender": "m",
+			"name": "Albert"
+		},
+		"speaker_2": {
+			"gender": "m",
+			"name": "Herr Müller"
+		}
+	},
+
+	"native_language": "English",
+  "target_language": "German",
+	"language_level": "C2",
+  "length": "2",
+	"tts_provider": "1",
+	"voice_1_id": "smthn",
+	"voice_2_id": "smthn",
+	"words_to_repeat": ["one", "two"]
+}
+
+
