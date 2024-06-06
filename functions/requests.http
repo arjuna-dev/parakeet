@@ -47,3 +47,21 @@ content-type: application/json
 }
 
 
+###
+
+GET http://127.0.0.1:8080/ HTTP/1.1
+content-type: application/json
+
+{
+  "requested_scenario": "A baby alien talks with a butterfly",
+  "native_language": "English",
+  "target_language": "German",
+  "length": "2",
+  "user_ID": "3x3x3x",
+	"language_level": "C2",
+	"keywords": "",
+	"document_id": "3x3x3x",
+	"tts_provider": "1"
+}
+
+###
