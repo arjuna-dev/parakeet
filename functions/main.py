@@ -406,9 +406,9 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 document,
                                 target_language,
                                 document_durations,
+                                words_to_repeat,
                                 voice_1,
                                 voice_2,
-                                words_to_repeat,
                                 mock=is_mock
                                 )
     second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
