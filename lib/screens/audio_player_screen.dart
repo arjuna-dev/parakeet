@@ -126,6 +126,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print(script);
 
+    // Save the current track index and position
+    final currentIndex = player.currentIndex ?? 0;
+    final currentPosition = player.position;
+
     // to not add tracks already added to the playlist
     script.removeRange(0, playlist.children.length);
 
@@ -137,6 +141,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     await playlist.addAll(newTracks);
     await player.load();
+    await player.seek(currentPosition, index: currentIndex);
     await _play();
   }
 
