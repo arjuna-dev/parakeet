@@ -350,7 +350,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     request_data = req.get_json()
     dialogue = request_data.get("dialogue")
-    documentID = request_data.get("document_id")
+    document_id = request_data.get("document_id")
     user_ID = request_data.get("user_ID")
     title = request_data.get("title")
     speakers = request_data.get("speakers")
@@ -367,8 +367,8 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     print(request_data)
 
-    if not all([dialogue, 
-                documentID,
+    all_parameters = [dialogue, 
+                document_id,
                 user_ID,
                 title,
                 speakers,
@@ -380,18 +380,22 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                 voice_1_id,
                 voice_2_id,
                 words_to_repeat
-                ]):
-        print('Errroorrror')
+                ]
+
+    missing_parameters = [  {"index": i} for i, parameter in enumerate(all_parameters) if parameter is None]
+
+    if len(missing_parameters) > 0:
+        print("missing_parameters: ", missing_parameters)
         return {'error': 'Missing required parameters in request data'}
-    
-    is_mock = False
+
+    is_mock = True
 
     if is_mock == True:
         document = "Mock doc"
         document_durations = "Mock doc 2"
     else:
         db = firestore.client()
-        doc_ref = db.collection('chatGPT_responses').document(documentID)
+        doc_ref = db.collection('chatGPT_responses').document(document_id)
         subcollection_ref = doc_ref.collection('all_breakdowns')
         document = subcollection_ref.document('updatable_big_json')
 
@@ -405,7 +409,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     second_API_calls = APICalls(native_language,
                                 tts_provider,
-                                documentID,
+                                document_id,
                                 document,
                                 target_language,
                                 document_durations,
@@ -428,7 +432,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     second_API_calls.executor.shutdown(wait=True)
 
     final_response["user_ID"] = user_ID
-    final_response["document_id"] = documentID
+    final_response["document_id"] = document_id
     final_response["native_language"] = native_language
     final_response["target_language"] = target_language
     final_response["language_level"] = language_level
