@@ -121,6 +121,7 @@ class APICalls:
 
         if self.turn_nr + 1 < len(full_json.get('dialogue', [])):
             self.turn_nr += 1
+            print("full_json: ", full_json)
             self.push_to_firestore(full_json, self.document, operation="overwrite")
 
         if '"narrator_translation":' in current_line:
@@ -381,7 +382,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         print("missing_parameters: ", missing_parameters)
         return {'error': 'Missing required parameters in request data'}
 
-    is_mock = True
+    is_mock = False
 
     if is_mock == True:
         document = "Mock doc"

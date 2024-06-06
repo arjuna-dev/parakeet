@@ -1,6 +1,6 @@
 
 
-GET http://127.0.0.1:8080/ HTTP/1.1
+GET http://127.0.0.1:8081/ HTTP/1.1
 content-type: application/json
 
 {
@@ -41,8 +41,8 @@ content-type: application/json
 	"language_level": "C2",
   "length": "2",
 	"tts_provider": "1",
-	"voice_1_id": "smthn",
-	"voice_2_id": "smthn",
+	"voice_1_id": "de-DE-Studio-B",
+	"voice_2_id": "de-DE-Studio-C",
 	"words_to_repeat": ["one", "two"]
 }
 
