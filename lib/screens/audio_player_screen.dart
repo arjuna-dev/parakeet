@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
+import 'dart:collection';
 import 'package:auralearn/utils/script_generator.dart' as script_generator;
 
 // This is the main screen for the audio player
@@ -58,11 +58,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     script = widget.script;
     currentTrack = widget.script[0];
     _initPlaylist(); // Initialize the playlist
-    firestoreService = FirestoreService(widget.documentID, updatePlaylist);
+    firestoreService = FirestoreService(
+        widget.documentID, updatePlaylist, saveScriptToFirestore);
+
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
-        _stop();
+        // Wait for new tracks instead of stopping or resetting
+        setState(() {
+          isPlaying = false;
+          currentTrack = "Waiting for new tracks...";
+        });
+      }
+    });
+
+    // Update the current track when the index changes
+    player.currentIndexStream.listen((index) {
+      if (index != null && index < script.length) {
+        setState(() {
+          currentTrack = script[index];
+        });
       }
     });
   }
@@ -71,19 +86,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initPlaylist() async {
     List<String> fileUrls =
         widget.script.map((fileName) => _constructUrl(fileName)).toList();
-    List<AudioSource> audioSources = [];
-    for (var url in fileUrls) {
-      // ignore: unnecessary_null_comparison
-      if (url != null) {
-        bool urlExists = await _checkIfUrlExists(url);
-        while (!urlExists) {
-          await Future.delayed(const Duration(
-              seconds: 1)); // wait for 1 seconds before checking again
-          urlExists = await _checkIfUrlExists(url);
-        }
-        audioSources.add(AudioSource.uri(Uri.parse(url)));
-      }
-    }
+    List<AudioSource> audioSources = fileUrls
+        // ignore: unnecessary_null_comparison
+        .where((url) => url != null)
+        .map((url) => AudioSource.uri(Uri.parse(url)))
+        .toList();
     playlist = ConcatenatingAudioSource(
         useLazyPreparation: true, children: audioSources);
     player.setAudioSource(playlist);
@@ -109,42 +116,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylist(snapshot) async {
-    script = script_generator.parseAndCreateScript(
-        snapshot.docs[0].data() as Map<String, dynamic>,
-        widget.wordsToRepeat ?? []);
+    print("updating!!!");
+    try {
+      script = script_generator.parseAndCreateScript(
+          snapshot.docs[0].data() as Map<String, dynamic>,
+          widget.wordsToRepeat ?? []);
+    } catch (e) {
+      return;
+    }
     print(script);
-    // save script to firestore
-    DocumentReference docRef = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(widget.documentID)
-        .collection('script')
-        .doc(widget.scriptDocumentId);
-    await docRef.set({"script": script});
-    print(playlist.children.length);
+
+    // to not add tracks already added to the playlist
     script.removeRange(0, playlist.children.length);
-    print(script);
+
     // Construct URLs for the new files
     List<String> fileUrls =
         script.map((fileName) => _constructUrl(fileName)).toList();
+    final newTracks =
+        fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
-    for (var url in fileUrls) {
-      // ignore: unnecessary_null_comparison
-      if (url != null) {
-        bool urlExists = await _checkIfUrlExists(url);
-        while (!urlExists) {
-          await Future.delayed(const Duration(
-              seconds: 1)); // wait for 1 seconds before checking again
-          urlExists = await _checkIfUrlExists(url);
-        }
-        await playlist.add(AudioSource.uri(Uri.parse(url)));
-      }
-    }
-  }
-
-// This method checks if a URL exists
-  Future<bool> _checkIfUrlExists(String url) async {
-    final response = await http.head(Uri.parse(url));
-    return response.statusCode == 200;
+    await playlist.addAll(newTracks);
+    await player.load();
+    await _play();
   }
 
   // This method constructs the URL for a file
@@ -161,6 +154,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     return fileUrl;
+  }
+
+  void saveScriptToFirestore() async {
+    DocumentReference docRef = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(widget.documentID)
+        .collection('script')
+        .doc(widget.scriptDocumentId);
+    await docRef.set({"script": script});
   }
 
   // This method calculates the cumulative duration up to a certain index
@@ -449,16 +451,35 @@ class PositionData {
 class FirestoreService extends ChangeNotifier {
   late Stream<QuerySnapshot> _stream;
   Function updatePlaylist;
+  Function saveScriptToFirestore;
+  Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
+  bool isUpdating = false;
 
-  FirestoreService(String documentID, this.updatePlaylist) {
+  FirestoreService(
+      String documentID, this.updatePlaylist, this.saveScriptToFirestore) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
         .collection('all_breakdowns')
         .snapshots();
+    // Use debounce to process updates in batches
     _stream.listen((snapshot) {
-      updatePlaylist(snapshot);
+      queue.add(snapshot);
+      processQueue(saveScriptToFirestore);
     });
+  }
+
+  Future<void> processQueue(saveScriptToFirestore) async {
+    if (!isUpdating && queue.isNotEmpty) {
+      isUpdating = true;
+      await updatePlaylist(queue.removeFirst());
+      isUpdating = false;
+      if (queue.isEmpty) {
+        // save script to firestore
+        saveScriptToFirestore();
+      }
+      processQueue(saveScriptToFirestore);
+    }
   }
 
   Stream<QuerySnapshot> get stream => _stream;
