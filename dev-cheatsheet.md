@@ -29,3 +29,9 @@ firebase functions:delete myFunction
 ```bash
 firebase functions:delete myFunction --region us-east-1
 ```
+
+Deploy locally for testing:
+
+```
+functions-framework --target second_API_calls --debug
+```
