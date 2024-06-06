@@ -125,20 +125,13 @@ class APICalls:
 
         if '"narrator_translation":' in current_line:
             enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-            if (enclosed_words_objects):
-                for index, text_part in enumerate(enclosed_words_objects):
-                    filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
-                    if text_part['enclosed']:
-                        # words = text_part['text'].split()
-                        # if any(word in self.words_to_repeat for word in words):
-                        voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                        self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
-                        # else:
-                            # break
-                    else:
-                        self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
-            else:
-                self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            for index, text_part in enumerate(enclosed_words_objects):
+                filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
+                if text_part['enclosed']:
+                    voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
+                else:
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
         elif '"narrator_explanation":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"narrator_fun_fact":' in current_line:
