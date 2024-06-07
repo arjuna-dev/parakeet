@@ -168,7 +168,14 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             .doc(widget.documentID)
                             .collection('script')
                             .doc();
-                        await docRef.set({"script": script});
+                        await docRef.set({
+                          "script": script,
+                          "title": bigJsonDocument["title"],
+                          "dialogue": bigJsonDocument["dialogue"],
+                          "target_language": widget.targetLanguage,
+                          "language_level": widget.languageLevel,
+                          "user_ID": FirebaseAuth.instance.currentUser!.uid
+                        });
                         String scriptDocumentID = docRef.id;
 
                         http.post(
@@ -207,10 +214,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 builder: (context) => AudioPlayerScreen(
                                       script: script,
                                       dialogue: bigJsonDocument["dialogue"],
+                                      title: bigJsonDocument["title"],
                                       documentID: widget.documentID,
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
-                                      title: bigJsonDocument['title'],
                                       scriptDocumentId: scriptDocumentID,
                                       wordsToRepeat: selectedWords.entries
                                           .expand(
