@@ -272,39 +272,42 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   if (positionData == null) {
                     return const CircularProgressIndicator();
                   }
+                  final sliderValue = isPlaying
+                      ? positionData.cumulativePosition.inMilliseconds
+                          .toDouble()
+                      : currentPosition.inMilliseconds.toDouble();
                   return Column(
                     children: [
                       Slider(
                         min: 0.0,
                         max: totalDuration.inMilliseconds.toDouble(),
-                        value: isPlaying
-                            ? positionData.cumulativePosition.inMilliseconds
-                                .clamp(0, totalDuration.inMilliseconds)
-                                .toDouble()
-                            : savedPosition.toDouble(),
+                        value: sliderValue.clamp(
+                            0, totalDuration.inMilliseconds.toDouble()),
                         onChanged: (value) {
                           final trackIndex = findTrackIndexForPosition(value);
                           player.seek(
-                              Duration(
-                                  milliseconds: value.toInt() -
-                                      cumulativeDurationUpTo(trackIndex)
-                                          .inMilliseconds),
-                              index: trackIndex);
+                            Duration(
+                                milliseconds: value.toInt() -
+                                    cumulativeDurationUpTo(trackIndex)
+                                        .inMilliseconds),
+                            index: trackIndex,
+                          );
                           if (_isPaused) {
                             setState(() {
-                              positionData.cumulativePosition =
+                              currentPosition =
                                   Duration(milliseconds: value.toInt());
                             });
                           }
                         },
                       ),
                       Text(
-                        "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(totalDuration)}",
+                        "${formatDuration(Duration(milliseconds: sliderValue.toInt()))} / ${formatDuration(totalDuration)}",
                       ),
                     ],
                   );
                 },
               ),
+
               Text('Now Playing: $currentTrack'),
               controlButtons(), // Play, pause, stop, skip buttons
             ],
