@@ -98,7 +98,7 @@ class _LibraryState extends State<Library> {
 
                                       // Remove the audio file from Firestore
                                       await userDocRef.update({
-                                        'FavoriteAudioFiles':
+                                        'favoriteAudioFiles':
                                             FieldValue.arrayRemove([
                                           {'parentId': parentId, 'docId': docId}
                                         ])
@@ -109,7 +109,7 @@ class _LibraryState extends State<Library> {
 
                                       // Add the audio file to Firestore
                                       await userDocRef.set({
-                                        'FavoriteAudioFiles':
+                                        'favoriteAudioFiles':
                                             FieldValue.arrayUnion([
                                           {'parentId': parentId, 'docId': docId}
                                         ])
