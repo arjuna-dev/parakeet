@@ -63,6 +63,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     fileDurationUpdate = FileDurationUpdate(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
 
+    //update script if the big json from 2nd api is already there
+    DocumentReference docRefScript = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(widget.documentID)
+        .collection('all_breakdowns')
+        .doc('updatable_big_json');
+    docRefScript.get().then((DocumentSnapshot docSnap) {
+      if (docSnap.exists) {
+        script = script_generator.parseAndCreateScript(
+            docSnap.data() as Map<String, dynamic>, widget.wordsToRepeat ?? []);
+        saveScriptToFirestore();
+      }
+    });
+
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
@@ -85,13 +99,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     //Get the fileDurations
     // Create a DocumentReference
-    DocumentReference docRef = FirebaseFirestore.instance
+    DocumentReference docRefFileDuration = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)
         .collection('file_durations')
         .doc('file_durations');
 
-    docRef.get().then((DocumentSnapshot docSnap) {
+    docRefFileDuration.get().then((DocumentSnapshot docSnap) {
       if (docSnap.exists) {
         // Extract the audioDuration field
         print(docSnap.data());
