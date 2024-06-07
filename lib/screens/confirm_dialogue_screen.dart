@@ -32,8 +32,9 @@ class ConfirmDialogue extends StatefulWidget {
 
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
-  Map<int, Map<String, bool>> selectedWords = {};
+  Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
   Map<String, dynamic> bigJsonDocument = {};
+  ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(true);
 
   @override
   Widget build(BuildContext context) {
@@ -64,9 +65,56 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     title: const Text('Topic'),
                     subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
                   ),
-                  const ListTile(
-                    title: Text(
-                        'Select words that you want to repeat in your audio:'),
+                  Card(
+                    elevation: 3.0, // Adjust the elevation as needed
+                    color: Colors.lightGreen[
+                        100], // Light green background color for the card
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          8.0), // Adjust the border radius as needed
+                    ),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.all(8.0), // Add padding inside the card
+                      child: Text(
+                        'Highlight words that you want to focus on learning.',
+                        style: TextStyle(
+                            fontSize: 16), // Adjust the font size as needed
+                      ),
+                    ),
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: selectAllNotifier,
+                    builder: (context, selectAll, child) {
+                      return StatefulBuilder(
+                        builder: (context, setState) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 2.0), // Add padding if needed
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Checkbox(
+                                  value: selectAll,
+                                  onChanged: (bool? value) {
+                                    selectAllNotifier.value = value ?? false;
+                                    for (var entry in selectedWords.entries) {
+                                      for (var wordEntry
+                                          in entry.value.entries) {
+                                        wordEntry.value.value =
+                                            selectAllNotifier.value;
+                                      }
+                                    }
+                                  },
+                                ),
+                                const Text("Select All Words"),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                   Expanded(
                     child: SingleChildScrollView(
@@ -77,15 +125,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 .map((DocumentSnapshot document) {
                               bigJsonDocument =
                                   document.data() as Map<String, dynamic>;
-                              print(bigJsonDocument);
                               List<dynamic> turns = [];
                               if (bigJsonDocument.containsKey("dialogue")) {
                                 turns = bigJsonDocument["dialogue"];
                               }
-                              print(turns);
-                              script = script_generator.createFirstScript(
-                                  bigJsonDocument); // need to import script_generator.dart
-                              print(script);
+                              script = script_generator
+                                  .createFirstScript(bigJsonDocument);
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
@@ -96,13 +141,15 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                   final targetLanguageSentence =
                                       turn['target_language'] ?? "";
                                   final words =
-                                      targetLanguageSentence?.split(' ');
+                                      targetLanguageSentence.split(' ');
+                                  if (selectedWords[index] == null) {
+                                    selectedWords[index] = {};
+                                  }
                                   words.forEach((word) {
-                                    if (selectedWords[index] == null) {
-                                      selectedWords[index] = {};
-                                    }
                                     if (selectedWords[index]![word] == null) {
-                                      selectedWords[index]![word] = true;
+                                      selectedWords[index]![word] =
+                                          ValueNotifier<bool>(
+                                              selectAllNotifier.value);
                                     }
                                   });
 
@@ -117,21 +164,61 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                             "No native language"),
                                         Wrap(
                                           children: words.map<Widget>((word) {
-                                            return Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Checkbox(
-                                                  value: selectedWords[index]![
-                                                      word],
-                                                  onChanged: (bool? value) {
-                                                    setState(() {
-                                                      selectedWords[index]![
-                                                          word] = value!;
-                                                    });
+                                            ValueNotifier<bool>
+                                                isSelectedNotifier =
+                                                selectedWords[index]![word]!;
+
+                                            return ValueListenableBuilder(
+                                              valueListenable:
+                                                  isSelectedNotifier,
+                                              builder: (BuildContext context,
+                                                  bool isSelected,
+                                                  Widget? child) {
+                                                return GestureDetector(
+                                                  onTap: () {
+                                                    isSelectedNotifier.value =
+                                                        !isSelectedNotifier
+                                                            .value;
                                                   },
-                                                ),
-                                                Text(word),
-                                              ],
+                                                  child: Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 2.0,
+                                                        vertical: 0.0),
+                                                    margin: EdgeInsets.zero,
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected
+                                                          ? const Color
+                                                              .fromARGB(255,
+                                                              126, 255, 130)
+                                                          : Colors.transparent,
+                                                    ),
+                                                    child: Text(
+                                                      word,
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            16, // Adjust font size as needed
+                                                        decoration: isSelected
+                                                            ? TextDecoration
+                                                                .underline
+                                                            : TextDecoration
+                                                                .none,
+                                                        decorationColor: isSelected
+                                                            ? const Color
+                                                                .fromARGB(
+                                                                255, 21, 87, 25)
+                                                            : null, // Darker green for underline
+                                                        color: Colors
+                                                            .black, // Adjust text color if needed
+                                                        decorationThickness:
+                                                            isSelected
+                                                                ? 2.0
+                                                                : null,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
                                             );
                                           }).toList(),
                                         ),
@@ -201,7 +288,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             "tts_provider": "1",
                             "words_to_repeat": selectedWords.entries
                                 .expand((entry) => entry.value.entries)
-                                .where((innerEntry) => innerEntry.value == true)
+                                .where((innerEntry) =>
+                                    innerEntry.value.value == true)
                                 .map((innerEntry) => innerEntry.key)
                                 .toList(),
                           }),
@@ -223,7 +311,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                           .expand(
                                               (entry) => entry.value.entries)
                                           .where((innerEntry) =>
-                                              innerEntry.value == true)
+                                              innerEntry.value.value == true)
                                           .map((innerEntry) => innerEntry.key)
                                           .toList(),
                                       //audioDurations: script['fileDurations'],
