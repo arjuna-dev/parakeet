@@ -151,12 +151,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final currentIndex = player.currentIndex ?? 0;
     final currentPosition = player.position;
 
+    var newScript = script;
     // to not add tracks already added to the playlist
-    script.removeRange(0, playlist.children.length);
+    newScript.removeRange(0, playlist.children.length);
 
     // Construct URLs for the new files
     List<String> fileUrls =
-        script.map((fileName) => _constructUrl(fileName)).toList();
+        newScript.map((fileName) => _constructUrl(fileName)).toList();
     final newTracks =
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
@@ -295,36 +296,34 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   if (positionData == null) {
                     return const CircularProgressIndicator();
                   }
-                  final sliderValue = isPlaying
-                      ? positionData.cumulativePosition.inMilliseconds
-                          .toDouble()
-                      : currentPosition.inMilliseconds.toDouble();
                   return Column(
                     children: [
                       Slider(
                         min: 0.0,
                         max: totalDuration.inMilliseconds.toDouble(),
-                        value: sliderValue.clamp(
-                            0, totalDuration.inMilliseconds.toDouble()),
+                        value: isPlaying
+                            ? positionData.cumulativePosition.inMilliseconds
+                                .clamp(0, totalDuration.inMilliseconds)
+                                .toDouble()
+                            : savedPosition.toDouble(),
                         onChanged: (value) {
                           final trackIndex = findTrackIndexForPosition(value);
                           player.seek(
-                            Duration(
-                                milliseconds: value.toInt() -
-                                    cumulativeDurationUpTo(trackIndex)
-                                        .inMilliseconds),
-                            index: trackIndex,
-                          );
+                              Duration(
+                                  milliseconds: value.toInt() -
+                                      cumulativeDurationUpTo(trackIndex)
+                                          .inMilliseconds),
+                              index: trackIndex);
                           if (_isPaused) {
                             setState(() {
-                              currentPosition =
+                              positionData.cumulativePosition =
                                   Duration(milliseconds: value.toInt());
                             });
                           }
                         },
                       ),
                       Text(
-                        "${formatDuration(Duration(milliseconds: sliderValue.toInt()))} / ${formatDuration(totalDuration)}",
+                        "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(totalDuration)}",
                       ),
                     ],
                   );
