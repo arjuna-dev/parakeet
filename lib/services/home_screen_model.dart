@@ -49,7 +49,7 @@ class HomeScreenModel extends ChangeNotifier {
       final scriptDocRef = FirebaseFirestore.instance
           .collection('chatGPT_responses')
           .doc(map['parentId'])
-          .collection('scripts')
+          .collection('script')
           .doc(map['docId']);
       final scriptDoc = await scriptDocRef.get();
       return scriptDoc;
@@ -68,7 +68,7 @@ class HomeScreenModel extends ChangeNotifier {
       final scriptCollectionRef = FirebaseFirestore.instance
           .collection('chatGPT_responses')
           .doc(id)
-          .collection('scripts');
+          .collection('script');
       final scriptDocs = await scriptCollectionRef.get();
       if (scriptDocs.docs.isNotEmpty) {
         return scriptDocs.docs.first;

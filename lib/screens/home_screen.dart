@@ -89,12 +89,10 @@ class _HomeState extends State<Home> {
                           MaterialPageRoute(
                             builder: (context) => AudioPlayerScreen(
                               script: audioFile.get('script'),
-                              documentID:
-                                  audioFile.reference.parent.parent!.id,
+                              documentID: audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
                               userID: FirebaseAuth.instance.currentUser!.uid,
                               title: audioFile.get('title'),
-                              audioDurations: audioFile.get('fileDurations'),
                             ),
                           ),
                         );
@@ -128,13 +126,11 @@ class _HomeState extends State<Home> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => AudioPlayerScreen(
-                          script: audioFile.get('script'),
-                          documentID: audioFile.reference.parent.parent!.id,
-                          dialogue: audioFile.get('dialogue'),
-                          userID: FirebaseAuth.instance.currentUser!.uid,
-                          title: audioFile.get('title'),
-                          audioDurations: audioFile.get('fileDurations'),
-                        ),
+                            script: audioFile.get('script'),
+                            documentID: audioFile.reference.parent.parent!.id,
+                            dialogue: audioFile.get('dialogue'),
+                            userID: FirebaseAuth.instance.currentUser!.uid,
+                            title: audioFile.get('title')),
                       ),
                     );
                   },
