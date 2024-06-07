@@ -37,9 +37,9 @@ class HomeScreenModel extends ChangeNotifier {
     final userDocRef =
         FirebaseFirestore.instance.collection('users').doc(user!.uid);
     final userDoc = await userDocRef.get();
-    if (userDoc.data()!.containsKey('selectedAudioFiles')) {
+    if (userDoc.data()!.containsKey('favoriteAudioFiles')) {
       favoriteAudioFileIds =
-          userDoc.get('selectedAudioFiles') as List<dynamic>? ?? [];
+          userDoc.get('favoriteAudioFiles') as List<dynamic>? ?? [];
     }
 
     favoriteAudioFileIdsNotifier.value = favoriteAudioFileIds;
