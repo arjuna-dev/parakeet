@@ -94,7 +94,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     docRef.get().then((DocumentSnapshot docSnap) {
       if (docSnap.exists) {
         // Extract the audioDuration field
+        print(docSnap.data());
         audioDurations = docSnap.data() as Map<String, dynamic>;
+      }
+    });
+
+    // Get the audio durations from narrator storage
+    CollectionReference colRef = FirebaseFirestore.instance.collection(
+        'narrator_audio_files_durations/google_tts/narrator_english');
+
+    colRef.get().then((QuerySnapshot querySnap) {
+      if (querySnap.docs.isNotEmpty) {
+        // Get the first document
+        DocumentSnapshot firstDoc = querySnap.docs.first;
+
+        // Save its data to audioDurations
+        audioDurations!.addAll(firstDoc.data() as Map<String, dynamic>);
       }
     });
   }
