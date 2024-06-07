@@ -33,7 +33,7 @@ class _LibraryState extends State<Library> {
       body: Consumer<HomeScreenModel>(
         builder: (context, model, child) {
           return StreamBuilder<QuerySnapshot>(
-            stream: _firestore.collectionGroup('scripts').snapshots(),
+            stream: _firestore.collectionGroup('script').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Text('Error: ${snapshot.error}');
@@ -130,11 +130,8 @@ class _LibraryState extends State<Library> {
                                       .parent!
                                       .id,
                                   dialogue: documents[index].get('dialogue'),
-                                  userID:
-                                      FirebaseAuth.instance.currentUser!.uid,
+                                  userID: documents[index].get('user_ID'),
                                   title: documents[index].get('title'),
-                                  audioDurations:
-                                      documents[index].get('fileDurations'),
                                 ),
                               ),
                             );
