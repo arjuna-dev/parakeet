@@ -136,6 +136,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // This method initializes the playlist
   Future<void> _initPlaylist() async {
+    // try {
+    // script = script_generator.parseAndCreateScript(
+    //     widget.dialogue, widget.wordsToRepeat ?? []);
+    // } catch (e) {
+    //   print(e);
+    // }
     List<String> fileUrls =
         widget.script.map((fileName) => _constructUrl(fileName)).toList();
     List<AudioSource> audioSources = fileUrls
