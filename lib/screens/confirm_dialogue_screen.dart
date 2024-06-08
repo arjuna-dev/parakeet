@@ -127,10 +127,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                   document.data() as Map<String, dynamic>;
                               List<dynamic> turns = [];
                               if (bigJsonDocument.containsKey("dialogue")) {
-                                turns = bigJsonDocument["dialogue"];
+                                turns = bigJsonDocument["dialogue"] ?? [];
                               }
                               script = script_generator.createFirstScript(
-                                  bigJsonDocument["dialogue"]);
+                                  bigJsonDocument["dialogue"] ?? []);
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
