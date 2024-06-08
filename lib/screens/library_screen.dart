@@ -123,7 +123,6 @@ class _LibraryState extends State<Library> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
-                                  script: documents[index].get('script'),
                                   documentID: documents[index]
                                       .reference
                                       .parent
@@ -132,6 +131,9 @@ class _LibraryState extends State<Library> {
                                   dialogue: documents[index].get('dialogue'),
                                   userID: documents[index].get('user_ID'),
                                   title: documents[index].get('title'),
+                                  wordsToRepeat:
+                                      documents[index].get('words_to_repeat'),
+                                  scriptDocumentId: documents[index].id,
                                 ),
                               ),
                             );

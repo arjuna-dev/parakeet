@@ -18,12 +18,12 @@ List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
   return result;
 }
 
-List<String> createFirstScript(Map<String, dynamic> data) {
+List<String> createFirstScript(List<dynamic> data) {
   List<String> script = [];
   int randomI = Random().nextInt(sequences.introSequences.length);
   List<String> introSequence = sequences.introSequences[randomI]();
   script.addAll(introSequence);
-  for (int i = 0; i < data["dialogue"].length; i++) {
+  for (int i = 0; i < data.length; i++) {
     script.add("dialogue_${i}_target_language");
   }
 
@@ -33,24 +33,16 @@ List<String> createFirstScript(Map<String, dynamic> data) {
 }
 
 List<String> parseAndCreateScript(
-    Map<String, dynamic> data, List<String> wordsToRepeat) {
+    List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue) {
   List<String> script = [];
 
-  int randomI = Random().nextInt(sequences.introSequences.length);
-  List<String> introSequence = sequences.introSequences[randomI]();
-  script.addAll(introSequence);
-
-  for (int i = 0; i < data["dialogue"].length; i++) {
-    script.add("dialogue_${i}_target_language");
-  }
-
-  script.addAll(sequences.introOutroSequence1());
+  script = createFirstScript(dialogue);
 
   List<int> sentenceNumberExcludeList = [];
-  print(data["dialogue"]);
+  print(data);
   // Process each turn in the dialogue
-  for (int i = 0; i < data["dialogue"].length; i++) {
-    if ((data["dialogue"][i] as Map).isNotEmpty) {
+  for (int i = 0; i < data.length; i++) {
+    if ((data[i] as Map).isNotEmpty) {
       String nativeSentence = "dialogue_${i}_native_language";
       String targetSentence = "dialogue_${i}_target_language";
 
@@ -65,14 +57,13 @@ List<String> parseAndCreateScript(
       List<int> chunkNumberExcludeList = [];
 
       // Process split_sentence items
-      for (int j = 0; j < data["dialogue"][i]["split_sentence"].length; j++) {
+      for (int j = 0; j < data[i]["split_sentence"].length; j++) {
         // Check if user wants to repeat the split sentence (only if at least one word they want is there)
-        if (wordsToRepeat.any((element) => data["dialogue"][i]["split_sentence"]
-                [j]["target_language"]
+        if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
+                ["target_language"]
             .split(' ')
             .contains(element))) {
-          String text =
-              data["dialogue"][i]["split_sentence"][j]["narrator_translation"];
+          String text = data[i]["split_sentence"][j]["narrator_translation"];
 
           // Classify and process the text into parts enclosed by || (target_language text)
           List<Map<String, dynamic>> classifiedText1 =
@@ -91,14 +82,14 @@ List<String> parseAndCreateScript(
 
           List<Map<String, dynamic>> wordObjects = [];
           for (int index = 0;
-              index < data["dialogue"][i]["split_sentence"][j]['words'].length;
+              index < data[i]["split_sentence"][j]['words'].length;
               index++) {
-            if (wordsToRepeat.contains(data["dialogue"][i]["split_sentence"][j]
-                ['words'][index]["target_language"])) {
+            if (wordsToRepeat.contains(data[i]["split_sentence"][j]['words']
+                [index]["target_language"])) {
               String wordFile =
                   "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
-              String text = data["dialogue"][i]["split_sentence"][j]['words']
-                  [index]["narrator_translation"];
+              String text = data[i]["split_sentence"][j]['words'][index]
+                  ["narrator_translation"];
 
               // Classify and process the text into parts enclosed by || (target_language text)
               List<Map<String, dynamic>> classifiedText2 =
@@ -128,15 +119,14 @@ List<String> parseAndCreateScript(
       }
       // Active recall sequence
       if (i != 0) {
-        if (chunkNumberExcludeList.length !=
-            data["dialogue"][i]["split_sentence"].length) {
+        if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
           List<int> validSentences = List<int>.generate(i + 1, (index) => index)
             ..removeWhere(
                 (element) => sentenceNumberExcludeList.contains(element));
           int randomSentenceI =
               validSentences[Random().nextInt(validSentences.length)];
           int numberOfChunks =
-              data["dialogue"][randomSentenceI]["split_sentence"].length - 1;
+              data[randomSentenceI]["split_sentence"].length - 1;
           List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
             ..removeWhere(
                 (element) => chunkNumberExcludeList.contains(element));
@@ -152,7 +142,7 @@ List<String> parseAndCreateScript(
           sentenceNumberExcludeList.add(i);
         }
       } else if (chunkNumberExcludeList.length ==
-          data["dialogue"][i]["split_sentence"].length) {
+          data[i]["split_sentence"].length) {
         sentenceNumberExcludeList.add(i);
       }
     }

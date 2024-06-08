@@ -129,8 +129,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               if (bigJsonDocument.containsKey("dialogue")) {
                                 turns = bigJsonDocument["dialogue"];
                               }
-                              script = script_generator
-                                  .createFirstScript(bigJsonDocument);
+                              script = script_generator.createFirstScript(
+                                  bigJsonDocument["dialogue"]);
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
@@ -261,6 +261,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           "dialogue": bigJsonDocument["dialogue"],
                           "target_language": widget.targetLanguage,
                           "language_level": widget.languageLevel,
+                          "words_to_repeat": selectedWords.entries
+                              .expand((entry) => entry.value.entries)
+                              .where((innerEntry) =>
+                                  innerEntry.value.value == true)
+                              .map((innerEntry) => innerEntry.key)
+                              .toList(),
                           "user_ID": FirebaseAuth.instance.currentUser!.uid
                         });
                         String scriptDocumentID = docRef.id;
@@ -300,7 +306,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                             context,
                             MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
-                                      script: script,
                                       dialogue: bigJsonDocument["dialogue"],
                                       title: bigJsonDocument["title"],
                                       documentID: widget.documentID,
