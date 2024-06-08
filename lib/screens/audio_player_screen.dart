@@ -59,6 +59,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     currentTrack = script[0];
     _initPlaylist();
 
+    // Listen to the playerSequenceCompleteStream
+    player.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
+        // Stop the player when the end of the playlist is reached
+        _stop();
+      }
+    });
+
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
