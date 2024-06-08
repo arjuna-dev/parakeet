@@ -10,24 +10,22 @@ import 'package:auralearn/utils/script_generator.dart' as script_generator;
 // This is the main screen for the audio player
 // ignore: must_be_immutable
 class AudioPlayerScreen extends StatefulWidget {
-  final List<dynamic> script; //List of audio file names
   final String documentID; // Database ID for the response
   final List<dynamic> dialogue;
   final String userID;
   final String title;
-  String? scriptDocumentId;
-  List<String>? wordsToRepeat;
+  final List<dynamic> wordsToRepeat;
+  final String scriptDocumentId;
 
-  AudioPlayerScreen(
-      {Key? key,
-      required this.script,
-      required this.documentID,
-      required this.dialogue,
-      required this.userID,
-      required this.title,
-      this.scriptDocumentId,
-      this.wordsToRepeat})
-      : super(key: key);
+  const AudioPlayerScreen({
+    Key? key,
+    required this.documentID,
+    required this.dialogue,
+    required this.userID,
+    required this.title,
+    required this.wordsToRepeat,
+    required this.scriptDocumentId,
+  }) : super(key: key);
 
   @override
   AudioPlayerScreenState createState() => AudioPlayerScreenState();
@@ -55,27 +53,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void initState() {
     super.initState();
     player = AudioPlayer();
-    script = widget.script;
-    currentTrack = widget.script[0];
-    _initPlaylist(); // Initialize the playlist
-    firestoreService = FirestoreService(
-        widget.documentID, updatePlaylist, saveScriptToFirestore);
-    fileDurationUpdate = FileDurationUpdate(
-        widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
-
-    //update script if the big json from 2nd api is already there
-    DocumentReference docRefScript = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(widget.documentID)
-        .collection('all_breakdowns')
-        .doc('updatable_big_json');
-    docRefScript.get().then((DocumentSnapshot docSnap) {
-      if (docSnap.exists) {
-        script = script_generator.parseAndCreateScript(
-            docSnap.data() as Map<String, dynamic>, widget.wordsToRepeat ?? []);
-        saveScriptToFirestore();
-      }
-    });
+    script = script_generator.createFirstScript(widget.dialogue);
+    currentTrack = script[0];
+    _initPlaylist();
 
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
@@ -88,53 +68,38 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
-    // Update the current track when the index changes
-    player.currentIndexStream.listen((index) {
-      if (index != null && index < script.length) {
-        setState(() {
-          currentTrack = script[index];
-        });
-      }
-    });
+    firestoreService = FirestoreService(
+        widget.documentID, updatePlaylist, saveScriptToFirestore);
+    fileDurationUpdate = FileDurationUpdate(
+        widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
+  }
 
-    //Get the fileDurations
-    // Create a DocumentReference
-    DocumentReference docRefFileDuration = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(widget.documentID)
-        .collection('file_durations')
-        .doc('file_durations');
-
-    docRefFileDuration.get().then((DocumentSnapshot docSnap) {
-      if (docSnap.exists) {
-        // Extract the audioDuration field
-        print(docSnap.data());
-        audioDurations = docSnap.data() as Map<String, dynamic>;
-      }
-    });
-
+  void calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
+    totalDuration = Duration.zero;
+    trackDurations = List<Duration>.filled(script.length, Duration.zero);
+    audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
     // Get the audio durations from narrator storage
     CollectionReference colRef = FirebaseFirestore.instance.collection(
         'narrator_audio_files_durations/google_tts/narrator_english');
 
-    colRef.get().then((QuerySnapshot querySnap) {
+    await colRef.get().then((QuerySnapshot querySnap) {
       if (querySnap.docs.isNotEmpty) {
         // Get the first document
         DocumentSnapshot firstDoc = querySnap.docs.first;
-
         // Save its data to audioDurations
+
         audioDurations!.addAll(firstDoc.data() as Map<String, dynamic>);
       }
     });
-  }
-
-  void calculateTotalDurationAndUpdateTrackDurations() {
-    totalDuration = Duration.zero;
-    trackDurations = List<Duration>.filled(widget.script.length, Duration.zero);
     if (audioDurations!.isNotEmpty) {
-      for (int i = 0; i < widget.script.length; i++) {
-        String fileName = widget.script[i];
+      print(script);
+      for (int i = 0; i < script.length; i++) {
+        print(script[i]);
+        String fileName = script[i];
+        print("horrray!");
+        print(fileName);
         double durationInSeconds;
+        //print(audioDurations);
         if (audioDurations?[fileName].runtimeType == String) {
           durationInSeconds = double.parse(audioDurations?[fileName]);
         } else {
@@ -143,21 +108,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
+        print(totalDuration);
         trackDurations[i] = duration;
       }
+      setState(() {});
     }
   }
 
   // This method initializes the playlist
   Future<void> _initPlaylist() async {
-    // try {
-    // script = script_generator.parseAndCreateScript(
-    //     widget.dialogue, widget.wordsToRepeat ?? []);
-    // } catch (e) {
-    //   print(e);
-    // }
     List<String> fileUrls =
-        widget.script.map((fileName) => _constructUrl(fileName)).toList();
+        script.map((fileName) => _constructUrl(fileName)).toList();
     List<AudioSource> audioSources = fileUrls
         // ignore: unnecessary_null_comparison
         .where((url) => url != null)
@@ -166,17 +127,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     playlist = ConcatenatingAudioSource(
         useLazyPreparation: true, children: audioSources);
     player.setAudioSource(playlist);
-
-    //update track durations and calculate total duration
-    calculateTotalDurationAndUpdateTrackDurations();
   }
 
   void updatePlaylist(snapshot) async {
     print("updating!!!");
     try {
+      print(snapshot.docs[0].data() as Map<String, dynamic>);
       script = script_generator.parseAndCreateScript(
-          snapshot.docs[0].data() as Map<String, dynamic>,
-          widget.wordsToRepeat ?? []);
+          snapshot.docs[0].data()["dialogue"] as List<dynamic>,
+          widget.wordsToRepeat,
+          widget.dialogue);
     } catch (e) {
       return;
     }
@@ -185,10 +145,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Save the current track index and position
     final currentIndex = player.currentIndex ?? 0;
     final currentPosition = player.position;
+    print(playlist.children.length);
 
-    var newScript = script;
+    var newScript = List.from(script);
     // to not add tracks already added to the playlist
     newScript.removeRange(0, playlist.children.length);
+    print(newScript);
 
     // Construct URLs for the new files
     List<String> fileUrls =
@@ -364,7 +326,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   );
                 },
               ),
-
               Text('Now Playing: $currentTrack'),
               controlButtons(), // Play, pause, stop, skip buttons
             ],
@@ -446,9 +407,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
     await player.play();
     player.currentIndexStream.listen((index) {
-      if (index != null && index < widget.script.length) {
+      if (index != null && index < script.length) {
         setState(() {
-          currentTrack = widget.script[index];
+          currentTrack = script[index];
         });
       }
     });
@@ -466,7 +427,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.seek(Duration.zero, index: 0);
     setState(() {
       isPlaying = false;
-      currentTrack = widget.script[0];
+      currentTrack = script[0];
     });
   }
 
@@ -558,7 +519,7 @@ class FileDurationUpdate extends ChangeNotifier {
   Function calculateTotalDurationAndUpdateTrackDurations;
 
   FileDurationUpdate(
-      documentID, this.calculateTotalDurationAndUpdateTrackDurations) {
+      String documentID, this.calculateTotalDurationAndUpdateTrackDurations) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
