@@ -48,6 +48,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int? _lastMatchedIndex;
   List<dynamic> script = [];
   Map<String, dynamic>? audioDurations = {};
+  Future<Map<String, dynamic>>?
+      cachedAudioDurations; // Future to cache audio durations
 
   @override
   void initState() {
@@ -57,18 +59,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     currentTrack = script[0];
     _initPlaylist();
 
-    // Listen to the playerSequenceCompleteStream
-    player.playerStateStream.listen((playerState) {
-      if (playerState.processingState == ProcessingState.completed) {
-        // Wait for new tracks instead of stopping or resetting
-        setState(() {
-          isPlaying = false;
-          currentTrack = "Waiting for new tracks...";
-        });
-      }
-    });
-
-    getAudioDurationsFromNarratorStorage();
+    // Initialize the cached audio durations Future
+    cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
     firestoreService = FirestoreService(
         widget.documentID, updatePlaylist, saveScriptToFirestore);
@@ -77,6 +69,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
+    if (cachedAudioDurations != null) {
+      return cachedAudioDurations!;
+    }
+
     CollectionReference colRef = FirebaseFirestore.instance.collection(
         'narrator_audio_files_durations/google_tts/narrator_english');
 
@@ -173,7 +169,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await playlist.addAll(newTracks);
     await player.load();
     await player.seek(currentPosition, index: currentIndex);
-    await _play();
   }
 
   // This method constructs the URL for a file
@@ -201,6 +196,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await docRef.update({
       "script": script,
     });
+    CollectionReference colRef = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(widget.documentID)
+        .collection('file_durations');
+    QuerySnapshot querySnap = await colRef.get();
+    if (querySnap.docs.isNotEmpty) {
+      calculateTotalDurationAndUpdateTrackDurations(querySnap);
+    }
   }
 
   // This method calculates the cumulative duration up to a certain index
