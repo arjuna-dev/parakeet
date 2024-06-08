@@ -68,29 +68,41 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
+    getAudioDurationsFromNarratorStorage();
+
     firestoreService = FirestoreService(
         widget.documentID, updatePlaylist, saveScriptToFirestore);
     fileDurationUpdate = FileDurationUpdate(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
 
+  Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
+    CollectionReference colRef = FirebaseFirestore.instance.collection(
+        'narrator_audio_files_durations/google_tts/narrator_english');
+
+    QuerySnapshot querySnap = await colRef.get();
+
+    if (querySnap.docs.isNotEmpty) {
+      // Get the first document
+      DocumentSnapshot firstDoc = querySnap.docs.first;
+      // Save its data to audioDurations
+      return firstDoc.data() as Map<String, dynamic>;
+    }
+
+    return {};
+  }
+
   void calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
-    // Get the audio durations from narrator storage
-    CollectionReference colRef = FirebaseFirestore.instance.collection(
-        'narrator_audio_files_durations/google_tts/narrator_english');
 
-    await colRef.get().then((QuerySnapshot querySnap) {
-      if (querySnap.docs.isNotEmpty) {
-        // Get the first document
-        DocumentSnapshot firstDoc = querySnap.docs.first;
-        // Save its data to audioDurations
+    var narratorAudioDurations = await getAudioDurationsFromNarratorStorage();
+    print(narratorAudioDurations);
+    audioDurations!.addAll(narratorAudioDurations);
 
-        audioDurations!.addAll(firstDoc.data() as Map<String, dynamic>);
-      }
-    });
+    print(audioDurations);
+
     if (audioDurations!.isNotEmpty) {
       print(script);
       for (int i = 0; i < script.length; i++) {
@@ -98,12 +110,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         String fileName = script[i];
         print("horrray!");
         print(fileName);
-        double durationInSeconds;
+        double durationInSeconds = 0.0;
         //print(audioDurations);
-        if (audioDurations?[fileName].runtimeType == String) {
-          durationInSeconds = double.parse(audioDurations?[fileName]);
-        } else {
+        if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
+        } else {
+          print('file not found');
         }
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
