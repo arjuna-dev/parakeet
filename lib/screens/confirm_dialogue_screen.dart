@@ -65,21 +65,24 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                     title: const Text('Topic'),
                     subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
                   ),
-                  Card(
-                    elevation: 3.0, // Adjust the elevation as needed
-                    color: Colors.lightGreen[
-                        100], // Light green background color for the card
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          8.0), // Adjust the border radius as needed
-                    ),
-                    child: const Padding(
-                      padding:
-                          EdgeInsets.all(8.0), // Add padding inside the card
-                      child: Text(
-                        'Highlight words that you want to focus on learning.',
-                        style: TextStyle(
-                            fontSize: 16), // Adjust the font size as needed
+                  Align(
+                    alignment: Alignment.centerLeft, // Align the card to the left
+                    child: Card(
+                      elevation: 3.0, // Adjust the elevation as needed
+                      // color: Colors.lightGreen[
+                      //     100], // Light green background color for the card
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                            8.0), // Adjust the border radius as needed
+                      ),
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.all(8.0), // Add padding inside the card
+                        child: Text(
+                          'Highlight words that you want to focus on learning.',
+                          style: TextStyle(
+                              fontSize: 16), // Adjust the font size as needed
+                        ),
                       ),
                     ),
                   ),
@@ -188,9 +191,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     margin: EdgeInsets.zero,
                                                     decoration: BoxDecoration(
                                                       color: isSelected
-                                                          ? const Color
-                                                              .fromARGB(255,
-                                                              126, 255, 130)
+                                                          ? Colors.lightGreen
                                                           : Colors.transparent,
                                                     ),
                                                     child: Text(
