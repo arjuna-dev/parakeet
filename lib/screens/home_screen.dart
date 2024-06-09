@@ -4,6 +4,7 @@ import 'package:auralearn/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:auralearn/utils/constants.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -40,28 +41,31 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Now playing',
-              style: TextStyle(fontSize: 18),
+      body: Padding(
+        padding: AppConstants.horizontalPadding,
+        child: Column(
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Now playing',
+                style: TextStyle(fontSize: 18),
+              ),
             ),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          nowPlayingList(),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Favorite Audio', style: TextStyle(fontSize: 18)),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          favoriteAudioList(),
-        ],
+            const SizedBox(
+              height: 10,
+            ),
+            nowPlayingList(),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Favorite Audio', style: TextStyle(fontSize: 18)),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            favoriteAudioList(),
+          ],
+        ),
       ),
       bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
     );
