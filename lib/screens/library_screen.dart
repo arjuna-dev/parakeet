@@ -62,15 +62,18 @@ class _LibraryState extends State<Library> {
                                 builder: (context,
                                     List<dynamic> favoriteAudioFileIds, child) {
                                   return IconButton(
-                                    icon: model.favoriteAudioFileIds.any((file) =>
-                                            file['docId'] ==
-                                                documents[index].reference.id &&
-                                            file['parentId'] ==
-                                                documents[index]
-                                                    .reference
-                                                    .parent
-                                                    .parent!
-                                                    .id)
+                                    icon: model.favoriteAudioFileIds.any(
+                                            (file) =>
+                                                file['docId'] ==
+                                                    documents[index]
+                                                        .reference
+                                                        .id &&
+                                                file['parentId'] ==
+                                                    documents[index]
+                                                        .reference
+                                                        .parent
+                                                        .parent!
+                                                        .id)
                                         ? const Icon(Icons.star)
                                         : const Icon(Icons.star_border),
                                     onPressed: () async {
@@ -87,34 +90,43 @@ class _LibraryState extends State<Library> {
                                           .id;
                                       String docId =
                                           documents[index].reference.id;
-                                      if (model.favoriteAudioFileIds.any((file) =>
-                                          file['docId'] ==
-                                              documents[index].reference.id &&
-                                          file['parentId'] ==
-                                              documents[index]
-                                                  .reference
-                                                  .parent
-                                                  .parent!
-                                                  .id)) {
+                                      if (model.favoriteAudioFileIds.any(
+                                          (file) =>
+                                              file['docId'] ==
+                                                  documents[index]
+                                                      .reference
+                                                      .id &&
+                                              file['parentId'] ==
+                                                  documents[index]
+                                                      .reference
+                                                      .parent
+                                                      .parent!
+                                                      .id)) {
                                         // Remove the audio file from the home screen
                                         model.removeAudioFile(documents[index]);
-                
+
                                         // Remove the audio file from Firestore
                                         await userDocRef.update({
                                           'favoriteAudioFiles':
                                               FieldValue.arrayRemove([
-                                            {'parentId': parentId, 'docId': docId}
+                                            {
+                                              'parentId': parentId,
+                                              'docId': docId
+                                            }
                                           ])
                                         });
                                       } else {
                                         // Add the audio file to the home screen
                                         model.addAudioFile(documents[index]);
-                
+
                                         // Add the audio file to Firestore
                                         await userDocRef.set({
                                           'favoriteAudioFiles':
                                               FieldValue.arrayUnion([
-                                            {'parentId': parentId, 'docId': docId}
+                                            {
+                                              'parentId': parentId,
+                                              'docId': docId
+                                            }
                                           ])
                                         }, SetOptions(merge: true));
                                       }
