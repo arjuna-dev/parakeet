@@ -172,14 +172,15 @@ class _CreateLessonState extends State<CreateLesson> {
                             );
                           },
                         );
-              
+
                         try {
                           final FirebaseFirestore firestore =
                               FirebaseFirestore.instance;
                           final DocumentReference docRef =
                               firestore.collection('chatGPT_responses').doc();
                           http.post(
-                            Uri.parse('http://127.0.0.1:8080'),
+                            Uri.parse(
+                                'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
                             headers: <String, String>{
                               'Content-Type': 'application/json; charset=UTF-8',
                               "Access-Control-Allow-Origin":
@@ -201,8 +202,8 @@ class _CreateLessonState extends State<CreateLesson> {
                           int counter = 0;
                           bool docExists = false;
                           while (!docExists && counter < 10) {
-                            await Future.delayed(
-                                const Duration(seconds: 1)); // wait for 1 second
+                            await Future.delayed(const Duration(
+                                seconds: 1)); // wait for 1 second
                             final QuerySnapshot snapshot = await docRef
                                 .collection('only_target_sentences')
                                 .get();
@@ -212,7 +213,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   snapshot.docs.first.data()
                                       as Map<String, dynamic>;
                               firstDialogue = data;
-              
+
                               if (firstDialogue.isNotEmpty) {
                                 Navigator.pop(context);
                                 Navigator.push(
@@ -241,8 +242,8 @@ class _CreateLessonState extends State<CreateLesson> {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content:
-                                  Text('Something went wrong! Please try again.'),
+                              content: Text(
+                                  'Something went wrong! Please try again.'),
                               duration: Duration(seconds: 3),
                             ),
                           );
