@@ -349,7 +349,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   );
                 },
               ),
-              Text('Now Playing: $currentTrack'),
               controlButtons(), // Play, pause, stop, skip buttons
             ],
           ),
