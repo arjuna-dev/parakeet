@@ -35,3 +35,21 @@ Deploy locally for testing:
 ```
 functions-framework --target second_API_calls --debug
 ```
+
+Create Android installer file:
+
+```
+flutter build apk --release
+```
+
+Run on selected device (build the .apk file first for Android):
+
+```
+flutter run --release
+```
+
+Try cleaning if something go wrong:
+
+```
+flutter clean
+```
