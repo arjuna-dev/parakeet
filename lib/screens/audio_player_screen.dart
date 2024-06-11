@@ -321,9 +321,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       Slider(
                         min: 0.0,
                         max: totalDuration.inMilliseconds.toDouble(),
-                        value: positionData.cumulativePosition.inMilliseconds
-                            .clamp(0, totalDuration.inMilliseconds)
-                            .toDouble(),
+                        value: isPlaying
+                            ? positionData.cumulativePosition.inMilliseconds
+                                .clamp(0, totalDuration.inMilliseconds)
+                                .toDouble()
+                            : savedPosition
+                                .clamp(0, totalDuration.inMilliseconds)
+                                .toDouble(),
                         onChanged: (value) {
                           final trackIndex = findTrackIndexForPosition(value);
                           player.seek(
