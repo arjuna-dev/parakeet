@@ -152,7 +152,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .map((url) => AudioSource.uri(Uri.parse(url)))
         .toList();
     playlist = ConcatenatingAudioSource(
-        useLazyPreparation: true, children: audioSources);
+        useLazyPreparation: false, children: audioSources);
     player.setAudioSource(playlist);
   }
 
@@ -169,9 +169,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print(script);
 
-    // Save the current track index and position
-    final currentIndex = player.currentIndex ?? 0;
-    final currentPosition = player.position;
     print(playlist.children.length);
 
     var newScript = List.from(script);
@@ -186,8 +183,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
     await playlist.addAll(newTracks);
-    await player.load();
-    await player.seek(currentPosition, index: currentIndex);
     if (!widget.generating) {
       calculateFinalTotalDuration();
     }
