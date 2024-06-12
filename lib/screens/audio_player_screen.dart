@@ -223,28 +223,32 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // This method creates a stream of position data
   Stream<PositionData> get _positionDataStream =>
-      Rx.combineLatest3<Duration, Duration, int, PositionData>(
-          player.positionStream.where((_) => !_isPaused),
-          player.durationStream.whereType<Duration>(),
-          player.currentIndexStream.whereType<int>().startWith(0),
-          (position, duration, index) {
+      Rx.combineLatest3<Duration, Duration, int, PositionData?>(
+              player.positionStream.where((_) => !_isPaused),
+              player.durationStream.whereType<Duration>(),
+              player.currentIndexStream.whereType<int>().startWith(0),
+              (position, duration, index) {
+        // Debug prints
+        print("Position: $position, Duration: $duration, Index: $index");
+
+        var previousIndex = index;
+        bool hasIndexChanged = index != previousIndex;
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
-        if (position < duration) {
+        if (hasIndexChanged) {
+          return null;
+        } else if (position < duration) {
           return PositionData(
             position,
-            position + duration, // Buffered position might not be needed as is
             duration,
             cumulativeDuration + position,
           );
         } else {
-          return PositionData(
-            position,
-            position + duration, // Buffered position might not be needed as is
-            duration,
-            cumulativeDuration + duration,
-          );
+          return null;
         }
-      }).distinct((prev, current) => prev.position == current.position);
+      })
+          .where((positionData) => positionData != null)
+          .cast<PositionData>()
+          .distinct((prev, current) => prev.position == current.position);
 
   // This method finds the track index for a position
   int findTrackIndexForPosition(double milliseconds) {
@@ -492,12 +496,10 @@ String formatDuration(Duration d) {
 // This class represents the position data
 class PositionData {
   final Duration position; // Current position within the track
-  final Duration bufferedPosition;
   final Duration duration; // Duration of the current track
   Duration cumulativePosition; // Cumulative position across all tracks
 
-  PositionData(this.position, this.bufferedPosition, this.duration,
-      this.cumulativePosition);
+  PositionData(this.position, this.duration, this.cumulativePosition);
 }
 
 class FirestoreService extends ChangeNotifier {
