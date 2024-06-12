@@ -98,6 +98,7 @@ class _HomeState extends State<Home> {
                               userID: FirebaseAuth.instance.currentUser!.uid,
                               title: audioFile.get('title'),
                               scriptDocumentId: audioFile.id,
+                              generating: false,
                             ),
                           ),
                         );
@@ -137,6 +138,7 @@ class _HomeState extends State<Home> {
                           userID: FirebaseAuth.instance.currentUser!.uid,
                           title: audioFile.get('title'),
                           scriptDocumentId: audioFile.id,
+                          generating: false,
                         ),
                       ),
                     );
