@@ -132,6 +132,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
       setState(() {});
     }
+    if (!widget.generating) {
+      calculateFinalTotalDuration();
+    }
   }
 
   void calculateFinalTotalDuration() {
@@ -182,10 +185,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final newTracks =
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
-    await playlist.addAll(newTracks);
-    if (!widget.generating) {
-      calculateFinalTotalDuration();
-    }
+    playlist.addAll(newTracks);
   }
 
   // This method constructs the URL for a file
@@ -232,33 +232,35 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   // This method creates a stream of position data
-  Stream<PositionData> get _positionDataStream =>
-      Rx.combineLatest3<Duration, Duration, int, PositionData?>(
-              player.positionStream.where((_) => !_isPaused),
-              player.durationStream.whereType<Duration>(),
-              player.currentIndexStream.whereType<int>().startWith(0),
-              (position, duration, index) {
-        // Debug prints
-        print("Position: $position, Duration: $duration, Index: $index");
+  Stream<PositionData> get _positionDataStream {
+    int previousIndex = -1;
+    return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
+            player.positionStream.where((_) => !_isPaused),
+            player.durationStream.whereType<Duration>(),
+            player.currentIndexStream.whereType<int>().startWith(0),
+            (position, duration, index) {
+      // Debug prints
+      print("Position: $position, Duration: $duration, Index: $index");
 
-        var previousIndex = index;
-        bool hasIndexChanged = index != previousIndex;
-        Duration cumulativeDuration = cumulativeDurationUpTo(index);
-        if (hasIndexChanged) {
-          return null;
-        } else if (position < duration) {
-          return PositionData(
-            position,
-            duration,
-            cumulativeDuration + position,
-          );
-        } else {
-          return null;
-        }
-      })
-          .where((positionData) => positionData != null)
-          .cast<PositionData>()
-          .distinct((prev, current) => prev.position == current.position);
+      bool hasIndexChanged = index != previousIndex;
+      previousIndex = index;
+      Duration cumulativeDuration = cumulativeDurationUpTo(index);
+      if (hasIndexChanged) {
+        return null;
+      } else if (position < duration) {
+        return PositionData(
+          position,
+          duration,
+          cumulativeDuration + position,
+        );
+      } else {
+        return null;
+      }
+    })
+        .where((positionData) => positionData != null)
+        .cast<PositionData>()
+        .distinct((prev, current) => prev.position == current.position);
+  }
 
   // This method finds the track index for a position
   int findTrackIndexForPosition(double milliseconds) {
