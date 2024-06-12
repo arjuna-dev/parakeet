@@ -313,6 +313,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       userID: FirebaseAuth
                                           .instance.currentUser!.uid,
                                       scriptDocumentId: scriptDocumentID,
+                                      generating: true,
                                       wordsToRepeat: selectedWords.entries
                                           .expand(
                                               (entry) => entry.value.entries)
