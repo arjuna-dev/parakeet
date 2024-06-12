@@ -16,16 +16,18 @@ class AudioPlayerScreen extends StatefulWidget {
   final String title;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
+  final bool generating;
 
-  const AudioPlayerScreen({
-    Key? key,
-    required this.documentID,
-    required this.dialogue,
-    required this.userID,
-    required this.title,
-    required this.wordsToRepeat,
-    required this.scriptDocumentId,
-  }) : super(key: key);
+  const AudioPlayerScreen(
+      {Key? key,
+      required this.documentID,
+      required this.dialogue,
+      required this.userID,
+      required this.title,
+      required this.wordsToRepeat,
+      required this.scriptDocumentId,
+      required this.generating})
+      : super(key: key);
 
   @override
   AudioPlayerScreenState createState() => AudioPlayerScreenState();
@@ -39,6 +41,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String currentTrack = ''; // The current track
   bool isPlaying = false; // Whether the player is playing
   Duration totalDuration = Duration.zero; // The total duration of all tracks
+  Duration finalTotalDuration = Duration.zero;
   Duration currentPosition =
       Duration.zero; // The current position within the track
   Duration cumulativeTimeBeforeCurrent =
@@ -70,8 +73,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
-    firestoreService = FirestoreService(
-        widget.documentID, updatePlaylist, saveScriptToFirestore);
+    firestoreService = FirestoreService(widget.documentID, widget.generating,
+        updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
     fileDurationUpdate = FileDurationUpdate(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
@@ -96,7 +99,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return {};
   }
 
-  void calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
+  Future<void> calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
@@ -129,6 +132,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
       setState(() {});
     }
+  }
+
+  void calculateFinalTotalDuration() {
+    print("calculate!!!");
+    finalTotalDuration =
+        trackDurations.fold(Duration.zero, (sum, d) => sum + d);
+    print("total : $finalTotalDuration");
+    setState(() {});
   }
 
   // This method initializes the playlist
@@ -177,6 +188,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await playlist.addAll(newTracks);
     await player.load();
     await player.seek(currentPosition, index: currentIndex);
+    if (!widget.generating) {
+      calculateFinalTotalDuration();
+    }
   }
 
   // This method constructs the URL for a file
@@ -195,7 +209,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return fileUrl;
   }
 
-  void saveScriptToFirestore() async {
+  void saveScriptToFirestoreAndUpdateTrack() async {
+    print("yay!");
     DocumentReference docRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)
@@ -210,7 +225,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
-      calculateTotalDurationAndUpdateTrackDurations(querySnap);
+      await calculateTotalDurationAndUpdateTrackDurations(querySnap);
     }
   }
 
@@ -350,7 +365,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         },
                       ),
                       Text(
-                        "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(totalDuration)}",
+                        finalTotalDuration == Duration.zero
+                            ? formatDuration(isPlaying
+                                ? positionData.cumulativePosition
+                                : Duration(milliseconds: savedPosition))
+                            : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
                       ),
                     ],
                   );
@@ -505,12 +524,12 @@ class PositionData {
 class FirestoreService extends ChangeNotifier {
   late Stream<QuerySnapshot> _stream;
   Function updatePlaylist;
-  Function saveScriptToFirestore;
+  Function saveScriptToFirestoreAndUpdateTrack;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
-  FirestoreService(
-      String documentID, this.updatePlaylist, this.saveScriptToFirestore) {
+  FirestoreService(String documentID, bool generating, this.updatePlaylist,
+      this.saveScriptToFirestoreAndUpdateTrack) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
@@ -519,20 +538,20 @@ class FirestoreService extends ChangeNotifier {
     // Use debounce to process updates in batches
     _stream.listen((snapshot) {
       queue.add(snapshot);
-      processQueue(saveScriptToFirestore);
+      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
     });
   }
 
-  Future<void> processQueue(saveScriptToFirestore) async {
+  Future<void> processQueue(
+      saveScriptToFirestoreAndUpdateTrack, generating) async {
     if (!isUpdating && queue.isNotEmpty) {
       isUpdating = true;
       await updatePlaylist(queue.removeFirst());
       isUpdating = false;
-      if (queue.isEmpty) {
-        // save script to firestore
-        saveScriptToFirestore();
+      if (queue.isEmpty && generating) {
+        saveScriptToFirestoreAndUpdateTrack();
       }
-      processQueue(saveScriptToFirestore);
+      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
     }
   }
 
