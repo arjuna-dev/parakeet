@@ -53,7 +53,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int? _lastMatchedIndex;
   List<dynamic> script = [];
   Map<String, dynamic>? audioDurations = {};
-  bool _isDisposed = false; // Cancellation token
   Future<Map<String, dynamic>>?
       cachedAudioDurations; // Future to cache audio durations
 
@@ -103,26 +102,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
-    if (_isDisposed) return; // Check cancellation token
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
 
     var narratorAudioDurations = await getAudioDurationsFromNarratorStorage();
-    print(narratorAudioDurations);
     audioDurations!.addAll(narratorAudioDurations);
 
-    print(audioDurations);
-
     if (audioDurations!.isNotEmpty) {
-      print(script);
       for (int i = 0; i < script.length; i++) {
-        print(script[i]);
         String fileName = script[i];
-        print("horrray!");
-        print(fileName);
         double durationInSeconds = 0.0;
-        //print(audioDurations);
         if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
         } else {
@@ -131,7 +121,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
-        print(totalDuration);
         trackDurations[i] = duration;
       }
       setState(() {});
@@ -164,10 +153,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylist(snapshot) async {
-    if (_isDisposed) return; // Check cancellation token
-    print("updating!!!");
     try {
-      print(snapshot.docs[0].data() as Map<String, dynamic>);
       script = script_generator.parseAndCreateScript(
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
@@ -175,14 +161,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     } catch (e) {
       return;
     }
-    print(script);
-
-    print(playlist.children.length);
 
     var newScript = List.from(script);
     // to not add tracks already added to the playlist
     newScript.removeRange(0, playlist.children.length);
-    print(newScript);
 
     // Construct URLs for the new files
     List<String> fileUrls =
@@ -210,7 +192,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updateTrack() async {
-    if (_isDisposed) return; // Check cancellation token
     CollectionReference colRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)
@@ -237,7 +218,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             player.currentIndexStream.whereType<int>().startWith(0),
             (position, duration, index) {
       // Debug prints
-      print("Position: $position, Duration: $duration, Index: $index");
+      //print("Position: $position, Duration: $duration, Index: $index");
 
       bool hasIndexChanged = index != previousIndex;
       previousIndex = index;
@@ -282,7 +263,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             leading: IconButton(
               icon: const Icon(Icons.home),
               onPressed: () {
-                dispose();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                       builder: (context) =>
@@ -494,7 +474,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
-    _isDisposed = true;
     super.dispose();
   }
 }
