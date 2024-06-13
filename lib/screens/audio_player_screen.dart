@@ -73,9 +73,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
-    firestoreService = FirestoreService(widget.documentID, widget.generating,
-        updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
-    fileDurationUpdate = FileDurationUpdate(
+    firestoreService = FirestoreService.getInstance(widget.documentID,
+        widget.generating, updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+    fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
 
@@ -519,20 +519,31 @@ class PositionData {
 }
 
 class FirestoreService extends ChangeNotifier {
+  static FirestoreService? _instance;
+
   late Stream<QuerySnapshot> _stream;
   Function updatePlaylist;
   Function saveScriptToFirestoreAndUpdateTrack;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
-  FirestoreService(String documentID, bool generating, this.updatePlaylist,
-      this.saveScriptToFirestoreAndUpdateTrack) {
+  FirestoreService._privateConstructor(
+      this.updatePlaylist, this.saveScriptToFirestoreAndUpdateTrack);
+
+  static FirestoreService getInstance(String documentID, bool generating,
+      Function updatePlaylist, Function saveScriptToFirestoreAndUpdateTrack) {
+    _instance ??= FirestoreService._privateConstructor(
+        updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+    _instance!._initializeStream(documentID, generating);
+    return _instance!;
+  }
+
+  void _initializeStream(String documentID, bool generating) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
         .collection('all_breakdowns')
         .snapshots();
-    // Use debounce to process updates in batches
     _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
@@ -553,22 +564,40 @@ class FirestoreService extends ChangeNotifier {
   }
 
   Stream<QuerySnapshot> get stream => _stream;
+
+  @override
+  void dispose() {
+    _instance = null;
+    queue.clear();
+    super.dispose();
+  }
 }
 
 class FileDurationUpdate extends ChangeNotifier {
+  static FileDurationUpdate? _instance;
+
   late Stream<QuerySnapshot> _stream;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
   Function calculateTotalDurationAndUpdateTrackDurations;
 
-  FileDurationUpdate(
-      String documentID, this.calculateTotalDurationAndUpdateTrackDurations) {
+  FileDurationUpdate._privateConstructor(
+      this.calculateTotalDurationAndUpdateTrackDurations);
+
+  static FileDurationUpdate getInstance(String documentID,
+      Function calculateTotalDurationAndUpdateTrackDurations) {
+    _instance ??= FileDurationUpdate._privateConstructor(
+        calculateTotalDurationAndUpdateTrackDurations);
+    _instance!._initializeStream(documentID);
+    return _instance!;
+  }
+
+  void _initializeStream(String documentID) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
         .collection('file_durations')
         .snapshots();
-    // Use debounce to process updates in batches
     _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue();
@@ -585,4 +614,11 @@ class FileDurationUpdate extends ChangeNotifier {
   }
 
   Stream<QuerySnapshot> get stream => _stream;
+
+  @override
+  void dispose() {
+    _instance = null;
+    queue.clear();
+    super.dispose();
+  }
 }
