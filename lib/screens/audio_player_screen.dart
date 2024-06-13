@@ -111,6 +111,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     audioDurations!.addAll(narratorAudioDurations);
 
     if (audioDurations!.isNotEmpty) {
+      print("audioDurations: $audioDurations");
       for (int i = 0; i < script.length; i++) {
         String fileName = script[i];
         double durationInSeconds = 0.0;
@@ -126,9 +127,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
       setState(() {});
     }
-    if (!widget.generating) {
-      calculateFinalTotalDuration();
-    }
+
     if (updateNumber == widget.dialogue.length) {
       calculateFinalTotalDuration();
     }
@@ -178,6 +177,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     playlist.addAll(newTracks);
     updateNumber++;
+    if (!widget.generating) {
+      await updateTrack();
+      calculateFinalTotalDuration();
+    }
     print("updated!!");
   }
 
@@ -197,7 +200,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return fileUrl;
   }
 
-  void updateTrack() async {
+  Future<void> updateTrack() async {
     CollectionReference colRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)

@@ -38,12 +38,14 @@ class _CreateLessonState extends State<CreateLesson> {
     super.initState();
     _controller.text = example_scenarios[
         Random().nextInt(example_scenarios.length)]; // Set initial random topic
+    topic = _controller.text;
   }
 
   void regenerateTopic() {
     setState(() {
       _controller.text = example_scenarios[Random()
           .nextInt(example_scenarios.length)]; // Update with new random topic
+      topic = _controller.text;
     });
   }
 
@@ -83,6 +85,9 @@ class _CreateLessonState extends State<CreateLesson> {
                       ),
                       onChanged: (value) {
                         // You can still handle changes here if needed
+                        setState(() {
+                          topic = value;
+                        });
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -199,6 +204,7 @@ class _CreateLessonState extends State<CreateLesson> {
                           );
 
                           try {
+                            print("topic: $topic");
                             final FirebaseFirestore firestore =
                                 FirebaseFirestore.instance;
                             final DocumentReference docRef =
