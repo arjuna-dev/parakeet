@@ -39,7 +39,6 @@ List<String> parseAndCreateScript(
   script = createFirstScript(dialogue);
 
   List<int> sentenceNumberExcludeList = [];
-  print(data);
   // Process each turn in the dialogue
   for (int i = 0; i < data.length; i++) {
     if ((data[i] as Map).isNotEmpty) {
