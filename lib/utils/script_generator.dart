@@ -73,6 +73,7 @@ List<String> parseAndCreateScript(
             String narratorTranslation =
                 "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
             narratorTranslationsChunk.add(narratorTranslation);
+            narratorTranslationsChunk.add("one_second_break");
           }
 
           String splitNative =
