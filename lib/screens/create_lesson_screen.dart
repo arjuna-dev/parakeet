@@ -95,7 +95,7 @@ class _CreateLessonState extends State<CreateLesson> {
                     TextField(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: 'Keywords',
+                        labelText: 'Enter keywords in any language',
                       ),
                       onChanged: (value) {
                         setState(() {
