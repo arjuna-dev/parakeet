@@ -52,6 +52,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _isPaused = false; // Whether the player is paused
   int? _lastMatchedIndex;
   List<dynamic> script = [];
+  int updateNumber = 0;
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>?
       cachedAudioDurations; // Future to cache audio durations
@@ -128,6 +129,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!widget.generating) {
       calculateFinalTotalDuration();
     }
+    if (updateNumber == widget.dialogue.length) {
+      calculateFinalTotalDuration();
+    }
   }
 
   void calculateFinalTotalDuration() {
@@ -173,6 +177,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
     playlist.addAll(newTracks);
+    updateNumber++;
+    print("updated!!");
   }
 
   // This method constructs the URL for a file
