@@ -116,9 +116,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         double durationInSeconds = 0.0;
         if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
-        } else {
-          print('file not found');
         }
+        // else {
+        //   print('file not found');
+        // }
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;

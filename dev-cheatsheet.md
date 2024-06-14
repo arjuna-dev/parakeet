@@ -53,3 +53,24 @@ Try cleaning if something go wrong:
 ```
 flutter clean
 ```
+
+How to get a DEBUG SHA-1 key to add to GCP or firestore:
+(or replace ~/.android/debug.keystore with your path)
+
+```
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+```
+
+How to get a RELEASE SHA-1 key to add to GCP or firestore:
+
+(or replace ~/.android/release.keystore with your path)
+
+```
+keytool -list -v -keystore ~/.android/release.keystore -alias parakeetreleasekeystore -storepass Ilove@alllanguages
+```
+
+To run on device as emulator and print to a file to not loose the lines in the console: select the device, plug it in, tun command:
+
+```
+flutter run > flutter_output.txt
+```

@@ -118,39 +118,39 @@ List<String> parseAndCreateScript(
         }
       }
       // Active recall sequence
-      if (i != 0) {
-        if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
-          List<int> validSentences = List<int>.generate(i + 1, (index) => index)
-            ..removeWhere(
-                (element) => sentenceNumberExcludeList.contains(element));
-          if (validSentences.isEmpty) {
-            break;
-          }
-          int randomSentenceI =
-              validSentences[Random().nextInt(validSentences.length)];
-          int numberOfChunks =
-              data[randomSentenceI]["split_sentence"].length - 1;
-          List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
-            ..removeWhere(
-                (element) => chunkNumberExcludeList.contains(element));
-          if (validChunks.isEmpty) {
-            break;
-          }
-          int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
-          String target =
-              "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
-          String native =
-              "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
-          List<String> activeRecallSequence =
-              sequences.activeRecallSequence1(native, target);
-          script.addAll(activeRecallSequence);
-        } else {
-          sentenceNumberExcludeList.add(i);
-        }
-      } else if (chunkNumberExcludeList.length ==
-          data[i]["split_sentence"].length) {
-        sentenceNumberExcludeList.add(i);
-      }
+      // if (i != 0) {
+      //   if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
+      //     List<int> validSentences = List<int>.generate(i + 1, (index) => index)
+      //       ..removeWhere(
+      //           (element) => sentenceNumberExcludeList.contains(element));
+      //     if (validSentences.isEmpty) {
+      //       break;
+      //     }
+      //     int randomSentenceI =
+      //         validSentences[Random().nextInt(validSentences.length)];
+      //     int numberOfChunks =
+      //         data[randomSentenceI]["split_sentence"].length - 1;
+      //     List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
+      //       ..removeWhere(
+      //           (element) => chunkNumberExcludeList.contains(element));
+      //     if (validChunks.isEmpty) {
+      //       break;
+      //     }
+      //     int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
+      //     String target =
+      //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
+      //     String native =
+      //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
+      //     List<String> activeRecallSequence =
+      //         sequences.activeRecallSequence1(native, target);
+      //     script.addAll(activeRecallSequence);
+      //   } else {
+      //     sentenceNumberExcludeList.add(i);
+      //   }
+      // } else if (chunkNumberExcludeList.length ==
+      //     data[i]["split_sentence"].length) {
+      //   sentenceNumberExcludeList.add(i);
+      // }
     }
   }
   return script;

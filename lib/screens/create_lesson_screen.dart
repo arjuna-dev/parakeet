@@ -160,7 +160,7 @@ class _CreateLessonState extends State<CreateLesson> {
                           length = value.toString();
                         });
                       },
-                      items: List<int>.generate(9, (i) => i + 2)
+                      items: List<int>.generate(4, (i) => i + 2)
                           .map<DropdownMenuItem<int>>((int value) {
                         return DropdownMenuItem<int>(
                           value: value,
