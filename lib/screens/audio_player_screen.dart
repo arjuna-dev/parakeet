@@ -16,16 +16,18 @@ class AudioPlayerScreen extends StatefulWidget {
   final String title;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
+  final bool generating;
 
-  const AudioPlayerScreen({
-    Key? key,
-    required this.documentID,
-    required this.dialogue,
-    required this.userID,
-    required this.title,
-    required this.wordsToRepeat,
-    required this.scriptDocumentId,
-  }) : super(key: key);
+  const AudioPlayerScreen(
+      {Key? key,
+      required this.documentID,
+      required this.dialogue,
+      required this.userID,
+      required this.title,
+      required this.wordsToRepeat,
+      required this.scriptDocumentId,
+      required this.generating})
+      : super(key: key);
 
   @override
   AudioPlayerScreenState createState() => AudioPlayerScreenState();
@@ -39,6 +41,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String currentTrack = ''; // The current track
   bool isPlaying = false; // Whether the player is playing
   Duration totalDuration = Duration.zero; // The total duration of all tracks
+  Duration finalTotalDuration = Duration.zero;
   Duration currentPosition =
       Duration.zero; // The current position within the track
   Duration cumulativeTimeBeforeCurrent =
@@ -70,9 +73,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
-    firestoreService = FirestoreService(
-        widget.documentID, updatePlaylist, saveScriptToFirestore);
-    fileDurationUpdate = FileDurationUpdate(
+    firestoreService = FirestoreService.getInstance(widget.documentID,
+        widget.generating, updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+    fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
 
@@ -96,7 +99,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return {};
   }
 
-  void calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
+  Future<void> calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
@@ -129,6 +132,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
       setState(() {});
     }
+    if (!widget.generating) {
+      calculateFinalTotalDuration();
+    }
+  }
+
+  void calculateFinalTotalDuration() {
+    print("calculate!!!");
+    finalTotalDuration =
+        trackDurations.fold(Duration.zero, (sum, d) => sum + d);
+    print("total : $finalTotalDuration");
+    setState(() {});
   }
 
   // This method initializes the playlist
@@ -141,7 +155,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .map((url) => AudioSource.uri(Uri.parse(url)))
         .toList();
     playlist = ConcatenatingAudioSource(
-        useLazyPreparation: true, children: audioSources);
+        useLazyPreparation: false, children: audioSources);
     player.setAudioSource(playlist);
   }
 
@@ -158,9 +172,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print(script);
 
-    // Save the current track index and position
-    final currentIndex = player.currentIndex ?? 0;
-    final currentPosition = player.position;
     print(playlist.children.length);
 
     var newScript = List.from(script);
@@ -174,9 +185,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final newTracks =
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
-    await playlist.addAll(newTracks);
-    await player.load();
-    await player.seek(currentPosition, index: currentIndex);
+    playlist.addAll(newTracks);
   }
 
   // This method constructs the URL for a file
@@ -195,7 +204,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return fileUrl;
   }
 
-  void saveScriptToFirestore() async {
+  void saveScriptToFirestoreAndUpdateTrack() async {
+    print("yay!");
     DocumentReference docRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)
@@ -210,7 +220,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
-      calculateTotalDurationAndUpdateTrackDurations(querySnap);
+      await calculateTotalDurationAndUpdateTrackDurations(querySnap);
     }
   }
 
@@ -222,29 +232,35 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   // This method creates a stream of position data
-  Stream<PositionData> get _positionDataStream =>
-      Rx.combineLatest3<Duration, Duration, int, PositionData>(
-          player.positionStream.where((_) => !_isPaused),
-          player.durationStream.whereType<Duration>(),
-          player.currentIndexStream.whereType<int>().startWith(0),
-          (position, duration, index) {
-        Duration cumulativeDuration = cumulativeDurationUpTo(index);
-        if (position < duration) {
-          return PositionData(
-            position,
-            position + duration, // Buffered position might not be needed as is
-            duration,
-            cumulativeDuration + position,
-          );
-        } else {
-          return PositionData(
-            position,
-            position + duration, // Buffered position might not be needed as is
-            duration,
-            cumulativeDuration + duration,
-          );
-        }
-      }).distinct((prev, current) => prev.position == current.position);
+  Stream<PositionData> get _positionDataStream {
+    int previousIndex = -1;
+    return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
+            player.positionStream.where((_) => !_isPaused),
+            player.durationStream.whereType<Duration>(),
+            player.currentIndexStream.whereType<int>().startWith(0),
+            (position, duration, index) {
+      // Debug prints
+      print("Position: $position, Duration: $duration, Index: $index");
+
+      bool hasIndexChanged = index != previousIndex;
+      previousIndex = index;
+      Duration cumulativeDuration = cumulativeDurationUpTo(index);
+      if (hasIndexChanged) {
+        return null;
+      } else if (position < duration) {
+        return PositionData(
+          position,
+          duration,
+          cumulativeDuration + position,
+        );
+      } else {
+        return null;
+      }
+    })
+        .where((positionData) => positionData != null)
+        .cast<PositionData>()
+        .distinct((prev, current) => prev.position == current.position);
+  }
 
   // This method finds the track index for a position
   int findTrackIndexForPosition(double milliseconds) {
@@ -325,7 +341,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             ? positionData.cumulativePosition.inMilliseconds
                                 .clamp(0, totalDuration.inMilliseconds)
                                 .toDouble()
-                            : savedPosition.toDouble(),
+                            : savedPosition
+                                .clamp(0, totalDuration.inMilliseconds)
+                                .toDouble(),
                         onChanged: (value) {
                           final trackIndex = findTrackIndexForPosition(value);
                           player.seek(
@@ -335,6 +353,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                           .inMilliseconds),
                               index: trackIndex);
                           if (_isPaused) {
+                            _pause();
                             setState(() {
                               positionData.cumulativePosition =
                                   Duration(milliseconds: value.toInt());
@@ -343,7 +362,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         },
                       ),
                       Text(
-                        "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(totalDuration)}",
+                        finalTotalDuration == Duration.zero
+                            ? formatDuration(isPlaying
+                                ? positionData.cumulativePosition
+                                : Duration(milliseconds: savedPosition))
+                            : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
                       ),
                     ],
                   );
@@ -489,65 +512,92 @@ String formatDuration(Duration d) {
 // This class represents the position data
 class PositionData {
   final Duration position; // Current position within the track
-  final Duration bufferedPosition;
   final Duration duration; // Duration of the current track
   Duration cumulativePosition; // Cumulative position across all tracks
 
-  PositionData(this.position, this.bufferedPosition, this.duration,
-      this.cumulativePosition);
+  PositionData(this.position, this.duration, this.cumulativePosition);
 }
 
 class FirestoreService extends ChangeNotifier {
+  static FirestoreService? _instance;
+
   late Stream<QuerySnapshot> _stream;
   Function updatePlaylist;
-  Function saveScriptToFirestore;
+  Function saveScriptToFirestoreAndUpdateTrack;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
-  FirestoreService(
-      String documentID, this.updatePlaylist, this.saveScriptToFirestore) {
+  FirestoreService._privateConstructor(
+      this.updatePlaylist, this.saveScriptToFirestoreAndUpdateTrack);
+
+  static FirestoreService getInstance(String documentID, bool generating,
+      Function updatePlaylist, Function saveScriptToFirestoreAndUpdateTrack) {
+    _instance ??= FirestoreService._privateConstructor(
+        updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+    _instance!._initializeStream(documentID, generating);
+    return _instance!;
+  }
+
+  void _initializeStream(String documentID, bool generating) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
         .collection('all_breakdowns')
         .snapshots();
-    // Use debounce to process updates in batches
     _stream.listen((snapshot) {
       queue.add(snapshot);
-      processQueue(saveScriptToFirestore);
+      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
     });
   }
 
-  Future<void> processQueue(saveScriptToFirestore) async {
+  Future<void> processQueue(
+      saveScriptToFirestoreAndUpdateTrack, generating) async {
     if (!isUpdating && queue.isNotEmpty) {
       isUpdating = true;
       await updatePlaylist(queue.removeFirst());
       isUpdating = false;
-      if (queue.isEmpty) {
-        // save script to firestore
-        saveScriptToFirestore();
+      if (queue.isEmpty && generating) {
+        saveScriptToFirestoreAndUpdateTrack();
       }
-      processQueue(saveScriptToFirestore);
+      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
     }
   }
 
   Stream<QuerySnapshot> get stream => _stream;
+
+  @override
+  void dispose() {
+    _instance = null;
+    queue.clear();
+    super.dispose();
+  }
 }
 
 class FileDurationUpdate extends ChangeNotifier {
+  static FileDurationUpdate? _instance;
+
   late Stream<QuerySnapshot> _stream;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
   Function calculateTotalDurationAndUpdateTrackDurations;
 
-  FileDurationUpdate(
-      String documentID, this.calculateTotalDurationAndUpdateTrackDurations) {
+  FileDurationUpdate._privateConstructor(
+      this.calculateTotalDurationAndUpdateTrackDurations);
+
+  static FileDurationUpdate getInstance(String documentID,
+      Function calculateTotalDurationAndUpdateTrackDurations) {
+    _instance ??= FileDurationUpdate._privateConstructor(
+        calculateTotalDurationAndUpdateTrackDurations);
+    _instance!._initializeStream(documentID);
+    return _instance!;
+  }
+
+  void _initializeStream(String documentID) {
     _stream = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(documentID)
         .collection('file_durations')
         .snapshots();
-    // Use debounce to process updates in batches
     _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue();
@@ -564,4 +614,11 @@ class FileDurationUpdate extends ChangeNotifier {
   }
 
   Stream<QuerySnapshot> get stream => _stream;
+
+  @override
+  void dispose() {
+    _instance = null;
+    queue.clear();
+    super.dispose();
+  }
 }
