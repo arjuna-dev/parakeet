@@ -144,8 +144,10 @@ class _LibraryState extends State<Library> {
                                         .parent!
                                         .id,
                                     dialogue: documents[index].get('dialogue'),
-                                    userID: documents[index].get('user_ID'),
+                                    userID:
+                                        FirebaseAuth.instance.currentUser!.uid,
                                     title: documents[index].get('title'),
+                                    generating: false,
                                     wordsToRepeat:
                                         documents[index].get('words_to_repeat'),
                                     scriptDocumentId: documents[index].id,
