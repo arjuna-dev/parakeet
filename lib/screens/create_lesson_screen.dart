@@ -25,7 +25,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var keywords = '';
   var nativeLanguage = 'English';
   var targetLanguage = 'German';
-  var length = '';
+  var length = '4';
   var languageLevel = 'A1';
   final TextEditingController _controller = TextEditingController();
 
@@ -154,7 +154,7 @@ class _CreateLessonState extends State<CreateLesson> {
                         border: OutlineInputBorder(),
                         labelText: 'Number of sentences',
                       ),
-                      value: 4,
+                      value: int.parse(length),
                       onChanged: (value) {
                         setState(() {
                           length = value.toString();
