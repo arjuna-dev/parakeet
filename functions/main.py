@@ -15,7 +15,7 @@ import concurrent.futures
 
 import os
 
-options.set_global_options(region="europe-west1", memory=512, timeout_sec=499)
+options.set_global_options(region="europe-west1", memory=512, timeout_sec=1000)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
 
