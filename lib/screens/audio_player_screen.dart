@@ -111,7 +111,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     audioDurations!.addAll(narratorAudioDurations);
 
     if (audioDurations!.isNotEmpty) {
-      print("audioDurations: $audioDurations");
       for (int i = 0; i < script.length; i++) {
         String fileName = script[i];
         double durationInSeconds = 0.0;
@@ -157,11 +156,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
+      print(snapshot.docs[0].data()["dialogue"]);
+      print(widget.dialogue);
       script = script_generator.parseAndCreateScript(
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
           widget.dialogue);
     } catch (e) {
+      print("Errors: $e");
       return;
     }
 

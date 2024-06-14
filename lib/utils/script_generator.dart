@@ -123,6 +123,9 @@ List<String> parseAndCreateScript(
           List<int> validSentences = List<int>.generate(i + 1, (index) => index)
             ..removeWhere(
                 (element) => sentenceNumberExcludeList.contains(element));
+          if (validSentences.isEmpty) {
+            break;
+          }
           int randomSentenceI =
               validSentences[Random().nextInt(validSentences.length)];
           int numberOfChunks =
@@ -130,6 +133,9 @@ List<String> parseAndCreateScript(
           List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
             ..removeWhere(
                 (element) => chunkNumberExcludeList.contains(element));
+          if (validChunks.isEmpty) {
+            break;
+          }
           int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
           String target =
               "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
