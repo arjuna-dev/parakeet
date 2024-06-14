@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auralearn/screens/home_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -50,6 +52,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _isPaused = false; // Whether the player is paused
   int? _lastMatchedIndex;
   List<dynamic> script = [];
+  int updateNumber = 0;
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>?
       cachedAudioDurations; // Future to cache audio durations
@@ -73,8 +76,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
-    firestoreService = FirestoreService.getInstance(widget.documentID,
-        widget.generating, updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+    firestoreService = FirestoreService.getInstance(
+        widget.documentID, widget.generating, updatePlaylist, updateTrack);
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
@@ -105,20 +108,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
 
     var narratorAudioDurations = await getAudioDurationsFromNarratorStorage();
-    print(narratorAudioDurations);
     audioDurations!.addAll(narratorAudioDurations);
 
-    print(audioDurations);
-
     if (audioDurations!.isNotEmpty) {
-      print(script);
+      print("audioDurations: $audioDurations");
       for (int i = 0; i < script.length; i++) {
-        print(script[i]);
         String fileName = script[i];
-        print("horrray!");
-        print(fileName);
         double durationInSeconds = 0.0;
-        //print(audioDurations);
         if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
         } else {
@@ -127,12 +123,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
-        print(totalDuration);
         trackDurations[i] = duration;
       }
       setState(() {});
     }
-    if (!widget.generating) {
+
+    if (updateNumber == widget.dialogue.length) {
       calculateFinalTotalDuration();
     }
   }
@@ -160,9 +156,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylist(snapshot) async {
-    print("updating!!!");
     try {
-      print(snapshot.docs[0].data() as Map<String, dynamic>);
       script = script_generator.parseAndCreateScript(
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
@@ -170,14 +164,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     } catch (e) {
       return;
     }
-    print(script);
-
-    print(playlist.children.length);
 
     var newScript = List.from(script);
     // to not add tracks already added to the playlist
     newScript.removeRange(0, playlist.children.length);
-    print(newScript);
 
     // Construct URLs for the new files
     List<String> fileUrls =
@@ -186,6 +176,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
     playlist.addAll(newTracks);
+    updateNumber++;
+    if (!widget.generating) {
+      await updateTrack();
+      calculateFinalTotalDuration();
+    }
+    print("updated!!");
   }
 
   // This method constructs the URL for a file
@@ -204,16 +200,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return fileUrl;
   }
 
-  void saveScriptToFirestoreAndUpdateTrack() async {
-    print("yay!");
-    DocumentReference docRef = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(widget.documentID)
-        .collection('script')
-        .doc(widget.scriptDocumentId);
-    await docRef.update({
-      "script": script,
-    });
+  Future<void> updateTrack() async {
     CollectionReference colRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
         .doc(widget.documentID)
@@ -240,7 +227,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             player.currentIndexStream.whereType<int>().startWith(0),
             (position, duration, index) {
       // Debug prints
-      print("Position: $position, Duration: $duration, Index: $index");
+      //print("Position: $position, Duration: $duration, Index: $index");
 
       bool hasIndexChanged = index != previousIndex;
       previousIndex = index;
@@ -285,7 +272,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             leading: IconButton(
               icon: const Icon(Icons.home),
               onPressed: () {
-                dispose();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                       builder: (context) =>
@@ -522,18 +508,18 @@ class FirestoreService extends ChangeNotifier {
   static FirestoreService? _instance;
 
   late Stream<QuerySnapshot> _stream;
+  StreamSubscription<QuerySnapshot>? _streamSubscription;
   Function updatePlaylist;
-  Function saveScriptToFirestoreAndUpdateTrack;
+  Function updateTrack;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
-  FirestoreService._privateConstructor(
-      this.updatePlaylist, this.saveScriptToFirestoreAndUpdateTrack);
+  FirestoreService._privateConstructor(this.updatePlaylist, this.updateTrack);
 
   static FirestoreService getInstance(String documentID, bool generating,
-      Function updatePlaylist, Function saveScriptToFirestoreAndUpdateTrack) {
-    _instance ??= FirestoreService._privateConstructor(
-        updatePlaylist, saveScriptToFirestoreAndUpdateTrack);
+      Function updatePlaylist, Function updateTrack) {
+    _instance ??=
+        FirestoreService._privateConstructor(updatePlaylist, updateTrack);
     _instance!._initializeStream(documentID, generating);
     return _instance!;
   }
@@ -544,22 +530,21 @@ class FirestoreService extends ChangeNotifier {
         .doc(documentID)
         .collection('all_breakdowns')
         .snapshots();
-    _stream.listen((snapshot) {
+    _streamSubscription = _stream.listen((snapshot) {
       queue.add(snapshot);
-      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
+      processQueue(updateTrack, generating);
     });
   }
 
-  Future<void> processQueue(
-      saveScriptToFirestoreAndUpdateTrack, generating) async {
+  Future<void> processQueue(updateTrack, generating) async {
     if (!isUpdating && queue.isNotEmpty) {
       isUpdating = true;
       await updatePlaylist(queue.removeFirst());
       isUpdating = false;
       if (queue.isEmpty && generating) {
-        saveScriptToFirestoreAndUpdateTrack();
+        updateTrack();
       }
-      processQueue(saveScriptToFirestoreAndUpdateTrack, generating);
+      processQueue(updateTrack, generating);
     }
   }
 
@@ -567,6 +552,7 @@ class FirestoreService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _streamSubscription?.cancel();
     _instance = null;
     queue.clear();
     super.dispose();
@@ -577,6 +563,7 @@ class FileDurationUpdate extends ChangeNotifier {
   static FileDurationUpdate? _instance;
 
   late Stream<QuerySnapshot> _stream;
+  StreamSubscription<QuerySnapshot>? _streamSubscription;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
   Function calculateTotalDurationAndUpdateTrackDurations;
@@ -598,7 +585,7 @@ class FileDurationUpdate extends ChangeNotifier {
         .doc(documentID)
         .collection('file_durations')
         .snapshots();
-    _stream.listen((snapshot) {
+    _streamSubscription = _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue();
     });
@@ -617,6 +604,7 @@ class FileDurationUpdate extends ChangeNotifier {
 
   @override
   void dispose() {
+    _streamSubscription?.cancel();
     _instance = null;
     queue.clear();
     super.dispose();
