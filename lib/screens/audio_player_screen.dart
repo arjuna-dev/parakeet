@@ -325,7 +325,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     children: [
                       Slider(
                         min: 0.0,
-                        max: totalDuration.inMilliseconds.toDouble(),
+                        max: widget.generating
+                            ? totalDuration.inMilliseconds.toDouble()
+                            : finalTotalDuration.inMilliseconds.toDouble(),
                         value: isPlaying
                             ? positionData.cumulativePosition.inMilliseconds
                                 .clamp(0, totalDuration.inMilliseconds)
