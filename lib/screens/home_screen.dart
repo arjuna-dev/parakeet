@@ -119,6 +119,8 @@ class _HomeState extends State<Home> {
             itemCount: model.favoriteAudioFiles.length,
             itemBuilder: (context, index) {
               final audioFile = model.favoriteAudioFiles[index];
+              print("itemCount");
+              print(model.favoriteAudioFiles.length);
               return Card(
                 child: ListTile(
                   title: Text(audioFile.get('title')),
