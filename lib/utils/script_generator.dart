@@ -55,102 +55,108 @@ List<String> parseAndCreateScript(
 
       List<int> chunkNumberExcludeList = [];
 
-      // Process split_sentence items
-      for (int j = 0; j < data[i]["split_sentence"].length; j++) {
-        // Check if user wants to repeat the split sentence (only if at least one word they want is there)
-        if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
-                ["target_language"]
-            .split(' ')
-            .contains(element))) {
-          String text = data[i]["split_sentence"][j]["narrator_translation"];
+      // Process words in the sentence
+      if (wordsToRepeat.any((element) =>
+          data[i]["target_language"].split(' ').contains(element))) {
+        // Process split_sentence items
+        for (int j = 0; j < data[i]["split_sentence"].length; j++) {
+          // Check if user wants to repeat the split sentence (only if at least one word they want is there)
+          if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
+                  ["target_language"]
+              .split(' ')
+              .contains(element))) {
+            String text = data[i]["split_sentence"][j]["narrator_translation"];
 
-          // Classify and process the text into parts enclosed by || (target_language text)
-          List<Map<String, dynamic>> classifiedText1 =
-              extractAndClassifyEnclosedWords(text);
-          List<String> narratorTranslationsChunk = [];
-          for (int index = 0; index < classifiedText1.length; index++) {
-            String narratorTranslation =
-                "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
-            narratorTranslationsChunk.add(narratorTranslation);
-            narratorTranslationsChunk.add("one_second_break");
-          }
-
-          String splitNative =
-              "dialogue_${i}_split_sentence_${j}_native_language";
-          String splitTarget =
-              "dialogue_${i}_split_sentence_${j}_target_language";
-
-          List<Map<String, dynamic>> wordObjects = [];
-          for (int index = 0;
-              index < data[i]["split_sentence"][j]['words'].length;
-              index++) {
-            if (wordsToRepeat.contains(data[i]["split_sentence"][j]['words']
-                [index]["target_language"])) {
-              String wordFile =
-                  "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
-              String text = data[i]["split_sentence"][j]['words'][index]
-                  ["narrator_translation"];
-
-              // Classify and process the text into parts enclosed by || (target_language text)
-              List<Map<String, dynamic>> classifiedText2 =
-                  extractAndClassifyEnclosedWords(text);
-              List<String> narratorTranslations = [];
-              for (int index2 = 0; index2 < classifiedText2.length; index2++) {
-                String narratorTranslation =
-                    "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_$index2";
-                narratorTranslations.add(narratorTranslation);
-              }
-
-              wordObjects
-                  .add({"word": wordFile, "translation": narratorTranslations});
+            // Classify and process the text into parts enclosed by || (target_language text)
+            List<Map<String, dynamic>> classifiedText1 =
+                extractAndClassifyEnclosedWords(text);
+            List<String> narratorTranslationsChunk = [];
+            for (int index = 0; index < classifiedText1.length; index++) {
+              String narratorTranslation =
+                  "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
+              narratorTranslationsChunk.add(narratorTranslation);
+              narratorTranslationsChunk.add("one_second_break");
             }
-          }
 
-          List<String> chunkSequence = sequences.chunkSequence1(
-              narratorTranslationsChunk,
-              splitNative,
-              splitTarget,
-              wordObjects,
-              j);
-          script.addAll(chunkSequence);
-        } else {
-          chunkNumberExcludeList.add(j);
+            String splitNative =
+                "dialogue_${i}_split_sentence_${j}_native_language";
+            String splitTarget =
+                "dialogue_${i}_split_sentence_${j}_target_language";
+
+            List<Map<String, dynamic>> wordObjects = [];
+            for (int index = 0;
+                index < data[i]["split_sentence"][j]['words'].length;
+                index++) {
+              if (wordsToRepeat.contains(data[i]["split_sentence"][j]['words']
+                  [index]["target_language"])) {
+                String wordFile =
+                    "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
+                String text = data[i]["split_sentence"][j]['words'][index]
+                    ["narrator_translation"];
+
+                // Classify and process the text into parts enclosed by || (target_language text)
+                List<Map<String, dynamic>> classifiedText2 =
+                    extractAndClassifyEnclosedWords(text);
+                List<String> narratorTranslations = [];
+                for (int index2 = 0;
+                    index2 < classifiedText2.length;
+                    index2++) {
+                  String narratorTranslation =
+                      "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_$index2";
+                  narratorTranslations.add(narratorTranslation);
+                }
+
+                wordObjects.add(
+                    {"word": wordFile, "translation": narratorTranslations});
+              }
+            }
+
+            List<String> chunkSequence = sequences.chunkSequence1(
+                narratorTranslationsChunk,
+                splitNative,
+                splitTarget,
+                wordObjects,
+                j);
+            script.addAll(chunkSequence);
+          } else {
+            chunkNumberExcludeList.add(j);
+          }
         }
+        // Active recall sequence
+        // if (i != 0) {
+        //   if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
+        //     List<int> validSentences = List<int>.generate(i + 1, (index) => index)
+        //       ..removeWhere(
+        //           (element) => sentenceNumberExcludeList.contains(element));
+        //     if (validSentences.isEmpty) {
+        //       break;
+        //     }
+        //     int randomSentenceI =
+        //         validSentences[Random().nextInt(validSentences.length)];
+        //     int numberOfChunks =
+        //         data[randomSentenceI]["split_sentence"].length - 1;
+        //     List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
+        //       ..removeWhere(
+        //           (element) => chunkNumberExcludeList.contains(element));
+        //     if (validChunks.isEmpty) {
+        //       break;
+        //     }
+        //     int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
+        //     String target =
+        //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
+        //     String native =
+        //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
+        //     List<String> activeRecallSequence =
+        //         sequences.activeRecallSequence1(native, target);
+        //     script.addAll(activeRecallSequence);
+        //   } else {
+        //     sentenceNumberExcludeList.add(i);
+        //   }
+        // } else if (chunkNumberExcludeList.length ==
+        //     data[i]["split_sentence"].length) {
+        //   sentenceNumberExcludeList.add(i);
+        // }
       }
-      // Active recall sequence
-      // if (i != 0) {
-      //   if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
-      //     List<int> validSentences = List<int>.generate(i + 1, (index) => index)
-      //       ..removeWhere(
-      //           (element) => sentenceNumberExcludeList.contains(element));
-      //     if (validSentences.isEmpty) {
-      //       break;
-      //     }
-      //     int randomSentenceI =
-      //         validSentences[Random().nextInt(validSentences.length)];
-      //     int numberOfChunks =
-      //         data[randomSentenceI]["split_sentence"].length - 1;
-      //     List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
-      //       ..removeWhere(
-      //           (element) => chunkNumberExcludeList.contains(element));
-      //     if (validChunks.isEmpty) {
-      //       break;
-      //     }
-      //     int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
-      //     String target =
-      //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
-      //     String native =
-      //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
-      //     List<String> activeRecallSequence =
-      //         sequences.activeRecallSequence1(native, target);
-      //     script.addAll(activeRecallSequence);
-      //   } else {
-      //     sentenceNumberExcludeList.add(i);
-      //   }
-      // } else if (chunkNumberExcludeList.length ==
-      //     data[i]["split_sentence"].length) {
-      //   sentenceNumberExcludeList.add(i);
-      // }
     }
   }
   return script;
