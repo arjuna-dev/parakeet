@@ -316,7 +316,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                         text: '$word ',
                                         style: TextStyle(
                                           fontSize: 16,
-
+                                          color: match
+                                              ? Colors.green
+                                              : (index == _lastMatchedIndex
+                                                  ? Colors.purple
+                                                  : Colors.black),
                                           fontWeight: index == _lastMatchedIndex
                                               ? FontWeight.bold
                                               : FontWeight.normal,
