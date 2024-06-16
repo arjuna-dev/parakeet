@@ -278,7 +278,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                         .instance
                                         .collection('chatGPT_responses')
                                         .doc(widget.documentID)
-                                        .collection('script')
+                                        .collection(
+                                            'script-${FirebaseAuth.instance.currentUser!.uid}')
                                         .doc();
                                     await docRef.set({
                                       "script": script,
