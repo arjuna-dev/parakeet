@@ -16,6 +16,8 @@ class Library extends StatefulWidget {
 
 class _LibraryState extends State<Library> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  //get current user id
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -34,7 +36,7 @@ class _LibraryState extends State<Library> {
       body: Consumer<HomeScreenModel>(
         builder: (context, model, child) {
           return StreamBuilder<QuerySnapshot>(
-            stream: _firestore.collectionGroup('script').snapshots(),
+            stream: _firestore.collectionGroup('script-$userId').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Text('Error: ${snapshot.error}');
