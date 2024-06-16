@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Parakeet',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -63,8 +64,7 @@ class MyApp extends StatelessWidget {
             );
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) =>
-                  const CreateLesson(title: 'Parakeet'),
+              builder: (context) => const CreateLesson(title: 'Parakeet'),
             );
           case '/login':
             return MaterialPageRoute(
