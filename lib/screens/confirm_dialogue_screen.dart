@@ -334,7 +334,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       }),
                                     );
                                     if (script.isNotEmpty) {
-                                      Navigator.pop(context);
+                                      Navigator.pop(context, "reload");
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
