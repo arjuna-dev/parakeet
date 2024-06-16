@@ -288,24 +288,57 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   child: ListView.builder(
                     itemCount: widget.dialogue.length,
                     itemBuilder: (context, index) {
-                      String dialogue =
+                      String dialogueTarget =
                           widget.dialogue[index]["target_language"];
+                      String dialogueNative =
+                          widget.dialogue[index]["native_language"];
                       bool isMatch = currentTrack.split('_').length >= 2 &&
                           currentTrack.split('_').take(2).join('_') ==
                               "dialogue_$index";
                       if (isMatch) {
                         _lastMatchedIndex = index;
                       }
-                      return Text(
-                        dialogue,
-                        style: TextStyle(
-                          color: index == _lastMatchedIndex
-                              ? Colors.red
-                              : Colors.black,
-                          fontWeight: index == _lastMatchedIndex
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
+                      return Column(
+                        children: [
+                          ListTile(
+                            title: Text("Sentence number : ${index + 1}"),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(dialogueNative),
+                                RichText(
+                                  text: TextSpan(
+                                    children:
+                                        dialogueTarget.split(' ').map((word) {
+                                      final match =
+                                          widget.wordsToRepeat.contains(word);
+                                      return TextSpan(
+                                        text: '$word ',
+                                        style: TextStyle(
+                                          fontSize: 16,
+
+                                          fontWeight: index == _lastMatchedIndex
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          decoration: match
+                                              ? TextDecoration.underline
+                                              : TextDecoration.none,
+                                          decorationColor: match
+                                              ? const Color.fromARGB(
+                                                  255, 21, 87, 25)
+                                              : null, // Darker green for underline
+
+                                          decorationThickness:
+                                              match ? 2.0 : null,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
