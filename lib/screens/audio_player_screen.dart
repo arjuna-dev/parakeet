@@ -128,7 +128,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {});
     }
 
-    if (updateNumber == widget.dialogue.length) {
+    if (updateNumber == widget.dialogue.length || !widget.generating) {
       calculateFinalTotalDuration();
     }
   }
@@ -180,10 +180,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     playlist.addAll(newTracks);
     updateNumber++;
-    if (!widget.generating) {
-      await updateTrack();
-      calculateFinalTotalDuration();
-    }
+
     print("updated!!");
   }
 
