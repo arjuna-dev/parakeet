@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:auralearn/screens/audio_player_screen.dart';
+import 'package:auralearn/utils/constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -259,72 +260,47 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                   ValueListenableBuilder<bool>(
                       valueListenable: isConfirmButtonActive,
                       builder: (context, value, child) {
-                        return FloatingActionButton(
-                          onPressed: isConfirmButtonActive.value
-                              ? () async {
-                                  print("confirmed");
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (BuildContext context) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    },
-                                  );
-
-                                  try {
-                                    DocumentReference docRef = FirebaseFirestore
-                                        .instance
-                                        .collection('chatGPT_responses')
-                                        .doc(widget.documentID)
-                                        .collection(
-                                            'script-${FirebaseAuth.instance.currentUser!.uid}')
-                                        .doc();
-                                    await docRef.set({
-                                      "script": script,
-                                      "title": bigJsonDocument["title"],
-                                      "dialogue": bigJsonDocument["dialogue"],
-                                      "target_language": widget.targetLanguage,
-                                      "language_level": widget.languageLevel,
-                                      "words_to_repeat": selectedWords.entries
-                                          .expand(
-                                              (entry) => entry.value.entries)
-                                          .where((innerEntry) =>
-                                              innerEntry.value.value == true)
-                                          .map((innerEntry) => innerEntry.key)
-                                          .toList(),
-                                      "user_ID":
-                                          FirebaseAuth.instance.currentUser!.uid
-                                    });
-                                    String scriptDocumentID = docRef.id;
-
-                                    http.post(
-                                      Uri.parse(
-                                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
-                                      headers: <String, String>{
-                                        'Content-Type':
-                                            'application/json; charset=UTF-8',
-                                        "Access-Control-Allow-Origin":
-                                            "*", // Required for CORS support to work
+                        return Container(
+                          width: 200,
+                          height: 50,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          child: FloatingActionButton.extended(
+                            label: const Text('Confirm and generate audio'),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            backgroundColor: isConfirmButtonActive.value
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[400],
+                            foregroundColor: Colors.white,
+                            onPressed: isConfirmButtonActive.value
+                                ? () async {
+                                    print("confirmed");
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (BuildContext context) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
                                       },
-                                      body: jsonEncode(<String, dynamic>{
-                                        "document_id": widget.documentID,
-                                        "dialogue": bigJsonDocument["dialogue"],
+                                    );
+
+                                    try {
+                                      DocumentReference docRef = FirebaseFirestore
+                                          .instance
+                                          .collection('chatGPT_responses')
+                                          .doc(widget.documentID)
+                                          .collection(
+                                              'script-${FirebaseAuth.instance.currentUser!.uid}')
+                                          .doc();
+                                      await docRef.set({
+                                        "script": script,
                                         "title": bigJsonDocument["title"],
-                                        "speakers": bigJsonDocument["speakers"],
-                                        "user_ID": bigJsonDocument["user_ID"],
-                                        "native_language":
-                                            widget.nativeLanguage,
+                                        "dialogue": bigJsonDocument["dialogue"],
                                         "target_language":
                                             widget.targetLanguage,
-                                        "length": widget.length,
                                         "language_level": widget.languageLevel,
-                                        "voice_1_id":
-                                            bigJsonDocument["voice_1_id"],
-                                        "voice_2_id":
-                                            bigJsonDocument["voice_2_id"],
-                                        "tts_provider": "1",
                                         "words_to_repeat": selectedWords.entries
                                             .expand(
                                                 (entry) => entry.value.entries)
@@ -332,60 +308,104 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                 innerEntry.value.value == true)
                                             .map((innerEntry) => innerEntry.key)
                                             .toList(),
-                                      }),
-                                    );
-                                    if (script.isNotEmpty) {
-                                      Navigator.pop(context, "reload");
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                AudioPlayerScreen(
-                                                  dialogue: bigJsonDocument[
-                                                      "dialogue"],
-                                                  title:
-                                                      bigJsonDocument["title"],
-                                                  documentID: widget.documentID,
-                                                  userID: FirebaseAuth.instance
-                                                      .currentUser!.uid,
-                                                  scriptDocumentId:
-                                                      scriptDocumentID,
-                                                  generating: true,
-                                                  wordsToRepeat: selectedWords
-                                                      .entries
-                                                      .expand((entry) =>
-                                                          entry.value.entries)
-                                                      .where((innerEntry) =>
-                                                          innerEntry
-                                                              .value.value ==
-                                                          true)
-                                                      .map((innerEntry) =>
-                                                          innerEntry.key)
-                                                      .toList(),
-                                                  //audioDurations: script['fileDurations'],
-                                                )),
+                                        "user_ID": FirebaseAuth
+                                            .instance.currentUser!.uid
+                                      });
+                                      String scriptDocumentID = docRef.id;
+
+                                      http.post(
+                                        Uri.parse(
+                                            'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
+                                        headers: <String, String>{
+                                          'Content-Type':
+                                              'application/json; charset=UTF-8',
+                                          "Access-Control-Allow-Origin":
+                                              "*", // Required for CORS support to work
+                                        },
+                                        body: jsonEncode(<String, dynamic>{
+                                          "document_id": widget.documentID,
+                                          "dialogue":
+                                              bigJsonDocument["dialogue"],
+                                          "title": bigJsonDocument["title"],
+                                          "speakers":
+                                              bigJsonDocument["speakers"],
+                                          "user_ID": bigJsonDocument["user_ID"],
+                                          "native_language":
+                                              widget.nativeLanguage,
+                                          "target_language":
+                                              widget.targetLanguage,
+                                          "length": widget.length,
+                                          "language_level":
+                                              widget.languageLevel,
+                                          "voice_1_id":
+                                              bigJsonDocument["voice_1_id"],
+                                          "voice_2_id":
+                                              bigJsonDocument["voice_2_id"],
+                                          "tts_provider": "1",
+                                          "words_to_repeat": selectedWords
+                                              .entries
+                                              .expand((entry) =>
+                                                  entry.value.entries)
+                                              .where((innerEntry) =>
+                                                  innerEntry.value.value ==
+                                                  true)
+                                              .map((innerEntry) =>
+                                                  innerEntry.key)
+                                              .toList(),
+                                        }),
                                       );
-                                    } else {
-                                      throw Exception(
-                                          'Failed to create script!');
+                                      if (script.isNotEmpty) {
+                                        Navigator.pop(context, "reload");
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AudioPlayerScreen(
+                                                    dialogue: bigJsonDocument[
+                                                        "dialogue"],
+                                                    title: bigJsonDocument[
+                                                        "title"],
+                                                    documentID:
+                                                        widget.documentID,
+                                                    userID: FirebaseAuth
+                                                        .instance
+                                                        .currentUser!
+                                                        .uid,
+                                                    scriptDocumentId:
+                                                        scriptDocumentID,
+                                                    generating: true,
+                                                    wordsToRepeat: selectedWords
+                                                        .entries
+                                                        .expand((entry) =>
+                                                            entry.value.entries)
+                                                        .where((innerEntry) =>
+                                                            innerEntry
+                                                                .value.value ==
+                                                            true)
+                                                        .map((innerEntry) =>
+                                                            innerEntry.key)
+                                                        .toList(),
+                                                    //audioDurations: script['fileDurations'],
+                                                  )),
+                                        );
+                                      } else {
+                                        throw Exception(
+                                            'Failed to create script!');
+                                      }
+                                    } catch (e) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Something went wrong! Please try again.'),
+                                          duration: Duration(seconds: 4),
+                                        ),
+                                      );
                                     }
-                                  } catch (e) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Something went wrong! Please try again.'),
-                                        duration: Duration(seconds: 4),
-                                      ),
-                                    );
                                   }
-                                }
-                              : null,
-                          backgroundColor: isConfirmButtonActive.value
-                              ? Colors.purple
-                              : Colors.grey[400],
-                          foregroundColor: Colors.white,
-                          child: const Text('Confirm'),
+                                : null,
+                          ),
                         );
                       })
                 ]),
