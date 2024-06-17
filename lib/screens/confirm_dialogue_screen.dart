@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:auralearn/screens/audio_player_screen.dart';
-import 'package:auralearn/utils/constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +62,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!isConfirmButtonActive.value &&
                   snapshot.data!.docs.isNotEmpty &&
+                  (snapshot.data!.docs[0].data() as Map<String, dynamic>)
+                      .containsKey('dialogue') &&
                   snapshot.data!.docs[0]['dialogue'] != null &&
                   snapshot.data!.docs[0]['dialogue'].length ==
                       int.parse(widget.length) &&
@@ -150,10 +151,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               List<dynamic> turns = [];
                               if (bigJsonDocument.containsKey("dialogue")) {
                                 turns = bigJsonDocument["dialogue"] ?? [];
+                                script = script_generator.createFirstScript(
+                                    bigJsonDocument["dialogue"] ?? []);
                               }
-
-                              script = script_generator.createFirstScript(
-                                  bigJsonDocument["dialogue"] ?? []);
 
                               return ListView.builder(
                                 itemBuilder: (context, index) {
