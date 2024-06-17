@@ -41,6 +41,11 @@ class _CreateLessonState extends State<CreateLesson> {
     topic = _controller.text;
   }
 
+  void _reloadPage() {
+    print("yaya!");
+    regenerateTopic();
+  }
+
   void regenerateTopic() {
     setState(() {
       _controller.text = example_scenarios[Random()
@@ -260,7 +265,12 @@ class _CreateLessonState extends State<CreateLesson> {
                                           length: length,
                                           documentID: docRef.id),
                                     ),
-                                  );
+                                  ).then((result) {
+                                    if (result == 'reload') {
+                                      _reloadPage();
+                                    }
+                                  });
+                                  ;
                                 } else {
                                   throw Exception(
                                       'Proper data not received from API');
