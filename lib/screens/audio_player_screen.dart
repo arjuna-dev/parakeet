@@ -157,8 +157,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      print(snapshot.docs[0].data()["dialogue"]);
-      print(widget.dialogue);
       script = script_generator.parseAndCreateScript(
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
@@ -167,6 +165,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print("Errors: $e");
       return;
     }
+    print("script: $script");
 
     var newScript = List.from(script);
     // to not add tracks already added to the playlist
