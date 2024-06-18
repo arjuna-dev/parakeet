@@ -1,4 +1,4 @@
-import 'package:auralearn/services/home_screen_model.dart';
+import 'package:parakeet/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';

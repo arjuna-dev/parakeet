@@ -1,4 +1,4 @@
-package com.example.auralearn
+package com.parakeetapp.app
 
 import io.flutter.embedding.android.FlutterActivity
 
