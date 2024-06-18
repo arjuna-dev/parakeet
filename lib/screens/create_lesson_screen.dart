@@ -41,6 +41,11 @@ class _CreateLessonState extends State<CreateLesson> {
     topic = _controller.text;
   }
 
+  void _reloadPage() {
+    print("yaya!");
+    regenerateTopic();
+  }
+
   void regenerateTopic() {
     setState(() {
       _controller.text = example_scenarios[Random()
@@ -189,101 +194,116 @@ class _CreateLessonState extends State<CreateLesson> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
-                    FloatingActionButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          print("pressed");
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (BuildContext context) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                          );
-
-                          try {
-                            print("topic: $topic");
-                            final FirebaseFirestore firestore =
-                                FirebaseFirestore.instance;
-                            final DocumentReference docRef =
-                                firestore.collection('chatGPT_responses').doc();
-                            http.post(
-                              Uri.parse(
-                                  'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
-                              headers: <String, String>{
-                                'Content-Type':
-                                    'application/json; charset=UTF-8',
-                                "Access-Control-Allow-Origin":
-                                    "*", // Required for CORS support to work
+                    SizedBox(
+                      width: 150,
+                      height: 50,
+                      child: FloatingActionButton.extended(
+                        label: const Text('Create audio lesson'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        onPressed: () async {
+                          if (_formKey.currentState!.validate()) {
+                            print("pressed");
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
                               },
-                              body: jsonEncode(<String, String>{
-                                "requested_scenario": topic,
-                                "keywords": keywords,
-                                "native_language": nativeLanguage,
-                                "target_language": targetLanguage,
-                                "length": length,
-                                "user_ID": FirebaseAuth
-                                    .instance.currentUser!.uid
-                                    .toString(),
-                                "language_level": languageLevel,
-                                "document_id": docRef.id,
-                                "tts_provider": "1"
-                              }),
                             );
-                            int counter = 0;
-                            bool docExists = false;
-                            while (!docExists && counter < 10) {
-                              await Future.delayed(const Duration(
-                                  seconds: 1)); // wait for 1 second
-                              final QuerySnapshot snapshot = await docRef
-                                  .collection('only_target_sentences')
-                                  .get();
-                              if (snapshot.docs.isNotEmpty) {
-                                docExists = true;
-                                final Map<String, dynamic> data =
-                                    snapshot.docs.first.data()
-                                        as Map<String, dynamic>;
-                                firstDialogue = data;
 
-                                if (firstDialogue.isNotEmpty) {
-                                  Navigator.pop(context);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ConfirmDialogue(
-                                          firstDialogue: firstDialogue,
-                                          nativeLanguage: nativeLanguage,
-                                          targetLanguage: targetLanguage,
-                                          languageLevel: languageLevel,
-                                          length: length,
-                                          documentID: docRef.id),
-                                    ),
-                                  );
-                                } else {
-                                  throw Exception(
-                                      'Proper data not received from API');
+                            try {
+                              print("topic: $topic");
+                              final FirebaseFirestore firestore =
+                                  FirebaseFirestore.instance;
+                              final DocumentReference docRef = firestore
+                                  .collection('chatGPT_responses')
+                                  .doc();
+                              http.post(
+                                Uri.parse(
+                                    'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+                                headers: <String, String>{
+                                  'Content-Type':
+                                      'application/json; charset=UTF-8',
+                                  "Access-Control-Allow-Origin":
+                                      "*", // Required for CORS support to work
+                                },
+                                body: jsonEncode(<String, String>{
+                                  "requested_scenario": topic,
+                                  "keywords": keywords,
+                                  "native_language": nativeLanguage,
+                                  "target_language": targetLanguage,
+                                  "length": length,
+                                  "user_ID": FirebaseAuth
+                                      .instance.currentUser!.uid
+                                      .toString(),
+                                  "language_level": languageLevel,
+                                  "document_id": docRef.id,
+                                  "tts_provider": "1"
+                                }),
+                              );
+                              int counter = 0;
+                              bool docExists = false;
+                              while (!docExists && counter < 10) {
+                                await Future.delayed(const Duration(
+                                    seconds: 1)); // wait for 1 second
+                                final QuerySnapshot snapshot = await docRef
+                                    .collection('only_target_sentences')
+                                    .get();
+                                if (snapshot.docs.isNotEmpty) {
+                                  docExists = true;
+                                  final Map<String, dynamic> data =
+                                      snapshot.docs.first.data()
+                                          as Map<String, dynamic>;
+                                  firstDialogue = data;
+
+                                  if (firstDialogue.isNotEmpty) {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ConfirmDialogue(
+                                            firstDialogue: firstDialogue,
+                                            nativeLanguage: nativeLanguage,
+                                            targetLanguage: targetLanguage,
+                                            languageLevel: languageLevel,
+                                            length: length,
+                                            documentID: docRef.id),
+                                      ),
+                                    ).then((result) {
+                                      if (result == 'reload') {
+                                        _reloadPage();
+                                      }
+                                    });
+                                    ;
+                                  } else {
+                                    throw Exception(
+                                        'Proper data not received from API');
+                                  }
                                 }
                               }
+                              if (!docExists) {
+                                throw Exception(
+                                    'Failed to find the response in firestore within 10 second');
+                              }
+                            } catch (e) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Something went wrong! Please try again.'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
                             }
-                            if (!docExists) {
-                              throw Exception(
-                                  'Failed to find the response in firestore within 10 second');
-                            }
-                          } catch (e) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Something went wrong! Please try again.'),
-                                duration: Duration(seconds: 3),
-                              ),
-                            );
                           }
-                        }
-                      },
-                      child: const Icon(Icons.add),
+                        },
+                      ),
                     ),
                   ],
                 ),

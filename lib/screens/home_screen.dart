@@ -25,6 +25,15 @@ class _HomeState extends State<Home> {
         .loadNowPlayingFromPreference();
   }
 
+  void _reloadPage() {
+    // Load the audio files
+    Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+
+    Provider.of<HomeScreenModel>(context, listen: false)
+        .loadNowPlayingFromPreference();
+    //setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +110,11 @@ class _HomeState extends State<Home> {
                               generating: false,
                             ),
                           ),
-                        );
+                        ).then((result) {
+                          if (result == 'reload') {
+                            _reloadPage();
+                          }
+                        });
                       }));
             },
           ),
@@ -143,7 +156,12 @@ class _HomeState extends State<Home> {
                           generating: false,
                         ),
                       ),
-                    );
+                    ).then((result) {
+                      if (result == 'reload') {
+                        _reloadPage();
+                      }
+                    });
+                    ;
                   },
                 ),
               );

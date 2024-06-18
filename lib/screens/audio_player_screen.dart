@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:parakeet/screens/home_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +127,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {});
     }
 
-    if (updateNumber == widget.dialogue.length) {
+    if (updateNumber == widget.dialogue.length || !widget.generating) {
       calculateFinalTotalDuration();
     }
   }
@@ -157,8 +156,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      print(snapshot.docs[0].data()["dialogue"]);
-      print(widget.dialogue);
       script = script_generator.parseAndCreateScript(
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
@@ -167,6 +164,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print("Errors: $e");
       return;
     }
+    print("script: $script");
 
     var newScript = List.from(script);
     // to not add tracks already added to the playlist
@@ -180,10 +178,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     playlist.addAll(newTracks);
     updateNumber++;
-    if (!widget.generating) {
-      await updateTrack();
-      calculateFinalTotalDuration();
-    }
+
     print("updated!!");
   }
 
@@ -267,106 +262,141 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // This method builds the widget
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<int>(
-      builder: (context, snapshot) {
-        int savedPosition = snapshot.data ?? 0;
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.home),
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          const Home()), // replace HomeScreen with your actual home screen widget
-                  (Route<dynamic> route) => false,
-                );
-              },
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) async {
+        if (didPop) {
+          return;
+        }
+        final NavigatorState navigator = Navigator.of(context);
+        navigator.pop('reload');
+      },
+      child: FutureBuilder<int>(
+        builder: (context, snapshot) {
+          int savedPosition = snapshot.data ?? 0;
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
             ),
-            title: Text(widget.title),
-          ),
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              Expanded(
-                child: ListView.builder(
-                  itemCount: widget.dialogue.length,
-                  itemBuilder: (context, index) {
-                    String dialogue = widget.dialogue[index]["target_language"];
-                    bool isMatch = currentTrack.split('_').length >= 2 &&
-                        currentTrack.split('_').take(2).join('_') ==
-                            "dialogue_$index";
-                    if (isMatch) {
-                      _lastMatchedIndex = index;
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: widget.dialogue.length,
+                    itemBuilder: (context, index) {
+                      String dialogueTarget =
+                          widget.dialogue[index]["target_language"];
+                      String dialogueNative =
+                          widget.dialogue[index]["native_language"];
+                      bool isMatch = currentTrack.split('_').length >= 2 &&
+                          currentTrack.split('_').take(2).join('_') ==
+                              "dialogue_$index";
+                      if (isMatch) {
+                        _lastMatchedIndex = index;
+                      }
+                      return Column(
+                        children: [
+                          ListTile(
+                            title: Text("Sentence number : ${index + 1}"),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(dialogueNative),
+                                RichText(
+                                  text: TextSpan(
+                                    children:
+                                        dialogueTarget.split(' ').map((word) {
+                                      final match =
+                                          widget.wordsToRepeat.contains(word);
+                                      return TextSpan(
+                                        text: '$word ',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: match
+                                              ? Colors.green
+                                              : (index == _lastMatchedIndex
+                                                  ? Colors.purple
+                                                  : Colors.black),
+                                          fontWeight: index == _lastMatchedIndex
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          decoration: match
+                                              ? TextDecoration.underline
+                                              : TextDecoration.none,
+                                          decorationColor: match
+                                              ? const Color.fromARGB(
+                                                  255, 21, 87, 25)
+                                              : null, // Darker green for underline
+
+                                          decorationThickness:
+                                              match ? 2.0 : null,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                StreamBuilder<PositionData>(
+                  stream: _positionDataStream,
+                  builder: (context, snapshot) {
+                    final positionData = snapshot.data;
+                    if (positionData == null) {
+                      return const CircularProgressIndicator();
                     }
-                    return Text(
-                      dialogue,
-                      style: TextStyle(
-                        color: index == _lastMatchedIndex
-                            ? Colors.red
-                            : Colors.black,
-                        fontWeight: index == _lastMatchedIndex
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
+                    return Column(
+                      children: [
+                        Slider(
+                          min: 0.0,
+                          max: totalDuration.inMilliseconds.toDouble(),
+                          value: isPlaying
+                              ? positionData.cumulativePosition.inMilliseconds
+                                  .clamp(0, totalDuration.inMilliseconds)
+                                  .toDouble()
+                              : savedPosition
+                                  .clamp(0, totalDuration.inMilliseconds)
+                                  .toDouble(),
+                          onChanged: (value) {
+                            final trackIndex = findTrackIndexForPosition(value);
+                            player.seek(
+                                Duration(
+                                    milliseconds: value.toInt() -
+                                        cumulativeDurationUpTo(trackIndex)
+                                            .inMilliseconds),
+                                index: trackIndex);
+                            if (_isPaused) {
+                              _pause();
+                              setState(() {
+                                positionData.cumulativePosition =
+                                    Duration(milliseconds: value.toInt());
+                              });
+                            }
+                          },
+                        ),
+                        Text(
+                          finalTotalDuration == Duration.zero
+                              ? "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))}/ loading..."
+                              : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
+                        ),
+                      ],
                     );
                   },
                 ),
-              ),
-              StreamBuilder<PositionData>(
-                stream: _positionDataStream,
-                builder: (context, snapshot) {
-                  final positionData = snapshot.data;
-                  if (positionData == null) {
-                    return const CircularProgressIndicator();
-                  }
-                  return Column(
-                    children: [
-                      Slider(
-                        min: 0.0,
-                        max: totalDuration.inMilliseconds.toDouble(),
-                        value: isPlaying
-                            ? positionData.cumulativePosition.inMilliseconds
-                                .clamp(0, totalDuration.inMilliseconds)
-                                .toDouble()
-                            : savedPosition
-                                .clamp(0, totalDuration.inMilliseconds)
-                                .toDouble(),
-                        onChanged: (value) {
-                          final trackIndex = findTrackIndexForPosition(value);
-                          player.seek(
-                              Duration(
-                                  milliseconds: value.toInt() -
-                                      cumulativeDurationUpTo(trackIndex)
-                                          .inMilliseconds),
-                              index: trackIndex);
-                          if (_isPaused) {
-                            _pause();
-                            setState(() {
-                              positionData.cumulativePosition =
-                                  Duration(milliseconds: value.toInt());
-                            });
-                          }
-                        },
-                      ),
-                      Text(
-                        finalTotalDuration == Duration.zero
-                            ? formatDuration(isPlaying
-                                ? positionData.cumulativePosition
-                                : Duration(milliseconds: savedPosition))
-                            : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
-                      ),
-                    ],
-                  );
-                },
-              ),
-              controlButtons(), // Play, pause, stop, skip buttons
-            ],
-          ),
-        );
-      },
-      future: _getSavedPosition(),
+                controlButtons(), // Play, pause, stop, skip buttons
+              ],
+            ),
+          );
+        },
+        future: _getSavedPosition(),
+      ),
     );
   }
 
@@ -385,7 +415,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.stop),
-            onPressed: isPlaying ? _stop : null,
+            onPressed: _stop,
           ),
           IconButton(
             icon: const Icon(Icons.skip_next),
@@ -455,7 +485,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     prefs.remove('savedPosition_${widget.documentID}_${widget.userID}');
     prefs.remove('savedTrackIndex_${widget.documentID}_${widget.userID}');
     prefs.remove("now_playing_${widget.documentID}_${widget.userID}");
-    await prefs.setStringList("now_playing_${widget.userID}", []);
+    // Retrieve the now playing list
+    List<String>? nowPlayingList =
+        prefs.getStringList("now_playing_${widget.userID}");
+
+    // Check if the list is not null
+    if (nowPlayingList != null) {
+      // Remove widget.documentID from the list if it exists
+      nowPlayingList.remove(widget.documentID);
+
+      // Save the updated list back to preferences
+      await prefs.setStringList("now_playing_${widget.userID}", nowPlayingList);
+    }
 
     player.stop();
     player.seek(Duration.zero, index: 0);
