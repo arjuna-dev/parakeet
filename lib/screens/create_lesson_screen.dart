@@ -225,8 +225,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   .collection('chatGPT_responses')
                                   .doc();
                               http.post(
-                                Uri.parse(
-                                    'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+                                Uri.parse('http://127.0.0.1:8080/'),
                                 headers: <String, String>{
                                   'Content-Type':
                                       'application/json; charset=UTF-8',
