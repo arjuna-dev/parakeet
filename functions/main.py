@@ -52,11 +52,6 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     except:
         keywords = ""
 
-    if not all([requested_scenario, native_language, target_language, language_level, user_ID, length, document_id]):
-        return https_fn.Response(
-            json.dumps({'error': 'Missing required parameters in request data'}),
-            status=400,
-        )
 
     is_mock = False
 
@@ -142,30 +137,6 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
 
     print(request_data)
-
-    all_parameters = [dialogue, 
-                document_id,
-                user_ID,
-                title,
-                speakers,
-                native_language,
-                target_language,
-                language_level,
-                length,
-                tts_provider,
-                voice_1_id,
-                voice_2_id,
-                words_to_repeat
-                ]
-
-    missing_parameters = [  {"index": i} for i, parameter in enumerate(all_parameters) if parameter is None]
-
-    if len(missing_parameters) > 0:
-        print("missing_parameters: ", missing_parameters)
-        return https_fn.Response(
-            json.dumps({'error': 'Missing required parameters in request data'}),
-            status=400,
-        )
 
     is_mock = False
 
