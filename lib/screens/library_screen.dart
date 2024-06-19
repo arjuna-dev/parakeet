@@ -149,7 +149,7 @@ class _LibraryState extends State<Library> {
                                                     prefs.getStringList(
                                                         'now_playing_${user.uid}')!;
                                                 nowPlayingIds.remove(parentId);
-                                                prefs.setStringList(
+                                                await prefs.setStringList(
                                                     'now_playing_${user.uid}',
                                                     nowPlayingIds);
                                               }
