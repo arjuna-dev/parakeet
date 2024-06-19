@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:auralearn/Navigation/bottom_menu_bar.dart';
 import 'package:auralearn/screens/audio_player_screen.dart';
 import 'package:auralearn/services/home_screen_model.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:auralearn/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class Library extends StatefulWidget {
   const Library({super.key});
@@ -26,6 +29,20 @@ class _LibraryState extends State<Library> {
 
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+  }
+
+  void deleteFromCloudStorage(documentId) {
+    http.post(
+      Uri.parse(
+          'https://europe-west1-noble-descent-420612.cloudfunctions.net/delete_audio_file'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        "Access-Control-Allow-Origin": "*", // Required for CORS support to work
+      },
+      body: jsonEncode(<String, String>{
+        "document_id": documentId,
+      }),
+    );
   }
 
   @override
@@ -136,6 +153,9 @@ class _LibraryState extends State<Library> {
                                                     'now_playing_${user.uid}',
                                                     nowPlayingIds);
                                               }
+                                              // Delete from cloud storage
+                                              deleteFromCloudStorage(parentId);
+
                                               Navigator.of(context).pop();
                                             },
                                           ),
