@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreenModel extends ChangeNotifier {
+  bool _isDisposed = false;
   List<DocumentSnapshot> favoriteAudioFiles = [];
   List<DocumentSnapshot> nowPlayingFiles = [];
   List<dynamic> favoriteAudioFileIds = [];
@@ -11,6 +12,18 @@ class HomeScreenModel extends ChangeNotifier {
   ValueNotifier<List<dynamic>> favoriteAudioFileIdsNotifier = ValueNotifier([]);
   ValueNotifier<List<dynamic>> nowPlayingIdsNotifier = ValueNotifier([]);
   final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
 
   void addAudioFile(DocumentSnapshot audioFile) {
     favoriteAudioFiles.add(audioFile);
@@ -20,7 +33,7 @@ class HomeScreenModel extends ChangeNotifier {
     });
     favoriteAudioFileIdsNotifier.value =
         List.from(favoriteAudioFileIds); // Update the notifier
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void removeAudioFile(DocumentSnapshot audioFile) {
@@ -30,7 +43,7 @@ class HomeScreenModel extends ChangeNotifier {
         file['parentId'] == audioFile.reference.parent.parent!.id);
     favoriteAudioFileIdsNotifier.value =
         List.from(favoriteAudioFileIds); // Update the notifier
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   Future<void> loadAudioFiles() async {
@@ -55,7 +68,7 @@ class HomeScreenModel extends ChangeNotifier {
       return scriptDoc;
     }));
 
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   Future<void> loadNowPlayingFromPreference() async {
@@ -77,6 +90,6 @@ class HomeScreenModel extends ChangeNotifier {
       }
     }));
 
-    notifyListeners();
+    safeNotifyListeners();
   }
 }
