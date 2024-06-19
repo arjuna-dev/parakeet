@@ -127,6 +127,9 @@ functions/audio
 **/web/manifest.json
 **/web/icons/Icon-*
 
+# Python related
+**/__pycache__/
+
 # VSCode related
 .vscode/
 
