@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:auralearn/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Library extends StatefulWidget {
   const Library({super.key});
@@ -57,84 +58,148 @@ class _LibraryState extends State<Library> {
                             subtitle: Text(
                                 "Learning language: ${documents[index].get('target_language')} \n"
                                 "Difficulty: ${documents[index].get('language_level')} level \n"),
-                            leading: const Icon(Icons.audio_file),
-                            trailing: ValueListenableBuilder(
-                                valueListenable:
-                                    model.favoriteAudioFileIdsNotifier,
-                                builder: (context,
-                                    List<dynamic> favoriteAudioFileIds, child) {
-                                  return IconButton(
-                                    icon: model.favoriteAudioFileIds.any(
-                                            (file) =>
-                                                file['docId'] ==
-                                                    documents[index]
-                                                        .reference
-                                                        .id &&
-                                                file['parentId'] ==
-                                                    documents[index]
-                                                        .reference
-                                                        .parent
-                                                        .parent!
-                                                        .id)
-                                        ? const Icon(Icons.star)
-                                        : const Icon(Icons.star_border),
-                                    onPressed: () async {
-                                      final user =
-                                          FirebaseAuth.instance.currentUser;
-                                      final userDocRef = FirebaseFirestore
-                                          .instance
-                                          .collection('users')
-                                          .doc(user!.uid);
-                                      String parentId = documents[index]
-                                          .reference
-                                          .parent
-                                          .parent!
-                                          .id;
-                                      String docId =
-                                          documents[index].reference.id;
-                                      if (model.favoriteAudioFileIds.any(
-                                          (file) =>
-                                              file['docId'] ==
-                                                  documents[index]
-                                                      .reference
-                                                      .id &&
-                                              file['parentId'] ==
-                                                  documents[index]
-                                                      .reference
-                                                      .parent
-                                                      .parent!
-                                                      .id)) {
-                                        // Remove the audio file from the home screen
-                                        model.removeAudioFile(documents[index]);
-
-                                        // Remove the audio file from Firestore
-                                        await userDocRef.update({
-                                          'favoriteAudioFiles':
-                                              FieldValue.arrayRemove([
-                                            {
-                                              'parentId': parentId,
-                                              'docId': docId
-                                            }
-                                          ])
-                                        });
-                                      } else {
-                                        // Add the audio file to the home screen
-                                        model.addAudioFile(documents[index]);
-
-                                        // Add the audio file to Firestore
-                                        await userDocRef.set({
-                                          'favoriteAudioFiles':
-                                              FieldValue.arrayUnion([
-                                            {
-                                              'parentId': parentId,
-                                              'docId': docId
-                                            }
-                                          ])
-                                        }, SetOptions(merge: true));
-                                      }
+                            trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text('Confirmation'),
+                                        content: const Text(
+                                            'Are you sure you want to delete this audio?'),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            child: const Text('Cancel'),
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                          TextButton(
+                                            child: const Text('Delete'),
+                                            onPressed: () async {
+                                              await _firestore.runTransaction(
+                                                (Transaction
+                                                    myTransaction) async {
+                                                  myTransaction.delete(
+                                                      documents[index]
+                                                          .reference);
+                                                },
+                                              );
+                                              final user = FirebaseAuth
+                                                  .instance.currentUser;
+                                              final userDocRef =
+                                                  FirebaseFirestore.instance
+                                                      .collection('users')
+                                                      .doc(user!.uid);
+                                              String parentId = documents[index]
+                                                  .reference
+                                                  .parent
+                                                  .parent!
+                                                  .id;
+                                              String docId =
+                                                  documents[index].reference.id;
+                                              if (model.favoriteAudioFileIds
+                                                  .any((file) =>
+                                                      file['docId'] ==
+                                                          documents[index]
+                                                              .reference
+                                                              .id &&
+                                                      file['parentId'] ==
+                                                          documents[index]
+                                                              .reference
+                                                              .parent
+                                                              .parent!
+                                                              .id)) {
+                                                // Remove the audio file from the favorite list
+                                                model.removeAudioFile(
+                                                    documents[index]);
+                                                // Update the Firestore to remove from favorite list
+                                                await userDocRef.update({
+                                                  'favoriteAudioFiles':
+                                                      FieldValue.arrayRemove([
+                                                    {
+                                                      'parentId': parentId,
+                                                      'docId': docId
+                                                    }
+                                                  ])
+                                                });
+                                                //Remove from now playing list which is stored in shared preferences
+                                                final prefs =
+                                                    await SharedPreferences
+                                                        .getInstance();
+                                                var nowPlayingIds =
+                                                    prefs.getStringList(
+                                                        'now_playing_${user.uid}')!;
+                                                nowPlayingIds.remove(parentId);
+                                                prefs.setStringList(
+                                                    'now_playing_${user.uid}',
+                                                    nowPlayingIds);
+                                              }
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                        ],
+                                      );
                                     },
                                   );
                                 }),
+                            leading: IconButton(
+                              icon: model.favoriteAudioFileIds.any((file) =>
+                                      file['docId'] ==
+                                          documents[index].reference.id &&
+                                      file['parentId'] ==
+                                          documents[index]
+                                              .reference
+                                              .parent
+                                              .parent!
+                                              .id)
+                                  ? const Icon(Icons.favorite)
+                                  : const Icon(Icons.favorite_border),
+                              onPressed: () async {
+                                final user = FirebaseAuth.instance.currentUser;
+                                final userDocRef = FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user!.uid);
+                                String parentId = documents[index]
+                                    .reference
+                                    .parent
+                                    .parent!
+                                    .id;
+                                String docId = documents[index].reference.id;
+                                if (model.favoriteAudioFileIds.any((file) =>
+                                    file['docId'] ==
+                                        documents[index].reference.id &&
+                                    file['parentId'] ==
+                                        documents[index]
+                                            .reference
+                                            .parent
+                                            .parent!
+                                            .id)) {
+                                  // Remove the audio file from the home screen
+                                  model.removeAudioFile(documents[index]);
+
+                                  // Remove the audio file from Firestore
+                                  await userDocRef.update({
+                                    'favoriteAudioFiles':
+                                        FieldValue.arrayRemove([
+                                      {'parentId': parentId, 'docId': docId}
+                                    ])
+                                  });
+                                } else {
+                                  // Add the audio file to the home screen
+                                  model.addAudioFile(documents[index]);
+
+                                  // Add the audio file to Firestore
+                                  await userDocRef.set({
+                                    'favoriteAudioFiles':
+                                        FieldValue.arrayUnion([
+                                      {'parentId': parentId, 'docId': docId}
+                                    ])
+                                  }, SetOptions(merge: true));
+                                }
+                              },
+                            ),
                             onTap: () async {
                               Navigator.push(
                                 context,
