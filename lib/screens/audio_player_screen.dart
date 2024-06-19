@@ -134,10 +134,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void calculateFinalTotalDuration() {
-    print("calculate!!!");
     finalTotalDuration =
         trackDurations.fold(Duration.zero, (sum, d) => sum + d);
-    print("total : $finalTotalDuration");
     setState(() {});
   }
 
@@ -152,7 +150,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         .toList();
     playlist = ConcatenatingAudioSource(
         useLazyPreparation: false, children: audioSources);
-    player.setAudioSource(playlist);
+    await player.setAudioSource(playlist);
+    if (widget.generating) {
+      _play();
+    }
   }
 
   void updatePlaylist(snapshot) async {
@@ -162,10 +163,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           widget.wordsToRepeat,
           widget.dialogue);
     } catch (e) {
-      print("Errors: $e");
       return;
     }
-    print("script: $script");
 
     var newScript = List.from(script);
     // to not add tracks already added to the playlist
@@ -177,7 +176,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final newTracks =
         fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
-    playlist.addAll(newTracks);
+    await playlist.addAll(newTracks);
+    if (!widget.generating) {
+      _play();
+    }
+
     updateNumber++;
 
     print("updated!!");
@@ -384,7 +387,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         ),
                         Text(
                           finalTotalDuration == Duration.zero
-                              ? "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))}/ loading..."
+                              ? formatDuration(isPlaying
+                                  ? positionData.cumulativePosition
+                                  : Duration(milliseconds: savedPosition))
                               : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
                         ),
                       ],
@@ -449,10 +454,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await prefs.setStringList(nowPlayingKey, nowPlayingList);
 
     player.pause();
-    setState(() {
-      isPlaying = false;
-      _isPaused = true;
-    });
+    if (mounted) {
+      setState(() {
+        isPlaying = false;
+        _isPaused = true;
+      });
+    }
   }
 
 // This method plays the audio
@@ -462,22 +469,24 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
     final savedTrackIndex =
         prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
-    if (savedPosition != null && savedTrackIndex != null) {
-      await player.seek(Duration(milliseconds: savedPosition),
-          index: savedTrackIndex);
-    }
+
     setState(() {
       isPlaying = true;
       _isPaused = false;
     });
-    await player.play();
-    player.currentIndexStream.listen((index) {
-      if (index != null && index < script.length) {
-        setState(() {
-          currentTrack = script[index];
-        });
-      }
-    });
+    if (savedPosition != null && savedTrackIndex != null) {
+      await player.seek(Duration(milliseconds: savedPosition),
+          index: savedTrackIndex);
+    }
+    print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
+    player.play();
+    // player.currentIndexStream.listen((index) {
+    //   if (index != null && index < script.length) {
+    //     setState(() {
+    //       currentTrack = script[index];
+    //     });
+    //   }
+    // });
   }
 
   // This method stops the audio
