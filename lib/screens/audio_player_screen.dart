@@ -387,7 +387,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         ),
                         Text(
                           finalTotalDuration == Duration.zero
-                              ? "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))}/ loading..."
+                              ? formatDuration(isPlaying
+                                  ? positionData.cumulativePosition
+                                  : Duration(milliseconds: savedPosition))
                               : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
                         ),
                       ],
