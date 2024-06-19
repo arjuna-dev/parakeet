@@ -10,6 +10,7 @@ from utils.mock_responses import mock_response_first_API, mock_response_second_A
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
+from google.cloud import storage
 
 
 import os
@@ -195,3 +196,36 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         final_response,
         status=200,
     )
+@https_fn.on_request(
+        cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
+)
+def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
+    try:
+        print(req)
+        request_data = req.get_json()
+        print(request_data)
+        document_id = request_data.get("document_id")
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=400,
+        )
+    bucket_name = "conversations_audio_files"
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+
+    blobs = bucket.list_blobs(prefix=document_id + '/')
+
+    for blob in blobs:
+        try:
+            blob.delete()
+            print(f"Blob {blob.name} deleted.")
+        except Exception as e:
+            print(f"Blob {blob.name} not found.")
+    # delete the folder as well
+    
+    
+    return https_fn.Response(status=200)
