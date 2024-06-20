@@ -72,6 +72,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
+    //Listen to the playerCurrentIndexStream
+    player.currentIndexStream.listen((index) {
+      if (index != null && index < script.length) {
+        setState(() {
+          currentTrack = script[index];
+        });
+      }
+    });
+
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
@@ -491,13 +500,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
     player.play();
-    player.currentIndexStream.listen((index) {
-      if (index != null && index < script.length) {
-        setState(() {
-          currentTrack = script[index];
-        });
-      }
-    });
   }
 
   // This method stops the audio
