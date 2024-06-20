@@ -1,4 +1,4 @@
-package com.parakeetapp.app
+package com.parakeetapp
 
 import io.flutter.embedding.android.FlutterActivity
 
