@@ -42,6 +42,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late ConcatenatingAudioSource playlist; // The playlist
   String currentTrack = ''; // The current track
   bool isPlaying = false; // Whether the player is playing
+  bool isStopped = false; // Whether the player is stopped
   Duration totalDuration = Duration.zero; // The total duration of all tracks
   Duration finalTotalDuration = Duration.zero;
   Duration currentPosition =
@@ -274,6 +275,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
         final NavigatorState navigator = Navigator.of(context);
         if (!widget.generating) {
+          if (!isStopped) {
+            await _pause();
+          }
           navigator.pop('reload');
         } else {
           //remove all the stacks and reload the home page
@@ -521,6 +525,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.seek(Duration.zero, index: 0);
     setState(() {
       isPlaying = false;
+      isStopped = true;
       currentTrack = script[0];
     });
   }
