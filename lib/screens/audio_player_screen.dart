@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'package:parakeet/services/home_screen_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:collection';
@@ -280,11 +278,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           }
           navigator.pop('reload');
         } else {
+          if (!isStopped) {
+            await _pause();
+          }
           //remove all the stacks and reload the home page
           navigator.popUntil((route) => route.isFirst);
-          // Load the audio files
-          await Provider.of<HomeScreenModel>(context, listen: false)
-              .loadNowPlayingFromPreference();
           navigator.pushReplacementNamed('/');
         }
       },
