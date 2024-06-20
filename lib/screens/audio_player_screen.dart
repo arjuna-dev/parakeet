@@ -1,7 +1,5 @@
 import 'dart:async';
-
-//import 'package:auralearn/screens/home_screen.dart';
-import 'package:auralearn/services/home_screen_model.dart';
+import 'package:parakeet/screens/home_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -9,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:collection';
-import 'package:auralearn/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/utils/script_generator.dart' as script_generator;
 
 // This is the main screen for the audio player
 // ignore: must_be_immutable

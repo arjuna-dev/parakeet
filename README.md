@@ -1,4 +1,4 @@
-# auralearn
+# Parakeet
 
 A new Flutter project.
 
