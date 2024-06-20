@@ -185,6 +185,7 @@ class APICalls:
         for chunk in chatGPT_response:
             is_finished = chunk.choices[0].finish_reason
             if is_finished != None:
+                print("is finished reason: ", is_finished)
                 break
 
             a_chunk = chunk.choices[0].delta.content
