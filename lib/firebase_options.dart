@@ -64,9 +64,11 @@ class DefaultFirebaseOptions {
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
     storageBucket: 'noble-descent-420612.appspot.com',
-    androidClientId: '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
-    iosClientId: '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
-    iosBundleId: 'com.example.auralearn',
+    androidClientId:
+        '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
+    iosClientId:
+        '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
+    iosBundleId: 'com.parakeetapp.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -75,9 +77,11 @@ class DefaultFirebaseOptions {
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
     storageBucket: 'noble-descent-420612.appspot.com',
-    androidClientId: '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
-    iosClientId: '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
-    iosBundleId: 'com.example.auralearn',
+    androidClientId:
+        '104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com',
+    iosClientId:
+        '104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com',
+    iosBundleId: 'com.parakeetapp.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -89,5 +93,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'noble-descent-420612.appspot.com',
     measurementId: 'G-QYD2HYDHZ9',
   );
-
 }
