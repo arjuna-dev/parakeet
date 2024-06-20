@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:parakeet/screens/home_screen.dart';
+import 'package:parakeet/services/home_screen_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
