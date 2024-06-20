@@ -1,49 +1,84 @@
 
 
-GET http://127.0.0.1:8081/ HTTP/1.1
+GET http://127.0.0.1:8080/ HTTP/1.1
 content-type: application/json
 
 {
-	"dialogue": [
-		{
-			"gender": "m",
-			"native_language": "Good day, Mr. Müller. I would like to order a catapult.",
-			"speaker": "speaker_1",
-			"target_language": "Guten Tag, Herr Müller. Ich möchte eine Katapult bestellen.",
-			"turn_nr": "1"
-		},
-		{
-			"gender": "m",
-			"native_language": "A catapult, Mr. Einstein? That is an unusual order.",
-			"speaker": "speaker_2",
-			"target_language": "Eine Katapult, Herr Einstein? Das ist eine ungewöhnliche Bestellung.",
-			"turn_nr": "2"
-		}
-	],
-
-	"document_id": "000_(¬,‿,¬)",
-	"user_ID": "iAmAUserID",
-	"title": "Einstein Orders a Catapult",
-	
-  "speakers": {
-		"speaker_1": {
-			"gender": "m",
-			"name": "Albert"
-		},
-		"speaker_2": {
-			"gender": "m",
-			"name": "Herr Müller"
-		}
-	},
-
-	"native_language": "English",
-  "target_language": "German",
-	"language_level": "C2",
-  "length": "2",
-	"tts_provider": "1",
-	"voice_1_id": "de-DE-Studio-B",
-	"voice_2_id": "de-DE-Studio-C",
-	"words_to_repeat": ["one", "two"]
+   "dialogue":[
+      {
+         "gender":"f",
+         "turn_nr":"1",
+         "speaker":"speaker_2",
+         "target_language":"Hans, was hältst du von der Einhaltung europäischer Gesetze durch Unternehmen?",
+         "native_language":"Hans, what do you think about companies adhering to European laws?"
+      },
+      {
+         "gender":"m",
+         "turn_nr":"2",
+         "target_language":"Ingrid, ich denke, es ist wichtig für die Unternehmen, den Gesetzen zu folgen, um Angriffe und rechtliche Probleme zu vermeiden.",
+         "speaker":"speaker_1",
+         "native_language":"Ingrid, I think it is important for companies to follow laws to avoid attacks and legal issues."
+      },
+      {
+         "gender":"f",
+         "turn_nr":"3",
+         "speaker":"speaker_2",
+         "target_language":"Ja, aber viele argumentieren, dass die strikte Einhaltung der Vorschriften die Profitabilität und das Umsatzwachstum in Frage stellen könnte.",
+         "native_language":"Yes, but many argue that strict adherence might challenge profitability and revenue growth."
+      },
+      {
+         "gender":"m",
+         "turn_nr":"4",
+         "target_language":"Das stimmt, aber ich glaube, dass die langfristigen Vorteile wie Sicherheit und Reputation größer sind als kurzfristige Gewinne.",
+         "speaker":"speaker_1",
+         "native_language":"That's true, but I believe the long-term benefits like security and reputation outweigh short-term profits."
+      },
+      {
+         "gender":"f",
+         "turn_nr":"5",
+         "target_language":"Das ist ein guter Punkt. Langfristige Strategie kann nachhaltiges Wachstum besser unterstützen.",
+         "speaker":"speaker_2",
+         "native_language":"That's a good point. Long-term strategy can better support sustainable growth."
+      }
+   ],
+   "document_id":"AIlKVmERMUyCslGDFrK0",
+   "user_ID":"JRqn79vzmsYDYv7x6iLv2Zr9BKB3",
+   "title":"A Discussion on the Pros and Cons of Compliance in Europe",
+   "speakers":{
+      "speaker_1":{
+         "gender":"m",
+         "name":"Hans"
+      },
+      "speaker_2":{
+         "gender":"f",
+         "name":"Ingrid"
+      }
+   },
+   "native_language":"English",
+   "target_language":"German",
+   "language_level":"C2",
+   "length":"10",
+   "voice_1_id":"de-DE-Studio-C",
+   "voice_2_id":"de-DE-Studio-B",
+   "words_to_repeat":[
+      "Einhaltung",
+      "Gesetze",
+      "durch",
+      "Unternehmen?",
+      "um",
+      "Angriffe",
+      "rechtliche",
+      "vermeiden.",
+      "Vorschriften",
+      "Umsatzwachstum",
+      "in",
+      "Frage",
+      "langfristigen",
+      "kurzfristige",
+      "nachhaltiges",
+      "Wachstum"
+   ],
+   "tts_provider":"1"
 }
 
 
