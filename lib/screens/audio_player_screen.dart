@@ -491,13 +491,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
     player.play();
-    // player.currentIndexStream.listen((index) {
-    //   if (index != null && index < script.length) {
-    //     setState(() {
-    //       currentTrack = script[index];
-    //     });
-    //   }
-    // });
+    player.currentIndexStream.listen((index) {
+      if (index != null && index < script.length) {
+        setState(() {
+          currentTrack = script[index];
+        });
+      }
+    });
   }
 
   // This method stops the audio
