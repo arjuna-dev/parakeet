@@ -1,15 +1,15 @@
 // import math package
 import 'dart:math';
-import 'package:auralearn/screens/confirm_dialogue_screen.dart';
-import 'package:auralearn/Navigation/bottom_menu_bar.dart';
+import 'package:parakeet/screens/confirm_dialogue_screen.dart';
+import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
-import 'package:auralearn/utils/google_tts_language_codes.dart';
-import 'package:auralearn/utils/constants.dart';
-import 'package:auralearn/utils/example_scenarios.dart';
+import 'package:parakeet/utils/google_tts_language_codes.dart';
+import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/example_scenarios.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);

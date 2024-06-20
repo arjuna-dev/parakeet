@@ -1,4 +1,4 @@
-import 'package:auralearn/services/home_screen_model.dart';
+import 'package:parakeet/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Parakeet',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -63,8 +64,7 @@ class MyApp extends StatelessWidget {
             );
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) =>
-                  const CreateLesson(title: 'Parakeet'),
+              builder: (context) => const CreateLesson(title: 'Parakeet'),
             );
           case '/login':
             return MaterialPageRoute(

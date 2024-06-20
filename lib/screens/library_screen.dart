@@ -1,13 +1,12 @@
 import 'dart:convert';
-
-import 'package:auralearn/Navigation/bottom_menu_bar.dart';
-import 'package:auralearn/screens/audio_player_screen.dart';
-import 'package:auralearn/services/home_screen_model.dart';
+import 'package:parakeet/Navigation/bottom_menu_bar.dart';
+import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/services/home_screen_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:auralearn/utils/constants.dart';
+import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
