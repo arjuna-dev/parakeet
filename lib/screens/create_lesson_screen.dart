@@ -23,7 +23,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
-  var nativeLanguage = 'English';
+  var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
   var languageLevel = 'A1';
@@ -125,7 +125,7 @@ class _CreateLessonState extends State<CreateLesson> {
                           nativeLanguage = value.toString();
                         });
                       },
-                      items: <String>['English']
+                      items: <String>['English (US)']
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
