@@ -192,38 +192,6 @@ google_tts_voices =  [
         "language_code": "en-US"
     },
     {
-        "language": "English (US)",
-        "gender": "f",
-        "voice_id": "en-US-Studio-O",
-        "voice_category": "Studio",
-        "voice_type": "Studio",
-        "language_code": "en-US"
-    },
-    {
-        "language": "English (US)",
-        "gender": "m",
-        "voice_id": "en-US-Studio-Q",
-        "voice_category": "Studio",
-        "voice_type": "Studio",
-        "language_code": "en-US"
-    },
-    {
-        "language": "English (US)",
-        "gender": "f",
-        "voice_id": "en-US-Wavenet-C",
-        "voice_category": "Premium",
-        "voice_type": "Wavenet",
-        "language_code": "en-US"
-    },
-    {
-        "language": "English (US)",
-        "gender": "m",
-        "voice_id": "en-US-Wavenet-A",
-        "voice_category": "Premium",
-        "voice_type": "Wavenet",
-        "language_code": "en-US"
-    },
-    {
         "language": "Filipino",
         "gender": "f",
         "voice_id": "fil-PH-Wavenet-A",
