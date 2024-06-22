@@ -32,7 +32,7 @@ google_tts_voices =  [
         "language_code": "ar-XA"
     },
     {
-        "language": "Bengali (India)",
+        "language": "Bengali",
         "gender": "f",
         "voice_id": "bn-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -40,7 +40,15 @@ google_tts_voices =  [
         "language_code": "bn-IN"
     },
     {
-        "language": "Bengali (India)",
+        "language": "Bengali",
+        "gender": "f",
+        "voice_id": "bn-IN-Wavenet-C",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "bn-IN"
+    },
+    {
+        "language": "Bengali",
         "gender": "m",
         "voice_id": "bn-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -48,7 +56,15 @@ google_tts_voices =  [
         "language_code": "bn-IN"
     },
     {
-        "language": "Danish (Denmark)",
+        "language": "Bengali",
+        "gender": "m",
+        "voice_id": "bn-IN-Wavenet-D",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "bn-IN"
+    },
+    {
+        "language": "Danish",
         "gender": "f",
         "voice_id": "da-DK-Wavenet-A",
         "voice_category": "Premium",
@@ -56,7 +72,15 @@ google_tts_voices =  [
         "language_code": "da-DK"
     },
     {
-        "language": "Danish (Denmark)",
+        "language": "Danish",
+        "gender": "f",
+        "voice_id": "da-DK-Wavenet-D",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "da-DK"
+    },
+    {
+        "language": "Danish",
         "gender": "m",
         "voice_id": "da-DK-Wavenet-C",
         "voice_category": "Premium",
@@ -64,9 +88,25 @@ google_tts_voices =  [
         "language_code": "da-DK"
     },
     {
+        "language": "Danish",
+        "gender": "m",
+        "voice_id": "da-DK-Standard-C",
+        "voice_category": "Standard",
+        "voice_type": "Standard",
+        "language_code": "da-DK"
+    },
+    {
         "language": "English (Australia)",
         "gender": "f",
         "voice_id": "en-AU-Neural2-A",
+        "voice_category": "Premium",
+        "voice_type": "Neural2",
+        "language_code": "en-AU"
+    },
+    {
+        "language": "English (Australia)",
+        "gender": "f",
+        "voice_id": "en-AU-Neural2-C",
         "voice_category": "Premium",
         "voice_type": "Neural2",
         "language_code": "en-AU"
@@ -80,6 +120,30 @@ google_tts_voices =  [
         "language_code": "en-AU"
     },
     {
+        "language": "English (Australia)",
+        "gender": "m",
+        "voice_id": "en-AU-Neural2-D",
+        "voice_category": "Premium",
+        "voice_type": "Neural2",
+        "language_code": "en-AU"
+    },
+    {
+        "language": "English (UK)",
+        "gender": "f",
+        "voice_id": "en-GB-Studio-C",
+        "voice_category": "Studio",
+        "voice_type": "Studio",
+        "language_code": "en-GB"
+    },
+    {
+        "language": "English (UK)",
+        "gender": "f",
+        "voice_id": "en-GB-Wavenet-A",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "en-GB"
+    },
+    {
         "language": "English (UK)",
         "gender": "m",
         "voice_id": "en-GB-Studio-B",
@@ -89,11 +153,43 @@ google_tts_voices =  [
     },
     {
         "language": "English (UK)",
+        "gender": "m",
+        "voice_id": "en-GB-Wavenet-B",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "en-GB"
+    },
+    {
+        "language": "English (US)",
         "gender": "f",
-        "voice_id": "en-GB-Studio-C",
+        "voice_id": "en-US-Studio-O",
         "voice_category": "Studio",
         "voice_type": "Studio",
-        "language_code": "en-GB"
+        "language_code": "en-US"
+    },
+    {
+        "language": "English (US)",
+        "gender": "f",
+        "voice_id": "en-US-Wavenet-C",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "en-US"
+    },
+    {
+        "language": "English (US)",
+        "gender": "m",
+        "voice_id": "en-US-Studio-Q",
+        "voice_category": "Studio",
+        "voice_type": "Studio",
+        "language_code": "en-US"
+    },
+    {
+        "language": "English (US)",
+        "gender": "m",
+        "voice_id": "en-US-Wavenet-A",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "en-US"
     },
     {
         "language": "English (US)",
@@ -128,7 +224,7 @@ google_tts_voices =  [
         "language_code": "en-US"
     },
     {
-        "language": "Filipino (Philippines)",
+        "language": "Filipino",
         "gender": "f",
         "voice_id": "fil-PH-Wavenet-A",
         "voice_category": "Premium",
@@ -136,7 +232,7 @@ google_tts_voices =  [
         "language_code": "fil-PH"
     },
     {
-        "language": "Filipino (Philippines)",
+        "language": "Filipino",
         "gender": "f",
         "voice_id": "fil-ph-Neural2-A",
         "voice_category": "Premium",
@@ -144,7 +240,7 @@ google_tts_voices =  [
         "language_code": "fil-PH"
     },
     {
-        "language": "Filipino (Philippines)",
+        "language": "Filipino",
         "gender": "m",
         "voice_id": "fil-PH-Wavenet-C",
         "voice_category": "Premium",
@@ -152,7 +248,7 @@ google_tts_voices =  [
         "language_code": "fil-PH"
     },
     {
-        "language": "Filipino (Philippines)",
+        "language": "Filipino",
         "gender": "m",
         "voice_id": "fil-ph-Neural2-D",
         "voice_category": "Premium",
@@ -224,7 +320,7 @@ google_tts_voices =  [
         "language_code": "fr-FR"
     },
     {
-        "language": "Gujarati (India)",
+        "language": "Gujarati",
         "gender": "f",
         "voice_id": "gu-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -232,7 +328,7 @@ google_tts_voices =  [
         "language_code": "gu-IN"
     },
     {
-        "language": "Gujarati (India)",
+        "language": "Gujarati",
         "gender": "f",
         "voice_id": "gu-IN-Wavenet-C",
         "voice_category": "Premium",
@@ -240,7 +336,7 @@ google_tts_voices =  [
         "language_code": "gu-IN"
     },
     {
-        "language": "Gujarati (India)",
+        "language": "Gujarati",
         "gender": "m",
         "voice_id": "gu-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -248,7 +344,7 @@ google_tts_voices =  [
         "language_code": "gu-IN"
     },
     {
-        "language": "Gujarati (India)",
+        "language": "Gujarati",
         "gender": "m",
         "voice_id": "gu-IN-Wavenet-D",
         "voice_category": "Premium",
@@ -256,7 +352,7 @@ google_tts_voices =  [
         "language_code": "gu-IN"
     },
     {
-        "language": "Hindi (India)",
+        "language": "Hindi",
         "gender": "f",
         "voice_id": "hi-IN-Neural2-A",
         "voice_category": "Premium",
@@ -264,7 +360,7 @@ google_tts_voices =  [
         "language_code": "hi-IN"
     },
     {
-        "language": "Hindi (India)",
+        "language": "Hindi",
         "gender": "m",
         "voice_id": "hi-IN-Neural2-B",
         "voice_category": "Premium",
@@ -272,9 +368,17 @@ google_tts_voices =  [
         "language_code": "hi-IN"
     },
     {
-        "language": "Hindi (India)",
+        "language": "Hindi",
         "gender": "m",
         "voice_id": "hi-IN-Neural2-C",
+        "voice_category": "Premium",
+        "voice_type": "Neural2",
+        "language_code": "hi-IN"
+    },
+    {
+        "language": "Hindi",
+        "gender": "f",
+        "voice_id": "hi-IN-Neural2-D",
         "voice_category": "Premium",
         "voice_type": "Neural2",
         "language_code": "hi-IN"
@@ -312,7 +416,7 @@ google_tts_voices =  [
       "language_code": "de-DE"
     },
     {
-        "language": "Indonesian (Indonesia)",
+        "language": "Indonesian",
         "gender": "f",
         "voice_id": "id-ID-Wavenet-A",
         "voice_category": "Premium",
@@ -320,7 +424,7 @@ google_tts_voices =  [
         "language_code": "id-ID"
     },
     {
-        "language": "Indonesian (Indonesia)",
+        "language": "Indonesian",
         "gender": "f",
         "voice_id": "id-ID-Wavenet-D",
         "voice_category": "Premium",
@@ -328,7 +432,7 @@ google_tts_voices =  [
         "language_code": "id-ID"
     },
     {
-        "language": "Indonesian (Indonesia)",
+        "language": "Indonesian",
         "gender": "m",
         "voice_id": "id-ID-Wavenet-B",
         "voice_category": "Premium",
@@ -336,7 +440,7 @@ google_tts_voices =  [
         "language_code": "id-ID"
     },
     {
-        "language": "Indonesian (Indonesia)",
+        "language": "Indonesian",
         "gender": "m",
         "voice_id": "id-ID-Wavenet-C",
         "voice_category": "Premium",
@@ -344,7 +448,7 @@ google_tts_voices =  [
         "language_code": "id-ID"
     },
     {
-        "language": "Italian (Italy)",
+        "language": "Italian",
         "gender": "f",
         "voice_id": "it-IT-Neural2-A",
         "voice_category": "Premium",
@@ -352,7 +456,7 @@ google_tts_voices =  [
         "language_code": "it-IT"
     },
     {
-        "language": "Italian (Italy)",
+        "language": "Italian",
         "gender": "f",
         "voice_id": "it-IT-Wavenet-B",
         "voice_category": "Premium",
@@ -360,7 +464,7 @@ google_tts_voices =  [
         "language_code": "it-IT"
     },
     {
-        "language": "Italian (Italy)",
+        "language": "Italian",
         "gender": "m",
         "voice_id": "it-IT-Neural2-C",
         "voice_category": "Premium",
@@ -368,7 +472,7 @@ google_tts_voices =  [
         "language_code": "it-IT"
     },
     {
-        "language": "Italian (Italy)",
+        "language": "Italian",
         "gender": "m",
         "voice_id": "it-IT-Wavenet-C",
         "voice_category": "Premium",
@@ -376,7 +480,7 @@ google_tts_voices =  [
         "language_code": "it-IT"
     },
     {
-        "language": "Japanese (Japan)",
+        "language": "Japanese",
         "gender": "f",
         "voice_id": "ja-JP-Neural2-B",
         "voice_category": "Premium",
@@ -384,7 +488,7 @@ google_tts_voices =  [
         "language_code": "ja-JP"
     },
     {
-        "language": "Japanese (Japan)",
+        "language": "Japanese",
         "gender": "f",
         "voice_id": "ja-JP-Wavenet-A",
         "voice_category": "Premium",
@@ -392,7 +496,7 @@ google_tts_voices =  [
         "language_code": "ja-JP"
     },
     {
-        "language": "Japanese (Japan)",
+        "language": "Japanese",
         "gender": "m",
         "voice_id": "ja-JP-Neural2-C",
         "voice_category": "Premium",
@@ -400,7 +504,7 @@ google_tts_voices =  [
         "language_code": "ja-JP"
     },
     {
-        "language": "Japanese (Japan)",
+        "language": "Japanese",
         "gender": "m",
         "voice_id": "ja-JP-Neural2-D",
         "voice_category": "Premium",
@@ -408,7 +512,7 @@ google_tts_voices =  [
         "language_code": "ja-JP"
     },
     {
-        "language": "Kannada (India)",
+        "language": "Kannada",
         "gender": "f",
         "voice_id": "kn-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -416,7 +520,7 @@ google_tts_voices =  [
         "language_code": "kn-IN"
     },
     {
-        "language": "Kannada (India)",
+        "language": "Kannada",
         "gender": "f",
         "voice_id": "kn-IN-Wavenet-C",
         "voice_category": "Premium",
@@ -424,7 +528,7 @@ google_tts_voices =  [
         "language_code": "kn-IN"
     },
     {
-        "language": "Kannada (India)",
+        "language": "Kannada",
         "gender": "m",
         "voice_id": "kn-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -432,7 +536,7 @@ google_tts_voices =  [
         "language_code": "kn-IN"
     },
     {
-        "language": "Kannada (India)",
+        "language": "Kannada",
         "gender": "m",
         "voice_id": "kn-IN-Wavenet-D",
         "voice_category": "Premium",
@@ -440,7 +544,7 @@ google_tts_voices =  [
         "language_code": "kn-IN"
     },
     {
-        "language": "Korean (South Korea)",
+        "language": "Korean",
         "gender": "f",
         "voice_id": "ko-KR-Neural2-A",
         "voice_category": "Premium",
@@ -448,7 +552,7 @@ google_tts_voices =  [
         "language_code": "ko-KR"
     },
     {
-        "language": "Korean (South Korea)",
+        "language": "Korean",
         "gender": "f",
         "voice_id": "ko-KR-Neural2-B",
         "voice_category": "Premium",
@@ -456,7 +560,7 @@ google_tts_voices =  [
         "language_code": "ko-KR"
     },
     {
-        "language": "Korean (South Korea)",
+        "language": "Korean",
         "gender": "m",
         "voice_id": "ko-KR-Neural2-C",
         "voice_category": "Premium",
@@ -464,7 +568,7 @@ google_tts_voices =  [
         "language_code": "ko-KR"
     },
     {
-        "language": "Korean (South Korea)",
+        "language": "Korean",
         "gender": "m",
         "voice_id": "ko-KR-Wavenet-C",
         "voice_category": "Premium",
@@ -472,7 +576,7 @@ google_tts_voices =  [
         "language_code": "ko-KR"
     },
     {
-        "language": "Malay (Malaysia)",
+        "language": "Malay",
         "gender": "f",
         "voice_id": "ms-MY-Wavenet-A",
         "voice_category": "Premium",
@@ -480,7 +584,7 @@ google_tts_voices =  [
         "language_code": "ms-MY"
     },
     {
-        "language": "Malay (Malaysia)",
+        "language": "Malay",
         "gender": "f",
         "voice_id": "ms-MY-Wavenet-C",
         "voice_category": "Premium",
@@ -488,7 +592,7 @@ google_tts_voices =  [
         "language_code": "ms-MY"
     },
     {
-        "language": "Malay (Malaysia)",
+        "language": "Malay",
         "gender": "m",
         "voice_id": "ms-MY-Wavenet-B",
         "voice_category": "Premium",
@@ -496,7 +600,7 @@ google_tts_voices =  [
         "language_code": "ms-MY"
     },
     {
-        "language": "Malay (Malaysia)",
+        "language": "Malay",
         "gender": "m",
         "voice_id": "ms-MY-Wavenet-D",
         "voice_category": "Premium",
@@ -504,7 +608,7 @@ google_tts_voices =  [
         "language_code": "ms-MY"
     },
     {
-        "language": "Malayalam (India)",
+        "language": "Malayalam",
         "gender": "f",
         "voice_id": "ml-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -512,7 +616,7 @@ google_tts_voices =  [
         "language_code": "ml-IN"
     },
     {
-        "language": "Malayalam (India)",
+        "language": "Malayalam",
         "gender": "f",
         "voice_id": "ml-IN-Wavenet-C",
         "voice_category": "Premium",
@@ -520,7 +624,7 @@ google_tts_voices =  [
         "language_code": "ml-IN"
     },
     {
-        "language": "Malayalam (India)",
+        "language": "Malayalam",
         "gender": "m",
         "voice_id": "ml-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -528,7 +632,7 @@ google_tts_voices =  [
         "language_code": "ml-IN"
     },
     {
-        "language": "Malayalam (India)",
+        "language": "Malayalam",
         "gender": "m",
         "voice_id": "ml-IN-Wavenet-D",
         "voice_category": "Premium",
@@ -568,7 +672,7 @@ google_tts_voices =  [
         "language_code": "cmn-CN"
     },
     {
-        "language": "Norwegian (Norway)",
+        "language": "Norwegian",
         "gender": "f",
         "voice_id": "nb-NO-Wavenet-A",
         "voice_category": "Premium",
@@ -576,7 +680,7 @@ google_tts_voices =  [
         "language_code": "nb-NO"
     },
     {
-        "language": "Norwegian (Norway)",
+        "language": "Norwegian",
         "gender": "f",
         "voice_id": "nb-NO-Wavenet-C",
         "voice_category": "Premium",
@@ -584,7 +688,7 @@ google_tts_voices =  [
         "language_code": "nb-NO"
     },
     {
-        "language": "Norwegian (Norway)",
+        "language": "Norwegian",
         "gender": "m",
         "voice_id": "nb-NO-Wavenet-B",
         "voice_category": "Premium",
@@ -592,7 +696,7 @@ google_tts_voices =  [
         "language_code": "nb-NO"
     },
     {
-        "language": "Norwegian (Norway)",
+        "language": "Norwegian",
         "gender": "m",
         "voice_id": "nb-NO-Wavenet-D",
         "voice_category": "Premium",
@@ -600,7 +704,7 @@ google_tts_voices =  [
         "language_code": "nb-NO"
     },
     {
-        "language": "Polish (Poland)",
+        "language": "Polish",
         "gender": "f",
         "voice_id": "pl-PL-Wavenet-A",
         "voice_category": "Premium",
@@ -608,7 +712,7 @@ google_tts_voices =  [
         "language_code": "pl-PL"
     },
     {
-        "language": "Polish (Poland)",
+        "language": "Polish",
         "gender": "f",
         "voice_id": "pl-PL-Wavenet-D",
         "voice_category": "Premium",
@@ -616,7 +720,7 @@ google_tts_voices =  [
         "language_code": "pl-PL"
     },
     {
-        "language": "Polish (Poland)",
+        "language": "Polish",
         "gender": "m",
         "voice_id": "pl-PL-Wavenet-B",
         "voice_category": "Premium",
@@ -624,7 +728,7 @@ google_tts_voices =  [
         "language_code": "pl-PL"
     },
     {
-        "language": "Polish (Poland)",
+        "language": "Polish",
         "gender": "m",
         "voice_id": "pl-PL-Wavenet-C",
         "voice_category": "Premium",
@@ -696,7 +800,7 @@ google_tts_voices =  [
         "language_code": "pt-PT"
     },
     {
-        "language": "Punjabi (India)",
+        "language": "Punjabi",
         "gender": "f",
         "voice_id": "pa-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -704,7 +808,7 @@ google_tts_voices =  [
         "language_code": "pa-IN"
     },
     {
-        "language": "Punjabi (India)",
+        "language": "Punjabi",
         "gender": "f",
         "voice_id": "pa-IN-Wavenet-C",
         "voice_category": "Premium",
@@ -712,7 +816,7 @@ google_tts_voices =  [
         "language_code": "pa-IN"
     },
     {
-        "language": "Punjabi (India)",
+        "language": "Punjabi",
         "gender": "m",
         "voice_id": "pa-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -720,7 +824,7 @@ google_tts_voices =  [
         "language_code": "pa-IN"
     },
     {
-        "language": "Punjabi (India)",
+        "language": "Punjabi",
         "gender": "m",
         "voice_id": "pa-IN-Wavenet-D",
         "voice_category": "Premium",
@@ -728,7 +832,7 @@ google_tts_voices =  [
         "language_code": "pa-IN"
     },
     {
-        "language": "Russian (Russia)",
+        "language": "Russian",
         "gender": "f",
         "voice_id": "ru-RU-Wavenet-A",
         "voice_category": "Premium",
@@ -736,7 +840,7 @@ google_tts_voices =  [
         "language_code": "ru-RU"
     },
     {
-        "language": "Russian (Russia)",
+        "language": "Russian",
         "gender": "f",
         "voice_id": "ru-RU-Wavenet-C",
         "voice_category": "Premium",
@@ -744,7 +848,7 @@ google_tts_voices =  [
         "language_code": "ru-RU"
     },
     {
-        "language": "Russian (Russia)",
+        "language": "Russian",
         "gender": "m",
         "voice_id": "ru-RU-Wavenet-B",
         "voice_category": "Premium",
@@ -752,7 +856,7 @@ google_tts_voices =  [
         "language_code": "ru-RU"
     },
     {
-        "language": "Russian (Russia)",
+        "language": "Russian",
         "gender": "m",
         "voice_id": "ru-RU-Wavenet-D",
         "voice_category": "Premium",
@@ -824,7 +928,7 @@ google_tts_voices =  [
         "language_code": "es-US"
     },
     {
-        "language": "Swedish (Sweden)",
+        "language": "Swedish",
         "gender": "f",
         "voice_id": "sv-SE-Wavenet-B",
         "voice_category": "Premium",
@@ -832,7 +936,7 @@ google_tts_voices =  [
         "language_code": "sv-SE"
     },
     {
-        "language": "Swedish (Sweden)",
+        "language": "Swedish",
         "gender": "f",
         "voice_id": "sv-SE-Wavenet-D",
         "voice_category": "Premium",
@@ -840,7 +944,7 @@ google_tts_voices =  [
         "language_code": "sv-SE"
     },
     {
-        "language": "Swedish (Sweden)",
+        "language": "Swedish",
         "gender": "m",
         "voice_id": "sv-SE-Wavenet-C",
         "voice_category": "Premium",
@@ -848,7 +952,7 @@ google_tts_voices =  [
         "language_code": "sv-SE"
     },
     {
-        "language": "Swedish (Sweden)",
+        "language": "Swedish",
         "gender": "m",
         "voice_id": "sv-SE-Wavenet-E",
         "voice_category": "Premium",
@@ -856,7 +960,7 @@ google_tts_voices =  [
         "language_code": "sv-SE"
     },
     {
-        "language": "Tamil (India)",
+        "language": "Tamil",
         "gender": "f",
         "voice_id": "ta-IN-Wavenet-A",
         "voice_category": "Premium",
@@ -864,7 +968,7 @@ google_tts_voices =  [
         "language_code": "ta-IN"
     },
     {
-        "language": "Tamil (India)",
+        "language": "Tamil",
         "gender": "f",
         "voice_id": "ta-IN-Wavenet-C",
         "voice_category": "Premium",
@@ -872,7 +976,7 @@ google_tts_voices =  [
         "language_code": "ta-IN"
     },
     {
-        "language": "Tamil (India)",
+        "language": "Tamil",
         "gender": "m",
         "voice_id": "ta-IN-Wavenet-B",
         "voice_category": "Premium",
@@ -880,7 +984,7 @@ google_tts_voices =  [
         "language_code": "ta-IN"
     },
     {
-        "language": "Tamil (India)",
+        "language": "Tamil",
         "gender": "m",
         "voice_id": "ta-IN-Wavenet-D",
         "voice_category": "Premium",
@@ -888,7 +992,7 @@ google_tts_voices =  [
         "language_code": "ta-IN"
     },
     {
-        "language": "Turkish (Turkey)",
+        "language": "Turkish",
         "gender": "f",
         "voice_id": "tr-TR-Wavenet-A",
         "voice_category": "Premium",
@@ -896,7 +1000,7 @@ google_tts_voices =  [
         "language_code": "tr-TR"
     },
     {
-        "language": "Turkish (Turkey)",
+        "language": "Turkish",
         "gender": "f",
         "voice_id": "tr-TR-Wavenet-C",
         "voice_category": "Premium",
@@ -904,7 +1008,7 @@ google_tts_voices =  [
         "language_code": "tr-TR"
     },
     {
-        "language": "Turkish (Turkey)",
+        "language": "Turkish",
         "gender": "m",
         "voice_id": "tr-TR-Wavenet-B",
         "voice_category": "Premium",
@@ -912,7 +1016,7 @@ google_tts_voices =  [
         "language_code": "tr-TR"
     },
     {
-        "language": "Turkish (Turkey)",
+        "language": "Turkish",
         "gender": "m",
         "voice_id": "tr-TR-Wavenet-E",
         "voice_category": "Premium",
@@ -920,19 +1024,35 @@ google_tts_voices =  [
         "language_code": "tr-TR"
     },
     {
-        "language": "Vietnamese (Vietnam)",
+        "language": "Vietnamese",
         "gender": "f",
-        "voice_id": "vi-VN-Neural2-A",
+        "voice_id": "vi-VN-Wavenet-A",
         "voice_category": "Premium",
-        "voice_type": "Neural2",
+        "voice_type": "Wavenet",
         "language_code": "vi-VN"
     },
     {
-        "language": "Vietnamese (Vietnam)",
-        "gender": "m",
-        "voice_id": "vi-VN-Neural2-D",
+        "language": "Vietnamese",
+        "gender": "f",
+        "voice_id": "vi-VN-Wavenet-C",
         "voice_category": "Premium",
-        "voice_type": "Neural2",
+        "voice_type": "Wavenet",
+        "language_code": "vi-VN"
+    },
+    {
+        "language": "Vietnamese",
+        "gender": "m",
+        "voice_id": "vi-VN-Wavenet-B",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
+        "language_code": "vi-VN"
+    },
+    {
+        "language": "Vietnamese",
+        "gender": "m",
+        "voice_id": "vi-VN-Wavenet-D",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
         "language_code": "vi-VN"
     }
   ]
