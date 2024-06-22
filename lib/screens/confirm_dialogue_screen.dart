@@ -34,14 +34,22 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
   Map<String, dynamic> bigJsonDocument = {};
-  ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(true);
+  ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(false);
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
+  bool hasSelectedWord = false;
+
+  void updateHasSelectedWords() {
+    hasSelectedWord = selectedWords.values
+        .any((wordMap) => wordMap.values.any((notifier) => notifier.value));
+  }
+
+  void handleConfirmPress(BuildContext context) async {}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm dialogue'),
+        title: const Text('Your Conversation'),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -99,7 +107,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                         padding:
                             EdgeInsets.all(8.0), // Add padding inside the card
                         child: Text(
-                          'Highlight words that you want to focus on learning.',
+                          'Select the words that you want to focus on learning.',
                           style: TextStyle(
                               fontSize: 16), // Adjust the font size as needed
                         ),
@@ -129,6 +137,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                             selectAllNotifier.value;
                                       }
                                     }
+                                    updateHasSelectedWords();
                                   },
                                 ),
                                 const Text("Select All Words"),
@@ -202,6 +211,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     isSelectedNotifier.value =
                                                         !isSelectedNotifier
                                                             .value;
+                                                    updateHasSelectedWords();
                                                   },
                                                   child: Container(
                                                     padding: const EdgeInsets
@@ -265,42 +275,93 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           height: 50,
                           margin: const EdgeInsets.only(bottom: 20),
                           child: FloatingActionButton.extended(
-                            label: const Text('Confirm and generate audio'),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            backgroundColor: isConfirmButtonActive.value
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey[400],
-                            foregroundColor: Colors.white,
-                            onPressed: isConfirmButtonActive.value
-                                ? () async {
-                                    print("confirmed");
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (BuildContext context) {
-                                        return const Center(
-                                          child: CircularProgressIndicator(),
-                                        );
-                                      },
+                              label: const Text('Generate Audio'),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              backgroundColor: isConfirmButtonActive.value
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey[400],
+                              foregroundColor: Colors.white,
+                              onPressed: () async {
+                                if (isConfirmButtonActive.value) {
+                                  if (!hasSelectedWord) {
+                                    // Show a Snackbar with a message
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                              'Please select at least one word to proceed 🧐'),
+                                        ),
+                                        duration: Duration(seconds: 3),
+                                      ),
                                     );
+                                    return; // Return early since no word has been selected
+                                  }
 
-                                    try {
-                                      DocumentReference docRef = FirebaseFirestore
-                                          .instance
-                                          .collection('chatGPT_responses')
-                                          .doc(widget.documentID)
-                                          .collection(
-                                              'script-${FirebaseAuth.instance.currentUser!.uid}')
-                                          .doc();
-                                      await docRef.set({
-                                        "script": script,
-                                        "title": bigJsonDocument["title"],
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (BuildContext context) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    },
+                                  );
+
+                                  try {
+                                    DocumentReference docRef = FirebaseFirestore
+                                        .instance
+                                        .collection('chatGPT_responses')
+                                        .doc(widget.documentID)
+                                        .collection(
+                                            'script-${FirebaseAuth.instance.currentUser!.uid}')
+                                        .doc();
+                                    await docRef.set({
+                                      "script": script,
+                                      "title": bigJsonDocument["title"],
+                                      "dialogue": bigJsonDocument["dialogue"],
+                                      "target_language": widget.targetLanguage,
+                                      "language_level": widget.languageLevel,
+                                      "words_to_repeat": selectedWords.entries
+                                          .expand(
+                                              (entry) => entry.value.entries)
+                                          .where((innerEntry) =>
+                                              innerEntry.value.value == true)
+                                          .map((innerEntry) => innerEntry.key)
+                                          .toList(),
+                                      "user_ID":
+                                          FirebaseAuth.instance.currentUser!.uid
+                                    });
+                                    String scriptDocumentID = docRef.id;
+
+                                    http.post(
+                                      Uri.parse(
+                                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
+                                      headers: <String, String>{
+                                        'Content-Type':
+                                            'application/json; charset=UTF-8',
+                                        "Access-Control-Allow-Origin":
+                                            "*", // Required for CORS support to work
+                                      },
+                                      body: jsonEncode(<String, dynamic>{
+                                        "document_id": widget.documentID,
                                         "dialogue": bigJsonDocument["dialogue"],
+                                        "title": bigJsonDocument["title"],
+                                        "speakers": bigJsonDocument["speakers"],
+                                        "user_ID": bigJsonDocument["user_ID"],
+                                        "native_language":
+                                            widget.nativeLanguage,
                                         "target_language":
                                             widget.targetLanguage,
+                                        "length": widget.length,
                                         "language_level": widget.languageLevel,
+                                        "voice_1_id":
+                                            bigJsonDocument["voice_1_id"],
+                                        "voice_2_id":
+                                            bigJsonDocument["voice_2_id"],
+                                        "tts_provider": "1",
                                         "words_to_repeat": selectedWords.entries
                                             .expand(
                                                 (entry) => entry.value.entries)
@@ -308,105 +369,56 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                 innerEntry.value.value == true)
                                             .map((innerEntry) => innerEntry.key)
                                             .toList(),
-                                        "user_ID": FirebaseAuth
-                                            .instance.currentUser!.uid
-                                      });
-                                      String scriptDocumentID = docRef.id;
-
-                                      http.post(
-                                        Uri.parse(
-                                            'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
-                                        headers: <String, String>{
-                                          'Content-Type':
-                                              'application/json; charset=UTF-8',
-                                          "Access-Control-Allow-Origin":
-                                              "*", // Required for CORS support to work
-                                        },
-                                        body: jsonEncode(<String, dynamic>{
-                                          "document_id": widget.documentID,
-                                          "dialogue":
-                                              bigJsonDocument["dialogue"],
-                                          "title": bigJsonDocument["title"],
-                                          "speakers":
-                                              bigJsonDocument["speakers"],
-                                          "user_ID": bigJsonDocument["user_ID"],
-                                          "native_language":
-                                              widget.nativeLanguage,
-                                          "target_language":
-                                              widget.targetLanguage,
-                                          "length": widget.length,
-                                          "language_level":
-                                              widget.languageLevel,
-                                          "voice_1_id":
-                                              bigJsonDocument["voice_1_id"],
-                                          "voice_2_id":
-                                              bigJsonDocument["voice_2_id"],
-                                          "tts_provider": "1",
-                                          "words_to_repeat": selectedWords
-                                              .entries
-                                              .expand((entry) =>
-                                                  entry.value.entries)
-                                              .where((innerEntry) =>
-                                                  innerEntry.value.value ==
-                                                  true)
-                                              .map((innerEntry) =>
-                                                  innerEntry.key)
-                                              .toList(),
-                                        }),
-                                      );
-                                      if (script.isNotEmpty) {
-                                        Navigator.pop(context);
-                                        Navigator.pushNamed(context, '/');
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  AudioPlayerScreen(
-                                                    dialogue: bigJsonDocument[
-                                                        "dialogue"],
-                                                    title: bigJsonDocument[
-                                                        "title"],
-                                                    documentID:
-                                                        widget.documentID,
-                                                    userID: FirebaseAuth
-                                                        .instance
-                                                        .currentUser!
-                                                        .uid,
-                                                    scriptDocumentId:
-                                                        scriptDocumentID,
-                                                    generating: true,
-                                                    wordsToRepeat: selectedWords
-                                                        .entries
-                                                        .expand((entry) =>
-                                                            entry.value.entries)
-                                                        .where((innerEntry) =>
-                                                            innerEntry
-                                                                .value.value ==
-                                                            true)
-                                                        .map((innerEntry) =>
-                                                            innerEntry.key)
-                                                        .toList(),
-                                                    //audioDurations: script['fileDurations'],
-                                                  )),
-                                        );
-                                      } else {
-                                        throw Exception(
-                                            'Failed to create script!');
-                                      }
-                                    } catch (e) {
+                                      }),
+                                    );
+                                    if (script.isNotEmpty) {
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Something went wrong! Please try again.'),
-                                          duration: Duration(seconds: 4),
-                                        ),
+                                      Navigator.pushNamed(context, '/');
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                AudioPlayerScreen(
+                                                  dialogue: bigJsonDocument[
+                                                      "dialogue"],
+                                                  title:
+                                                      bigJsonDocument["title"],
+                                                  documentID: widget.documentID,
+                                                  userID: FirebaseAuth.instance
+                                                      .currentUser!.uid,
+                                                  scriptDocumentId:
+                                                      scriptDocumentID,
+                                                  generating: true,
+                                                  wordsToRepeat: selectedWords
+                                                      .entries
+                                                      .expand((entry) =>
+                                                          entry.value.entries)
+                                                      .where((innerEntry) =>
+                                                          innerEntry
+                                                              .value.value ==
+                                                          true)
+                                                      .map((innerEntry) =>
+                                                          innerEntry.key)
+                                                      .toList(),
+                                                  //audioDurations: script['fileDurations'],
+                                                )),
                                       );
+                                    } else {
+                                      throw Exception(
+                                          'Failed to create script!');
                                     }
+                                  } catch (e) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Something went wrong! Please try again.'),
+                                        duration: Duration(seconds: 4),
+                                      ),
+                                    );
                                   }
-                                : null,
-                          ),
+                                }
+                              }),
                         );
                       })
                 ]),
