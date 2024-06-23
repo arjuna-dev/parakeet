@@ -74,6 +74,7 @@ class HomeScreenModel extends ChangeNotifier {
   Future<void> loadNowPlayingFromPreference() async {
     final prefs = await SharedPreferences.getInstance();
     nowPlayingIds = prefs.getStringList('now_playing_${user!.uid}')!;
+    print(nowPlayingIds);
 
     nowPlayingIdsNotifier.value = nowPlayingIds;
 
