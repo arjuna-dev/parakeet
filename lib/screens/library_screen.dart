@@ -62,6 +62,9 @@ class _LibraryState extends State<Library> {
                 return const CircularProgressIndicator();
               }
               final documents = snapshot.data!.docs;
+              print(documents[1].get('timestamp'));
+              documents.sort(
+                  (a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
 
               return Padding(
                 padding: AppConstants.horizontalPadding,
