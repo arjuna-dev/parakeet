@@ -62,7 +62,6 @@ class _LibraryState extends State<Library> {
                 return const CircularProgressIndicator();
               }
               final documents = snapshot.data!.docs;
-              print(documents[1].get('timestamp'));
               documents.sort(
                   (a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
 
@@ -147,13 +146,28 @@ class _LibraryState extends State<Library> {
                                                 final prefs =
                                                     await SharedPreferences
                                                         .getInstance();
-                                                var nowPlayingIds =
+                                                prefs.remove(
+                                                    'savedPosition_${parentId}_$userId');
+                                                prefs.remove(
+                                                    'savedTrackIndex_${parentId}_$userId');
+                                                prefs.remove(
+                                                    "now_playing_${parentId}_$userId");
+                                                // Retrieve the now playing list
+                                                List<String>? nowPlayingList =
                                                     prefs.getStringList(
-                                                        'now_playing_${user.uid}')!;
-                                                nowPlayingIds.remove(parentId);
-                                                await prefs.setStringList(
-                                                    'now_playing_${user.uid}',
-                                                    nowPlayingIds);
+                                                        "now_playing_$userId");
+
+                                                // Check if the list is not null
+                                                if (nowPlayingList != null) {
+                                                  // Remove widget.documentID from the list if it exists
+                                                  nowPlayingList
+                                                      .remove(parentId);
+
+                                                  // Save the updated list back to preferences
+                                                  await prefs.setStringList(
+                                                      "now_playing_$userId",
+                                                      nowPlayingList);
+                                                }
                                               }
                                               // Delete from cloud storage
                                               deleteFromCloudStorage(parentId);
