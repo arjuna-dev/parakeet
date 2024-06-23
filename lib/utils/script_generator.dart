@@ -165,9 +165,12 @@ List<String> parseAndCreateScript(
         // }
       }
     }
+    if (i == dialogue.length - 1) {
+      Random random = Random();
+      int randomNumber = random.nextInt(5);
+      script.add("narrator_closing_phrases_$randomNumber");
+    }
   }
-  Random random = Random();
-  int randomNumber = random.nextInt(5);
-  script.add("narrator_closing_phrases_$randomNumber");
+
   return script;
 }
