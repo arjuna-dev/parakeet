@@ -170,6 +170,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
           widget.dialogue);
+      print("script: $script");
     } catch (e) {
       return;
     }
