@@ -293,12 +293,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
         final NavigatorState navigator = Navigator.of(context);
         if (!widget.generating) {
-          if (!isStopped) {
+          if (!isStopped && isPlaying) {
             await _pause();
           }
           navigator.pop('reload');
         } else {
-          if (!isStopped) {
+          if (!isStopped && isPlaying) {
             await _pause();
           }
           //remove all the stacks and reload the home page
