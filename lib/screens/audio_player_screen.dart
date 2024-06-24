@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:collection';
@@ -55,6 +56,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>?
       cachedAudioDurations; // Future to cache audio durations
+  // Instantiate AnalyticsManager with the user ID
+  late AnalyticsManager analyticsManager;
 
   @override
   void initState() {
@@ -64,9 +67,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     currentTrack = script[0];
     _initPlaylist();
 
+    // Initialize AnalyticsManager with userID
+    analyticsManager = AnalyticsManager(widget.userID);
+
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
+        if (isPlaying) {
+          analyticsManager.storeAnalytics(
+              widget.documentID, 'completed'); // Track completion
+        }
         // Stop the player when the end of the playlist is reached
         _stop();
       }
@@ -481,6 +491,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _isPaused = true;
       });
     }
+    analyticsManager.storeAnalytics(widget.documentID, 'pause');
   }
 
 // This method plays the audio
@@ -501,6 +512,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
     player.play();
+    analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 
   // This method stops the audio
