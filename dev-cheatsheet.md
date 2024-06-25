@@ -83,6 +83,9 @@ dart run flutter_launcher_icons:main
 ```bash
 flutter build appbundle
 ```
+
+##### (If doing it for the first time continue here, otherwise skip to step 3.)
+
 1. Download the .jar file from https://github.com/google/bundletool/releases 
 2. Add this to .zshrc:
 ```bash
@@ -95,9 +98,11 @@ java -jar /path/to/bundletool-all-1.16.0.jar
 ```
 3. Generate a set of APKs under an .apks file with:
 ```bash
-bundletool build-apks --bundle=/MyApp/my_app.aab --output=/MyApp/my_app.apks
+bundletool build-apks --bundle=build/app/outputs/bundle/release/app-release.aab --output=build/app/outputs/bundle/release/app-release.apks
 ```
 4. To test the recently created .apks file on a connected Android device:
 ```
 bundletool install-apks --apks=path/to/my_app.apks
 ```
+
+#### Note: this last command will install the app but not open it immediately, you must search and open the app manually
