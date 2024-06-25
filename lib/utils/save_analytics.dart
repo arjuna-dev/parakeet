@@ -53,9 +53,7 @@ class AnalyticsManager {
   }
 
   void _loadAnalytics(Map<String, dynamic> data) {
-    print(data);
     data.forEach((key, value) {
-      print(value['timestamp']);
       analytics[key] = AnalyticsData(
           timestamp: (value['timestamp'] as Timestamp).toDate(),
           action: key,
