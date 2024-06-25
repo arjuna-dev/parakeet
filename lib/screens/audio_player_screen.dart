@@ -68,7 +68,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _initPlaylist();
 
     // Initialize AnalyticsManager with userID
-    analyticsManager = AnalyticsManager(widget.userID);
+    analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
+    analyticsManager.loadAnalyticsFromFirebase();
 
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
