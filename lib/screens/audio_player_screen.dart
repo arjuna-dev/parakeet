@@ -409,7 +409,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                             .inMilliseconds),
                                 index: trackIndex);
                             if (_isPaused) {
-                              _pause();
+                              _pause(analyticsOn: false);
                               setState(() {
                                 positionData.cumulativePosition =
                                     Duration(milliseconds: value.toInt());
@@ -463,7 +463,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       );
 
 // This method pauses the audio
-  Future<void> _pause() async {
+  Future<void> _pause({bool analyticsOn = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
@@ -492,7 +492,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _isPaused = true;
       });
     }
-    analyticsManager.storeAnalytics(widget.documentID, 'pause');
+    if (analyticsOn) {
+      analyticsManager.storeAnalytics(widget.documentID, 'pause');
+    }
   }
 
 // This method plays the audio
