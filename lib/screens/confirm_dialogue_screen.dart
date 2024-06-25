@@ -331,8 +331,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                               innerEntry.value.value == true)
                                           .map((innerEntry) => innerEntry.key)
                                           .toList(),
-                                      "user_ID":
-                                          FirebaseAuth.instance.currentUser!.uid
+                                      "user_ID": FirebaseAuth
+                                          .instance.currentUser!.uid,
+                                      "timestamp": FieldValue.serverTimestamp(),
                                     });
                                     String scriptDocumentID = docRef.id;
 
