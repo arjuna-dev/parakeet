@@ -42,7 +42,6 @@ class _CreateLessonState extends State<CreateLesson> {
   }
 
   void _reloadPage() {
-    print("yaya!");
     regenerateTopic();
   }
 
