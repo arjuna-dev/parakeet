@@ -136,9 +136,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
         }
-        // else {
-        //   print('file not found');
-        // }
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
@@ -181,7 +178,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
           widget.dialogue);
-      print("script: $script");
     } catch (e) {
       return;
     }
@@ -202,8 +198,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     updateNumber++;
-
-    print("updated!!");
   }
 
   // This method constructs the URL for a file
@@ -248,9 +242,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             player.durationStream.whereType<Duration>(),
             player.currentIndexStream.whereType<int>().startWith(0),
             (position, duration, index) {
-      // Debug prints
-      //print("Position: $position, Duration: $duration, Index: $index");
-
       bool hasIndexChanged = index != previousIndex;
       previousIndex = index;
       Duration cumulativeDuration = cumulativeDurationUpTo(index);
@@ -513,7 +504,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.seek(Duration(milliseconds: savedPosition),
           index: savedTrackIndex);
     }
-    print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
     player.play();
     analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
