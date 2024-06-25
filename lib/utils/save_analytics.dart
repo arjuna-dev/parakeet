@@ -2,14 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AnalyticsData {
   DateTime timestamp;
-  String fileId;
   String action; // 'play', 'pause', or 'completed'
   int count;
   List<DateTime> timestamps;
 
   AnalyticsData({
     required this.timestamp,
-    required this.fileId,
     required this.action,
     this.count = 1,
     required this.timestamps,
@@ -23,11 +21,11 @@ class AnalyticsData {
 
   Map<String, dynamic> toMap() {
     return {
-      'timestamp': timestamp,
-      'fileId': fileId,
-      'action': action,
-      'count': count,
-      'timestamps': timestamps.map((ts) => ts.toIso8601String()).toList(),
+      action: {
+        'timestamp': timestamp,
+        'count': count,
+        'timestamps': timestamps.map((ts) => ts.toIso8601String()).toList(),
+      }
     };
   }
 }
@@ -35,19 +33,46 @@ class AnalyticsData {
 class AnalyticsManager {
   Map<String, AnalyticsData> analytics = {};
   final String userId;
+  final String documentId;
 
-  AnalyticsManager(this.userId);
+  AnalyticsManager(this.userId, this.documentId);
+
+  void loadAnalyticsFromFirebase() {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('analytics')
+        .doc(documentId)
+        .get()
+        .then((DocumentSnapshot<Map<String, dynamic>> snapshot) {
+      if (snapshot.exists) {
+        _loadAnalytics(snapshot.data()!);
+      }
+    });
+  }
+
+  void _loadAnalytics(Map<String, dynamic> data) {
+    print(data);
+    data.forEach((key, value) {
+      print(value['timestamp']);
+      analytics[key] = AnalyticsData(
+          timestamp: (value['timestamp'] as Timestamp).toDate(),
+          action: key,
+          count: value['count'],
+          timestamps: List<DateTime>.from(
+            value['timestamps'].map((ts) => DateTime.parse(ts as String)),
+          ));
+    });
+  }
 
   void storeAnalytics(String fileId, String action) {
     DateTime currentTimestamp = DateTime.now();
-    String key = "$fileId-$action";
 
-    if (analytics.containsKey(key)) {
-      analytics[key]!.updateData(currentTimestamp);
+    if (analytics.containsKey(action)) {
+      analytics[action]!.updateData(currentTimestamp);
     } else {
-      analytics[key] = AnalyticsData(
+      analytics[action] = AnalyticsData(
         timestamp: currentTimestamp,
-        fileId: fileId,
         action: action,
         timestamps: [currentTimestamp],
       );
@@ -57,14 +82,13 @@ class AnalyticsManager {
   }
 
   Future<void> _saveToFirebase(String fileId, String action) async {
-    String key = "$fileId-$action";
-    AnalyticsData data = analytics[key]!;
+    AnalyticsData data = analytics[action]!;
 
     await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection('analytics')
-        .doc(key)
+        .doc(fileId)
         .set(data.toMap(), SetOptions(merge: true));
   }
 
