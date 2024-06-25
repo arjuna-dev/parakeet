@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:collection';
@@ -55,6 +56,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>?
       cachedAudioDurations; // Future to cache audio durations
+  // Instantiate AnalyticsManager with the user ID
+  late AnalyticsManager analyticsManager;
 
   @override
   void initState() {
@@ -64,9 +67,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     currentTrack = script[0];
     _initPlaylist();
 
+    // Initialize AnalyticsManager with userID
+    analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
+    analyticsManager.loadAnalyticsFromFirebase();
+
     // Listen to the playerSequenceCompleteStream
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
+        if (isPlaying) {
+          analyticsManager.storeAnalytics(
+              widget.documentID, 'completed'); // Track completion
+        }
         // Stop the player when the end of the playlist is reached
         _stop();
       }
@@ -125,9 +136,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         if (audioDurations?.containsKey(fileName) == true) {
           durationInSeconds = audioDurations?[fileName] as double;
         }
-        // else {
-        //   print('file not found');
-        // }
         Duration duration =
             Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
@@ -170,7 +178,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           snapshot.docs[0].data()["dialogue"] as List<dynamic>,
           widget.wordsToRepeat,
           widget.dialogue);
-      print("script: $script");
     } catch (e) {
       return;
     }
@@ -191,8 +198,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     updateNumber++;
-
-    print("updated!!");
   }
 
   // This method constructs the URL for a file
@@ -237,9 +242,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             player.durationStream.whereType<Duration>(),
             player.currentIndexStream.whereType<int>().startWith(0),
             (position, duration, index) {
-      // Debug prints
-      //print("Position: $position, Duration: $duration, Index: $index");
-
       bool hasIndexChanged = index != previousIndex;
       previousIndex = index;
       Duration cumulativeDuration = cumulativeDurationUpTo(index);
@@ -283,12 +285,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
         final NavigatorState navigator = Navigator.of(context);
         if (!widget.generating) {
-          if (!isStopped) {
+          if (!isStopped && isPlaying) {
             await _pause();
           }
           navigator.pop('reload');
         } else {
-          if (!isStopped) {
+          if (!isStopped && isPlaying) {
             await _pause();
           }
           //remove all the stacks and reload the home page
@@ -398,7 +400,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                             .inMilliseconds),
                                 index: trackIndex);
                             if (_isPaused) {
-                              _pause();
+                              _pause(analyticsOn: false);
                               setState(() {
                                 positionData.cumulativePosition =
                                     Duration(milliseconds: value.toInt());
@@ -452,7 +454,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       );
 
 // This method pauses the audio
-  Future<void> _pause() async {
+  Future<void> _pause({bool analyticsOn = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
@@ -481,6 +483,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _isPaused = true;
       });
     }
+    if (analyticsOn) {
+      analyticsManager.storeAnalytics(widget.documentID, 'pause');
+    }
   }
 
 // This method plays the audio
@@ -499,8 +504,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.seek(Duration(milliseconds: savedPosition),
           index: savedTrackIndex);
     }
-    print('savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex');
     player.play();
+    analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 
   // This method stops the audio
