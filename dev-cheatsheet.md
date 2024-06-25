@@ -102,7 +102,7 @@ bundletool build-apks --bundle=build/app/outputs/bundle/release/app-release.aab 
 ```
 4. To test the recently created .apks file on a connected Android device:
 ```
-bundletool install-apks --apks=path/to/my_app.apks
+bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
 
 #### Note: this last command will install the app but not open it immediately, you must search and open the app manually
