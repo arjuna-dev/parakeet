@@ -15,6 +15,7 @@ class AnalyticsData {
 
   // Method to update the analytics data
   void updateData(DateTime newTimestamp) {
+    timestamp = newTimestamp;
     count += 1;
     timestamps.add(newTimestamp);
   }
