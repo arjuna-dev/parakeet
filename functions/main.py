@@ -189,6 +189,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["language_level"] = language_level
     final_response["title"] = title
     final_response["speakers"] = speakers
+    final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(final_response)
 
     second_API_calls.push_to_firestore(final_response, document, operation="overwrite")

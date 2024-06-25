@@ -30,13 +30,7 @@ class AuthScreen extends StatelessWidget {
 
                   // Check if user already exists in Firestore
                   DocumentSnapshot userDocSnapshot = await userDocRef.get();
-                  if (userDocSnapshot.exists) {
-                    // User already exists, retrieve data
-                    Map<String, dynamic> userData =
-                        userDocSnapshot.data() as Map<String, dynamic>;
-                    print(userData);
-                    // Use userData as needed
-                  } else {
+                  if (!userDocSnapshot.exists) {
                     // User does not exist, create new document
                     await userDocRef.set({
                       'name': user.displayName,
