@@ -20,38 +20,26 @@ class AuthScreen extends StatelessWidget {
           children: <Widget>[
             ElevatedButton(
               onPressed: () async {
-                try {
-                  // Show loading indicator
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) =>
-                        const Center(child: CircularProgressIndicator()),
-                  );
+                // Sign in with Google
+                User? user = await AuthService().signInWithGoogle();
+                if (user != null) {
+                  // Get reference to the user's document in Firestore
+                  DocumentReference userDocRef = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid);
 
-                  User? user = await AuthService().signInWithGoogle();
-                  if (user != null) {
-                    DocumentReference userDocRef = FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid);
-                    DocumentSnapshot userDocSnapshot = await userDocRef.get();
-                    if (!userDocSnapshot.exists) {
-                      await userDocRef.set({
-                        'name': user.displayName,
-                        'email': user.email,
-                        // Add more user data as needed
-                      });
-                    }
-
-                    Navigator.pop(context); // Hide loading indicator
-                    Navigator.pushReplacementNamed(context, '/');
-                  } else {
-                    Navigator.pop(context); // Hide loading indicator
-                    // Handle the case where the user is null
+                  // Check if user already exists in Firestore
+                  DocumentSnapshot userDocSnapshot = await userDocRef.get();
+                  if (!userDocSnapshot.exists) {
+                    // User does not exist, create new document
+                    await userDocRef.set({
+                      'name': user.displayName,
+                      'email': user.email,
+                      // Add more user data as needed
+                    });
                   }
-                } catch (e) {
-                  Navigator.pop(context); // Hide loading indicator
-                  // Handle errors, possibly show an error dialog
+
+                  Navigator.pushReplacementNamed(context, '/');
                 }
               },
               child: const Text('Sign In with Google'),
