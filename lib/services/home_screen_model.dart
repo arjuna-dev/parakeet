@@ -73,22 +73,24 @@ class HomeScreenModel extends ChangeNotifier {
 
   Future<void> loadNowPlayingFromPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    nowPlayingIds = prefs.getStringList('now_playing_${user!.uid}')!;
+    nowPlayingIds = prefs.getStringList('now_playing_${user!.uid}') ?? [];
 
     nowPlayingIdsNotifier.value = nowPlayingIds;
 
-    nowPlayingFiles = await Future.wait(nowPlayingIds.map((id) async {
-      final scriptCollectionRef = FirebaseFirestore.instance
-          .collection('chatGPT_responses')
-          .doc(id)
-          .collection('script-${user!.uid}');
-      final scriptDocs = await scriptCollectionRef.get();
-      if (scriptDocs.docs.isNotEmpty) {
-        return scriptDocs.docs.first;
-      } else {
-        throw Exception('No document found in the scripts collection');
-      }
-    }));
+    if (nowPlayingIds.isNotEmpty) {
+      nowPlayingFiles = await Future.wait(nowPlayingIds.map((id) async {
+        final scriptCollectionRef = FirebaseFirestore.instance
+            .collection('chatGPT_responses')
+            .doc(id)
+            .collection('script-${user!.uid}');
+        final scriptDocs = await scriptCollectionRef.get();
+        if (scriptDocs.docs.isNotEmpty) {
+          return scriptDocs.docs.first;
+        } else {
+          throw Exception('No document found in the scripts collection');
+        }
+      }));
+    }
 
     safeNotifyListeners();
   }
