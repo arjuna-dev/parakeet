@@ -137,7 +137,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     tts_provider = int(tts_provider)
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
 
-    print(request_data)
+    print("request_data:", request_data)
 
     is_mock = False
 
@@ -154,7 +154,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         document_durations = subcollection_ref_durations.document('file_durations')
 
     language_code = language_to_language_code(target_language)
-    print(language_code)
+
     voice_1 = create_google_voice(language_code, voice_1_id)
     voice_2 = create_google_voice(language_code, voice_2_id)
 
@@ -190,7 +190,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["title"] = title
     final_response["speakers"] = speakers
     final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(final_response)
+    print("final_response: ", final_response)
 
     second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
     return https_fn.Response(
