@@ -1,7 +1,7 @@
 from partialjson.json_parser import JSONParser
 from utils.google_tts.gcloud_text_to_speech_api import voice_finder_google, google_synthesize_text
 from utils.elevenlabs.elevenlabs_api import elevenlabs_tts
-from utils.utilities import push_to_firestore
+from utils.utilities import push_to_firestore, remove_user_from_active_creation_by_id
 from utils.utilities import TTS_PROVIDERS
 import concurrent.futures
 import os
@@ -26,6 +26,7 @@ class APICalls:
         self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
         self.push_to_firestore = push_to_firestore
+        self.remove_user_from_active_creation_by_id = remove_user_from_active_creation_by_id
         self.mock = mock
         self.line_handler = None
         self.futures = []
