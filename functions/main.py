@@ -192,6 +192,12 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(final_response)
 
+    # remove user ID from active_creation db in the firebase
+    second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
+
+
+
+
     second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
     return https_fn.Response(
         final_response,
