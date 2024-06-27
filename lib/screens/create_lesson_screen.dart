@@ -28,6 +28,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var length = '4';
   var languageLevel = 'A1';
   final TextEditingController _controller = TextEditingController();
+  final activeCreationAllowed = 10; // change this to allow more users
 
   final _formKey = GlobalKey<FormState>();
 
@@ -51,6 +52,28 @@ class _CreateLessonState extends State<CreateLesson> {
           .nextInt(example_scenarios.length)]; // Update with new random topic
       topic = _controller.text;
     });
+  }
+
+  Future<int> countUsersInActiveCreation() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    // Assuming there's a specific document ID you're interested in, replace 'your_document_id' with it
+    final DocumentReference docRef =
+        firestore.collection('active_creation').doc('active_creation');
+
+    try {
+      final DocumentSnapshot doc = await docRef.get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('users')) {
+          final users = data['users'] as List;
+          return users.length; // Number of users in the 'users' key
+        }
+      }
+      return 0; // Return 0 if the document doesn't exist or doesn't contain a 'users' key
+    } catch (e) {
+      print('Error fetching users from active_creation: $e');
+      return -1; // Return -1 or handle the error as appropriate
+    }
   }
 
   @override
@@ -215,9 +238,23 @@ class _CreateLessonState extends State<CreateLesson> {
                                 );
                               },
                             );
+                            var usersInActiveCreation =
+                                await countUsersInActiveCreation();
+                            if (usersInActiveCreation != -1 &&
+                                usersInActiveCreation >=
+                                    activeCreationAllowed) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Oops, this is embarassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
+                              return;
+                            }
 
                             try {
-                              print("topic: $topic");
                               final FirebaseFirestore firestore =
                                   FirebaseFirestore.instance;
                               final DocumentReference docRef = firestore
