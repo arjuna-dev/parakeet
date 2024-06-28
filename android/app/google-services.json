@@ -7,18 +7,26 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:104439269977:android:a5e9c424cab1818964bf48",
+        "mobilesdk_app_id": "1:104439269977:android:9a4196d3d6cbb40464bf48",
         "android_client_info": {
           "package_name": "com.parakeetapp.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "104439269977-lh5h868n81hug4lvvgvfu9s9fqsq49js.apps.googleusercontent.com",
+          "client_id": "104439269977-ih56680tg77d59u0fcvm8f3mm96u0qh9.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.parakeetapp.app",
-            "certificate_hash": "d1714e82d716acd34ecdcf989e0e76ec5f77c819"
+            "certificate_hash": "5515e7f7154f5d8bbaf453642baa82ceac778b6b"
+          }
+        },
+        {
+          "client_id": "104439269977-n9ipqpuqbolcv8ierkuri0d2q9qlie9f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.parakeetapp.app",
+            "certificate_hash": "87c86bfc333c0aae4b6e5b23bac2611f8fa5feed"
           }
         },
         {
@@ -42,7 +50,7 @@
               "client_id": "104439269977-jl0mjre2nh8rcmtsp9tdisjic643eqf5.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.parakeetapp.app"
+                "bundle_id": "com.example.auralearn"
               }
             }
           ]

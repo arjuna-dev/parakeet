@@ -43,7 +43,38 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
         .any((wordMap) => wordMap.values.any((notifier) => notifier.value));
   }
 
-  void handleConfirmPress(BuildContext context) async {}
+  Future<void> addUserToActiveCreation() async {
+    String userId = FirebaseAuth.instance.currentUser!.uid;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DocumentReference docRef =
+        firestore.collection('active_creation').doc('active_creation');
+    await firestore.runTransaction((transaction) async {
+      // Attempt to get the document
+      DocumentSnapshot snapshot = await transaction.get(docRef);
+
+      // Prepare the user data
+      var userData = {
+        "userId": userId,
+        "documentId": widget.documentID,
+        "timestamp": Timestamp.now()
+      };
+
+      if (snapshot.exists) {
+        // Document exists, add user ID to array
+        transaction.update(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      } else {
+        // Document does not exist, create it with user ID in array
+        transaction.set(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      }
+    }).catchError((error) {
+      // Handle any errors that occur during the transaction
+      print('Failed to add user to active creation: $error');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +404,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       }),
                                     );
                                     if (script.isNotEmpty) {
+                                      await addUserToActiveCreation();
                                       Navigator.pop(context);
                                       Navigator.pushNamed(context, '/');
                                       Navigator.pushReplacement(
