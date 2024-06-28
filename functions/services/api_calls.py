@@ -5,6 +5,8 @@ from utils.utilities import push_to_firestore, remove_user_from_active_creation_
 from utils.utilities import TTS_PROVIDERS
 import concurrent.futures
 import os
+import time
+from threading import Timer, Lock
 
 class APICalls:
     def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
@@ -31,6 +33,7 @@ class APICalls:
         self.line_handler = None
         self.futures = []
         self.executor = concurrent.futures.ThreadPoolExecutor()
+        self.lock = Lock()
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
             self.tts_function = self.mock_tts
@@ -99,6 +102,23 @@ class APICalls:
         
     def handle_line_2nd_API(self, current_line, full_json):
 
+        def submit_tts_task(text, voice, filename, durations):
+            with self.lock:
+                if time.time() - self.last_batch_timestamp > 60:
+                    self.request_count = 0
+                if self.request_count >= 20:
+                    elapsed_time = time.time() - self.last_batch_timestamp
+                    wait_time = max(60 - elapsed_time, 0)
+                    self.last_batch_timestamp = time.time() + wait_time
+                    timer = Timer(wait_time, self.executor.submit, [self.tts_function, text, voice, filename, durations])
+                    self.futures.append(timer)
+                    timer.start()
+                else:
+                    future = self.futures.append(self.executor.submit(self.tts_function, text, voice, filename, durations))
+                    self.futures.append(future)
+                    self.request_count += 1
+                    self.last_batch_timestamp = time.time()
+
         if self.mock:
             self.use_mock_voices()
 
@@ -118,20 +138,18 @@ class APICalls:
                 filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                 if text_part['enclosed']:
                     voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
+                    submit_tts_task(text_part['text'], voice_to_use, filename, self.document_durations)
                 else:
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
+                    submit_tts_task(text_part['text'], self.narrator_voice, filename, self.document_durations)
         elif '"narrator_explanation":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
         elif '"narrator_fun_fact":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
         elif '"native_language":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
         elif '"target_language":' in current_line:
-            # words = last_value.split()
-            # if any(word in self.words_to_repeat for word in words):
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
+            submit_tts_task(last_value, voice_to_use, filename, self.document_durations)
 
 
     def get_last_value_path(self, json_obj, path=None):
