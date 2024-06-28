@@ -117,6 +117,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         request_data = SecondAPIRequest.parse_obj(req.get_json()).dict()
         print(type(request_data))
     except Exception as e:
+        second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
