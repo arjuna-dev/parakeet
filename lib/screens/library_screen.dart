@@ -142,7 +142,8 @@ class _LibraryState extends State<Library> {
                                                     }
                                                   ])
                                                 });
-                                                //Remove from now playing list which is stored in shared preferences
+                                              }
+                                              //Remove from now playing list which is stored in shared preferences
                                                 final prefs =
                                                     await SharedPreferences
                                                         .getInstance();
@@ -168,7 +169,6 @@ class _LibraryState extends State<Library> {
                                                       "now_playing_$userId",
                                                       nowPlayingList);
                                                 }
-                                              }
                                               // Delete from cloud storage
                                               deleteFromCloudStorage(parentId);
 
