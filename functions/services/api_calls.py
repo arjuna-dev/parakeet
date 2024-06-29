@@ -114,12 +114,12 @@ class APICalls:
                     print("starting task with delay")
                     elapsed_time = time.time() - self.last_batch_timestamp
                     wait_time = max(self.waiting_time - elapsed_time, 0)
-                    timer = Timer(wait_time, self.executor.submit, [self.tts_function, text, voice, filename, durations])
-                    self.futures.append(timer)
+                    timer = Timer(wait_time, lambda: self.futures.append(self.executor.submit(self.tts_function, text, voice, filename, durations)))
                     timer.start()
+                    self.futures.append(timer)
                 else:
                     print("starting concurrent tts task")
-                    future = self.futures.append(self.executor.submit(self.tts_function, text, voice, filename, durations))
+                    future = self.executor.submit(self.tts_function, text, voice, filename, durations)
                     self.futures.append(future)
                     self.request_count += 1
                     self.last_batch_timestamp = time.time()
