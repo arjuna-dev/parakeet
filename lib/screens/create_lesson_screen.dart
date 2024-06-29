@@ -241,7 +241,7 @@ class _CreateLessonState extends State<CreateLesson> {
                             var usersInActiveCreation =
                                 await countUsersInActiveCreation();
                             if (usersInActiveCreation != -1 &&
-                                usersInActiveCreation >=
+                                usersInActiveCreation >
                                     activeCreationAllowed) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
