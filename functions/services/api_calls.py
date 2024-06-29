@@ -37,7 +37,8 @@ class APICalls:
         self.lock = Lock()
         self.last_batch_timestamp = time.time()
         self.request_count = 0
-        self.waiting_time = 10
+        self.waiting_time = 60
+        self.max_concurrent_files = 40
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
             self.tts_function = self.mock_tts
@@ -111,7 +112,7 @@ class APICalls:
                 if time.time() - self.last_batch_timestamp > self.waiting_time and self.request_count >= 20:
                     print("resetting request count")
                     self.request_count = 0
-                if self.request_count >= 20:
+                if self.request_count >= self.max_concurrent_files:
                     print("starting task with delay")
                     elapsed_time = time.time() - self.last_batch_timestamp
                     wait_time = max(self.waiting_time - elapsed_time, 0)
