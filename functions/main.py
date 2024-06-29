@@ -180,8 +180,6 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     final_response = second_API_calls.process_response(chatGPT_response)
 
-    second_API_calls.executor.shutdown(wait=True)
-
     final_response["user_ID"] = user_ID
     final_response["document_id"] = document_id
     final_response["native_language"] = native_language
@@ -190,19 +188,22 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["title"] = title
     final_response["speakers"] = speakers
     final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     print("final_response: ", final_response)
+    second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
+
+    second_API_calls.executor.shutdown(wait=True)
 
     # remove user ID from active_creation db in the firebase
     second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
 
-
-
-
-    second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
     return https_fn.Response(
         final_response,
         status=200,
     )
+
+
+
 @https_fn.on_request(
         cors=options.CorsOptions(
         cors_origins=["*"],
