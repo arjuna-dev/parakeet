@@ -3,6 +3,7 @@ from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
 import json
 import datetime
+import re
 from utils.prompts import prompt_dialogue, prompt_big_JSON
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
@@ -74,7 +75,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                             document,
                             target_language,
                             document_durations,
-                            words_to_repeat=[],
+                            words_to_repeat_without_punctuation=[],
                             mock=is_mock)
     first_API_calls.line_handler = first_API_calls.handle_line_1st_API
 
@@ -134,6 +135,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     voice_1_id = request_data.get("voice_1_id")
     voice_2_id = request_data.get("voice_2_id")
     words_to_repeat = request_data.get("words_to_repeat")
+    words_to_repeat_without_punctuation = [re.sub(r'[^\w\s]', '', word) for word in words_to_repeat]
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
@@ -165,7 +167,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 document,
                                 target_language,
                                 document_durations,
-                                words_to_repeat,
+                                words_to_repeat_without_punctuation,
                                 voice_1,
                                 voice_2,
                                 mock=is_mock
