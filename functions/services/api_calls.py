@@ -34,8 +34,6 @@ class APICalls:
         self.line_handler = None
         self.futures = []
         self.executor = concurrent.futures.ThreadPoolExecutor()
-        self.lock = Lock()
-        self.last_batch_timestamp = time.time()
         self.request_count = 0
         self.waiting_time = 60
         self.max_concurrent_files = 40
@@ -107,24 +105,10 @@ class APICalls:
         
     def handle_line_2nd_API(self, current_line, full_json):
 
-        def submit_tts_task(text, voice, filename, durations):
-            with self.lock:
-                if time.time() - self.last_batch_timestamp > self.waiting_time and self.request_count >= 20:
-                    print("resetting request count")
-                    self.request_count = 0
-                if self.request_count >= self.max_concurrent_files:
-                    print("starting task with delay")
-                    elapsed_time = time.time() - self.last_batch_timestamp
-                    wait_time = max(self.waiting_time - elapsed_time, 0)
-                    timer = Timer(wait_time, lambda: self.futures.append(self.executor.submit(self.tts_function, text, voice, filename, durations)))
-                    timer.start()
-                    self.futures.append(timer)
-                else:
-                    print("starting concurrent tts task")
-                    future = self.executor.submit(self.tts_function, text, voice, filename, durations)
-                    self.futures.append(future)
-                    self.request_count += 1
-                    self.last_batch_timestamp = time.time()
+        if self.request_count >= self.max_concurrent_files:
+            print("sleeping")
+            time.sleep(self.waiting_time)
+            self.request_count = 0
 
         if self.mock:
             self.use_mock_voices()
@@ -147,21 +131,27 @@ class APICalls:
                     if not any(element.lower() in text_part['text'].lower().split(' ') for element in self.words_to_repeat_without_punctuation):
                         break
                     voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                    submit_tts_task(text_part['text'], voice_to_use, filename, self.document_durations)
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
+                    self.request_count += 1
                 else:
-                    submit_tts_task(text_part['text'], self.narrator_voice, filename, self.document_durations)
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
+                    self.request_count += 1
         elif '"narrator_explanation":' in current_line:
-            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
+            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            self.request_count += 1
         elif '"narrator_fun_fact":' in current_line:
-            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
+            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            self.request_count += 1
         elif '"native_language":' in current_line:
-            submit_tts_task(last_value, self.narrator_voice, filename, self.document_durations)
+            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            self.request_count += 1
         elif '"target_language":' in current_line:
             words = [re.sub(r'[^\w\s]', '', word) for word in last_value.split()]
             if not any(word in self.words_to_repeat_without_punctuation for word in words):
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-            submit_tts_task(last_value, voice_to_use, filename, self.document_durations)
+            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
+            self.request_count += 1
 
     def get_last_value_path(self, json_obj, path=None):
         """
