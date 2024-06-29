@@ -34,6 +34,9 @@ class APICalls:
         self.futures = []
         self.executor = concurrent.futures.ThreadPoolExecutor()
         self.lock = Lock()
+        self.last_batch_timestamp = time.time()
+        self.request_count = 0
+        self.waiting_time = 10
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
             self.tts_function = self.mock_tts
@@ -104,16 +107,18 @@ class APICalls:
 
         def submit_tts_task(text, voice, filename, durations):
             with self.lock:
-                if time.time() - self.last_batch_timestamp > 60:
+                if time.time() - self.last_batch_timestamp > self.waiting_time and self.request_count >= 20:
+                    print("resetting request count")
                     self.request_count = 0
                 if self.request_count >= 20:
+                    print("starting task with delay")
                     elapsed_time = time.time() - self.last_batch_timestamp
-                    wait_time = max(60 - elapsed_time, 0)
-                    self.last_batch_timestamp = time.time() + wait_time
+                    wait_time = max(self.waiting_time - elapsed_time, 0)
                     timer = Timer(wait_time, self.executor.submit, [self.tts_function, text, voice, filename, durations])
                     self.futures.append(timer)
                     timer.start()
                 else:
+                    print("starting concurrent tts task")
                     future = self.futures.append(self.executor.submit(self.tts_function, text, voice, filename, durations))
                     self.futures.append(future)
                     self.request_count += 1
@@ -150,7 +155,6 @@ class APICalls:
         elif '"target_language":' in current_line:
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
             submit_tts_task(last_value, voice_to_use, filename, self.document_durations)
-
 
     def get_last_value_path(self, json_obj, path=None):
         """
@@ -203,7 +207,7 @@ class APICalls:
 
         for chunk in chatGPT_response:
             is_finished = chunk.choices[0].finish_reason
-            if is_finished != None:
+            if is_finished is not None:
                 print("is finished reason: ", is_finished)
                 break
 
