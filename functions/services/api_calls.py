@@ -136,13 +136,7 @@ class APICalls:
                 else:
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
                     self.request_count += 1
-        elif '"narrator_explanation":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-            self.request_count += 1
-        elif '"narrator_fun_fact":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-            self.request_count += 1
-        elif '"native_language":' in current_line:
+        elif any(phrase in current_line for phrase in ['"narrator_explanation":', '"narrator_fun_fact":', '"native_language":']):
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
             self.request_count += 1
         elif '"target_language":' in current_line:
