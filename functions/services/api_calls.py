@@ -34,9 +34,6 @@ class APICalls:
         self.line_handler = None
         self.futures = []
         self.executor = concurrent.futures.ThreadPoolExecutor()
-        self.request_count = 0
-        self.waiting_time = 60
-        self.max_concurrent_files = 40
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
             self.tts_function = self.mock_tts
@@ -105,11 +102,6 @@ class APICalls:
         
     def handle_line_2nd_API(self, current_line, full_json):
 
-        if self.request_count >= self.max_concurrent_files:
-            print("sleeping")
-            time.sleep(self.waiting_time)
-            self.request_count = 0
-
         if self.mock:
             self.use_mock_voices()
 
@@ -132,26 +124,20 @@ class APICalls:
                         break
                     voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
-                    self.request_count += 1
                 else:
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
-                    self.request_count += 1
         elif '"narrator_explanation":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-            self.request_count += 1
         elif '"narrator_fun_fact":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-            self.request_count += 1
         elif '"native_language":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
-            self.request_count += 1
         elif '"target_language":' in current_line:
             words = [re.sub(r'[^\w\s]', '', word) for word in last_value.split()]
             if not any(word in self.words_to_repeat_without_punctuation for word in words):
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
-            self.request_count += 1
 
     def get_last_value_path(self, json_obj, path=None):
         """
