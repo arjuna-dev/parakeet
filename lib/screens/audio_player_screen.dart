@@ -326,7 +326,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       return Column(
                         children: [
                           ListTile(
-                            title: Text("Sentence number : ${index + 1}"),
+                            title: Text("Dialogue ${index + 1}:"),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

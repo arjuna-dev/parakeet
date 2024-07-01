@@ -217,8 +217,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                   });
 
                                   return ListTile(
-                                    title: Text(
-                                        'Sentence Number: ${turn['turn_nr']}'),
+                                    title: Text('Dialogue ${turn['turn_nr']}:'),
                                     subtitle: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,

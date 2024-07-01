@@ -179,7 +179,7 @@ class _CreateLessonState extends State<CreateLesson> {
                     DropdownButtonFormField<int>(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: 'Number of sentences',
+                        labelText: 'Number of dialogues',
                       ),
                       value: int.parse(length),
                       onChanged: (value) {
