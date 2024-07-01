@@ -120,7 +120,8 @@ class APICalls:
             for index, text_part in enumerate(enclosed_words_objects):
                 filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                 if text_part['enclosed']:
-                    if not any(element.lower() in text_part['text'].lower().split(' ') for element in self.words_to_repeat_without_punctuation):
+                    text_words = [re.sub(r'[^\w\s]', '', word) for word in text_part['text'].lower().split()]
+                    if not any(element.lower() in text_words for element in self.words_to_repeat_without_punctuation):
                         break
                     voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
