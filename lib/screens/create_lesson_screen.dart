@@ -91,25 +91,19 @@ class _CreateLessonState extends State<CreateLesson> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ElevatedButton(
-                        onPressed: regenerateTopic,
-                        child: const Text('Suggest topic'),
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _controller,
                       keyboardType: TextInputType.multiline,
                       maxLines: null,
                       maxLength: 400,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText:
-                            'Type a topic or click on the suggest topic button',
-                        counterText: '',
-                      ),
+                      decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: 'Topic of the lesson',
+                          counterText: '',
+                          suffix: ElevatedButton(
+                              onPressed: regenerateTopic,
+                              child: const Text('Suggest topic'))),
                       onChanged: (value) {
                         // You can still handle changes here if needed
                         setState(() {
@@ -127,7 +121,8 @@ class _CreateLessonState extends State<CreateLesson> {
                     TextField(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: 'Enter keywords in any language',
+                        labelText:
+                            'Enter words you want to learn in any language (optional)',
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -179,7 +174,7 @@ class _CreateLessonState extends State<CreateLesson> {
                     DropdownButtonFormField<int>(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        labelText: 'Number of dialogues',
+                        labelText: 'Length of conversation',
                       ),
                       value: int.parse(length),
                       onChanged: (value) {
@@ -189,9 +184,14 @@ class _CreateLessonState extends State<CreateLesson> {
                       },
                       items: List<int>.generate(3, (i) => i + 2)
                           .map<DropdownMenuItem<int>>((int value) {
+                        const lengthDesciptions = {
+                          2: 'Short',
+                          3: 'Medium',
+                          4: 'Long'
+                        };
                         return DropdownMenuItem<int>(
                           value: value,
-                          child: Text(value.toString()),
+                          child: Text(lengthDesciptions[value]!),
                         );
                       }).toList(),
                     ),
