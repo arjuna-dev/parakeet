@@ -33,7 +33,7 @@ class ConfirmDialogue extends StatefulWidget {
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
-  Map<String, dynamic> bigJsonDocument = {};
+  Map<String, dynamic> smallJsonDocument = {};
   ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(false);
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
   bool hasSelectedWord = false;
@@ -186,13 +186,13 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                           Column(
                             children: snapshot.data!.docs
                                 .map((DocumentSnapshot document) {
-                              bigJsonDocument =
+                              smallJsonDocument =
                                   document.data() as Map<String, dynamic>;
                               List<dynamic> turns = [];
-                              if (bigJsonDocument.containsKey("dialogue")) {
-                                turns = bigJsonDocument["dialogue"] ?? [];
+                              if (smallJsonDocument.containsKey("dialogue")) {
+                                turns = smallJsonDocument["dialogue"] ?? [];
                                 script = script_generator.createFirstScript(
-                                    bigJsonDocument["dialogue"] ?? []);
+                                    smallJsonDocument["dialogue"] ?? []);
                               }
 
                               return ListView.builder(
@@ -350,8 +350,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                         .doc();
                                     await docRef.set({
                                       "script": script,
-                                      "title": bigJsonDocument["title"],
-                                      "dialogue": bigJsonDocument["dialogue"],
+                                      "title": smallJsonDocument["title"],
+                                      "dialogue": smallJsonDocument["dialogue"],
                                       "target_language": widget.targetLanguage,
                                       "language_level": widget.languageLevel,
                                       "words_to_repeat": selectedWords.entries
@@ -378,10 +378,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       },
                                       body: jsonEncode(<String, dynamic>{
                                         "document_id": widget.documentID,
-                                        "dialogue": bigJsonDocument["dialogue"],
-                                        "title": bigJsonDocument["title"],
-                                        "speakers": bigJsonDocument["speakers"],
-                                        "user_ID": bigJsonDocument["user_ID"],
+                                        "dialogue":
+                                            smallJsonDocument["dialogue"],
+                                        "title": smallJsonDocument["title"],
+                                        "speakers":
+                                            smallJsonDocument["speakers"],
+                                        "user_ID": smallJsonDocument["user_ID"],
                                         "native_language":
                                             widget.nativeLanguage,
                                         "target_language":
@@ -389,9 +391,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                         "length": widget.length,
                                         "language_level": widget.languageLevel,
                                         "voice_1_id":
-                                            bigJsonDocument["voice_1_id"],
+                                            smallJsonDocument["voice_1_id"],
                                         "voice_2_id":
-                                            bigJsonDocument["voice_2_id"],
+                                            smallJsonDocument["voice_2_id"],
                                         "tts_provider": "1",
                                         "words_to_repeat": selectedWords.entries
                                             .expand(
@@ -411,10 +413,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                         MaterialPageRoute(
                                             builder: (context) =>
                                                 AudioPlayerScreen(
-                                                  dialogue: bigJsonDocument[
+                                                  dialogue: smallJsonDocument[
                                                       "dialogue"],
-                                                  title:
-                                                      bigJsonDocument["title"],
+                                                  title: smallJsonDocument[
+                                                      "title"],
                                                   documentID: widget.documentID,
                                                   userID: FirebaseAuth.instance
                                                       .currentUser!.uid,
