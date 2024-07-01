@@ -64,7 +64,6 @@ class _LibraryState extends State<Library> {
               final documents = snapshot.data!.docs;
               documents.sort(
                   (a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
-              print(documents.isEmpty);
 
               return Padding(
                 padding: AppConstants.horizontalPadding,

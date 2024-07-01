@@ -64,7 +64,8 @@ class MyApp extends StatelessWidget {
             );
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) => const CreateLesson(title: 'Parakeet'),
+              builder: (context) =>
+                  const CreateLesson(title: 'Create an audio lesson'),
             );
           case '/login':
             return MaterialPageRoute(
