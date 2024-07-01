@@ -284,7 +284,8 @@ class _CreateLessonState extends State<CreateLesson> {
                               );
                               int counter = 0;
                               bool docExists = false;
-                              while (!docExists && counter < 10) {
+                              while (!docExists && counter < 15) {
+                                counter++;
                                 await Future.delayed(const Duration(
                                     seconds: 1)); // wait for 1 second
                                 final QuerySnapshot snapshot = await docRef
@@ -331,7 +332,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Something went wrong! Please try again.'),
+                                      'Oops, this is embarassing 😅 Something went wrong! Please try again.'),
                                   duration: Duration(seconds: 3),
                                 ),
                               );
