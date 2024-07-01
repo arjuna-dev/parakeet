@@ -84,41 +84,51 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
-        return Expanded(
-          child: ListView.builder(
-            itemCount: model.nowPlayingFiles.length,
-            itemBuilder: (context, index) {
-              final audioFile = model.nowPlayingFiles[index];
-              return Card(
-                  child: ListTile(
-                      title: Text(audioFile.get('title')),
-                      subtitle: Text(
-                          "Learning language: ${audioFile.get('target_language')} \n"
-                          "Difficulty: ${audioFile.get('language_level')} level \n"),
-                      leading: const Icon(Icons.audio_file),
-                      onTap: () async {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AudioPlayerScreen(
-                              documentID: audioFile.reference.parent.parent!.id,
-                              dialogue: audioFile.get('dialogue'),
-                              wordsToRepeat: audioFile.get('words_to_repeat'),
-                              userID: FirebaseAuth.instance.currentUser!.uid,
-                              title: audioFile.get('title'),
-                              scriptDocumentId: audioFile.id,
-                              generating: false,
-                            ),
-                          ),
-                        ).then((result) {
-                          if (result == 'reload') {
-                            _reloadPage();
-                          }
-                        });
-                      }));
-            },
-          ),
-        );
+        return model.nowPlayingFiles.isEmpty
+            ? const SizedBox(
+                height: 150,
+                child: Center(
+                    child: Text(
+                        'You are not playing anything right now. Play or create an audio lesson!')),
+              )
+            : Expanded(
+                child: ListView.builder(
+                  itemCount: model.nowPlayingFiles.length,
+                  itemBuilder: (context, index) {
+                    final audioFile = model.nowPlayingFiles[index];
+                    return Card(
+                        child: ListTile(
+                            title: Text(audioFile.get('title')),
+                            subtitle: Text(
+                                "Learning language: ${audioFile.get('target_language')} \n"
+                                "Difficulty: ${audioFile.get('language_level')} level \n"),
+                            leading: const Icon(Icons.audio_file),
+                            onTap: () async {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AudioPlayerScreen(
+                                    documentID:
+                                        audioFile.reference.parent.parent!.id,
+                                    dialogue: audioFile.get('dialogue'),
+                                    wordsToRepeat:
+                                        audioFile.get('words_to_repeat'),
+                                    userID:
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                    title: audioFile.get('title'),
+                                    scriptDocumentId: audioFile.id,
+                                    generating: false,
+                                  ),
+                                ),
+                              ).then((result) {
+                                if (result == 'reload') {
+                                  _reloadPage();
+                                }
+                              });
+                            }));
+                  },
+                ),
+              );
       },
     );
   }
@@ -127,45 +137,53 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
-        return Expanded(
-          child: ListView.builder(
-            itemCount: model.favoriteAudioFiles.length,
-            itemBuilder: (context, index) {
-              final audioFile = model.favoriteAudioFiles[index];
-              return Card(
-                child: ListTile(
-                  title: Text(audioFile.get('title')),
-                  subtitle: Text(
-                    "Learning language: ${audioFile.get('target_language')} \n"
-                    "Difficulty: ${audioFile.get('language_level')} level \n",
-                  ),
-                  leading: const Icon(Icons.favorite),
-                  onTap: () async {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AudioPlayerScreen(
-                          documentID: audioFile.reference.parent.parent!.id,
-                          dialogue: audioFile.get('dialogue'),
-                          wordsToRepeat: audioFile.get('words_to_repeat'),
-                          userID: FirebaseAuth.instance.currentUser!.uid,
-                          title: audioFile.get('title'),
-                          scriptDocumentId: audioFile.id,
-                          generating: false,
+        return model.favoriteAudioFiles.isEmpty
+            ? const SizedBox(
+                height: 150,
+                child: Center(
+                    child: Text(
+                        'You have not added any audio to your favorite list yet. Add some audio from library to your favorite list!')),
+              )
+            : Expanded(
+                child: ListView.builder(
+                  itemCount: model.favoriteAudioFiles.length,
+                  itemBuilder: (context, index) {
+                    final audioFile = model.favoriteAudioFiles[index];
+                    return Card(
+                      child: ListTile(
+                        title: Text(audioFile.get('title')),
+                        subtitle: Text(
+                          "Learning language: ${audioFile.get('target_language')} \n"
+                          "Difficulty: ${audioFile.get('language_level')} level \n",
                         ),
+                        leading: const Icon(Icons.favorite),
+                        onTap: () async {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AudioPlayerScreen(
+                                documentID:
+                                    audioFile.reference.parent.parent!.id,
+                                dialogue: audioFile.get('dialogue'),
+                                wordsToRepeat: audioFile.get('words_to_repeat'),
+                                userID: FirebaseAuth.instance.currentUser!.uid,
+                                title: audioFile.get('title'),
+                                scriptDocumentId: audioFile.id,
+                                generating: false,
+                              ),
+                            ),
+                          ).then((result) {
+                            if (result == 'reload') {
+                              _reloadPage();
+                            }
+                          });
+                          ;
+                        },
                       ),
-                    ).then((result) {
-                      if (result == 'reload') {
-                        _reloadPage();
-                      }
-                    });
-                    ;
+                    );
                   },
                 ),
               );
-            },
-          ),
-        );
       },
     );
   }
