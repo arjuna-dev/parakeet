@@ -304,6 +304,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => ConfirmDialogue(
+                                            topic: topic,
                                             firstDialogue: firstDialogue,
                                             nativeLanguage: nativeLanguage,
                                             targetLanguage: targetLanguage,

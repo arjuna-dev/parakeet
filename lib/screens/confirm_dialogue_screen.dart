@@ -7,15 +7,15 @@ import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 
 class ConfirmDialogue extends StatefulWidget {
-  const ConfirmDialogue({
-    super.key,
-    required this.firstDialogue,
-    required this.nativeLanguage,
-    required this.targetLanguage,
-    required this.languageLevel,
-    required this.length,
-    required this.documentID,
-  });
+  const ConfirmDialogue(
+      {super.key,
+      required this.firstDialogue,
+      required this.nativeLanguage,
+      required this.targetLanguage,
+      required this.languageLevel,
+      required this.length,
+      required this.documentID,
+      required this.topic});
 
   final Map<String, dynamic> firstDialogue;
   final String nativeLanguage;
@@ -23,6 +23,7 @@ class ConfirmDialogue extends StatefulWidget {
   final String languageLevel;
   final String length;
   final String documentID;
+  final String topic;
 
   @override
   State<ConfirmDialogue> createState() => _ConfirmDialogueState();
@@ -77,7 +78,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Conversation'),
+        title: Text(widget.topic),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -138,12 +139,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
 
           return Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                ListTile(
-                  title: const Text('Topic'),
-                  subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
-                ),
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
@@ -193,7 +190,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       padding: EdgeInsets.all(8.0),
                       child: Text(
                         'Select the words that you want to focus on learning.',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -225,41 +223,44 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                 ),
                 Wrap(
                   children: selectedWords.entries.map<Widget>((entry) {
-                    return ValueListenableBuilder(
-                      valueListenable: entry.value,
-                      builder: (context, isSelected, child) {
-                        return GestureDetector(
-                          onTap: () {
-                            entry.value.value = !entry.value.value;
-                            updateHasSelectedWords();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0, vertical: 4.0),
-                            margin: const EdgeInsets.all(4.0),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.lightGreen
-                                  : Colors.transparent,
-                              border: Border.all(color: Colors.black),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Text(
-                              entry.key,
-                              style: TextStyle(
-                                fontSize: 16,
-                                decoration: isSelected
-                                    ? TextDecoration.underline
-                                    : TextDecoration.none,
-                                color: Colors.black,
+                    return SingleChildScrollView(
+                      child: ValueListenableBuilder(
+                        valueListenable: entry.value,
+                        builder: (context, isSelected, child) {
+                          return GestureDetector(
+                            onTap: () {
+                              entry.value.value = !entry.value.value;
+                              updateHasSelectedWords();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0, vertical: 4.0),
+                              margin: const EdgeInsets.all(4.0),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.lightGreen
+                                    : Colors.transparent,
+                                border: Border.all(color: Colors.black),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: Text(
+                                entry.key,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  decoration: isSelected
+                                      ? TextDecoration.underline
+                                      : TextDecoration.none,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 10),
                 ValueListenableBuilder<bool>(
                   valueListenable: isConfirmButtonActive,
                   builder: (context, value, child) {
