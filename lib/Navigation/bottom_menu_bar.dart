@@ -33,7 +33,7 @@ class BottomMenuBar extends StatelessWidget {
             color: currentRoute == '/create_lesson' ? Colors.blue : null,
           ),
           IconButton(
-            icon: const Icon(Icons.explore),
+            icon: const Icon(Icons.library_music),
             onPressed: () {
               if (currentRoute != '/library') {
                 Navigator.pushReplacementNamed(context, '/library');
