@@ -5,8 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
 
 class ConfirmDialogue extends StatefulWidget {
   const ConfirmDialogue({
@@ -32,15 +30,14 @@ class ConfirmDialogue extends StatefulWidget {
 
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
-  Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
+  Map<String, ValueNotifier<bool>> selectedWords = {};
   Map<String, dynamic> smallJsonDocument = {};
   ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(false);
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
   bool hasSelectedWord = false;
 
   void updateHasSelectedWords() {
-    hasSelectedWord = selectedWords.values
-        .any((wordMap) => wordMap.values.any((notifier) => notifier.value));
+    hasSelectedWord = selectedWords.values.any((notifier) => notifier.value);
   }
 
   Future<void> addUserToActiveCreation() async {
@@ -113,349 +110,294 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                 isConfirmButtonActive.value = true;
               }
             });
+
+            // Collect all words from dialogues
+            for (var document in snapshot.data!.docs) {
+              smallJsonDocument = document.data() as Map<String, dynamic>;
+              List<dynamic> turns = smallJsonDocument['dialogue'] ?? [];
+              for (var turn in turns) {
+                final targetLanguageSentence = turn['target_language'] ?? '';
+                final words = targetLanguageSentence
+                    .replaceAll(RegExp(r'\p{P}', unicode: true), '')
+                    .toLowerCase()
+                    .split(' ')
+                    .where(
+                        (String word) => word.isNotEmpty) // Remove empty words
+                    .toSet()
+                    .toList();
+                for (var word in words) {
+                  if (!selectedWords.containsKey(word)) {
+                    selectedWords[word] = ValueNotifier<bool>(false);
+                  }
+                }
+              }
+              script = script_generator
+                  .createFirstScript(smallJsonDocument['dialogue'] ?? []);
+            }
           }
 
           return Center(
             child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ListTile(
-                    title: const Text('Topic'),
-                    subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                ListTile(
+                  title: const Text('Topic'),
+                  subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children:
+                          snapshot.data!.docs.map((DocumentSnapshot document) {
+                        smallJsonDocument =
+                            document.data() as Map<String, dynamic>;
+                        List<dynamic> turns =
+                            smallJsonDocument['dialogue'] ?? [];
+                        return ListView.builder(
+                          itemBuilder: (context, index) {
+                            if (index >= turns.length) {
+                              return Container(); // Return an empty container if index is out of bounds
+                            }
+                            final turn = turns[index];
+                            return ListTile(
+                              title: Text('Dialogue ${turn['turn_nr']}:'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(turn['native_language'] ??
+                                      "No native language"),
+                                  Text(
+                                    turn['target_language'] ?? "",
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          itemCount: turns.length,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                  Align(
-                    alignment:
-                        Alignment.centerLeft, // Align the card to the left
-                    child: Card(
-                      elevation: 3.0, // Adjust the elevation as needed
-                      // color: Colors.lightGreen[
-                      //     100], // Light green background color for the card
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                            8.0), // Adjust the border radius as needed
-                      ),
-                      child: const Padding(
-                        padding:
-                            EdgeInsets.all(8.0), // Add padding inside the card
-                        child: Text(
-                          'Select the words that you want to focus on learning.',
-                          style: TextStyle(
-                              fontSize: 16), // Adjust the font size as needed
-                        ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Card(
+                    elevation: 3.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(
+                        'Select the words that you want to focus on learning.',
+                        style: TextStyle(fontSize: 16),
                       ),
                     ),
                   ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: selectAllNotifier,
-                    builder: (context, selectAll, child) {
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 2.0), // Add padding if needed
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Checkbox(
-                                  value: selectAll,
-                                  onChanged: (bool? value) {
-                                    selectAllNotifier.value = value ?? false;
-                                    for (var entry in selectedWords.entries) {
-                                      for (var wordEntry
-                                          in entry.value.entries) {
-                                        wordEntry.value.value =
-                                            selectAllNotifier.value;
-                                      }
-                                    }
-                                    updateHasSelectedWords();
-                                  },
-                                ),
-                                const Text("Select All Words"),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: selectAllNotifier,
+                  builder: (context, selectAll, child) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Column(
-                            children: snapshot.data!.docs
-                                .map((DocumentSnapshot document) {
-                              smallJsonDocument =
-                                  document.data() as Map<String, dynamic>;
-                              List<dynamic> turns = [];
-                              if (smallJsonDocument.containsKey("dialogue")) {
-                                turns = smallJsonDocument["dialogue"] ?? [];
-                                script = script_generator.createFirstScript(
-                                    smallJsonDocument["dialogue"] ?? []);
+                          Checkbox(
+                            value: selectAll,
+                            onChanged: (bool? value) {
+                              selectAllNotifier.value = value ?? false;
+                              for (var entry in selectedWords.entries) {
+                                entry.value.value = selectAllNotifier.value;
                               }
-
-                              return ListView.builder(
-                                itemBuilder: (context, index) {
-                                  if (index >= turns.length) {
-                                    return Container(); // Return an empty container if index is out of bounds
-                                  }
-                                  final turn = turns[index];
-                                  final targetLanguageSentence =
-                                      turn['target_language'] ?? "";
-                                  final words =
-                                      targetLanguageSentence.split(' ');
-                                  if (selectedWords[index] == null) {
-                                    selectedWords[index] = {};
-                                  }
-                                  words.forEach((word) {
-                                    if (selectedWords[index]![word] == null) {
-                                      selectedWords[index]![word] =
-                                          ValueNotifier<bool>(
-                                              selectAllNotifier.value);
-                                    }
-                                  });
-
-                                  return ListTile(
-                                    title: Text('Dialogue ${turn['turn_nr']}:'),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(turn['native_language'] ??
-                                            "No native language"),
-                                        Wrap(
-                                          children: words.map<Widget>((word) {
-                                            ValueNotifier<bool>
-                                                isSelectedNotifier =
-                                                selectedWords[index]![word]!;
-
-                                            return ValueListenableBuilder(
-                                              valueListenable:
-                                                  isSelectedNotifier,
-                                              builder: (BuildContext context,
-                                                  bool isSelected,
-                                                  Widget? child) {
-                                                return GestureDetector(
-                                                  onTap: () {
-                                                    isSelectedNotifier.value =
-                                                        !isSelectedNotifier
-                                                            .value;
-                                                    updateHasSelectedWords();
-                                                  },
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 2.0,
-                                                        vertical: 0.0),
-                                                    margin: EdgeInsets.zero,
-                                                    decoration: BoxDecoration(
-                                                      color: isSelected
-                                                          ? Colors.lightGreen
-                                                          : Colors.transparent,
-                                                    ),
-                                                    child: Text(
-                                                      word,
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            16, // Adjust font size as needed
-                                                        decoration: isSelected
-                                                            ? TextDecoration
-                                                                .underline
-                                                            : TextDecoration
-                                                                .none,
-                                                        decorationColor: isSelected
-                                                            ? const Color
-                                                                .fromARGB(
-                                                                255, 21, 87, 25)
-                                                            : null, // Darker green for underline
-                                                        color: Colors
-                                                            .black, // Adjust text color if needed
-                                                        decorationThickness:
-                                                            isSelected
-                                                                ? 2.0
-                                                                : null,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                                itemCount: turns.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                              );
-                            }).toList(),
+                              updateHasSelectedWords();
+                            },
                           ),
+                          const Text("Select All Words"),
                         ],
                       ),
-                    ),
-                  ),
-                  ValueListenableBuilder<bool>(
-                      valueListenable: isConfirmButtonActive,
-                      builder: (context, value, child) {
-                        return Container(
-                          width: 200,
-                          height: 50,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          child: FloatingActionButton.extended(
-                              label: const Text('Generate Audio'),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                    );
+                  },
+                ),
+                Wrap(
+                  children: selectedWords.entries.map<Widget>((entry) {
+                    return ValueListenableBuilder(
+                      valueListenable: entry.value,
+                      builder: (context, isSelected, child) {
+                        return GestureDetector(
+                          onTap: () {
+                            entry.value.value = !entry.value.value;
+                            updateHasSelectedWords();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0, vertical: 4.0),
+                            margin: const EdgeInsets.all(4.0),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.lightGreen
+                                  : Colors.transparent,
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: Text(
+                              entry.key,
+                              style: TextStyle(
+                                fontSize: 16,
+                                decoration: isSelected
+                                    ? TextDecoration.underline
+                                    : TextDecoration.none,
+                                color: Colors.black,
                               ),
-                              backgroundColor: isConfirmButtonActive.value
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey[400],
-                              foregroundColor: Colors.white,
-                              onPressed: () async {
-                                if (isConfirmButtonActive.value) {
-                                  if (!hasSelectedWord) {
-                                    // Show a Snackbar with a message
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                              'Please select at least one word to proceed 🧐'),
-                                        ),
-                                        duration: Duration(seconds: 3),
-                                      ),
-                                    );
-                                    return; // Return early since no word has been selected
-                                  }
-
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (BuildContext context) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    },
-                                  );
-
-                                  try {
-                                    DocumentReference docRef = FirebaseFirestore
-                                        .instance
-                                        .collection('chatGPT_responses')
-                                        .doc(widget.documentID)
-                                        .collection(
-                                            'script-${FirebaseAuth.instance.currentUser!.uid}')
-                                        .doc();
-                                    await docRef.set({
-                                      "script": script,
-                                      "title": smallJsonDocument["title"],
-                                      "dialogue": smallJsonDocument["dialogue"],
-                                      "target_language": widget.targetLanguage,
-                                      "language_level": widget.languageLevel,
-                                      "words_to_repeat": selectedWords.entries
-                                          .expand(
-                                              (entry) => entry.value.entries)
-                                          .where((innerEntry) =>
-                                              innerEntry.value.value == true)
-                                          .map((innerEntry) => innerEntry.key)
-                                          .toList(),
-                                      "user_ID": FirebaseAuth
-                                          .instance.currentUser!.uid,
-                                      "timestamp": FieldValue.serverTimestamp(),
-                                    });
-                                    String scriptDocumentID = docRef.id;
-
-                                    http.post(
-                                      Uri.parse(
-                                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
-                                      headers: <String, String>{
-                                        'Content-Type':
-                                            'application/json; charset=UTF-8',
-                                        "Access-Control-Allow-Origin":
-                                            "*", // Required for CORS support to work
-                                      },
-                                      body: jsonEncode(<String, dynamic>{
-                                        "document_id": widget.documentID,
-                                        "dialogue":
-                                            smallJsonDocument["dialogue"],
-                                        "title": smallJsonDocument["title"],
-                                        "speakers":
-                                            smallJsonDocument["speakers"],
-                                        "user_ID": smallJsonDocument["user_ID"],
-                                        "native_language":
-                                            widget.nativeLanguage,
-                                        "target_language":
-                                            widget.targetLanguage,
-                                        "length": widget.length,
-                                        "language_level": widget.languageLevel,
-                                        "voice_1_id":
-                                            smallJsonDocument["voice_1_id"],
-                                        "voice_2_id":
-                                            smallJsonDocument["voice_2_id"],
-                                        "tts_provider": "1",
-                                        "words_to_repeat": selectedWords.entries
-                                            .expand(
-                                                (entry) => entry.value.entries)
-                                            .where((innerEntry) =>
-                                                innerEntry.value.value == true)
-                                            .map((innerEntry) => innerEntry.key)
-                                            .toList(),
-                                      }),
-                                    );
-                                    if (script.isNotEmpty) {
-                                      await addUserToActiveCreation();
-                                      Navigator.pop(context);
-                                      Navigator.pushNamed(context, '/');
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                AudioPlayerScreen(
-                                                  dialogue: smallJsonDocument[
-                                                      "dialogue"],
-                                                  title: smallJsonDocument[
-                                                      "title"],
-                                                  documentID: widget.documentID,
-                                                  userID: FirebaseAuth.instance
-                                                      .currentUser!.uid,
-                                                  scriptDocumentId:
-                                                      scriptDocumentID,
-                                                  generating: true,
-                                                  wordsToRepeat: selectedWords
-                                                      .entries
-                                                      .expand((entry) =>
-                                                          entry.value.entries)
-                                                      .where((innerEntry) =>
-                                                          innerEntry
-                                                              .value.value ==
-                                                          true)
-                                                      .map((innerEntry) =>
-                                                          innerEntry.key)
-                                                      .toList(),
-                                                  //audioDurations: script['fileDurations'],
-                                                )),
-                                      );
-                                    } else {
-                                      throw Exception(
-                                          'Failed to create script!');
-                                    }
-                                  } catch (e) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Something went wrong! Please try again.'),
-                                        duration: Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
-                                }
-                              }),
+                            ),
+                          ),
                         );
-                      })
-                ]),
+                      },
+                    );
+                  }).toList(),
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: isConfirmButtonActive,
+                  builder: (context, value, child) {
+                    return Container(
+                      width: 200,
+                      height: 50,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      child: FloatingActionButton.extended(
+                        label: const Text('Generate Audio'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        backgroundColor: isConfirmButtonActive.value
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[400],
+                        foregroundColor: Colors.white,
+                        onPressed: () async {
+                          if (isConfirmButtonActive.value) {
+                            if (!hasSelectedWord) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text(
+                                        'Please select at least one word to proceed 🧐'),
+                                  ),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                              return;
+                            }
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                            );
+
+                            try {
+                              DocumentReference docRef = FirebaseFirestore
+                                  .instance
+                                  .collection('chatGPT_responses')
+                                  .doc(widget.documentID)
+                                  .collection(
+                                      'script-${FirebaseAuth.instance.currentUser!.uid}')
+                                  .doc();
+                              await docRef.set({
+                                "script": script,
+                                "title": smallJsonDocument["title"],
+                                "dialogue": smallJsonDocument["dialogue"],
+                                "target_language": widget.targetLanguage,
+                                "language_level": widget.languageLevel,
+                                "words_to_repeat": selectedWords.entries
+                                    .where((entry) => entry.value.value == true)
+                                    .map((entry) => entry.key)
+                                    .toList(),
+                                "user_ID":
+                                    FirebaseAuth.instance.currentUser!.uid,
+                                "timestamp": FieldValue.serverTimestamp(),
+                              });
+                              String scriptDocumentID = docRef.id;
+
+                              http.post(
+                                Uri.parse(
+                                    'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+                                headers: <String, String>{
+                                  'Content-Type':
+                                      'application/json; charset=UTF-8',
+                                  "Access-Control-Allow-Origin": "*",
+                                },
+                                body: jsonEncode(<String, dynamic>{
+                                  "document_id": widget.documentID,
+                                  "dialogue": smallJsonDocument["dialogue"],
+                                  "title": smallJsonDocument["title"],
+                                  "speakers": smallJsonDocument["speakers"],
+                                  "user_ID": smallJsonDocument["user_ID"],
+                                  "native_language": widget.nativeLanguage,
+                                  "target_language": widget.targetLanguage,
+                                  "length": widget.length,
+                                  "language_level": widget.languageLevel,
+                                  "voice_1_id": smallJsonDocument["voice_1_id"],
+                                  "voice_2_id": smallJsonDocument["voice_2_id"],
+                                  "tts_provider": "1",
+                                  "words_to_repeat": selectedWords.entries
+                                      .where(
+                                          (entry) => entry.value.value == true)
+                                      .map((entry) => entry.key)
+                                      .toList(),
+                                }),
+                              );
+                              if (script.isNotEmpty) {
+                                await addUserToActiveCreation();
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, '/');
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => AudioPlayerScreen(
+                                      dialogue: smallJsonDocument["dialogue"],
+                                      title: smallJsonDocument["title"],
+                                      documentID: widget.documentID,
+                                      userID: FirebaseAuth
+                                          .instance.currentUser!.uid,
+                                      scriptDocumentId: scriptDocumentID,
+                                      generating: true,
+                                      wordsToRepeat: selectedWords.entries
+                                          .where((entry) =>
+                                              entry.value.value == true)
+                                          .map((entry) => entry.key)
+                                          .toList(),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                throw Exception('Failed to create script!');
+                              }
+                            } catch (e) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Something went wrong! Please try again.'),
+                                  duration: Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),
