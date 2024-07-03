@@ -171,31 +171,6 @@ class _CreateLessonState extends State<CreateLesson> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
-                    DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Length of lesson',
-                      ),
-                      value: int.parse(length),
-                      onChanged: (value) {
-                        setState(() {
-                          length = value.toString();
-                        });
-                      },
-                      items: List<int>.generate(3, (i) => i + 2)
-                          .map<DropdownMenuItem<int>>((int value) {
-                        const lengthDesciptions = {
-                          2: 'Short',
-                          3: 'Medium',
-                          4: 'Long'
-                        };
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text(lengthDesciptions[value]!),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
