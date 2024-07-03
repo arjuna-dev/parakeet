@@ -10,7 +10,7 @@ import time
 from threading import Timer, Lock
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat_without_punctuation, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
         self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
@@ -26,7 +26,7 @@ class APICalls:
         self.target_language = target_language
         self.document = document
         self.document_durations = document_durations
-        self.words_to_repeat_without_punctuation = words_to_repeat_without_punctuation
+        self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
         self.push_to_firestore = push_to_firestore
         self.remove_user_from_active_creation_by_id = remove_user_from_active_creation_by_id
@@ -123,7 +123,7 @@ class APICalls:
                 if text_part['enclosed']:
                     text_words = [re.sub(r'[^\w\s]', '', word) for word in text_part['text'].lower().split()]
                     if not found:
-                        if not any(element.lower() in text_words for element in self.words_to_repeat_without_punctuation):
+                        if not any(element.lower() in text_words for element in self.words_to_repeat):
                             break
                         else:
                             found = True
@@ -138,8 +138,8 @@ class APICalls:
         elif '"native_language":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"target_language":' in current_line:
-            words = [re.sub(r'[^\w\s]', '', word) for word in last_value.split()]
-            if not any(word in self.words_to_repeat_without_punctuation for word in words):
+            words = [re.sub(r'[^\w\s]', '', word).lower() for word in last_value.split()]
+            if not any(word in self.words_to_repeat for word in words):
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))

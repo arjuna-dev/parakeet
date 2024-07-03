@@ -335,8 +335,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                   text: TextSpan(
                                     children:
                                         dialogueTarget.split(' ').map((word) {
-                                      final match =
-                                          widget.wordsToRepeat.contains(word);
+                                      final cleanWord = word
+                                          .replaceAll(RegExp(r'[^\w\s]'), '')
+                                          .toLowerCase();
+                                      final match = widget.wordsToRepeat
+                                          .contains(cleanWord);
                                       return TextSpan(
                                         text: '$word ',
                                         style: TextStyle(
