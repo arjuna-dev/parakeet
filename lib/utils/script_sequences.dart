@@ -49,7 +49,7 @@ List<String> introOutroSequence1() {
 
 List<Function> sentenceSequences = [sentenceSequence1];
 List<String> sentenceSequence1(String native, String target,
-    String narratorExplanation, String narratorFunFact,
+    String narratorExplanation, List<String> narratorFunFact,
     {bool isFirstSentence = false}) {
   String firstPhrase = isFirstSentence
       ? "narrator_navigation_phrases_20"
@@ -64,7 +64,7 @@ List<String> sentenceSequence1(String native, String target,
     "one_second_break",
     target,
     "one_second_break",
-    narratorFunFact,
+    ...narratorFunFact,
     "one_second_break",
   ];
   return scriptPart;
