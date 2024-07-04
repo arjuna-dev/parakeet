@@ -87,7 +87,7 @@ List<String> activeRecallSequence1(String native, String target) {
 
 List<Function> chunkSequences = [chunkSequence1];
 List<String> chunkSequence1(
-    List<String> narratorFunFact,
+    List<String> narratorTranslationsChunk,
     String nativeLanguage,
     String targetLanguage,
     List<Map<String, dynamic>> wordObjects,
@@ -115,7 +115,7 @@ List<String> chunkSequence1(
     "one_second_break",
     targetLanguage,
     "five_second_break",
-    ...narratorFunFact,
+    ...narratorTranslationsChunk,
     "narrator_repetition_phrases_4", //Listen and repeat
     "one_second_break",
     targetLanguage,
