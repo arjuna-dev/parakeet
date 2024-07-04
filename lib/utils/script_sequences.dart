@@ -131,6 +131,7 @@ List<String> words2RepsFixElevenlabsLonelyWords(
   for (int i = 0; i < wordObjects.length; i++) {
     scriptPart.addAll(wordObjects[i]["translation"]);
     if (i == 0) {
+      scriptPart.add("one_second_break");
       scriptPart.add("narrator_repetition_phrases_4"); // Listen and repeat
       scriptPart.add("one_second_break");
     }
