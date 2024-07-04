@@ -49,7 +49,17 @@ List<String> parseAndCreateScript(
       String targetSentence = "dialogue_${i}_target_language";
 
       String narratorExplanation = "dialogue_${i}_narrator_explanation";
-      String narratorFunFact = "dialogue_${i}_narrator_fun_fact";
+      String narratorFunFactText = data[i]["narrator_fun_fact"];
+
+      // Classify and process the text into parts enclosed by || (target_language text)
+      List<Map<String, dynamic>> classifiedText =
+          extractAndClassifyEnclosedWords(narratorFunFactText);
+      List<String> narratorFunFact = [];
+      for (int index = 0; index < classifiedText.length; index++) {
+        String narratorFunFactChunks = "dialogue_${i}_narrator_fun_fact_$index";
+        narratorFunFact.add(narratorFunFactChunks);
+        narratorFunFact.add("one_second_break");
+      }
 
       List<String> sentenceSequence = sequences.sentenceSequence1(
           nativeSentence, targetSentence, narratorExplanation, narratorFunFact,
