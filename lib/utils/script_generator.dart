@@ -171,6 +171,9 @@ List<String> parseAndCreateScript(
       }
     }
   }
-
+  // Uncomment to print full script:
+  // for (int i = 0; i < script.length; i++) {
+  //   print(script[i]);
+  // }
   return script;
 }
