@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
@@ -88,8 +89,8 @@ class _HomeState extends State<Home> {
             ? const SizedBox(
                 height: 150,
                 child: Center(
-                    child: Text(
-                        'You are not playing anything right now. Play or create an audio lesson!')),
+                    child:
+                        Text('Start playing audios to see them here! 🎧🎶🎵')),
               )
             : Expanded(
                 child: ListView.builder(
@@ -138,11 +139,34 @@ class _HomeState extends State<Home> {
       // Replace the body with this
       builder: (context, model, child) {
         return model.favoriteAudioFiles.isEmpty
-            ? const SizedBox(
+            ? SizedBox(
                 height: 150,
                 child: Center(
-                    child: Text(
-                        'You have not added any audio to your favorite list yet. Add some audio from library to your favorite list!')),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                          color: Colors.black), // Default text style
+                      children: <TextSpan>[
+                        const TextSpan(text: 'Nothing here yet 😅.'),
+                        TextSpan(
+                          text: 'Go to library',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ), // Make text blue to indicate it's clickable
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              // Navigator code to navigate to LibraryScreen
+                              Navigator.pushReplacementNamed(
+                                  context, '/library');
+                            },
+                        ),
+                        const TextSpan(
+                            text: ' to add audios to your favorite list!'),
+                      ],
+                    ),
+                  ),
+                ),
               )
             : Expanded(
                 child: ListView.builder(
