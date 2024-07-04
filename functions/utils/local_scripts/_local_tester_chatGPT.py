@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from prompts import prompt_big_JSON, prompt_big_JSON_2
+from prompts import prompt_big_JSON
 from llm_parametrizer import LLMParametrizer
 
 # user_name = input("Enter the user name: ")
@@ -81,10 +81,8 @@ prmtrzr = LLMParametrizer()
 prmtrzr.initialize_OpenAI()
 
 prompt_1  = prompt_big_JSON(dialogue["all_turns"], "English (US)", "German", "C2", "4", dialogue["speakers"])
-prompt_2 = prompt_big_JSON_2(dialogue["all_turns"], "English (US)", "German", "C2", "4", dialogue["speakers"])
-
-prmtrzr.add_prompts(prompt_1, prompt_2)
+prmtrzr.add_prompts(prompt_1)
 # prmtrzr.add_models(GPT_MODEL.GPT_4o.value, GPT_MODEL.GPT_3_5_T.value)
-# prmtrzr.add_temperatures(0.5, 1.0, 2)
+prmtrzr.add_temperatures(0.5, 1.0, 2.0)
 results = prmtrzr.run(output_csv=True)
 print(results)
