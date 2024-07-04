@@ -26,7 +26,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
-  var languageLevel = 'A1';
+  var languageLevel = 'Absolute beignner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 4; // change this to allow more users
 
@@ -182,8 +182,12 @@ class _CreateLessonState extends State<CreateLesson> {
                           languageLevel = value.toString();
                         });
                       },
-                      items: <String>['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
-                          .map<DropdownMenuItem<String>>((String value) {
+                      items: <String>[
+                        'Absolute beignner (A1)',
+                        'Beginner (A2-B1)',
+                        'Intermediate (B2)',
+                        'Advanced (C1-C2)'
+                      ].map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
