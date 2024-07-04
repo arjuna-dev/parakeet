@@ -92,8 +92,9 @@ List<String> chunkSequence1(
     String targetLanguage,
     List<Map<String, dynamic>> wordObjects,
     int chunkNumber) {
-  List<String> wordsReps = words2RepsFixElevenlabsLonelyWords(wordObjects);
-  List<String> wordsSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
+  List<String> allWordsRepetitions =
+      words2RepsFixElevenlabsLonelyWords(wordObjects);
+  List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
   String firstPhrase = chunkNumber == 0
       ? "narrator_navigation_phrases_17"
       : "narrator_navigation_phrases_23";
@@ -103,16 +104,16 @@ List<String> chunkSequence1(
     "one_second_break",
     targetLanguage,
     "one_second_break",
-    ...wordsReps,
+    ...allWordsRepetitions,
     "narrator_navigation_phrases_15", // Now try to say..
     "one_second_break",
     nativeLanguage,
     "five_second_break",
-    targetLanguage,
+    ...chunkSpaced,
     "five_second_break",
     "narrator_repetition_phrases_25", // Pay attention to the pronunciation and try saying it just like that.
     "one_second_break",
-    ...wordsSpaced,
+    targetLanguage,
     "five_second_break",
     ...narratorFunFact,
     "narrator_repetition_phrases_4", //Listen and repeat
@@ -131,6 +132,7 @@ List<String> words2RepsFixElevenlabsLonelyWords(
   for (int i = 0; i < wordObjects.length; i++) {
     scriptPart.addAll(wordObjects[i]["translation"]);
     if (i == 0) {
+      scriptPart.add("one_second_break");
       scriptPart.add("narrator_repetition_phrases_4"); // Listen and repeat
       scriptPart.add("one_second_break");
     }

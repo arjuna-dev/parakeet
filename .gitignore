@@ -47,7 +47,7 @@ app.*.map.json
 
 node_modules/
 functions/node_modules/.bin/acorn
-functions/venv
+venv
 functions/narrator_english
 functions/audio
 

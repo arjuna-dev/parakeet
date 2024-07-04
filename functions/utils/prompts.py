@@ -66,10 +66,17 @@ JSON:
 ===
 '''
 
-
-
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
-   return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n Language level is {language_level}. You will write turns from 1 to {length}. You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in {native_language}, when quoting in {target_language} the text should be enclosed in double vertical bars (||). The {target_language} sentence of each turn should be split in smaller parts of maximum 4 words that have grammatical cohesion and make sense and then translated as literally as possible to {native_language}. For the narrator_translation key avoid grammatical explanations, avoid explaining gender and number of articles for example. Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
+   return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}. 
+   
+   - You will write turns from 1 to {length}. 
+   - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in {native_language}, when quoting in {target_language} the text should be enclosed in double vertical bars (||).
+   - If the {target_language} sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
+    - Then these sub-sentences should be translated as literally as possible to {native_language} taking as context the sub-sentence and NOT the full sentence or conversation. 
+  - For the narrator_translation json key avoid grammatical explanations, avoid explaining gender and number of articles for example.
+  - For the narrator_fun_fact json key focus on things like etymology, explaining compound words, explaining idiomatic phrases, etc.
+  
+  Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
 
 JSON: ===
 {{
@@ -80,12 +87,12 @@ JSON: ===
       "target_language": "Hola, me gustaría una bolsa de palomitas, por favor.",
       "native_language": "Hello, I would like a bag of popcorn, please.",
       "narrator_explanation": "Carlos is ordering popcorn at the cinema.",
-      "narrator_fun_fact": "Popcorn is often associated with movie theaters in many cultures.",
+      "narrator_fun_fact": ""Popcorn" is a compound word formed from "pop" and "corn." "Pop" refers to the noise made by the corn as it explodes when heated, and "corn" in this context is derived from the old English grain that encompasses all types of grains, including wheat and barley. However, in modern American English, "corn" typically refers specifically to maize.",
       "split_sentence": [
         {{
           "target_language": "Hola",
           "native_language": "Hello",
-          "narrator_translation": "||Hola|| means 'Hello'. It's a universal greeting in Spanish-speaking countries.",
+          "narrator_translation": "||Hola|| is a universal greeting in Spanish-speaking countries.",
           "words": [
             {{
               "target_language": "Hola",
@@ -161,7 +168,7 @@ JSON: ===
       "target_language": "¿De qué tamaño? ¿Pequeño, mediano o grande?",
       "native_language": "What size? Small, medium, or large?",
       "narrator_explanation": "Elena is asking Carlos about the size of the popcorn bag he wants.",
-      "narrator_fun_fact": "In Spain, popcorn sizes at cinemas can vary widely from one theater to another.",
+      "narrator_fun_fact": "The term "popcorn" first appeared in John Russell Bartlett’s 1848 "Dictionary of Americanisms," which reflects its usage in early America. The word has remained relatively unchanged in meaning since that time.",
       "split_sentence": [
         {{
           "target_language": "¿De qué tamaño?",
@@ -210,5 +217,153 @@ JSON: ===
   ]
 }}
 ===
+Continue adding turns until you reach {length} turns.
+
+Here is another example:
+===
+{{
+ "dialogue": [
+    {{
+      "speaker": "speaker_1",
+      "turn_nr": "1",
+      "target_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
+      "native_language": "Who do you think is the best player in the upcoming EURO?",
+      "narrator_explanation": "Jürgen is asking Maria who she thinks will be the best player in the upcoming EURO soccer tournament.",
+      "narrator_fun_fact": "The word ||Spieler|| means 'player' in German. It comes from the verb ||spielen||, which means 'to play'. ||Beste|| is the superlative form of 'good' (||gut||), meaning 'the best'.",
+      "split_sentence": [
+        {{
+          "target_language": "Wer denkst du",
+          "native_language": "Who do you think",
+          "narrator_translation": "||Wer|| means 'Who'. ||Denkst|| translates to 'think'. ||Du|| means 'you'.",
+          "words": [
+            {{
+              "target_language": "Wer",
+              "narrator_translation": "||Wer|| means 'Who'."
+            }},
+            {{
+              "target_language": "denkst",
+              "narrator_translation": "||Denkst|| translates to 'think'."
+            }},
+            {{
+              "target_language": "du",
+              "narrator_translation": "||Du|| means 'you'."
+            }}
+          ]
+        }},
+        {{
+          "target_language": "ist der beste Spieler",
+          "native_language": "is the best player",
+          "narrator_translation": "||Ist|| means 'is'. ||Der beste|| translates to 'the best'. ||Spieler|| means 'player'.",
+          "words": [
+            {{
+              "target_language": "ist",
+              "narrator_translation": "||Ist|| means 'is'."
+            }},
+            {{
+              "target_language": "der beste",
+              "narrator_translation": "||Der beste|| translates to 'the best'."
+            }},
+            {{
+              "target_language": "Spieler",
+              "narrator_translation": "||Spieler|| means 'player'."
+            }}
+          ]
+        }},
+        {{
+          "target_language": "bei der kommenden EURO?",
+          "native_language": "in the upcoming EURO?",
+          "narrator_translation": "||Bei|| means 'in' or 'at'. ||Der kommenden|| translates to 'the upcoming'. ||EURO|| is short for the European Football Championship.",
+          "words": [
+            {{
+              "target_language": "bei",
+              "narrator_translation": "||Bei|| means 'in' or 'at'."
+            }},
+            {{
+              "target_language": "der kommenden",
+              "narrator_translation": "||Der kommenden|| translates to 'the upcoming'."
+            }},
+            {{
+              "target_language": "EURO",
+              "narrator_translation": "||EURO|| is short for the European Football Championship."
+            }}
+          ]
+        }}
+      ]
+    }},
+    {{
+      "speaker": "speaker_2",
+      "turn_nr": "2",
+      "target_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
+      "native_language": "I believe that Mbappé is one of the best players alive at the moment.",
+      "narrator_explanation": "Maria expresses her opinion that Mbappé is currently one of the best players in the world.",
+      "narrator_fun_fact": "The German word ||glaube|| means 'believe'. It comes from the Old High German ||gilouben||, which means 'to trust'. ||Momentan|| is derived from the Latin ||momentum||, meaning 'moment'.",
+      "split_sentence": [
+        {{
+          "target_language": "Ich glaube",
+          "native_language": "I believe",
+          "narrator_translation": "||Ich|| means 'I'. ||Glaube|| means 'believe'.",
+          "words": [
+            {{
+              "target_language": "Ich",
+              "narrator_translation": "||Ich|| means 'I'."
+            }},
+            {{
+              "target_language": "glaube",
+              "narrator_translation": "||Glaube|| means 'believe'."
+            }}
+          ]
+        }},
+        {{
+          "target_language": "dass Mbappé einer der besten Spieler ist",
+          "native_language": "that Mbappé is one of the best players",
+          "narrator_translation": "||Dass|| means 'that'. ||Einer der besten|| means 'one of the best'. ||Spieler|| means 'players'. ||Ist|| means 'is'.",
+          "words": [
+            {{
+              "target_language": "dass",
+              "narrator_translation": "||Dass|| means 'that'."
+            }},
+            {{
+              "target_language": "Mbappé",
+              "narrator_translation": "||Mbappé|| is a proper noun and refers to the famous football player, Kylian Mbappé."
+            }},
+            {{
+              "target_language": "einer der besten",
+              "narrator_translation": "||Einer der besten|| means 'one of the best'."
+            }},
+            {{
+              "target_language": "Spieler",
+              "narrator_translation": "||Spieler|| means 'players'."
+            }},
+            {{
+              "target_language": "ist",
+              "narrator_translation": "||Ist|| means 'is'."
+            }}
+          ]
+        }},
+        {{
+          "target_language": "die momentan leben.",
+          "native_language": "alive at the moment.",
+          "narrator_translation": "||Die|| means 'who'. ||Momentan|| means 'at the moment'. ||Leben|| means 'live' or 'are alive'.",
+          "words": [
+            {{
+              "target_language": "die",
+              "narrator_translation": "||Die|| means 'who'."
+            }},
+            {{
+              "target_language": "momentan",
+              "narrator_translation": "||Momentan|| means 'at the moment'."
+            }},
+            {{
+              "target_language": "leben.",
+              "narrator_translation": "||Leben|| means 'live' or 'are alive'."
+            }}
+          ]
+        }}
+      ]
+    }}
+  ]
+}}
+===
+
 Continue adding turns until you reach {length} turns.
 '''

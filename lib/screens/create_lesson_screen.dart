@@ -92,31 +92,51 @@ class _CreateLessonState extends State<CreateLesson> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _controller,
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                      maxLength: 400,
-                      decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
+                    Stack(children: [
+                      TextFormField(
+                        controller: _controller,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        maxLength: 400,
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 20.0, horizontal: 10.0),
+                          border: OutlineInputBorder(),
                           labelText: 'Topic of the lesson',
                           counterText: '',
-                          suffix: ElevatedButton(
-                              onPressed: regenerateTopic,
-                              child: const Text('Suggest topic'))),
-                      onChanged: (value) {
-                        // You can still handle changes here if needed
-                        setState(() {
-                          topic = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a topic';
-                        }
-                        return null;
-                      },
-                    ),
+                        ),
+                        onChanged: (value) {
+                          // You can still handle changes here if needed
+                          setState(() {
+                            topic = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a topic';
+                          }
+                          return null;
+                        },
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: GestureDetector(
+                          onTap: () {
+                            regenerateTopic();
+                          },
+                          child: RichText(
+                            text: const TextSpan(
+                                text: 'suggest+',
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  color: Colors.deepPurple,
+                                  fontSize: 16,
+                                )),
+                          ),
+                        ),
+                      ),
+                    ]),
                     const SizedBox(height: 10),
                     TextField(
                       decoration: const InputDecoration(
@@ -225,7 +245,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Oops, this is embarassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+                                      'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
                                   duration: Duration(seconds: 5),
                                 ),
                               );
@@ -311,7 +331,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Oops, this is embarassing 😅 Something went wrong! Please try again.'),
+                                      'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
                                   duration: Duration(seconds: 3),
                                 ),
                               );
