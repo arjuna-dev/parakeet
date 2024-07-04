@@ -435,14 +435,21 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                   generating: true,
                                                   wordsToRepeat: selectedWords
                                                       .entries
-                                                      .expand((entry) =>
-                                                          entry.value.entries)
+                                                      .expand((entry) => entry
+                                                          .value.entries)
                                                       .where((innerEntry) =>
                                                           innerEntry
                                                               .value.value ==
                                                           true)
                                                       .map((innerEntry) =>
-                                                          innerEntry.key)
+                                                          innerEntry.key
+                                                              .toLowerCase()
+                                                              .replaceAll(
+                                                                  RegExp(
+                                                                      r'[^\p{L}\s]',
+                                                                      unicode:
+                                                                          true),
+                                                                  ''))
                                                       .toList(),
                                                   //audioDurations: script['fileDurations'],
                                                 )),

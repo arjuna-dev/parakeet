@@ -341,7 +341,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                                   unicode: true),
                                               '')
                                           .toLowerCase();
-                                      print(cleanWord);
                                       final match = widget.wordsToRepeat
                                           .contains(cleanWord);
                                       return TextSpan(
