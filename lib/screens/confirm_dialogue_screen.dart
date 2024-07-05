@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:showcaseview/showcaseview.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
 
@@ -37,6 +38,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(false);
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
   bool hasSelectedWord = false;
+  final GlobalKey _one = GlobalKey();
 
   void updateHasSelectedWords() {
     hasSelectedWord = selectedWords.values
@@ -82,324 +84,332 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
       appBar: AppBar(
         title: const Text('Your Conversation'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('chatGPT_responses')
-            .doc(widget.documentID)
-            .collection('only_target_sentences')
-            .snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) {
-            return const Text('Something went wrong');
-          }
+      body: ShowCaseWidget(builder: (context) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('chatGPT_responses')
+              .doc(widget.documentID)
+              .collection('only_target_sentences')
+              .snapshots(),
+          builder:
+              (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Something went wrong');
+            }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            }
 
-          if (snapshot.hasData) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!isConfirmButtonActive.value &&
-                  snapshot.data!.docs.isNotEmpty &&
-                  (snapshot.data!.docs[0].data() as Map<String, dynamic>)
-                      .containsKey('dialogue') &&
-                  snapshot.data!.docs[0]['dialogue'] != null &&
-                  snapshot.data!.docs[0]['dialogue'].length ==
-                      int.parse(widget.length) &&
-                  snapshot
-                      .data!
-                      .docs[0]['dialogue'][int.parse(widget.length) - 1]
-                      .isNotEmpty) {
-                isConfirmButtonActive.value = true;
-              }
-            });
-          }
+            if (snapshot.hasData) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!isConfirmButtonActive.value &&
+                    snapshot.data!.docs.isNotEmpty &&
+                    (snapshot.data!.docs[0].data() as Map<String, dynamic>)
+                        .containsKey('dialogue') &&
+                    snapshot.data!.docs[0]['dialogue'] != null &&
+                    snapshot.data!.docs[0]['dialogue'].length ==
+                        int.parse(widget.length) &&
+                    snapshot
+                        .data!
+                        .docs[0]['dialogue'][int.parse(widget.length) - 1]
+                        .isNotEmpty) {
+                  isConfirmButtonActive.value = true;
+                  ShowCaseWidget.of(context).startShowCase([_one]);
+                }
+              });
+            }
 
-          return Center(
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ListTile(
-                    title: const Text('Topic'),
-                    subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
-                  ),
-                  Align(
-                    alignment:
-                        Alignment.centerLeft, // Align the card to the left
-                    child: Card(
-                      elevation: 3.0, // Adjust the elevation as needed
-                      // color: Colors.lightGreen[
-                      //     100], // Light green background color for the card
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                            8.0), // Adjust the border radius as needed
-                      ),
-                      child: const Padding(
-                        padding:
-                            EdgeInsets.all(8.0), // Add padding inside the card
-                        child: Text(
-                          'Select the words that you want to focus on learning.',
-                          style: TextStyle(
-                              fontSize: 16), // Adjust the font size as needed
+            return Center(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ListTile(
+                      title: const Text('Topic'),
+                      subtitle:
+                          Text(widget.firstDialogue['title'] ?? "No title"),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Card(
+                        elevation: 3.0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'Select the words that you want to focus on learning.',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: selectAllNotifier,
-                    builder: (context, selectAll, child) {
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 2.0), // Add padding if needed
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Checkbox(
-                                  value: selectAll,
-                                  onChanged: (bool? value) {
-                                    selectAllNotifier.value = value ?? false;
-                                    for (var entry in selectedWords.entries) {
-                                      for (var wordEntry
-                                          in entry.value.entries) {
-                                        wordEntry.value.value =
-                                            selectAllNotifier.value;
+                    ValueListenableBuilder<bool>(
+                      valueListenable: selectAllNotifier,
+                      builder: (context, selectAll, child) {
+                        return StatefulBuilder(
+                          builder: (context, setState) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 2.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Checkbox(
+                                    value: selectAll,
+                                    onChanged: (bool? value) {
+                                      selectAllNotifier.value = value ?? false;
+                                      for (var entry in selectedWords.entries) {
+                                        for (var wordEntry
+                                            in entry.value.entries) {
+                                          wordEntry.value.value =
+                                              selectAllNotifier.value;
+                                        }
                                       }
-                                    }
-                                    updateHasSelectedWords();
-                                  },
-                                ),
-                                const Text("Select All Words"),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          Column(
-                            children: snapshot.data!.docs
-                                .map((DocumentSnapshot document) {
-                              smallJsonDocument =
-                                  document.data() as Map<String, dynamic>;
-                              List<dynamic> turns = [];
-                              if (smallJsonDocument.containsKey("dialogue")) {
-                                turns = smallJsonDocument["dialogue"] ?? [];
-                                script = script_generator.createFirstScript(
-                                    smallJsonDocument["dialogue"] ?? []);
-                              }
-
-                              return ListView.builder(
-                                itemBuilder: (context, index) {
-                                  if (index >= turns.length) {
-                                    return Container(); // Return an empty container if index is out of bounds
-                                  }
-                                  final turn = turns[index];
-                                  final targetLanguageSentence =
-                                      turn['target_language'] ?? "";
-                                  final words =
-                                      targetLanguageSentence.split(' ');
-                                  if (selectedWords[index] == null) {
-                                    selectedWords[index] = {};
-                                  }
-                                  words.forEach((word) {
-                                    if (selectedWords[index]![word] == null) {
-                                      selectedWords[index]![word] =
-                                          ValueNotifier<bool>(
-                                              selectAllNotifier.value);
-                                    }
-                                  });
-
-                                  return ListTile(
-                                    title: Text('Dialogue ${turn['turn_nr']}:'),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(turn['native_language'] ??
-                                            "No native language"),
-                                        Wrap(
-                                          children: words.map<Widget>((word) {
-                                            ValueNotifier<bool>
-                                                isSelectedNotifier =
-                                                selectedWords[index]![word]!;
-
-                                            return ValueListenableBuilder(
-                                              valueListenable:
-                                                  isSelectedNotifier,
-                                              builder: (BuildContext context,
-                                                  bool isSelected,
-                                                  Widget? child) {
-                                                return GestureDetector(
-                                                  onTap: () {
-                                                    isSelectedNotifier.value =
-                                                        !isSelectedNotifier
-                                                            .value;
-                                                    updateHasSelectedWords();
-                                                  },
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 2.0,
-                                                        vertical: 0.0),
-                                                    margin: EdgeInsets.zero,
-                                                    decoration: BoxDecoration(
-                                                      color: isSelected
-                                                          ? Colors.lightGreen
-                                                          : Colors.transparent,
-                                                    ),
-                                                    child: Text(
-                                                      word,
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            16, // Adjust font size as needed
-                                                        decoration: isSelected
-                                                            ? TextDecoration
-                                                                .underline
-                                                            : TextDecoration
-                                                                .none,
-                                                        decorationColor: isSelected
-                                                            ? const Color
-                                                                .fromARGB(
-                                                                255, 21, 87, 25)
-                                                            : null, // Darker green for underline
-                                                        color: Colors
-                                                            .black, // Adjust text color if needed
-                                                        decorationThickness:
-                                                            isSelected
-                                                                ? 2.0
-                                                                : null,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                                itemCount: turns.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ValueListenableBuilder<bool>(
-                      valueListenable: isConfirmButtonActive,
-                      builder: (context, value, child) {
-                        return Container(
-                          width: 200,
-                          height: 50,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          child: FloatingActionButton.extended(
-                              label: const Text('Generate Audio'),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                      updateHasSelectedWords();
+                                    },
+                                  ),
+                                  const Text("Select All Words"),
+                                ],
                               ),
-                              backgroundColor: isConfirmButtonActive.value
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey[400],
-                              foregroundColor: Colors.white,
-                              onPressed: () async {
-                                if (isConfirmButtonActive.value) {
-                                  if (!hasSelectedWord) {
-                                    // Show a Snackbar with a message
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                              'Please select at least one word to proceed 🧐'),
-                                        ),
-                                        duration: Duration(seconds: 3),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            Column(
+                              children: snapshot.data!.docs
+                                  .map((DocumentSnapshot document) {
+                                smallJsonDocument =
+                                    document.data() as Map<String, dynamic>;
+                                List<dynamic> turns = [];
+                                if (smallJsonDocument.containsKey("dialogue")) {
+                                  turns = smallJsonDocument["dialogue"] ?? [];
+                                  script = script_generator.createFirstScript(
+                                      smallJsonDocument["dialogue"] ?? []);
+                                }
+
+                                return ListView.builder(
+                                  itemBuilder: (context, index) {
+                                    if (index >= turns.length) {
+                                      return Container();
+                                    }
+                                    final turn = turns[index];
+                                    final targetLanguageSentence =
+                                        turn['target_language'] ?? "";
+                                    final words =
+                                        targetLanguageSentence.split(' ');
+                                    if (selectedWords[index] == null) {
+                                      selectedWords[index] = {};
+                                    }
+                                    words.forEach((word) {
+                                      if (selectedWords[index]![word] == null) {
+                                        selectedWords[index]![word] =
+                                            ValueNotifier<bool>(
+                                                selectAllNotifier.value);
+                                      }
+                                    });
+
+                                    return ListTile(
+                                      title:
+                                          Text('Dialogue ${turn['turn_nr']}:'),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(turn['native_language'] ??
+                                              "No native language"),
+                                          Wrap(
+                                            children: words
+                                                .asMap()
+                                                .entries
+                                                .map<Widget>((entry) {
+                                              int wordIndex = entry.key;
+                                              String word = entry.value;
+                                              ValueNotifier<bool>
+                                                  isSelectedNotifier =
+                                                  selectedWords[index]![word]!;
+
+                                              return ValueListenableBuilder(
+                                                valueListenable:
+                                                    isSelectedNotifier,
+                                                builder: (BuildContext context,
+                                                    bool isSelected,
+                                                    Widget? child) {
+                                                  bool isSpecialWord =
+                                                      index == 0 &&
+                                                          wordIndex == 2;
+                                                  return GestureDetector(
+                                                    onTap: () {
+                                                      // if (isSpecialWord) {
+                                                      //   displayPopover(context);
+                                                      // } else {
+                                                      isSelectedNotifier.value =
+                                                          !isSelectedNotifier
+                                                              .value;
+                                                      updateHasSelectedWords();
+                                                      // }
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 2.0,
+                                                          vertical: 0.0),
+                                                      margin: EdgeInsets.zero,
+                                                      decoration: BoxDecoration(
+                                                        color: isSelected
+                                                            ? Colors.lightGreen
+                                                            : Colors
+                                                                .transparent,
+                                                      ),
+                                                      child: isSpecialWord
+                                                          ? Showcase.withWidget(
+                                                              key: _one,
+                                                              container: const Text(
+                                                                  'click here'), // description:
+                                                              // 'Tap to see menu options',
+                                                              height: 80,
+                                                              width: 140,
+                                                              onBarrierClick: () =>
+                                                                  debugPrint(
+                                                                      'Barrier clicked'),
+                                                              child:
+                                                                  GestureDetector(
+                                                                onTap: () =>
+                                                                    debugPrint(
+                                                                        'menu button clicked'),
+                                                                child: Text(
+                                                                  word,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    decoration: isSelected
+                                                                        ? TextDecoration
+                                                                            .underline
+                                                                        : TextDecoration
+                                                                            .none,
+                                                                    decorationColor: isSelected
+                                                                        ? Colors
+                                                                            .green[800]
+                                                                        : null,
+                                                                    color: Colors
+                                                                        .black,
+                                                                    decorationThickness:
+                                                                        isSelected
+                                                                            ? 2.0
+                                                                            : null,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            )
+                                                          : Text(
+                                                              word,
+                                                              style: TextStyle(
+                                                                fontSize: 16,
+                                                                decoration: isSelected
+                                                                    ? TextDecoration
+                                                                        .underline
+                                                                    : TextDecoration
+                                                                        .none,
+                                                                decorationColor:
+                                                                    isSelected
+                                                                        ? Colors
+                                                                            .green[800]
+                                                                        : null,
+                                                                color: Colors
+                                                                    .black,
+                                                                decorationThickness:
+                                                                    isSelected
+                                                                        ? 2.0
+                                                                        : null,
+                                                              ),
+                                                            ),
+                                                    ),
+                                                  );
+                                                },
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ],
                                       ),
                                     );
-                                    return; // Return early since no word has been selected
-                                  }
-
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (BuildContext context) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
+                                  },
+                                  itemCount: turns.length,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    ValueListenableBuilder<bool>(
+                        valueListenable: isConfirmButtonActive,
+                        builder: (context, value, child) {
+                          return Container(
+                            width: 200,
+                            height: 50,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            child: FloatingActionButton.extended(
+                                label: const Text('Generate Audio'),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                backgroundColor: isConfirmButtonActive.value
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[400],
+                                foregroundColor: Colors.white,
+                                onPressed: () async {
+                                  if (isConfirmButtonActive.value) {
+                                    if (!hasSelectedWord) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text(
+                                                'Please select at least one word to proceed 🧐'),
+                                          ),
+                                          duration: Duration(seconds: 3),
+                                        ),
                                       );
-                                    },
-                                  );
+                                      return;
+                                    }
 
-                                  try {
-                                    DocumentReference docRef = FirebaseFirestore
-                                        .instance
-                                        .collection('chatGPT_responses')
-                                        .doc(widget.documentID)
-                                        .collection(
-                                            'script-${FirebaseAuth.instance.currentUser!.uid}')
-                                        .doc();
-                                    await docRef.set({
-                                      "script": script,
-                                      "title": smallJsonDocument["title"],
-                                      "dialogue": smallJsonDocument["dialogue"],
-                                      "target_language": widget.targetLanguage,
-                                      "language_level": widget.languageLevel,
-                                      "words_to_repeat": selectedWords.entries
-                                          .expand(
-                                              (entry) => entry.value.entries)
-                                          .where((innerEntry) =>
-                                              innerEntry.value.value == true)
-                                          .map((innerEntry) => innerEntry.key
-                                              .toLowerCase()
-                                              .replaceAll(
-                                                  RegExp(r'[^\p{L}\s]',
-                                                      unicode: true),
-                                                  ''))
-                                          .toList(),
-                                      "user_ID": FirebaseAuth
-                                          .instance.currentUser!.uid,
-                                      "timestamp": FieldValue.serverTimestamp(),
-                                    });
-                                    String scriptDocumentID = docRef.id;
-
-                                    http.post(
-                                      Uri.parse(
-                                          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'), // need the function url here
-                                      headers: <String, String>{
-                                        'Content-Type':
-                                            'application/json; charset=UTF-8',
-                                        "Access-Control-Allow-Origin":
-                                            "*", // Required for CORS support to work
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (BuildContext context) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
                                       },
-                                      body: jsonEncode(<String, dynamic>{
-                                        "document_id": widget.documentID,
+                                    );
+
+                                    try {
+                                      DocumentReference docRef = FirebaseFirestore
+                                          .instance
+                                          .collection('chatGPT_responses')
+                                          .doc(widget.documentID)
+                                          .collection(
+                                              'script-${FirebaseAuth.instance.currentUser!.uid}')
+                                          .doc();
+                                      await docRef.set({
+                                        "script": script,
+                                        "title": smallJsonDocument["title"],
                                         "dialogue":
                                             smallJsonDocument["dialogue"],
-                                        "title": smallJsonDocument["title"],
-                                        "speakers":
-                                            smallJsonDocument["speakers"],
-                                        "user_ID": smallJsonDocument["user_ID"],
-                                        "native_language":
-                                            widget.nativeLanguage,
                                         "target_language":
                                             widget.targetLanguage,
-                                        "length": widget.length,
                                         "language_level": widget.languageLevel,
-                                        "voice_1_id":
-                                            smallJsonDocument["voice_1_id"],
-                                        "voice_2_id":
-                                            smallJsonDocument["voice_2_id"],
-                                        "tts_provider": "1",
                                         "words_to_repeat": selectedWords.entries
                                             .expand(
                                                 (entry) => entry.value.entries)
@@ -412,70 +422,113 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                         unicode: true),
                                                     ''))
                                             .toList(),
-                                      }),
-                                    );
-                                    if (script.isNotEmpty) {
-                                      await addUserToActiveCreation();
-                                      Navigator.pop(context);
-                                      Navigator.pushNamed(context, '/');
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                AudioPlayerScreen(
-                                                  dialogue: smallJsonDocument[
-                                                      "dialogue"],
-                                                  title: smallJsonDocument[
-                                                      "title"],
-                                                  documentID: widget.documentID,
-                                                  userID: FirebaseAuth.instance
-                                                      .currentUser!.uid,
-                                                  scriptDocumentId:
-                                                      scriptDocumentID,
-                                                  generating: true,
-                                                  wordsToRepeat: selectedWords
-                                                      .entries
-                                                      .expand((entry) => entry
-                                                          .value.entries)
-                                                      .where((innerEntry) =>
-                                                          innerEntry
-                                                              .value.value ==
-                                                          true)
-                                                      .map((innerEntry) =>
-                                                          innerEntry.key
-                                                              .toLowerCase()
-                                                              .replaceAll(
-                                                                  RegExp(
-                                                                      r'[^\p{L}\s]',
-                                                                      unicode:
-                                                                          true),
-                                                                  ''))
-                                                      .toList(),
-                                                  //audioDurations: script['fileDurations'],
-                                                )),
+                                        "user_ID": FirebaseAuth
+                                            .instance.currentUser!.uid,
+                                        "timestamp":
+                                            FieldValue.serverTimestamp(),
+                                      });
+                                      String scriptDocumentID = docRef.id;
+
+                                      http.post(
+                                        Uri.parse(
+                                            'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+                                        headers: <String, String>{
+                                          'Content-Type':
+                                              'application/json; charset=UTF-8',
+                                          "Access-Control-Allow-Origin": "*",
+                                        },
+                                        body: jsonEncode(<String, dynamic>{
+                                          "document_id": widget.documentID,
+                                          "dialogue":
+                                              smallJsonDocument["dialogue"],
+                                          "title": smallJsonDocument["title"],
+                                          "speakers":
+                                              smallJsonDocument["speakers"],
+                                          "user_ID":
+                                              smallJsonDocument["user_ID"],
+                                          "native_language":
+                                              widget.nativeLanguage,
+                                          "target_language":
+                                              widget.targetLanguage,
+                                          "length": widget.length,
+                                          "language_level":
+                                              widget.languageLevel,
+                                          "voice_1_id":
+                                              smallJsonDocument["voice_1_id"],
+                                          "voice_2_id":
+                                              smallJsonDocument["voice_2_id"],
+                                          "tts_provider": "1",
+                                          "words_to_repeat": selectedWords
+                                              .entries
+                                              .expand((entry) =>
+                                                  entry.value.entries)
+                                              .where((innerEntry) =>
+                                                  innerEntry.value.value ==
+                                                  true)
+                                              .map((innerEntry) =>
+                                                  innerEntry.key)
+                                              .toList(),
+                                        }),
                                       );
-                                    } else {
-                                      throw Exception(
-                                          'Failed to create script!');
+                                      if (script.isNotEmpty) {
+                                        await addUserToActiveCreation();
+                                        Navigator.pop(context);
+                                        Navigator.pushNamed(context, '/');
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AudioPlayerScreen(
+                                                    dialogue: smallJsonDocument[
+                                                        "dialogue"],
+                                                    title: smallJsonDocument[
+                                                        "title"],
+                                                    documentID:
+                                                        widget.documentID,
+                                                    userID: FirebaseAuth
+                                                        .instance
+                                                        .currentUser!
+                                                        .uid,
+                                                    scriptDocumentId:
+                                                        scriptDocumentID,
+                                                    generating: true,
+                                                    wordsToRepeat: selectedWords
+                                                        .entries
+                                                        .expand((entry) =>
+                                                            entry.value.entries)
+                                                        .where((innerEntry) =>
+                                                            innerEntry
+                                                                .value.value ==
+                                                            true)
+                                                        .map((innerEntry) =>
+                                                            innerEntry.key)
+                                                        .toList(),
+                                                  )),
+                                        );
+                                      } else {
+                                        throw Exception(
+                                            'Failed to create script!');
+                                      }
+                                    } catch (e) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Something went wrong! Please try again.'),
+                                          duration: Duration(seconds: 4),
+                                        ),
+                                      );
                                     }
-                                  } catch (e) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Something went wrong! Please try again.'),
-                                        duration: Duration(seconds: 4),
-                                      ),
-                                    );
                                   }
-                                }
-                              }),
-                        );
-                      })
-                ]),
-          );
-        },
-      ),
+                                }),
+                          );
+                        })
+                  ]),
+            );
+          },
+        );
+      }),
     );
   }
 }
