@@ -31,6 +31,7 @@ class APICalls:
         self.push_to_firestore = push_to_firestore
         self.remove_user_from_active_creation_by_id = remove_user_from_active_creation_by_id
         self.mock = mock
+        self.skip = False
         self.line_handler = None
         self.futures = []
         self.executor = concurrent.futures.ThreadPoolExecutor()
@@ -116,21 +117,22 @@ class APICalls:
             self.push_to_firestore(full_json, self.document, operation="overwrite")
 
         if '"narrator_translation":' in current_line:
-            enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-            found = False
-            for index, text_part in enumerate(enclosed_words_objects):
-                filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
-                if text_part['enclosed']:
-                    text_words = [re.sub(r'[^\w\s]', '', word) for word in text_part['text'].lower().split()]
-                    if not found:
-                        if not any(element.lower() in text_words for element in self.words_to_repeat):
-                            break
-                        else:
-                            found = True
-                    voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
-                else:
-                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
+            if (not self.skip):
+                enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
+                #found = False
+                for index, text_part in enumerate(enclosed_words_objects):
+                    filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
+                    if text_part['enclosed']:
+                        # text_words = [re.sub(r'[^\w\s]', '', word) for word in text_part['text'].lower().split()]
+                        # if not found:
+                        #     if not any(element.lower() in text_words for element in self.words_to_repeat):
+                        #         break
+                        #     else:
+                        #         found = True
+                        voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                        self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
+                    else:
+                        self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
         elif '"narrator_explanation":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"narrator_fun_fact":' in current_line:
@@ -143,13 +145,18 @@ class APICalls:
                 else:
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
         elif '"native_language":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
+            if (not self.skip):
+                self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"target_language":' in current_line:
             words = [re.sub(r'[^\w\s]', '', word).lower() for word in last_value.split()]
             if not any(word in self.words_to_repeat for word in words):
+                self.skip = True
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
+            self.skip = False
+        elif '"speaker":' in current_line:
+            self.skip = False
 
     def get_last_value_path(self, json_obj, path=None):
         """
