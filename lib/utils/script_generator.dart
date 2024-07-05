@@ -58,7 +58,7 @@ List<String> parseAndCreateScript(
       for (int index = 0; index < classifiedText.length; index++) {
         String narratorFunFactChunks = "dialogue_${i}_narrator_fun_fact_$index";
         narratorFunFact.add(narratorFunFactChunks);
-        narratorFunFact.add("one_second_break");
+        // narratorFunFact.add("one_second_break");
       }
 
       List<String> sentenceSequence = sequences.sentenceSequence1(
