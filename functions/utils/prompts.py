@@ -84,10 +84,10 @@ JSON: ===
     {{
       "speaker": "speaker_1",
       "turn_nr": "1",
-      "target_language": "Hola, me gustaría una bolsa de palomitas, por favor.",
       "native_language": "Hello, I would like a bag of popcorn, please.",
       "narrator_explanation": "Carlos is ordering popcorn at the cinema.",
       "narrator_fun_fact": ""Popcorn" is a compound word formed from "pop" and "corn." "Pop" refers to the noise made by the corn as it explodes when heated, and "corn" in this context is derived from the old English grain that encompasses all types of grains, including wheat and barley. However, in modern American English, "corn" typically refers specifically to maize.",
+      "target_language": "Hola, me gustaría una bolsa de palomitas, por favor.",
       "split_sentence": [
         {{
           "target_language": "Hola",
@@ -165,10 +165,10 @@ JSON: ===
     {{
       "speaker": "speaker_2",
       "turn_nr": 2,
-      "target_language": "¿De qué tamaño? ¿Pequeño, mediano o grande?",
       "native_language": "What size? Small, medium, or large?",
       "narrator_explanation": "Elena is asking Carlos about the size of the popcorn bag he wants.",
       "narrator_fun_fact": "The term "popcorn" first appeared in John Russell Bartlett’s 1848 "Dictionary of Americanisms," which reflects its usage in early America. The word has remained relatively unchanged in meaning since that time.",
+      "target_language": "¿De qué tamaño? ¿Pequeño, mediano o grande?",
       "split_sentence": [
         {{
           "target_language": "¿De qué tamaño?",
@@ -226,10 +226,10 @@ Here is another example:
     {{
       "speaker": "speaker_1",
       "turn_nr": "1",
-      "target_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
       "native_language": "Who do you think is the best player in the upcoming EURO?",
       "narrator_explanation": "Jürgen is asking Maria who she thinks will be the best player in the upcoming EURO soccer tournament.",
       "narrator_fun_fact": "The word ||Spieler|| means 'player' in German. It comes from the verb ||spielen||, which means 'to play'. ||Beste|| is the superlative form of 'good' (||gut||), meaning 'the best'.",
+      "target_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
       "split_sentence": [
         {{
           "target_language": "Wer denkst du",
@@ -293,10 +293,10 @@ Here is another example:
     {{
       "speaker": "speaker_2",
       "turn_nr": "2",
-      "target_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
       "native_language": "I believe that Mbappé is one of the best players alive at the moment.",
       "narrator_explanation": "Maria expresses her opinion that Mbappé is currently one of the best players in the world.",
       "narrator_fun_fact": "The German word ||glaube|| means 'believe'. It comes from the Old High German ||gilouben||, which means 'to trust'. ||Momentan|| is derived from the Latin ||momentum||, meaning 'moment'.",
+      "target_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
       "split_sentence": [
         {{
           "target_language": "Ich glaube",
