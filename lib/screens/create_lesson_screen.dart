@@ -26,9 +26,9 @@ class _CreateLessonState extends State<CreateLesson> {
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
-  var languageLevel = 'A1';
+  var languageLevel = 'Absolute beignner (A1)';
   final TextEditingController _controller = TextEditingController();
-  final activeCreationAllowed = 4; // change this to allow more users
+  final activeCreationAllowed = 20; // change this to allow more users
 
   final _formKey = GlobalKey<FormState>();
 
@@ -92,31 +92,51 @@ class _CreateLessonState extends State<CreateLesson> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _controller,
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                      maxLength: 400,
-                      decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
+                    Stack(children: [
+                      TextFormField(
+                        controller: _controller,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        maxLength: 400,
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 20.0, horizontal: 10.0),
+                          border: OutlineInputBorder(),
                           labelText: 'Topic of the lesson',
                           counterText: '',
-                          suffix: ElevatedButton(
-                              onPressed: regenerateTopic,
-                              child: const Text('Suggest topic'))),
-                      onChanged: (value) {
-                        // You can still handle changes here if needed
-                        setState(() {
-                          topic = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a topic';
-                        }
-                        return null;
-                      },
-                    ),
+                        ),
+                        onChanged: (value) {
+                          // You can still handle changes here if needed
+                          setState(() {
+                            topic = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a topic';
+                          }
+                          return null;
+                        },
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: GestureDetector(
+                          onTap: () {
+                            regenerateTopic();
+                          },
+                          child: RichText(
+                            text: const TextSpan(
+                                text: 'suggest+',
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  color: Colors.deepPurple,
+                                  fontSize: 16,
+                                )),
+                          ),
+                        ),
+                      ),
+                    ]),
                     const SizedBox(height: 10),
                     TextField(
                       decoration: const InputDecoration(
@@ -171,31 +191,6 @@ class _CreateLessonState extends State<CreateLesson> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
-                    DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Length of lesson',
-                      ),
-                      value: int.parse(length),
-                      onChanged: (value) {
-                        setState(() {
-                          length = value.toString();
-                        });
-                      },
-                      items: List<int>.generate(3, (i) => i + 2)
-                          .map<DropdownMenuItem<int>>((int value) {
-                        const lengthDesciptions = {
-                          2: 'Short',
-                          3: 'Medium',
-                          4: 'Long'
-                        };
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text(lengthDesciptions[value]!),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
@@ -207,8 +202,12 @@ class _CreateLessonState extends State<CreateLesson> {
                           languageLevel = value.toString();
                         });
                       },
-                      items: <String>['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
-                          .map<DropdownMenuItem<String>>((String value) {
+                      items: <String>[
+                        'Absolute beignner (A1)',
+                        'Beginner (A2-B1)',
+                        'Intermediate (B2)',
+                        'Advanced (C1-C2)'
+                      ].map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
@@ -246,7 +245,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Oops, this is embarassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+                                      'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
                                   duration: Duration(seconds: 5),
                                 ),
                               );
@@ -332,7 +331,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Oops, this is embarassing 😅 Something went wrong! Please try again.'),
+                                      'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
                                   duration: Duration(seconds: 3),
                                 ),
                               );
