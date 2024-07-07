@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
@@ -68,11 +69,36 @@ class _LibraryState extends State<Library> {
               return Padding(
                 padding: AppConstants.horizontalPadding,
                 child: documents.isEmpty
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 150,
                         child: Center(
-                            child: Text(
-                                'No audio files found. Please create your first audio lesson and it will be displayed here!')),
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(
+                                  color: Colors.black), // Default text style
+                              children: <TextSpan>[
+                                const TextSpan(text: 'Your library is empty. '),
+                                TextSpan(
+                                  text: 'Create your first lesson 🎵',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ), // Make text blue to indicate it's clickable
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      // Navigator code to navigate to LibraryScreen
+                                      Navigator.pushReplacementNamed(
+                                          context, '/create_lesson');
+                                    },
+                                ),
+                                const TextSpan(
+                                    text:
+                                        ' to fill it with your audio lessons!'),
+                              ],
+                            ),
+                          ),
+                        ),
                       )
                     : ListView.builder(
                         itemCount: documents.length,
