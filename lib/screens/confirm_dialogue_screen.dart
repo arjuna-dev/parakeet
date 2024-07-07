@@ -29,6 +29,37 @@ class ConfirmDialogue extends StatefulWidget {
   State<ConfirmDialogue> createState() => _ConfirmDialogueState();
 }
 
+class TooltipContainerPainter extends CustomPainter {
+  final Color backgroundColor;
+  final double triangleHeight;
+
+  TooltipContainerPainter(
+      {required this.backgroundColor, this.triangleHeight = 10});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()..color = backgroundColor;
+    Path path = Path();
+    // Draw the rectangle part
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, triangleHeight, size.width, size.height),
+      Radius.circular(10),
+    ));
+    // Draw the triangle part
+    path.moveTo(size.width / 2 - triangleHeight, triangleHeight);
+    path.lineTo(size.width / 2, 0);
+    path.lineTo(size.width / 2 + triangleHeight, triangleHeight);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
