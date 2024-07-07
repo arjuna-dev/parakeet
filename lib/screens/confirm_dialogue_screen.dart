@@ -305,7 +305,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     Widget? child) {
                                                   bool isSpecialWord =
                                                       index == 0 &&
-                                                          wordIndex == 2;
+                                                          wordIndex == 0;
                                                   return GestureDetector(
                                                     onTap: () {
                                                       isSelectedNotifier.value =
