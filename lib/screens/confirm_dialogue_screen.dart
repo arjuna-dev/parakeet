@@ -287,14 +287,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                           wordIndex == 2;
                                                   return GestureDetector(
                                                     onTap: () {
-                                                      // if (isSpecialWord) {
-                                                      //   displayPopover(context);
-                                                      // } else {
                                                       isSelectedNotifier.value =
                                                           !isSelectedNotifier
                                                               .value;
                                                       updateHasSelectedWords();
-                                                      // }
                                                     },
                                                     child: Container(
                                                       padding: const EdgeInsets
@@ -311,41 +307,80 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                       child: isSpecialWord
                                                           ? Showcase.withWidget(
                                                               key: _one,
-                                                              container: const Text(
-                                                                  'click here'), // description:
-                                                              // 'Tap to see menu options',
-                                                              height: 80,
-                                                              width: 140,
+                                                              container:
+                                                                  Container(
+                                                                width: 280,
+                                                                child:
+                                                                    CustomPaint(
+                                                                  painter: TooltipContainerPainter(
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .deepPurple),
+                                                                  child:
+                                                                      const Padding(
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .only(
+                                                                      top: 20,
+                                                                      bottom:
+                                                                          10,
+                                                                      left: 10,
+                                                                      right: 10,
+                                                                    ),
+                                                                    child: Text(
+                                                                      'Click on the words you want to focus on learning',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize:
+                                                                            16,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              width: 280,
+                                                              height: 100,
+                                                              onTargetClick:
+                                                                  (() {
+                                                                isSelectedNotifier
+                                                                        .value =
+                                                                    !isSelectedNotifier
+                                                                        .value;
+                                                                updateHasSelectedWords();
+                                                              }),
                                                               onBarrierClick: () =>
                                                                   debugPrint(
                                                                       'Barrier clicked'),
-                                                              child:
-                                                                  GestureDetector(
-                                                                onTap: () =>
-                                                                    debugPrint(
-                                                                        'menu button clicked'),
-                                                                child: Text(
-                                                                  word,
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        16,
-                                                                    decoration: isSelected
-                                                                        ? TextDecoration
-                                                                            .underline
-                                                                        : TextDecoration
-                                                                            .none,
-                                                                    decorationColor: isSelected
-                                                                        ? Colors
-                                                                            .green[800]
-                                                                        : null,
-                                                                    color: Colors
-                                                                        .black,
-                                                                    decorationThickness:
-                                                                        isSelected
-                                                                            ? 2.0
-                                                                            : null,
-                                                                  ),
+                                                              targetShapeBorder:
+                                                                  RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            10),
+                                                              ),
+                                                              child: Text(
+                                                                word,
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 16,
+                                                                  decoration: isSelected
+                                                                      ? TextDecoration
+                                                                          .underline
+                                                                      : TextDecoration
+                                                                          .none,
+                                                                  decorationColor:
+                                                                      isSelected
+                                                                          ? Colors
+                                                                              .green[800]
+                                                                          : null,
+                                                                  color: Colors
+                                                                      .black,
+                                                                  decorationThickness:
+                                                                      isSelected
+                                                                          ? 2.0
+                                                                          : null,
                                                                 ),
                                                               ),
                                                             )
