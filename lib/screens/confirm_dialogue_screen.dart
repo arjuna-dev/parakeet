@@ -68,6 +68,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
   bool hasSelectedWord = false;
   final GlobalKey _one = GlobalKey();
+  bool isShowingShowcase = false;
 
   void updateHasSelectedWords() {
     hasSelectedWord = selectedWords.values
@@ -130,6 +131,17 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
               return const CircularProgressIndicator();
             }
 
+            if (snapshot.hasData &&
+                snapshot.data!.docs.isNotEmpty &&
+                !isShowingShowcase) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_one.currentContext != null) {
+                  isShowingShowcase = true;
+                  ShowCaseWidget.of(context).startShowCase([_one]);
+                }
+              });
+            }
+
             if (snapshot.hasData) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!isConfirmButtonActive.value &&
@@ -144,7 +156,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                         .docs[0]['dialogue'][int.parse(widget.length) - 1]
                         .isNotEmpty) {
                   isConfirmButtonActive.value = true;
-                  ShowCaseWidget.of(context).startShowCase([_one]);
                 }
               });
             }
