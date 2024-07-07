@@ -54,6 +54,7 @@ class _HomeState extends State<Home> {
       body: Padding(
         padding: AppConstants.horizontalPadding,
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             const Align(
               alignment: Alignment.centerLeft,
@@ -65,7 +66,13 @@ class _HomeState extends State<Home> {
             const SizedBox(
               height: 10,
             ),
-            nowPlayingList(),
+            Flexible(
+              flex: 1, // Equal flex factor for equal height
+              child: nowPlayingList(),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Favorite Audio', style: TextStyle(fontSize: 18)),
@@ -73,7 +80,10 @@ class _HomeState extends State<Home> {
             const SizedBox(
               height: 10,
             ),
-            favoriteAudioList(),
+            Flexible(
+              flex: 1, // Equal flex factor for equal height
+              child: favoriteAudioList(),
+            ),
           ],
         ),
       ),
