@@ -524,8 +524,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       String scriptDocumentID = docRef.id;
 
                                       http.post(
-                                        Uri.parse(
-                                            'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+                                        Uri.parse('http://127.0.0.1:8081'),
                                         headers: <String, String>{
                                           'Content-Type':
                                               'application/json; charset=UTF-8',
@@ -559,8 +558,13 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                               .where((innerEntry) =>
                                                   innerEntry.value.value ==
                                                   true)
-                                              .map((innerEntry) =>
-                                                  innerEntry.key)
+                                              .map((innerEntry) => innerEntry
+                                                  .key
+                                                  .toLowerCase()
+                                                  .replaceAll(
+                                                      RegExp(r'[^\p{L}\s]',
+                                                          unicode: true),
+                                                      ''))
                                               .toList(),
                                         }),
                                       );
