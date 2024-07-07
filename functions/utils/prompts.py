@@ -10,7 +10,7 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
 With the following data as an example enclosed in double vertical lines (||):
 
@@ -34,8 +34,8 @@ JSON:
         }},
     "dialogue": [
         {{
-            "target_language": "Shankaracharya, \u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
-            "native_language": "Shankaracharya, what exactly does viveka mean in the context of Viveka Chudamani?",
+            "target_language": "\u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
+            "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
             "gender": "m"
