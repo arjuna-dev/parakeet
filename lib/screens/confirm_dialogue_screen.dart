@@ -374,13 +374,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                               onBarrierClick: () =>
                                                                   debugPrint(
                                                                       'Barrier clicked'),
+                                                              targetPadding:
+                                                                  const EdgeInsets
+                                                                      .all(8),
                                                               targetShapeBorder:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            10),
-                                                              ),
+                                                                  const CircleBorder(),
                                                               child: Text(
                                                                 word,
                                                                 style:
