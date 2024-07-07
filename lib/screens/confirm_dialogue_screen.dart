@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:showcaseview/showcaseview.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfirmDialogue extends StatefulWidget {
   const ConfirmDialogue({
@@ -31,6 +30,37 @@ class ConfirmDialogue extends StatefulWidget {
   State<ConfirmDialogue> createState() => _ConfirmDialogueState();
 }
 
+class TooltipContainerPainter extends CustomPainter {
+  final Color backgroundColor;
+  final double triangleHeight;
+
+  TooltipContainerPainter(
+      {required this.backgroundColor, this.triangleHeight = 10});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()..color = backgroundColor;
+    Path path = Path();
+    // Draw the rectangle part
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, triangleHeight, size.width, size.height),
+      Radius.circular(10),
+    ));
+    // Draw the triangle part
+    path.moveTo(size.width / 2 - triangleHeight, triangleHeight);
+    path.lineTo(size.width / 2, 0);
+    path.lineTo(size.width / 2 + triangleHeight, triangleHeight);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
@@ -39,6 +69,25 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
   bool hasSelectedWord = false;
   final GlobalKey _one = GlobalKey();
+  bool isShowingShowcase = false;
+  late bool isFirstLaunch;
+
+  @override
+  void initState() {
+    super.initState();
+    initPrefs();
+  }
+
+  Future<void> initPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
+    setState(() {});
+  }
+
+  Future<void> setIsFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isFirstLaunch', false);
+  }
 
   void updateHasSelectedWords() {
     hasSelectedWord = selectedWords.values
@@ -101,6 +150,19 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
               return const CircularProgressIndicator();
             }
 
+            if (snapshot.hasData &&
+                snapshot.data!.docs.isNotEmpty &&
+                !isShowingShowcase &&
+                isFirstLaunch) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_one.currentContext != null) {
+                  setIsFirstLaunch();
+                  isShowingShowcase = true;
+                  ShowCaseWidget.of(context).startShowCase([_one]);
+                }
+              });
+            }
+
             if (snapshot.hasData) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!isConfirmButtonActive.value &&
@@ -115,7 +177,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                         .docs[0]['dialogue'][int.parse(widget.length) - 1]
                         .isNotEmpty) {
                   isConfirmButtonActive.value = true;
-                  ShowCaseWidget.of(context).startShowCase([_one]);
                 }
               });
             }
@@ -244,17 +305,13 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     Widget? child) {
                                                   bool isSpecialWord =
                                                       index == 0 &&
-                                                          wordIndex == 2;
+                                                          wordIndex == 0;
                                                   return GestureDetector(
                                                     onTap: () {
-                                                      // if (isSpecialWord) {
-                                                      //   displayPopover(context);
-                                                      // } else {
                                                       isSelectedNotifier.value =
                                                           !isSelectedNotifier
                                                               .value;
                                                       updateHasSelectedWords();
-                                                      // }
                                                     },
                                                     child: Container(
                                                       padding: const EdgeInsets
@@ -271,41 +328,78 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                       child: isSpecialWord
                                                           ? Showcase.withWidget(
                                                               key: _one,
-                                                              container: const Text(
-                                                                  'click here'), // description:
-                                                              // 'Tap to see menu options',
-                                                              height: 80,
-                                                              width: 140,
+                                                              container:
+                                                                  Container(
+                                                                width: 280,
+                                                                child:
+                                                                    CustomPaint(
+                                                                  painter: TooltipContainerPainter(
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .deepPurple),
+                                                                  child:
+                                                                      const Padding(
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .only(
+                                                                      top: 20,
+                                                                      bottom:
+                                                                          10,
+                                                                      left: 10,
+                                                                      right: 10,
+                                                                    ),
+                                                                    child: Text(
+                                                                      'Click on the words you want to focus on learning',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize:
+                                                                            16,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              width: 280,
+                                                              height: 100,
+                                                              onTargetClick:
+                                                                  (() {
+                                                                isSelectedNotifier
+                                                                        .value =
+                                                                    !isSelectedNotifier
+                                                                        .value;
+                                                                updateHasSelectedWords();
+                                                              }),
                                                               onBarrierClick: () =>
                                                                   debugPrint(
                                                                       'Barrier clicked'),
-                                                              child:
-                                                                  GestureDetector(
-                                                                onTap: () =>
-                                                                    debugPrint(
-                                                                        'menu button clicked'),
-                                                                child: Text(
-                                                                  word,
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        16,
-                                                                    decoration: isSelected
-                                                                        ? TextDecoration
-                                                                            .underline
-                                                                        : TextDecoration
-                                                                            .none,
-                                                                    decorationColor: isSelected
-                                                                        ? Colors
-                                                                            .green[800]
-                                                                        : null,
-                                                                    color: Colors
-                                                                        .black,
-                                                                    decorationThickness:
-                                                                        isSelected
-                                                                            ? 2.0
-                                                                            : null,
-                                                                  ),
+                                                              targetPadding:
+                                                                  const EdgeInsets
+                                                                      .all(8),
+                                                              targetShapeBorder:
+                                                                  const CircleBorder(),
+                                                              child: Text(
+                                                                word,
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 16,
+                                                                  decoration: isSelected
+                                                                      ? TextDecoration
+                                                                          .underline
+                                                                      : TextDecoration
+                                                                          .none,
+                                                                  decorationColor:
+                                                                      isSelected
+                                                                          ? Colors
+                                                                              .green[800]
+                                                                          : null,
+                                                                  color: Colors
+                                                                      .black,
+                                                                  decorationThickness:
+                                                                      isSelected
+                                                                          ? 2.0
+                                                                          : null,
                                                                 ),
                                                               ),
                                                             )
