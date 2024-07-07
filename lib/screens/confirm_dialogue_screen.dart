@@ -595,7 +595,14 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                                 .value.value ==
                                                             true)
                                                         .map((innerEntry) =>
-                                                            innerEntry.key)
+                                                            innerEntry.key
+                                                                .toLowerCase()
+                                                                .replaceAll(
+                                                                    RegExp(
+                                                                        r'[^\p{L}\s]',
+                                                                        unicode:
+                                                                            true),
+                                                                    ''))
                                                         .toList(),
                                                   )),
                                         );
