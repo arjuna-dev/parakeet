@@ -28,7 +28,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var length = '4';
   var languageLevel = 'Absolute beignner (A1)';
   final TextEditingController _controller = TextEditingController();
-  final activeCreationAllowed = 4; // change this to allow more users
+  final activeCreationAllowed = 20; // change this to allow more users
 
   final _formKey = GlobalKey<FormState>();
 
