@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:showcaseview/showcaseview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfirmDialogue extends StatefulWidget {
   const ConfirmDialogue({
@@ -69,6 +70,24 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   bool hasSelectedWord = false;
   final GlobalKey _one = GlobalKey();
   bool isShowingShowcase = false;
+  late bool isFirstLaunch;
+
+  @override
+  void initState() {
+    super.initState();
+    initPrefs();
+  }
+
+  Future<void> initPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
+    setState(() {});
+  }
+
+  Future<void> setIsFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isFirstLaunch', false);
+  }
 
   void updateHasSelectedWords() {
     hasSelectedWord = selectedWords.values
@@ -133,9 +152,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
 
             if (snapshot.hasData &&
                 snapshot.data!.docs.isNotEmpty &&
-                !isShowingShowcase) {
+                !isShowingShowcase &&
+                isFirstLaunch) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (_one.currentContext != null) {
+                  setIsFirstLaunch();
                   isShowingShowcase = true;
                   ShowCaseWidget.of(context).startShowCase([_one]);
                 }
