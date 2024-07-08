@@ -94,7 +94,7 @@ List<String> chunkSequence1(
     int chunkNumber) {
   List<String> allWordsRepetitions =
       words2RepsFixElevenlabsLonelyWords(wordObjects);
-  List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
+  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
   String firstPhrase = chunkNumber == 0
       ? "narrator_navigation_phrases_17"
       : "narrator_navigation_phrases_23";
@@ -109,7 +109,8 @@ List<String> chunkSequence1(
     "one_second_break",
     nativeLanguage,
     "five_second_break",
-    ...chunkSpaced,
+    //...chunkSpaced,
+    targetLanguage,
     "five_second_break",
     "narrator_repetition_phrases_25", // Pay attention to the pronunciation and try saying it just like that.
     "one_second_break",
