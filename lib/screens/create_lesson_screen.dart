@@ -142,7 +142,8 @@ class _CreateLessonState extends State<CreateLesson> {
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText:
-                            'Enter words you want to learn in any language (optional)',
+                            ' (optional) Enter words you want to learn in any language',
+                        labelStyle: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       onChanged: (value) {
                         setState(() {
