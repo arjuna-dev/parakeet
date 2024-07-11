@@ -1,6 +1,3 @@
-
-
-
 def prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length):
    return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the the following content:
 
