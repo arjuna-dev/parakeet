@@ -19,6 +19,8 @@ import os
 options.set_global_options(region="europe-west1", memory=512, timeout_sec=1000)
 now = datetime.datetime.now().strftime("%m.%d.%H.%M.%S")
 app = initialize_app()
+today = datetime.datetime.now().strftime("%Y-%m-%d")
+
 
 
 
@@ -53,6 +55,41 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         keywords = request_data.get("keywords")
     except:
         keywords = ""
+
+    db = firestore.client()
+    # Reference to the user's document in the 'users' collection
+    user_doc_ref = db.collection('users').document(user_ID).collection('api_call_count').document('first_API_calls')
+
+    # Transaction to check and update the user's API call count
+    @firestore.transactional
+    def check_and_update_call_count(transaction, user_doc_ref):
+        user_doc_snapshot = user_doc_ref.get(transaction=transaction)
+        if not user_doc_snapshot.exists:
+            # If the document doesn't exist, create it with the current call count set to 1
+            transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
+        else:
+            # If the document exists, check the call count and date
+            if user_doc_snapshot.get('last_call_date') == today:
+                if user_doc_snapshot.get('call_count') >= 5:
+                    # If the call count for today is 5 or more, return False
+                    return False
+                else:
+                    # If the call count is less than 5, increment it
+                    transaction.update(user_doc_ref, {'call_count': firestore.Increment(1)})
+            else:
+                # If the last call was not made today, reset the count and date
+                transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
+        return True
+    
+    # Start the transaction
+    transaction = db.transaction()
+    if not check_and_update_call_count(transaction, user_doc_ref):
+        # If the user has reached their limit, return an error response
+        return https_fn.Response(
+            json.dumps({"error": "API call limit reached for today"}),
+            status=429,  # HTTP status code for Too Many Requests
+        )
+
 
 
     is_mock = False
