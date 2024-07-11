@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import re
-from utils.prompts import prompt_dialogue, prompt_big_JSON
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -117,6 +117,10 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     first_API_calls.line_handler = first_API_calls.handle_line_1st_API
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+
+    if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
+        prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
+
     
     if first_API_calls.mock == True: 
         chatGPT_response = mock_response_first_API
