@@ -952,6 +952,10 @@ PODS:
   - AppAuth/Core (1.7.5)
   - AppAuth/ExternalUserAgent (1.7.5):
     - AppAuth/Core
+  - AppCheckCore (10.19.2):
+    - GoogleUtilities/Environment (~> 7.13)
+    - GoogleUtilities/UserDefaults (~> 7.13)
+    - PromisesObjC (~> 2.3)
   - audio_session (0.0.1):
     - Flutter
   - BoringSSL-GRPC (0.0.32):
@@ -982,6 +986,11 @@ PODS:
   - Firebase/Storage (10.25.0):
     - Firebase/CoreOnly
     - FirebaseStorage (~> 10.25.0)
+  - firebase_app_check (0.2.2-7):
+    - Firebase/CoreOnly (~> 10.25.0)
+    - firebase_core
+    - FirebaseAppCheck (~> 10.25.0-beta)
+    - Flutter
   - firebase_auth (4.20.0):
     - Firebase/Auth (= 10.25.0)
     - firebase_core
@@ -993,6 +1002,13 @@ PODS:
     - Firebase/Storage (= 10.25.0)
     - firebase_core
     - Flutter
+  - FirebaseAppCheck (10.25.0):
+    - AppCheckCore (~> 10.19)
+    - FirebaseAppCheckInterop (~> 10.17)
+    - FirebaseCore (~> 10.0)
+    - GoogleUtilities/Environment (~> 7.13)
+    - GoogleUtilities/UserDefaults (~> 7.13)
+    - PromisesObjC (~> 2.1)
   - FirebaseAppCheckInterop (10.27.0)
   - FirebaseAuth (10.25.0):
     - FirebaseAppCheckInterop (~> 10.17)
@@ -1078,6 +1094,9 @@ PODS:
     - GoogleUtilities/Privacy
   - GoogleUtilities/Privacy (7.13.3)
   - GoogleUtilities/Reachability (7.13.3):
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/UserDefaults (7.13.3):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - "gRPC-C++ (1.62.5)":
@@ -1187,6 +1206,7 @@ DEPENDENCIES:
   - audio_session (from `.symlinks/plugins/audio_session/ios`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - cloud_functions (from `.symlinks/plugins/cloud_functions/ios`)
+  - firebase_app_check (from `.symlinks/plugins/firebase_app_check/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_storage (from `.symlinks/plugins/firebase_storage/ios`)
@@ -1200,8 +1220,10 @@ SPEC REPOS:
   trunk:
     - abseil
     - AppAuth
+    - AppCheckCore
     - BoringSSL-GRPC
     - Firebase
+    - FirebaseAppCheck
     - FirebaseAppCheckInterop
     - FirebaseAuth
     - FirebaseAuthInterop
@@ -1232,6 +1254,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/cloud_firestore/ios"
   cloud_functions:
     :path: ".symlinks/plugins/cloud_functions/ios"
+  firebase_app_check:
+    :path: ".symlinks/plugins/firebase_app_check/ios"
   firebase_auth:
     :path: ".symlinks/plugins/firebase_auth/ios"
   firebase_core:
@@ -1252,14 +1276,17 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   abseil: d121da9ef7e2ff4cab7666e76c5a3e0915ae08c3
   AppAuth: 501c04eda8a8d11f179dbe8637b7a91bb7e5d2fa
+  AppCheckCore: 9feb4300caa596a36416cde10674dc5bec1e022e
   audio_session: 088d2483ebd1dc43f51d253d4a1c517d9a2e7207
   BoringSSL-GRPC: 1e2348957acdbcad360b80a264a90799984b2ba6
   cloud_firestore: 003d53b6b8b392600b7769acf9421cc4f23e5911
   cloud_functions: 1a28a0b6ec4caf864692e54e1f5c1934431510c8
   Firebase: 0312a2352584f782ea56f66d91606891d4607f06
+  firebase_app_check: 717089a2df93747620263dd6c8e444bde5699b7e
   firebase_auth: 5719ddc9f654b813405899480e84971bd8e61235
   firebase_core: a626d00494efa398e7c54f25f1454a64c8abf197
   firebase_storage: 5c0f552d6b27d621429d7fd16ebab4be94a3c954
+  FirebaseAppCheck: 148fa858b8070710c8f83d3f545b5f1e85d104a4
   FirebaseAppCheckInterop: 0dd062c9926a76332ca5711dbed6f1a9ac540b54
   FirebaseAuth: c0f93dcc570c9da2bffb576969d793e95c344fbb
   FirebaseAuthInterop: 0344acef098654eaf59f6add4c93254349bc5de4
@@ -1290,4 +1317,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
 
-COCOAPODS: 1.15.1
+COCOAPODS: 1.15.2
