@@ -29,6 +29,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beignner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
+  final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
 
   final _formKey = GlobalKey<FormState>();
 
@@ -72,6 +73,32 @@ class _CreateLessonState extends State<CreateLesson> {
       return 0; // Return 0 if the document doesn't exist or doesn't contain a 'users' key
     } catch (e) {
       print('Error fetching users from active_creation: $e');
+      return -1; // Return -1 or handle the error as appropriate
+    }
+  }
+
+  Future<int> countAPIcallsByUser() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final DocumentReference userDocRef = firestore
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid.toString())
+        .collection('api_call_count')
+        .doc('first_API_calls');
+
+    try {
+      final DocumentSnapshot doc = await userDocRef.get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('call_count') &&
+            data['last_call_date'] ==
+                "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}") {
+          return data[
+              'call_count']; // Number of api calls made by the user in that day
+        }
+      }
+      return 0; // Return 0 if the document doesn't exist or doesn't contain a 'users' key
+    } catch (e) {
+      print('Error fetching api_call counts from user collection: $e');
       return -1; // Return -1 or handle the error as appropriate
     }
   }
@@ -142,7 +169,8 @@ class _CreateLessonState extends State<CreateLesson> {
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText:
-                            'Enter words you want to learn in any language (optional)',
+                            ' (optional) Enter words you want to learn in any language',
+                        labelStyle: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -251,6 +279,19 @@ class _CreateLessonState extends State<CreateLesson> {
                               );
                               return;
                             }
+                            var apiCallsByUser = await countAPIcallsByUser();
+                            if (apiCallsByUser != -1 &&
+                                apiCallsByUser >= numberOfAPIcallsAllowed) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'),
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
+                              return;
+                            }
 
                             try {
                               final FirebaseFirestore firestore =
@@ -315,7 +356,6 @@ class _CreateLessonState extends State<CreateLesson> {
                                         _reloadPage();
                                       }
                                     });
-                                    ;
                                   } else {
                                     throw Exception(
                                         'Proper data not received from API');

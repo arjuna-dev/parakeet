@@ -37,9 +37,6 @@ List<String> parseAndCreateScript(
   List<String> script = [];
 
   script = createFirstScript(dialogue);
-  List<dynamic> wordsToRepeatWithoutPunctation = wordsToRepeat.map((word) {
-    return word.replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
-  }).toList();
 
   //List<int> sentenceNumberExcludeList = [];
   // Process each turn in the dialogue
@@ -69,17 +66,18 @@ List<String> parseAndCreateScript(
       List<int> chunkNumberExcludeList = [];
 
       // Process words in the sentence
-      if (wordsToRepeatWithoutPunctation.any((element) => data[i]
-              ["target_language"]
+      if (wordsToRepeat.any((element) => data[i]["target_language"]
           .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+          .toLowerCase()
           .split(' ')
           .contains(element))) {
         // Process split_sentence items
         for (int j = 0; j < data[i]["split_sentence"].length; j++) {
           // Check if user wants to repeat the split sentence (only if at least one word they want is there)
-          if (wordsToRepeatWithoutPunctation.any((element) => data[i]
-                  ["split_sentence"][j]["target_language"]
+          if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
+                  ["target_language"]
               .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+              .toLowerCase()
               .split(' ')
               .contains(element))) {
             String text = data[i]["split_sentence"][j]["narrator_translation"];
@@ -104,8 +102,12 @@ List<String> parseAndCreateScript(
             for (int index = 0;
                 index < data[i]["split_sentence"][j]['words'].length;
                 index++) {
-              if (wordsToRepeatWithoutPunctation.contains(data[i]
-                  ["split_sentence"][j]['words'][index]["target_language"])) {
+              if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
+                      ["words"][index]["target_language"]
+                  .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+                  .toLowerCase()
+                  .split(' ')
+                  .contains(element))) {
                 String wordFile =
                     "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
                 String text = data[i]["split_sentence"][j]['words'][index]
