@@ -559,8 +559,13 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                               .where((innerEntry) =>
                                                   innerEntry.value.value ==
                                                   true)
-                                              .map((innerEntry) =>
-                                                  innerEntry.key)
+                                              .map((innerEntry) => innerEntry
+                                                  .key
+                                                  .toLowerCase()
+                                                  .replaceAll(
+                                                      RegExp(r'[^\p{L}\s]',
+                                                          unicode: true),
+                                                      ''))
                                               .toList(),
                                         }),
                                       );
