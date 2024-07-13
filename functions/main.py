@@ -138,14 +138,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
-    # if first_API_calls.mock == True:
-    #     return final_response
-    # else:
-    #     return
-    return https_fn.Response(
-        final_response,
-        status=200
-    )
+    return final_response
 
 
 @https_fn.on_request(
