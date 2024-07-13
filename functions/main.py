@@ -214,6 +214,17 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 )
     second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
 
+
+    if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
+        text_classifier = second_API_calls.extract_and_classify_enclosed_words
+        def remove_transliteration(target_language):
+            classified_text = text_classifier(target_language)
+            text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)
+            return text_w_o_transliteration['text'] if text_w_o_transliteration else target_language
+
+        for turn in dialogue:
+            turn["target_language"] = remove_transliteration(turn["target_language"])
+
     prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
     if second_API_calls.mock == True: 
