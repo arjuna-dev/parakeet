@@ -368,7 +368,7 @@ Continue adding turns until you reach {length} turns.
 
 
 def prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length):
-   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
+  return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
 
 requested_scenario: {requested_scenario}
 keywords: {keywords} 
@@ -376,22 +376,21 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. The target_language field should include the text in the {target_language} characters followed by the transliteration.
+The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
-With the following data as an example enclosed in double vertical lines (||):
+Here is an example of data you could get and its expected output.
 
-||
+Data:
+"""
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
 "keywords": ["discrimination", "patience"],
 "native_language": "English",
 "target_language": "Mandarin Chinese",
 "language_level": "C2",
-||
+"""
 
-You would generate the following JSON enclosed in triple equals symbols (===):
-
-JSON:
-===
+Expected JSON output:
+"""
 {{
     "title": "Understanding Viveka Chudamani",
     "speakers": {{
@@ -400,28 +399,28 @@ JSON:
         }},
     "dialogue": [
         {{
-            "target_language": "维韦卡在维韦卡·楚达马尼的背景下到底是什么意思？ wéiwéikǎ zài wéiwéikǎ·chǔdámǎní de bèijǐng xià dàodǐ shì shénme yìsi?",
+            "target_language": "维韦卡在维韦卡·楚达马尼的背景下到底是什么意思？ ||wéiwéikǎ zài wéiwéikǎ·chǔdámǎní de bèijǐng xià dàodǐ shì shénme yìsi?||",
             "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "维韦卡是分辨真实与非真实的能力。 wéiwéikǎ shì fēnbiàn zhēnshí yǔ fēi zhēnshí de nénglì.",
+            "target_language": "维韦卡是分辨真实与非真实的能力。 ||wéiwéikǎ shì fēnbiàn zhēnshí yǔ fēi zhēnshí de nénglì.||",
             "native_language": "Viveka is the ability to discriminate between the real and the unreal.",
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "m"
         }},
         {{
-            "target_language": "这种辨别能力是如何发展的？ zhè zhǒng biànbié nénglì shì rúhé fāzhǎn de?",
+            "target_language": "这种辨别能力是如何发展的？ ||zhè zhǒng biànbié nénglì shì rúhé fāzhǎn de?||",
             "native_language": "And how does one develop this discrimination?",
             "turn_nr": "3",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "通过不断的练习和耐心来发展。 tōngguò bùduàn de liànxí hé nàixīn lái fāzhǎn.",
+            "target_language": "通过不断的练习和耐心来发展。 ||tōngguò bùduàn de liànxí hé nàixīn lái fāzhǎn.||",
             "native_language": "It develops through constant practice and patience.",
             "turn_nr": "4",
             "speaker": "speaker_2",
@@ -429,5 +428,5 @@ JSON:
         }}
     ]
 }}
-===
+"""
 '''
