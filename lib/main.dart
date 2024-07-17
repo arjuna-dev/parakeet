@@ -9,6 +9,7 @@ import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/library_screen.dart';
+import 'screens/profile_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,13 @@ class MyApp extends StatelessWidget {
               builder: (context) => ChangeNotifierProvider(
                 create: (context) => HomeScreenModel(),
                 child: const Library(),
+              ),
+            );
+          case '/profile':
+            return MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const ProfileScreen(),
               ),
             );
           default:
