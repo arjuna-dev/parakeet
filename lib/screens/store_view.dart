@@ -97,10 +97,14 @@ class _StoreViewState extends State<StoreView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(productDetails.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    8.0, 25.0, 8.0, 8.0),
+                                child: Text(productDetails.title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                              ),
                               Text(productDetails.description),
                             ],
                           ),
@@ -143,9 +147,9 @@ class _StoreViewState extends State<StoreView> {
 
   Widget _getIAPIcon(productId) {
     if (productId == "1m") {
-      return Icon(Icons.brightness_7_outlined, size: 50);
+      return const Icon(Icons.subscriptions_rounded, size: 25);
     } else {
-      return Icon(Icons.post_add_outlined, size: 50);
+      return const Icon(Icons.post_add_outlined, size: 50);
     }
   }
 
