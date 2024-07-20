@@ -1,0 +1,9 @@
+firebase_functions
+firebase_admin
+google-auth
+google-api-python-client
+requests
+jwt
+pyjwt
+google-cloud-pubsub
+inapppy

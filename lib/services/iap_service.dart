@@ -11,10 +11,10 @@ class IAPService {
       print("purchaseDetails.status ${purchaseDetails.status}");
       if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        //bool valid = await _verifyPurchase(purchaseDetails);
-        //if (valid) {
-        _handleSuccessfulPurchase(purchaseDetails);
-        //}
+        bool valid = await _verifyPurchase(purchaseDetails);
+        if (valid) {
+          _handleSuccessfulPurchase(purchaseDetails);
+        }
       }
 
       if (purchaseDetails.status == PurchaseStatus.error) {
