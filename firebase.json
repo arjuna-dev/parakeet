@@ -25,6 +25,21 @@
         "firebase-debug.*.log",
         "*.local"
       ]
+    },
+    {
+      "source": "payment_verification_backend",
+      "codebase": "payment_verification_backend",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
     }
   ],
   "flutter": {
