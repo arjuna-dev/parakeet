@@ -37,7 +37,8 @@ class IAPService {
 
   Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
     print("Verifying Purchase");
-    final verifier = FirebaseFunctions.instance.httpsCallable('verifyPurchase');
+    final verifier = FirebaseFunctions.instanceFor(region: "europe-west1")
+        .httpsCallable('verifyPurchase');
     final results = await verifier({
       'source': purchaseDetails.verificationData.source,
       'verificationData':
