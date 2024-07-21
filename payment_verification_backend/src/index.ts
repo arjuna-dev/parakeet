@@ -62,5 +62,5 @@ export const handlePlayStoreServerEvent =
       .handleServerEvent;
 
 export const expireSubscriptions = functions.pubsub.schedule("*/10 */1 * * *")
-  .timeZone("America/New_York")
-  .onRun(() => firebaseCalls.exporeSubscriptions());
+  .timeZone("Europe/Berlin")
+  .onRun(() => firebaseCalls.expireSubscriptions());
