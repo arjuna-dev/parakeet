@@ -16,17 +16,6 @@
       ]
     },
     {
-      "source": "payment_backend",
-      "codebase": "payment_backend",
-      "ignore": [
-        "venv",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    },
-    {
       "source": "payment_verification_backend",
       "codebase": "payment_verification_backend",
       "ignore": [
