@@ -1,4 +1,4 @@
-import firestore from "firebase-admin/lib/firestore";
+import {firestore} from "firebase-admin";
 import Timestamp = firestore.Timestamp;
 
 export type SubscriptionStatus = "PENDING" | "ACTIVE" | "EXPIRED";

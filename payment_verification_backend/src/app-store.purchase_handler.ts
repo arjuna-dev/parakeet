@@ -3,7 +3,7 @@ import {ProductData, productDataMap} from "./products";
 import * as appleReceiptVerify from "node-apple-receipt-verify";
 import {APP_STORE_SHARED_SECRET, CLOUD_REGION} from "./constants";
 import {FirebaseCalls} from "./firebase.calls";
-import firestore from "firebase-admin/lib/firestore";
+import {firestore} from "firebase-admin";
 import * as Functions from "firebase-functions";
 import {jwtDecode} from "jwt-decode";
 import Timestamp = firestore.Timestamp;
