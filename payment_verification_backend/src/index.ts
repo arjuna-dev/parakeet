@@ -61,6 +61,6 @@ export const handlePlayStoreServerEvent =
     (purchaseHandlers.google_play as GooglePlayPurchaseHandler)
       .handleServerEvent;
 
-export const expireSubscriptions = functions.pubsub.schedule("*/10 */1 * * *")
+export const expireSubscriptions = functions.pubsub.schedule("0 0 * * *")
   .timeZone("Europe/Berlin")
   .onRun(() => firebaseCalls.expireSubscriptions());
