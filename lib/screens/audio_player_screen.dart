@@ -149,16 +149,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (fileName.startsWith("narrator_") ||
         fileName == "one_second_break" ||
         fileName == "five_second_break") {
-      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/${fileName}.mp3";
+      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else {
-      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/${fileName}.mp3";
+      return "https://storage.googleapis.com/conversations_audio_files/$widget.documentID/$fileName.mp3";
     }
   }
 
   Duration cumulativeDurationUpTo(int currentIndex) {
     return trackDurations
         .take(currentIndex)
-        .fold(Duration.zero, (sum, d) => sum + d);
+        .fold(Duration.zero, (total, d) => total + d);
   }
 
   Stream<PositionData> get _positionDataStream {
@@ -219,7 +219,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void calculateFinalTotalDuration() {
     finalTotalDuration =
-        trackDurations.fold(Duration.zero, (sum, d) => sum + d);
+        trackDurations.fold(Duration.zero, (total, d) => total + d);
     setState(() {});
   }
 
