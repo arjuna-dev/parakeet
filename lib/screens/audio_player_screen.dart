@@ -3,9 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/utils/save_analytics.dart';
+import 'package:parakeet/services/file_duration_update_service.dart';
+import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:collection';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 
 // This is the main screen for the audio player
@@ -35,7 +36,7 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  FirestoreService? firestoreService;
+  UpdateFirestoreService? firestoreService;
   FileDurationUpdate? fileDurationUpdate;
   late AudioPlayer player; // The audio player
   late ConcatenatingAudioSource playlist; // The playlist
@@ -95,7 +96,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize the cached audio durations Future
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
 
-    firestoreService = FirestoreService.getInstance(
+    firestoreService = UpdateFirestoreService.getInstance(
         widget.documentID, widget.generating, updatePlaylist, updateTrack);
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
@@ -582,111 +583,4 @@ class PositionData {
   Duration cumulativePosition; // Cumulative position across all tracks
 
   PositionData(this.position, this.duration, this.cumulativePosition);
-}
-
-class FirestoreService extends ChangeNotifier {
-  static FirestoreService? _instance;
-
-  late Stream<QuerySnapshot> _stream;
-  StreamSubscription<QuerySnapshot>? _streamSubscription;
-  Function updatePlaylist;
-  Function updateTrack;
-  Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
-  bool isUpdating = false;
-
-  FirestoreService._privateConstructor(this.updatePlaylist, this.updateTrack);
-
-  static FirestoreService getInstance(String documentID, bool generating,
-      Function updatePlaylist, Function updateTrack) {
-    _instance ??=
-        FirestoreService._privateConstructor(updatePlaylist, updateTrack);
-    _instance!._initializeStream(documentID, generating);
-    return _instance!;
-  }
-
-  void _initializeStream(String documentID, bool generating) {
-    _stream = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(documentID)
-        .collection('all_breakdowns')
-        .snapshots();
-    _streamSubscription = _stream.listen((snapshot) {
-      queue.add(snapshot);
-      processQueue(updateTrack, generating);
-    });
-  }
-
-  Future<void> processQueue(updateTrack, generating) async {
-    if (!isUpdating && queue.isNotEmpty) {
-      isUpdating = true;
-      await updatePlaylist(queue.removeFirst());
-      isUpdating = false;
-      if (queue.isEmpty && generating) {
-        updateTrack();
-      }
-      processQueue(updateTrack, generating);
-    }
-  }
-
-  Stream<QuerySnapshot> get stream => _stream;
-
-  @override
-  void dispose() {
-    _streamSubscription?.cancel();
-    _instance = null;
-    queue.clear();
-    super.dispose();
-  }
-}
-
-class FileDurationUpdate extends ChangeNotifier {
-  static FileDurationUpdate? _instance;
-
-  late Stream<QuerySnapshot> _stream;
-  StreamSubscription<QuerySnapshot>? _streamSubscription;
-  Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
-  bool isUpdating = false;
-  Function calculateTotalDurationAndUpdateTrackDurations;
-
-  FileDurationUpdate._privateConstructor(
-      this.calculateTotalDurationAndUpdateTrackDurations);
-
-  static FileDurationUpdate getInstance(String documentID,
-      Function calculateTotalDurationAndUpdateTrackDurations) {
-    _instance ??= FileDurationUpdate._privateConstructor(
-        calculateTotalDurationAndUpdateTrackDurations);
-    _instance!._initializeStream(documentID);
-    return _instance!;
-  }
-
-  void _initializeStream(String documentID) {
-    _stream = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(documentID)
-        .collection('file_durations')
-        .snapshots();
-    _streamSubscription = _stream.listen((snapshot) {
-      queue.add(snapshot);
-      processQueue();
-    });
-  }
-
-  Future<void> processQueue() async {
-    if (!isUpdating && queue.isNotEmpty) {
-      isUpdating = true;
-      await calculateTotalDurationAndUpdateTrackDurations(queue.removeFirst());
-      isUpdating = false;
-      processQueue();
-    }
-  }
-
-  Stream<QuerySnapshot> get stream => _stream;
-
-  @override
-  void dispose() {
-    _streamSubscription?.cancel();
-    _instance = null;
-    queue.clear();
-    super.dispose();
-  }
 }
