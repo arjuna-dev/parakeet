@@ -1,18 +1,19 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
+import 'package:parakeet/utils/save_analytics.dart';
+import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/widgets/position_data.dart';
+import 'package:parakeet/widgets/control_buttons.dart';
+import 'package:parakeet/widgets/dialogue_list.dart';
+import 'package:parakeet/widgets/position_slider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:parakeet/utils/script_generator.dart' as script_generator;
 
-// This is the main screen for the audio player
-// ignore: must_be_immutable
 class AudioPlayerScreen extends StatefulWidget {
-  final String documentID; // Database ID for the response
+  final String documentID;
   final List<dynamic> dialogue;
   final String userID;
   final String title;
@@ -20,16 +21,16 @@ class AudioPlayerScreen extends StatefulWidget {
   final String scriptDocumentId;
   final bool generating;
 
-  const AudioPlayerScreen(
-      {Key? key,
-      required this.documentID,
-      required this.dialogue,
-      required this.userID,
-      required this.title,
-      required this.wordsToRepeat,
-      required this.scriptDocumentId,
-      required this.generating})
-      : super(key: key);
+  const AudioPlayerScreen({
+    Key? key,
+    required this.documentID,
+    required this.dialogue,
+    required this.userID,
+    required this.title,
+    required this.wordsToRepeat,
+    required this.scriptDocumentId,
+    required this.generating,
+  }) : super(key: key);
 
   @override
   AudioPlayerScreenState createState() => AudioPlayerScreenState();
@@ -38,27 +39,23 @@ class AudioPlayerScreen extends StatefulWidget {
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   UpdateFirestoreService? firestoreService;
   FileDurationUpdate? fileDurationUpdate;
-  late AudioPlayer player; // The audio player
-  late ConcatenatingAudioSource playlist; // The playlist
-  String currentTrack = ''; // The current track
-  bool isPlaying = false; // Whether the player is playing
-  bool isStopped = false; // Whether the player is stopped
-  Duration totalDuration = Duration.zero; // The total duration of all tracks
-  Duration finalTotalDuration = Duration.zero;
-  Duration currentPosition =
-      Duration.zero; // The current position within the track
-  Duration cumulativeTimeBeforeCurrent =
-      Duration.zero; // Cumulative time before the current track
-  List<Duration> trackDurations = []; // List of durations for each track
-  bool _isPaused = false; // Whether the player is paused
-  int? _lastMatchedIndex;
-  List<dynamic> script = [];
-  int updateNumber = 0;
-  Map<String, dynamic>? audioDurations = {};
-  Future<Map<String, dynamic>>?
-      cachedAudioDurations; // Future to cache audio durations
-  // Instantiate AnalyticsManager with the user ID
+  late AudioPlayer player;
+  late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
+
+  String currentTrack = '';
+  bool isPlaying = false;
+  bool isStopped = false;
+  bool _isPaused = false;
+  int updateNumber = 0;
+
+  Duration totalDuration = Duration.zero;
+  Duration finalTotalDuration = Duration.zero;
+  List<Duration> trackDurations = [];
+  List<dynamic> script = [];
+
+  Map<String, dynamic>? audioDurations = {};
+  Future<Map<String, dynamic>>? cachedAudioDurations;
 
   @override
   void initState() {
@@ -67,24 +64,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
     _initPlaylist();
-
-    // Initialize AnalyticsManager with userID
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
     analyticsManager.loadAnalyticsFromFirebase();
+    _listenToPlayerStreams();
+    cachedAudioDurations = getAudioDurationsFromNarratorStorage();
+    firestoreService = UpdateFirestoreService.getInstance(
+        widget.documentID, widget.generating, updatePlaylist, updateTrack);
+    fileDurationUpdate = FileDurationUpdate.getInstance(
+        widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
+  }
 
-    // Listen to the playerSequenceCompleteStream
+  void _listenToPlayerStreams() {
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
-          analyticsManager.storeAnalytics(
-              widget.documentID, 'completed'); // Track completion
+          analyticsManager.storeAnalytics(widget.documentID, 'completed');
         }
-        // Stop the player when the end of the playlist is reached
         _stop();
       }
     });
 
-    //Listen to the playerCurrentIndexStream
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
         setState(() {
@@ -92,77 +91,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         });
       }
     });
-
-    // Initialize the cached audio durations Future
-    cachedAudioDurations = getAudioDurationsFromNarratorStorage();
-
-    firestoreService = UpdateFirestoreService.getInstance(
-        widget.documentID, widget.generating, updatePlaylist, updateTrack);
-    fileDurationUpdate = FileDurationUpdate.getInstance(
-        widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
   }
 
-  Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
-    if (cachedAudioDurations != null) {
-      return cachedAudioDurations!;
-    }
-
-    CollectionReference colRef = FirebaseFirestore.instance.collection(
-        'narrator_audio_files_durations/google_tts/narrator_english');
-
-    QuerySnapshot querySnap = await colRef.get();
-
-    if (querySnap.docs.isNotEmpty) {
-      // Get the first document
-      DocumentSnapshot firstDoc = querySnap.docs.first;
-      // Save its data to audioDurations
-      return firstDoc.data() as Map<String, dynamic>;
-    }
-
-    return {};
-  }
-
-  Future<void> calculateTotalDurationAndUpdateTrackDurations(snapshot) async {
-    totalDuration = Duration.zero;
-    trackDurations = List<Duration>.filled(script.length, Duration.zero);
-    audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
-
-    var narratorAudioDurations = await getAudioDurationsFromNarratorStorage();
-    audioDurations!.addAll(narratorAudioDurations);
-
-    if (audioDurations!.isNotEmpty) {
-      for (int i = 0; i < script.length; i++) {
-        String fileName = script[i];
-        double durationInSeconds = 0.0;
-        if (audioDurations?.containsKey(fileName) == true) {
-          durationInSeconds = audioDurations?[fileName] as double;
-        }
-        Duration duration =
-            Duration(milliseconds: (durationInSeconds * 1000).round());
-        totalDuration += duration;
-        trackDurations[i] = duration;
-      }
-      setState(() {});
-    }
-
-    if (updateNumber == widget.dialogue.length || !widget.generating) {
-      calculateFinalTotalDuration();
-    }
-  }
-
-  void calculateFinalTotalDuration() {
-    finalTotalDuration =
-        trackDurations.fold(Duration.zero, (sum, d) => sum + d);
-    setState(() {});
-  }
-
-  // This method initializes the playlist
   Future<void> _initPlaylist() async {
     List<String> fileUrls =
         script.map((fileName) => _constructUrl(fileName)).toList();
     List<AudioSource> audioSources = fileUrls
-        // ignore: unnecessary_null_comparison
-        .where((url) => url != null)
+        .where((url) => url.isNotEmpty)
         .map((url) => AudioSource.uri(Uri.parse(url)))
         .toList();
     playlist = ConcatenatingAudioSource(
@@ -184,10 +119,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     var newScript = List.from(script);
-    // to not add tracks already added to the playlist
     newScript.removeRange(0, playlist.children.length);
 
-    // Construct URLs for the new files
     List<String> fileUrls =
         newScript.map((fileName) => _constructUrl(fileName)).toList();
     final newTracks =
@@ -201,22 +134,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     updateNumber++;
   }
 
-  // This method constructs the URL for a file
-  String _constructUrl(String fileName) {
-    String fileUrl;
-    if (fileName.startsWith("narrator_") ||
-        fileName == "one_second_break" ||
-        fileName == "five_second_break") {
-      fileUrl =
-          "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/${fileName}.mp3";
-    } else {
-      fileUrl =
-          "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/${fileName}.mp3";
-    }
-
-    return fileUrl;
-  }
-
   Future<void> updateTrack() async {
     CollectionReference colRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
@@ -228,247 +145,162 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  // This method calculates the cumulative duration up to a certain index
+  String _constructUrl(String fileName) {
+    if (fileName.startsWith("narrator_") ||
+        fileName == "one_second_break" ||
+        fileName == "five_second_break") {
+      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/${fileName}.mp3";
+    } else {
+      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/${fileName}.mp3";
+    }
+  }
+
   Duration cumulativeDurationUpTo(int currentIndex) {
     return trackDurations
         .take(currentIndex)
         .fold(Duration.zero, (sum, d) => sum + d);
   }
 
-  // This method creates a stream of position data
   Stream<PositionData> get _positionDataStream {
     int previousIndex = -1;
     return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
-            player.positionStream.where((_) => !_isPaused),
-            player.durationStream.whereType<Duration>(),
-            player.currentIndexStream.whereType<int>().startWith(0),
-            (position, duration, index) {
-      bool hasIndexChanged = index != previousIndex;
-      previousIndex = index;
-      Duration cumulativeDuration = cumulativeDurationUpTo(index);
-      if (hasIndexChanged) {
+      player.positionStream.where((_) => !_isPaused),
+      player.durationStream.whereType<Duration>(),
+      player.currentIndexStream.whereType<int>().startWith(0),
+      (position, duration, index) {
+        bool hasIndexChanged = index != previousIndex;
+        previousIndex = index;
+        Duration cumulativeDuration = cumulativeDurationUpTo(index);
+        if (hasIndexChanged) return null;
+        if (position < duration) {
+          return PositionData(
+              position, duration, cumulativeDuration + position);
+        }
         return null;
-      } else if (position < duration) {
-        return PositionData(
-          position,
-          duration,
-          cumulativeDuration + position,
-        );
-      } else {
-        return null;
-      }
-    })
+      },
+    )
         .where((positionData) => positionData != null)
         .cast<PositionData>()
         .distinct((prev, current) => prev.position == current.position);
   }
 
-  // This method finds the track index for a position
   int findTrackIndexForPosition(double milliseconds) {
     int cumulative = 0;
     for (int i = 0; i < trackDurations.length; i++) {
       cumulative += trackDurations[i].inMilliseconds;
-      if (cumulative > milliseconds) {
-        return i;
-      }
+      if (cumulative > milliseconds) return i;
     }
     return trackDurations.length - 1;
   }
 
-  // This method builds the widget
+  Future<void> calculateTotalDurationAndUpdateTrackDurations(
+      QuerySnapshot snapshot) async {
+    totalDuration = Duration.zero;
+    trackDurations = List<Duration>.filled(script.length, Duration.zero);
+    audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
+    audioDurations!.addAll(await getAudioDurationsFromNarratorStorage());
+
+    if (audioDurations!.isNotEmpty) {
+      for (int i = 0; i < script.length; i++) {
+        String fileName = script[i];
+        double durationInSeconds = audioDurations?[fileName] ?? 0.0;
+        Duration duration =
+            Duration(milliseconds: (durationInSeconds * 1000).round());
+        totalDuration += duration;
+        trackDurations[i] = duration;
+      }
+      setState(() {});
+    }
+
+    if (updateNumber == widget.dialogue.length || !widget.generating) {
+      calculateFinalTotalDuration();
+    }
+  }
+
+  void calculateFinalTotalDuration() {
+    finalTotalDuration =
+        trackDurations.fold(Duration.zero, (sum, d) => sum + d);
+    setState(() {});
+  }
+
+  Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
+    if (cachedAudioDurations != null) {
+      return cachedAudioDurations!;
+    }
+
+    CollectionReference colRef = FirebaseFirestore.instance.collection(
+        'narrator_audio_files_durations/google_tts/narrator_english');
+    QuerySnapshot querySnap = await colRef.get();
+
+    if (querySnap.docs.isNotEmpty) {
+      DocumentSnapshot firstDoc = querySnap.docs.first;
+      return firstDoc.data() as Map<String, dynamic>;
+    }
+    return {};
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       onPopInvoked: (bool didPop) async {
-        if (didPop) {
-          return;
-        }
+        if (didPop) return;
         final NavigatorState navigator = Navigator.of(context);
         if (!widget.generating) {
-          if (!isStopped && isPlaying) {
-            await _pause();
-          }
+          if (!isStopped && isPlaying) await _pause();
           navigator.pop('reload');
         } else {
-          if (!isStopped && isPlaying) {
-            await _pause();
-          }
-          //remove all the stacks and reload the home page
+          if (!isStopped && isPlaying) await _pause();
           navigator.popUntil((route) => route.isFirst);
           navigator.pushReplacementNamed('/');
         }
       },
       child: FutureBuilder<int>(
+        future: _getSavedPosition(),
         builder: (context, snapshot) {
           int savedPosition = snapshot.data ?? 0;
           return Scaffold(
-            appBar: AppBar(
-              title: Text(widget.title),
-            ),
+            appBar: AppBar(title: Text(widget.title)),
             body: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widget.dialogue.length,
-                    itemBuilder: (context, index) {
-                      String dialogueTarget =
-                          widget.dialogue[index]["target_language"];
-                      String dialogueNative =
-                          widget.dialogue[index]["native_language"];
-                      bool isMatch = currentTrack.split('_').length >= 2 &&
-                          currentTrack.split('_').take(2).join('_') ==
-                              "dialogue_$index";
-                      if (isMatch) {
-                        _lastMatchedIndex = index;
-                      }
-                      return Column(
-                        children: [
-                          ListTile(
-                            title: Text("Dialogue ${index + 1}:"),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(dialogueNative),
-                                RichText(
-                                  text: TextSpan(
-                                    children:
-                                        dialogueTarget.split(' ').map((word) {
-                                      final cleanWord = word
-                                          .replaceAll(
-                                              RegExp(r'[^\p{L}\s]',
-                                                  unicode: true),
-                                              '')
-                                          .toLowerCase();
-                                      final match = widget.wordsToRepeat
-                                          .contains(cleanWord);
-                                      return TextSpan(
-                                        text: '$word ',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: match
-                                              ? Colors.green
-                                              : (index == _lastMatchedIndex
-                                                  ? Colors.purple
-                                                  : Colors.black),
-                                          fontWeight: index == _lastMatchedIndex
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          decoration: match
-                                              ? TextDecoration.underline
-                                              : TextDecoration.none,
-                                          decorationColor: match
-                                              ? const Color.fromARGB(
-                                                  255, 21, 87, 25)
-                                              : null, // Darker green for underline
-
-                                          decorationThickness:
-                                              match ? 2.0 : null,
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                )
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                DialogueList(
+                  dialogue: widget.dialogue,
+                  currentTrack: currentTrack,
+                  wordsToRepeat: widget.wordsToRepeat,
                 ),
-                StreamBuilder<PositionData>(
-                  stream: _positionDataStream,
-                  builder: (context, snapshot) {
-                    final positionData = snapshot.data;
-                    if (positionData == null) {
-                      return const CircularProgressIndicator();
-                    }
-                    return Column(
-                      children: [
-                        Slider(
-                          min: 0.0,
-                          max: totalDuration.inMilliseconds.toDouble(),
-                          value: isPlaying
-                              ? positionData.cumulativePosition.inMilliseconds
-                                  .clamp(0, totalDuration.inMilliseconds)
-                                  .toDouble()
-                              : savedPosition
-                                  .clamp(0, totalDuration.inMilliseconds)
-                                  .toDouble(),
-                          onChanged: (value) {
-                            final trackIndex = findTrackIndexForPosition(value);
-                            player.seek(
-                                Duration(
-                                    milliseconds: value.toInt() -
-                                        cumulativeDurationUpTo(trackIndex)
-                                            .inMilliseconds),
-                                index: trackIndex);
-                            if (_isPaused) {
-                              _pause(analyticsOn: false);
-                              setState(() {
-                                positionData.cumulativePosition =
-                                    Duration(milliseconds: value.toInt());
-                              });
-                            }
-                          },
-                        ),
-                        Text(
-                          finalTotalDuration == Duration.zero
-                              ? formatDuration(isPlaying
-                                  ? positionData.cumulativePosition
-                                  : Duration(milliseconds: savedPosition))
-                              : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
-                        ),
-                      ],
-                    );
-                  },
+                PositionSlider(
+                  positionDataStream: _positionDataStream,
+                  totalDuration: totalDuration,
+                  finalTotalDuration: finalTotalDuration,
+                  isPlaying: isPlaying,
+                  savedPosition: savedPosition,
+                  findTrackIndexForPosition: findTrackIndexForPosition,
+                  player: player,
+                  cumulativeDurationUpTo: cumulativeDurationUpTo,
+                  pause: _pause,
                 ),
-                controlButtons(), // Play, pause, stop, skip buttons
+                ControlButtons(
+                  player: player,
+                  isPlaying: isPlaying,
+                  onPlay: _play,
+                  onPause: _pause,
+                  onStop: _stop,
+                ),
               ],
             ),
           );
         },
-        future: _getSavedPosition(),
       ),
     );
   }
 
-  // This method creates the control buttons
-  Widget controlButtons() => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.skip_previous),
-            onPressed:
-                player.hasPrevious ? () => player.seekToPrevious() : null,
-          ),
-          IconButton(
-            icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-            onPressed: isPlaying ? _pause : _play,
-          ),
-          IconButton(
-            icon: const Icon(Icons.stop),
-            onPressed: _stop,
-          ),
-          IconButton(
-            icon: const Icon(Icons.skip_next),
-            onPressed: player.hasNext ? () => player.seekToNext() : null,
-          ),
-        ],
-      );
-
-// This method pauses the audio
   Future<void> _pause({bool analyticsOn = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
-    int currentIndex = 0;
-    player.currentIndexStream.listen((index) {
-      currentIndex = index ?? 0;
-    });
+    int currentIndex = player.currentIndex ?? 0;
 
     await prefs.setInt(
         'savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
@@ -476,6 +308,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         'savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
     await prefs.setBool(
         "now_playing_${widget.documentID}_${widget.userID}", true);
+
     final nowPlayingKey = "now_playing_${widget.userID}";
     final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
     if (!nowPlayingList.contains(widget.documentID)) {
@@ -495,7 +328,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-// This method plays the audio
   Future<void> _play() async {
     final prefs = await SharedPreferences.getInstance();
     final savedPosition =
@@ -515,22 +347,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 
-  // This method stops the audio
   Future<void> _stop() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.remove('savedPosition_${widget.documentID}_${widget.userID}');
     prefs.remove('savedTrackIndex_${widget.documentID}_${widget.userID}');
     prefs.remove("now_playing_${widget.documentID}_${widget.userID}");
-    // Retrieve the now playing list
+
     List<String>? nowPlayingList =
         prefs.getStringList("now_playing_${widget.userID}");
 
-    // Check if the list is not null
     if (nowPlayingList != null) {
-      // Remove widget.documentID from the list if it exists
       nowPlayingList.remove(widget.documentID);
-
-      // Save the updated list back to preferences
       await prefs.setStringList("now_playing_${widget.userID}", nowPlayingList);
     }
 
@@ -543,7 +370,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
-  // This method gets the saved position from shared preferences
   Future<int> _getSavedPosition() async {
     final prefs = await SharedPreferences.getInstance();
     final savedPosition =
@@ -555,7 +381,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return position;
   }
 
-  // This method disposes the player when the widget is disposed
   @override
   void dispose() {
     if (isPlaying) {
@@ -566,21 +391,4 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.dispose();
     super.dispose();
   }
-}
-
-// This method formats a duration as a string
-String formatDuration(Duration d) {
-  String twoDigits(int n) => n.toString().padLeft(2, "0");
-  String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
-  String twoDigitSeconds = twoDigits(d.inSeconds.remainder(60));
-  return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
-}
-
-// This class represents the position data
-class PositionData {
-  final Duration position; // Current position within the track
-  final Duration duration; // Duration of the current track
-  Duration cumulativePosition; // Cumulative position across all tracks
-
-  PositionData(this.position, this.duration, this.cumulativePosition);
 }
