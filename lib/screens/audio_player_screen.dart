@@ -11,6 +11,7 @@ import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -44,6 +45,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AnalyticsManager analyticsManager;
 
   String currentTrack = '';
+  String? previousTargetTrack;
+  String? previousTargetPhrase;
   bool isPlaying = false;
   bool isStopped = false;
   bool _isPaused = false;
@@ -56,6 +59,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>? cachedAudioDurations;
+
+  stt.SpeechToText speech = stt.SpeechToText();
+  String recordedText = '';
 
   @override
   void initState() {
@@ -86,6 +92,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
+        _handleTrackChange(script[index]);
         setState(() {
           currentTrack = script[index];
         });
@@ -238,6 +245,72 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     return {};
   }
+
+  void _handleTrackChange(String newTrack) {
+    if (newTrack.contains("target_language")) {
+      // Update the previous phrase when a target_language phrase/word track starts
+      previousTargetTrack = newTrack;
+      print('The previous target track is: $previousTargetTrack');
+    } else if (newTrack == "five_second_break") {
+      // Start recording during the 5-second break
+      _startRecording();
+    }
+  }
+
+  Future<void> _startRecording() async {
+    bool available = await speech.initialize();
+    if (available) {
+      speech.listen(
+          onResult: (result) {
+            setState(() {
+              recordedText = result.recognizedWords;
+            });
+            print('You said: ${result.recognizedWords}');
+          },
+          localeId: 'de-DE');
+
+      // Stop recording after the 5-second silent track ends
+      await Future.delayed(const Duration(seconds: 5));
+      speech.stop();
+
+      // After recording, compare the result with the previous phrase
+      _compareTranscriptionWithPhrase();
+    }
+  }
+
+  void _compareTranscriptionWithPhrase() {
+    if (previousTargetPhrase != null && recordedText.isNotEmpty) {
+      if (recordedText
+          .toLowerCase()
+          .contains(previousTargetPhrase!.toLowerCase())) {
+        print('Good job! You repeated the phrase correctly.');
+        //_provideFeedback("Good job! You repeated the phrase correctly.");
+      } else {
+        print('Try again. The phrase didn\'t match.');
+        //_provideFeedback("Try again. The phrase didn't match.");
+      }
+    }
+  }
+
+  // void _provideFeedback(String feedback) {
+  //   // Show feedback to the user
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         content: Text(feedback),
+  //         actions: <Widget>[
+  //           TextButton(
+  //             child: const Text('OK'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {

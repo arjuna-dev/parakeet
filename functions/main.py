@@ -187,7 +187,9 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         db = firestore.client()
         doc_ref = db.collection('chatGPT_responses').document(document_id)
         subcollection_ref = doc_ref.collection('all_breakdowns')
+        subcollection_ref_target_phrases = doc_ref.collection('target_phrases')
         document = subcollection_ref.document('updatable_big_json')
+        document_target_phrases = subcollection_ref_target_phrases.document('updatable_target_phrases')
 
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
@@ -201,6 +203,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 tts_provider,
                                 document_id,
                                 document,
+                                document_target_phrases,
                                 target_language,
                                 document_durations,
                                 words_to_repeat,

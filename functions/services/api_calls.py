@@ -10,7 +10,7 @@ import time
 from threading import Timer, Lock
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, document_target_phrases, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
         self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
@@ -25,6 +25,7 @@ class APICalls:
         self.document_id = document_id
         self.target_language = target_language
         self.document = document
+        self.document_target_phrases = document_target_phrases
         self.document_durations = document_durations
         self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
@@ -153,6 +154,7 @@ class APICalls:
                 self.skip = True
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+            self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value}, self.document_target_phrases, operation="add")
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
             self.skip = False
         elif '"speaker":' in current_line:
