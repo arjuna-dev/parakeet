@@ -246,14 +246,41 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return {};
   }
 
-  void _handleTrackChange(String newTrack) {
+  void _handleTrackChange(String newTrack) async {
     if (newTrack.contains("target_language")) {
       // Update the previous phrase when a target_language phrase/word track starts
       previousTargetTrack = newTrack;
       print('The previous target track is: $previousTargetTrack');
+      previousTargetPhrase = await _fetchPreviousTargetPhrase(
+          widget.documentID, previousTargetTrack);
+      print('The previous target phrase is: $previousTargetPhrase');
     } else if (newTrack == "five_second_break") {
       // Start recording during the 5-second break
       _startRecording();
+    }
+  }
+
+  Future<String?> _fetchPreviousTargetPhrase(
+      String documentId, String? previousTargetTrack) async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('chatGPT_responses')
+          .doc(documentId)
+          .collection('target_phrases')
+          .doc('updatable_target_phrases')
+          .get();
+
+      if (documentSnapshot.exists) {
+        Map<String, dynamic> data =
+            documentSnapshot.data() as Map<String, dynamic>;
+        return data[previousTargetTrack] as String?;
+      } else {
+        print('Document does not exist');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching previous target phrase: $e');
+      return null;
     }
   }
 
@@ -282,7 +309,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (previousTargetPhrase != null && recordedText.isNotEmpty) {
       if (recordedText
           .toLowerCase()
-          .contains(previousTargetPhrase!.toLowerCase())) {
+          .contains(previousTargetPhrase!.toString().toLowerCase())) {
         print('Good job! You repeated the phrase correctly.');
         //_provideFeedback("Good job! You repeated the phrase correctly.");
       } else {
