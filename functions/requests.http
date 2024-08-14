@@ -18,6 +18,70 @@ content-type: application/json
          "target_language":"Ingrid, ich denke, es ist wichtig für die Unternehmen, den Gesetzen zu folgen, um Angriffe und rechtliche Probleme zu vermeiden.",
          "speaker":"speaker_1",
          "native_language":"Ingrid, I think it is important for companies to follow laws to avoid attacks and legal issues."
+      }
+   ],
+   "document_id":"AIlKVmERMUyCslGDFrK0",
+   "user_ID":"JRqn79vzmsYDYv7x6iLv2Zr9BKB3",
+   "title":"A Discussion on the Pros and Cons of Compliance in Europe",
+   "speakers":{
+      "speaker_1":{
+         "gender":"m",
+         "name":"Hans"
+      },
+      "speaker_2":{
+         "gender":"f",
+         "name":"Ingrid"
+      }
+   },
+   "native_language":"English (US)",
+   "target_language":"German",
+   "language_level":"C2",
+   "length":"2",
+   "voice_1_id":"de-DE-Studio-C",
+   "voice_2_id":"de-DE-Studio-B",
+   "words_to_repeat":[
+      "Einhaltung",
+      "Gesetze",
+      "durch",
+      "Unternehmen?",
+      "um",
+      "Angriffe",
+      "rechtliche",
+      "vermeiden.",
+      "Vorschriften",
+      "Umsatzwachstum",
+      "in",
+      "Frage",
+      "langfristigen",
+      "kurzfristige",
+      "nachhaltiges",
+      "Wachstum"
+   ],
+   "tts_provider":"1"
+}
+
+
+###
+
+
+GET http://127.0.0.1:8080/ HTTP/1.1
+content-type: application/json
+
+{
+   "dialogue":[
+      {
+         "gender":"f",
+         "turn_nr":"1",
+         "speaker":"speaker_2",
+         "target_language":"Hans, was hältst du von der Einhaltung europäischer Gesetze durch Unternehmen?",
+         "native_language":"Hans, what do you think about companies adhering to European laws?"
+      },
+      {
+         "gender":"m",
+         "turn_nr":"2",
+         "target_language":"Ingrid, ich denke, es ist wichtig für die Unternehmen, den Gesetzen zu folgen, um Angriffe und rechtliche Probleme zu vermeiden.",
+         "speaker":"speaker_1",
+         "native_language":"Ingrid, I think it is important for companies to follow laws to avoid attacks and legal issues."
       },
       {
          "gender":"f",
@@ -54,10 +118,10 @@ content-type: application/json
          "name":"Ingrid"
       }
    },
-   "native_language":"English",
+   "native_language":"English (US)",
    "target_language":"German",
    "language_level":"C2",
-   "length":"10",
+   "length":"5",
    "voice_1_id":"de-DE-Studio-C",
    "voice_2_id":"de-DE-Studio-B",
    "words_to_repeat":[
@@ -88,11 +152,11 @@ GET http://127.0.0.1:8080/ HTTP/1.1
 content-type: application/json
 
 {
-  "requested_scenario": "A baby alien talks with a butterfly",
-  "native_language": "English",
-  "target_language": "German",
-  "length": "2",
-  "user_ID": "3x3x3x",
+   "requested_scenario": "A baby alien talks with a butterfly",
+   "native_language": "English (US)",
+   "target_language": "Mandarin Chinese",
+   "length": "2",
+   "user_ID": "3x3sx3x",
 	"language_level": "C2",
 	"keywords": "",
 	"document_id": "3x3x3x",
