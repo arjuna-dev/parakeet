@@ -73,16 +73,18 @@ class APICalls:
         if '"native_language":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"target_language":' in current_line:
+            classified_text = self.extract_and_classify_enclosed_words(last_value)
+            text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)["text"]
             if self.turn_nr % 2 == 0:
                 if self.voice_1:
-                    self.futures.append(self.executor.submit(self.tts_function, last_value, self.voice_1, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_1, filename, self.document_durations))
                 else:
-                    self.pending_voice_1 = {"text": last_value, "filename": filename}
+                    self.pending_voice_1 = {"text": text_w_o_transliteration, "filename": filename}
             else:
                 if self.voice_2:
-                    self.futures.append(self.executor.submit(self.tts_function, last_value, self.voice_2, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_2, filename, self.document_durations))
                 else:
-                    self.pending_voice_2 = {"text": last_value, "filename": filename}
+                    self.pending_voice_2 = {"text": text_w_o_transliteration, "filename": filename}
         if '"title":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
             self.push_to_firestore(full_json, self.document, operation="overwrite")
@@ -119,7 +121,6 @@ class APICalls:
         if '"narrator_translation":' in current_line:
             if (not self.skip):
                 enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-                #found = False
                 for index, text_part in enumerate(enclosed_words_objects):
                     filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                     if text_part['enclosed']:

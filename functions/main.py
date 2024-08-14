@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import re
-from utils.prompts import prompt_dialogue, prompt_big_JSON
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -117,6 +117,10 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     first_API_calls.line_handler = first_API_calls.handle_line_1st_API
 
     prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+
+    if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
+        prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
+
     
     if first_API_calls.mock == True: 
         chatGPT_response = mock_response_first_API
@@ -134,14 +138,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
-    # if first_API_calls.mock == True:
-    #     return final_response
-    # else:
-    #     return
-    return https_fn.Response(
-        final_response,
-        status=200
-    )
+    return final_response
 
 
 @https_fn.on_request(
@@ -209,6 +206,17 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 mock=is_mock
                                 )
     second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
+
+
+    if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
+        text_classifier = second_API_calls.extract_and_classify_enclosed_words
+        def remove_transliteration(target_language):
+            classified_text = text_classifier(target_language)
+            text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)
+            return text_w_o_transliteration['text'] if text_w_o_transliteration else target_language
+
+        for turn in dialogue:
+            turn["target_language"] = remove_transliteration(turn["target_language"])
 
     prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
