@@ -36,6 +36,8 @@ def push_to_firestore(data, document, operation='update'):
             document.update(data)
         elif operation == 'overwrite':
             document.set(data)
+        elif operation == 'add':
+            document.set(data, merge=True)
     except google.api_core.exceptions.NotFound:
         # If the document does not exist, use set instead of update
         document.set(data)
