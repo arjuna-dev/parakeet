@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:string_similarity/string_similarity.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -247,9 +248,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChange(String newTrack) async {
-    if (newTrack.contains("target_language")) {
+    print(newTrack);
+    if (newTrack.contains("target_language") ||
+        newTrack.contains("narrator_translation") ||
+        newTrack.contains("native_language")) {
       // Update the previous phrase when a target_language phrase/word track starts
       previousTargetTrack = newTrack;
+      if (newTrack.contains("native_language")) {
+        previousTargetTrack =
+            newTrack.replaceFirst("native_language", "target_language");
+      }
       print('The previous target track is: $previousTargetTrack');
       previousTargetPhrase = await _fetchPreviousTargetPhrase(
           widget.documentID, previousTargetTrack);
@@ -305,38 +313,66 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _compareTranscriptionWithPhrase() {
+  void _compareTranscriptionWithPhrase() async {
     if (previousTargetPhrase != null && recordedText.isNotEmpty) {
-      if (recordedText
-          .toLowerCase()
-          .contains(previousTargetPhrase!.toString().toLowerCase())) {
+      // Normalize both strings: remove punctuation and convert to lowercase
+      String normalizedRecordedText = _normalizeString(recordedText);
+      String normalizedTargetPhrase = _normalizeString(previousTargetPhrase!);
+
+      // Calculate similarity
+      double similarity = StringSimilarity.compareTwoStrings(
+        normalizedRecordedText,
+        normalizedTargetPhrase,
+      );
+
+      print('Similarity: $similarity');
+
+      if (similarity >= 0.7) {
         print('Good job! You repeated the phrase correctly.');
-        //_provideFeedback("Good job! You repeated the phrase correctly.");
+        //await _provideFeedback(isPositive: true);
       } else {
         print('Try again. The phrase didn\'t match.');
-        //_provideFeedback("Try again. The phrase didn't match.");
+        //await _provideFeedback(isPositive: false);
       }
     }
   }
 
-  // void _provideFeedback(String feedback) {
-  //   // Show feedback to the user
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return AlertDialog(
-  //         content: Text(feedback),
-  //         actions: <Widget>[
-  //           TextButton(
-  //             child: const Text('OK'),
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //             },
-  //           ),
-  //         ],
-  //       );
-  //     },
+// Helper method to normalize strings
+  String _normalizeString(String input) {
+    // Remove punctuation using a regular expression and convert to lowercase
+    return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
+  }
+
+// Method to provide audio feedback
+  // Future<void> _provideFeedback({required bool isPositive}) async {
+  //   // Pause the main player if it's playing
+  //   if (player.playing) {
+  //     await player.pause();
+  //   }
+
+  //   // Create a separate AudioPlayer for feedback to avoid conflicts
+  //   AudioPlayer feedbackPlayer = AudioPlayer();
+
+  //   // Set the appropriate audio source
+  //   await feedbackPlayer.setAudioSource(
+  //     isPositive ? positiveFeedbackAudio : negativeFeedbackAudio,
   //   );
+
+  //   // Play the feedback
+  //   await feedbackPlayer.play();
+
+  //   // Wait for the feedback to finish
+  //   await feedbackPlayer.processingStateStream.firstWhere(
+  //     (state) => state == ProcessingState.completed,
+  //   );
+
+  //   // Release the feedback player resources
+  //   await feedbackPlayer.dispose();
+
+  //   // Resume the main player if it was playing before
+  //   if (!isStopped && isPlaying) {
+  //     await player.play();
+  //   }
   // }
 
   @override
