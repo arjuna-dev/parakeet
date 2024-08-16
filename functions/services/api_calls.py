@@ -131,6 +131,7 @@ class APICalls:
                         #     else:
                         #         found = True
                         voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                        self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value.split()[0].replace('||', '')}, self.document_target_phrases, operation="add")
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
                     else:
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
