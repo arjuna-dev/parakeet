@@ -50,6 +50,7 @@ dependencies:
   in_app_purchase: ^3.2.0
   speech_to_text: ^6.6.2
   path_provider: ^2.1.4
+  string_similarity: ^2.1.1
 
 dev_dependencies:
   flutter_test:
