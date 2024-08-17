@@ -590,6 +590,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     scriptDocumentId:
                                                         scriptDocumentID,
                                                     generating: true,
+                                                    targetLanguage:
+                                                        widget.targetLanguage,
                                                     wordsToRepeat: selectedWords
                                                         .entries
                                                         .expand((entry) =>
