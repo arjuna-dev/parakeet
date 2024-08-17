@@ -13,12 +13,14 @@ import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:string_similarity/string_similarity.dart';
+import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
   final List<dynamic> dialogue;
   final String userID;
   final String title;
+  final String targetLanguage;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
@@ -29,6 +31,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.dialogue,
     required this.userID,
     required this.title,
+    required this.targetLanguage,
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
@@ -44,6 +47,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
+  late AudioSource positiveFeedbackAudio;
+  late AudioSource negativeFeedbackAudio;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -79,6 +84,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         widget.documentID, widget.generating, updatePlaylist, updateTrack);
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
+    _initFeedbackAudioSources();
+  }
+
+  // Initialize feedback audio sources
+  Future<void> _initFeedbackAudioSources() async {
+    positiveFeedbackAudio = AudioSource.asset('assets/correct_answer.mp3');
+    negativeFeedbackAudio = AudioSource.asset('assets/incorrect_answer.mp3');
   }
 
   void _listenToPlayerStreams() {
@@ -264,6 +276,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('The previous target phrase is: $previousTargetPhrase');
     } else if (newTrack == "five_second_break") {
       // Start recording during the 5-second break
+      setState(() {
+        recordedText = '';
+      });
       _startRecording();
     }
   }
@@ -296,13 +311,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     bool available = await speech.initialize();
     if (available) {
       speech.listen(
-          onResult: (result) {
-            setState(() {
-              recordedText = result.recognizedWords;
-            });
-            print('You said: ${result.recognizedWords}');
-          },
-          localeId: 'de-DE');
+        onResult: (result) {
+          setState(() {
+            recordedText = result.recognizedWords;
+          });
+          print('You said: ${result.recognizedWords}');
+        },
+        localeId: languageCodes[widget.targetLanguage],
+      );
 
       // Stop recording after the 5-second silent track ends
       await Future.delayed(const Duration(seconds: 5));
@@ -314,7 +330,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _compareTranscriptionWithPhrase() async {
-    if (previousTargetPhrase != null && recordedText.isNotEmpty) {
+    if (previousTargetPhrase != null) {
       // Normalize both strings: remove punctuation and convert to lowercase
       String normalizedRecordedText = _normalizeString(recordedText);
       String normalizedTargetPhrase = _normalizeString(previousTargetPhrase!);
@@ -329,10 +345,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       if (similarity >= 0.7) {
         print('Good job! You repeated the phrase correctly.');
-        //await _provideFeedback(isPositive: true);
+        await _provideFeedback(isPositive: true);
       } else {
         print('Try again. The phrase didn\'t match.');
-        //await _provideFeedback(isPositive: false);
+        await _provideFeedback(isPositive: false);
       }
     }
   }
@@ -344,36 +360,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
 // Method to provide audio feedback
-  // Future<void> _provideFeedback({required bool isPositive}) async {
-  //   // Pause the main player if it's playing
-  //   if (player.playing) {
-  //     await player.pause();
-  //   }
+  Future<void> _provideFeedback({required bool isPositive}) async {
+    // Pause the main player if it's playing
+    if (player.playing) {
+      await player.pause();
+    }
 
-  //   // Create a separate AudioPlayer for feedback to avoid conflicts
-  //   AudioPlayer feedbackPlayer = AudioPlayer();
+    // Create a separate AudioPlayer for feedback to avoid conflicts
+    AudioPlayer feedbackPlayer = AudioPlayer();
 
-  //   // Set the appropriate audio source
-  //   await feedbackPlayer.setAudioSource(
-  //     isPositive ? positiveFeedbackAudio : negativeFeedbackAudio,
-  //   );
+    // Set the appropriate audio source
+    await feedbackPlayer.setAudioSource(
+      isPositive ? positiveFeedbackAudio : negativeFeedbackAudio,
+    );
 
-  //   // Play the feedback
-  //   await feedbackPlayer.play();
+    // Play the feedback
+    await feedbackPlayer.play();
 
-  //   // Wait for the feedback to finish
-  //   await feedbackPlayer.processingStateStream.firstWhere(
-  //     (state) => state == ProcessingState.completed,
-  //   );
+    // Wait for the feedback to finish
+    await feedbackPlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
 
-  //   // Release the feedback player resources
-  //   await feedbackPlayer.dispose();
+    // Release the feedback player resources
+    await feedbackPlayer.dispose();
 
-  //   // Resume the main player if it was playing before
-  //   if (!isStopped && isPlaying) {
-  //     await player.play();
-  //   }
-  // }
+    // Resume the main player if it was playing before
+    if (!isStopped && isPlaying) {
+      await player.play();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

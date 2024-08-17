@@ -140,6 +140,8 @@ class _HomeState extends State<Home> {
                                   documentID:
                                       audioFile.reference.parent.parent!.id,
                                   dialogue: audioFile.get('dialogue'),
+                                  targetLanguage:
+                                      audioFile.get('target_language'),
                                   wordsToRepeat:
                                       audioFile.get('words_to_repeat'),
                                   userID:
@@ -215,6 +217,7 @@ class _HomeState extends State<Home> {
                             builder: (context) => AudioPlayerScreen(
                               documentID: audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
+                              targetLanguage: audioFile.get('target_language'),
                               wordsToRepeat: audioFile.get('words_to_repeat'),
                               userID: FirebaseAuth.instance.currentUser!.uid,
                               title: audioFile.get('title'),
