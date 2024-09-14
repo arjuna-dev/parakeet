@@ -26,7 +26,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
-  var languageLevel = 'Absolute beignner (A1)';
+  var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
   final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
