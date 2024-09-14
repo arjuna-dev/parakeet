@@ -231,10 +231,10 @@ class _CreateLessonState extends State<CreateLesson> {
                         });
                       },
                       items: <String>[
-                        'Absolute beignner (A1)',
+                        'Absolute beginner (A1)',
                         'Beginner (A2-B1)',
-                        'Intermediate (B2)',
-                        'Advanced (C1-C2)'
+                        'Intermediate (B2-C1)',
+                        'Advanced (C2)'
                       ].map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
