@@ -30,7 +30,8 @@ class IAPService {
 
   void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) {
     print('handling!!!');
-    if (purchaseDetails.productID == '1m') {
+    if (purchaseDetails.productID == '1m' ||
+        purchaseDetails.productID == '1y') {
       FirebaseService().setAccountType(uid: uid, type: 'premium');
     }
   }
