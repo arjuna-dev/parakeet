@@ -8,4 +8,8 @@ export const productDataMap: { [productId: string]: ProductData} = {
     productId: "1m",
     type: "SUBSCRIPTION",
   },
+  "1y": {
+    productId: "1y",
+    type: "SUBSCRIPTION",
+  },
 };
