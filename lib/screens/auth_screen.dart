@@ -48,7 +48,7 @@ class AuthScreen extends StatelessWidget {
               onPressed: () async {
                 User? user = await AuthService().signInWithApple();
                 if (user != null) {
-                  // Navigate to the home screen
+                  Navigator.pushReplacementNamed(context, '/');
                 }
               },
               child: Text('Sign in with Apple'),
