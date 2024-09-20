@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>104439269977-h11b5o95n92afmciga4a9e5nh3nbtcf6.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.104439269977-h11b5o95n92afmciga4a9e5nh3nbtcf6</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>104439269977-87k7cgmrap986tlqrr22cn61d2hprj9v.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBu_oYpQrK_b2asbvJzVOtxf8S1fXEFEwk</string>
+	<key>GCM_SENDER_ID</key>
+	<string>104439269977</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.aparakeetapp.app</string>
+	<key>PROJECT_ID</key>
+	<string>noble-descent-420612</string>
+	<key>STORAGE_BUCKET</key>
+	<string>noble-descent-420612.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:104439269977:ios:cf12c8f9a3eea1d064bf48</string>
+</dict>
+</plist>
