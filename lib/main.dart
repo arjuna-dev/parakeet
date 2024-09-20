@@ -1,3 +1,4 @@
+import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -76,6 +77,13 @@ class MyApp extends StatelessWidget {
               builder: (context) => ChangeNotifierProvider(
                 create: (context) => HomeScreenModel(),
                 child: const Library(),
+              ),
+            );
+          case '/profile':
+            return MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const ProfileScreen(),
               ),
             );
           default:
