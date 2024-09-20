@@ -79,12 +79,14 @@ dart run flutter_launcher_icons:main
 
 ### How to bundle an Android bundle and apks file
 
-0. Run:
+Run:
 ```bash
 flutter build appbundle
 ```
 
-##### (If doing it for the first time continue here, otherwise skip to step 3.)
+#### How te test an apk from the bundle on a device
+
+##### Installation:
 
 1. Download the .jar file from https://github.com/google/bundletool/releases 
 2. Add this to .zshrc:
@@ -96,11 +98,13 @@ Alternatively you'll have to point to the .jar file every time with
 ```bash
 java -jar /path/to/bundletool-all-1.16.0.jar
 ```
-3. Generate a set of APKs under an .apks file with:
+##### Generate .apks
+Generate a set of APKs under an .apks file with:
 ```bash
 bundletool build-apks --bundle=build/app/outputs/bundle/release/app-release.aab --output=build/app/outputs/bundle/release/app-release.apks
 ```
-4. To test the recently created .apks file on a connected Android device:
+##### Install from .apks
+To test the recently created .apks file on a connected Android device:
 ```
 bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
