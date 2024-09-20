@@ -26,7 +26,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
-  var languageLevel = 'Absolute beignner (A1)';
+  var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
   final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
@@ -41,6 +41,46 @@ class _CreateLessonState extends State<CreateLesson> {
     _controller.text = example_scenarios[
         Random().nextInt(example_scenarios.length)]; // Set initial random topic
     topic = _controller.text;
+    _loadUserPreferences();
+  }
+
+  void _loadUserPreferences() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final DocumentReference docRef = firestore
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid);
+
+    try {
+      final DocumentSnapshot doc = await docRef.get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('native_language')) {
+          setState(() {
+            nativeLanguage = data['native_language'];
+          });
+        }
+        if (data.containsKey('target_language')) {
+          setState(() {
+            targetLanguage = data['target_language'];
+          });
+        }
+        if (data.containsKey('language_level')) {
+          setState(() {
+            languageLevel = data['language_level'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching user preferences: $e');
+    }
+  }
+
+  Future<void> _saveUserPreferences(String key, String value) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    await firestore
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .set({key: value}, SetOptions(merge: true));
   }
 
   void _reloadPage() {
@@ -189,6 +229,8 @@ class _CreateLessonState extends State<CreateLesson> {
                         setState(() {
                           nativeLanguage = value.toString();
                         });
+                        _saveUserPreferences(
+                            'native_language', value.toString());
                       },
                       items: <String>['English (US)']
                           .map<DropdownMenuItem<String>>((String value) {
@@ -209,6 +251,8 @@ class _CreateLessonState extends State<CreateLesson> {
                         setState(() {
                           targetLanguage = value.toString();
                         });
+                        _saveUserPreferences(
+                            'target_language', value.toString());
                       },
                       items: languageCodes.keys
                           .map<DropdownMenuItem<String>>((String key) {
@@ -229,12 +273,14 @@ class _CreateLessonState extends State<CreateLesson> {
                         setState(() {
                           languageLevel = value.toString();
                         });
+                        _saveUserPreferences(
+                            'language_level', value.toString());
                       },
                       items: <String>[
-                        'Absolute beignner (A1)',
+                        'Absolute beginner (A1)',
                         'Beginner (A2-B1)',
-                        'Intermediate (B2)',
-                        'Advanced (C1-C2)'
+                        'Intermediate (B2-C1)',
+                        'Advanced (C2)'
                       ].map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
