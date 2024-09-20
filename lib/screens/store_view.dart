@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 // ignore: depend_on_referenced_packages
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StoreView extends StatefulWidget {
   const StoreView({super.key});
@@ -14,6 +15,7 @@ class StoreView extends StatefulWidget {
 
 const List<String> _productIds = <String>[
   '1m',
+  '1y',
 ];
 
 class _StoreViewState extends State<StoreView> {
@@ -139,6 +141,8 @@ class _StoreViewState extends State<StoreView> {
               ),
             ),
             _buildRestoreButton(),
+            _buildTermsButton(),
+            _buildPrivacyButton(),
           ],
         ),
       ),
@@ -146,7 +150,7 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Widget _getIAPIcon(productId) {
-    if (productId == "1m") {
+    if (productId == "1m" || productId == "1y") {
       return const Icon(Icons.subscriptions_rounded, size: 25);
     } else {
       return const Icon(Icons.post_add_outlined, size: 50);
@@ -156,6 +160,8 @@ class _StoreViewState extends State<StoreView> {
   Widget _buyText(productDetails) {
     if (productDetails.id == "1m") {
       return Text("${productDetails.price} / month");
+    } else if (productDetails.id == "1y") {
+      return Text("Buy for ${productDetails.price} / year");
     } else {
       return Text("Buy for ${productDetails.price}");
     }
@@ -171,12 +177,57 @@ class _StoreViewState extends State<StoreView> {
       mainAxisSize: MainAxisSize.max,
       children: [
         TextButton(
-          child: Text('Restore Purchases'),
           style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).primaryColor),
           onPressed: () => _inAppPurchase.restorePurchases(),
+          child: const Text('Restore Purchases'),
         )
       ],
     );
+  }
+
+  Widget _buildTermsButton() {
+    if (_loading) {
+      return Container();
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        TextButton(
+          style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).primaryColor),
+          onPressed: () => _launchURL(
+              "https://gregarious-giant-4a5.notion.site/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"),
+          child: const Text('Terms and Conditions'),
+        )
+      ],
+    );
+  }
+
+  Widget _buildPrivacyButton() {
+    if (_loading) {
+      return Container();
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        TextButton(
+          style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).primaryColor),
+          onPressed: () => _launchURL("https://parakeet.world/privacypolicy/"),
+          child: const Text('Privacy Policy'),
+        )
+      ],
+    );
+  }
+
+  void _launchURL(url) async {
+    await canLaunchUrl(url)
+        ? await launchUrl(url)
+        : throw 'Could not launch $url';
   }
 }
