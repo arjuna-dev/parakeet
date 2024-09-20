@@ -40,14 +40,32 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
-        actions: [
-          FloatingActionButton(
-            child: const Text('Logout'),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/login', (route) => false);
+        actions: <Widget>[
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.account_circle),
+            onSelected: (String result) {
+              switch (result) {
+                case 'Profile':
+                  Navigator.pushNamed(context, '/profile');
+                  break;
+                case 'Logout':
+                  FirebaseAuth.instance.signOut().then((value) {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, '/login', (route) => false);
+                  });
+                  break;
+              }
             },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'Profile',
+                child: Text('Profile'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'Logout',
+                child: Text('Logout'),
+              ),
+            ],
           ),
         ],
       ),
