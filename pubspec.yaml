@@ -47,6 +47,7 @@ dependencies:
   shared_preferences: ^2.2.3
   firebase_app_check: ^0.2.2+7
   showcaseview: ^3.0.0
+  sign_in_with_apple: ^6.1.2
 
 dev_dependencies:
   flutter_test:
