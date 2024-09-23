@@ -16,6 +16,7 @@ class StoreView extends StatefulWidget {
 const List<String> _productIds = <String>[
   '1m',
   '1y',
+  '1year',
 ];
 
 class _StoreViewState extends State<StoreView> {
@@ -150,7 +151,7 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Widget _getIAPIcon(productId) {
-    if (productId == "1m" || productId == "1y") {
+    if (productId == "1m" || productId == "1y" || productId == "1year") {
       return const Icon(Icons.subscriptions_rounded, size: 25);
     } else {
       return const Icon(Icons.post_add_outlined, size: 50);
@@ -160,8 +161,8 @@ class _StoreViewState extends State<StoreView> {
   Widget _buyText(productDetails) {
     if (productDetails.id == "1m") {
       return Text("${productDetails.price} / month");
-    } else if (productDetails.id == "1y") {
-      return Text("Buy for ${productDetails.price} / year");
+    } else if (productDetails.id == "1y" || productDetails.id == "1year") {
+      return Text("${productDetails.price} / year");
     } else {
       return Text("Buy for ${productDetails.price}");
     }
@@ -198,8 +199,10 @@ class _StoreViewState extends State<StoreView> {
         TextButton(
           style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).primaryColor),
-          onPressed: () => _launchURL(
-              "https://gregarious-giant-4a5.notion.site/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"),
+          onPressed: () => _launchURL(Uri(
+              scheme: "https",
+              host: "gregarious-giant-4a5.notion.site",
+              path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
           child: const Text('Terms and Conditions'),
         )
       ],
@@ -218,14 +221,15 @@ class _StoreViewState extends State<StoreView> {
         TextButton(
           style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).primaryColor),
-          onPressed: () => _launchURL("https://parakeet.world/privacypolicy/"),
+          onPressed: () =>
+              _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
           child: const Text('Privacy Policy'),
         )
       ],
     );
   }
 
-  void _launchURL(url) async {
+  void _launchURL(Uri url) async {
     await canLaunchUrl(url)
         ? await launchUrl(url)
         : throw 'Could not launch $url';

@@ -4,19 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
 
   Future<User?> signInWithGoogle() async {
     try {
+      print('Attempting to sign in with Google...');
       final GoogleSignInAccount? googleSignInAccount =
           await _googleSignIn.signIn();
       if (googleSignInAccount != null) {
+        print('Google Sign-In account retrieved: ${googleSignInAccount.email}');
         final GoogleSignInAuthentication googleSignInAuthentication =
             await googleSignInAccount.authentication;
 
+        print(
+            'Google Sign-In authentication retrieved: accessToken=${googleSignInAuthentication.accessToken}, idToken=${googleSignInAuthentication.idToken}');
         final AuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleSignInAuthentication.accessToken,
           idToken: googleSignInAuthentication.idToken,
@@ -24,7 +28,10 @@ class AuthService {
 
         final UserCredential userCredential =
             await _auth.signInWithCredential(credential);
+        print('Firebase user signed in: ${userCredential.user?.email}');
         return userCredential.user;
+      } else {
+        print('Google Sign-In account is null');
       }
     } catch (e) {
       print('Error signing in with Google: $e');
