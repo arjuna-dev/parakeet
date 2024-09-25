@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
@@ -53,6 +54,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String currentTrack = '';
   String? previousTargetTrack;
   String? previousTargetPhrase;
+  String? voiceLanguageCode;
+  bool isLanguageSupported = false;
   bool isPlaying = false;
   bool isStopped = false;
   bool _isPaused = false;
@@ -85,6 +88,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     _initFeedbackAudioSources();
+    _checkIfLanguageSupported();
   }
 
   // Initialize feedback audio sources
@@ -274,7 +278,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       previousTargetPhrase = await _fetchPreviousTargetPhrase(
           widget.documentID, previousTargetTrack);
       print('The previous target phrase is: $previousTargetPhrase');
-    } else if (newTrack == "five_second_break") {
+    } else if (newTrack == "five_second_break" && isLanguageSupported) {
       // Start recording during the 5-second break
       setState(() {
         recordedText = '';
@@ -305,6 +309,57 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('Error fetching previous target phrase: $e');
       return null;
     }
+  }
+
+  void _checkIfLanguageSupported() async {
+    bool isAvailable = await speech.initialize();
+    if (isAvailable) {
+      List<stt.LocaleName> systemLocales;
+
+      if (kIsWeb) {
+        // Get system locales from the browser
+        voiceLanguageCode = languageCodes[widget.targetLanguage];
+        print('Voice language code: $voiceLanguageCode');
+        isLanguageSupported = true;
+      } else {
+        // Get system locales from the device
+        systemLocales = await speech.locales();
+        print('System locales: $systemLocales');
+
+        isLanguageSupported = systemLocales.any((locale) =>
+            locale.localeId == languageCodes[widget.targetLanguage]);
+
+        if (!isLanguageSupported) {
+          _showLanguageNotSupportedDialog();
+        } else {
+          voiceLanguageCode = languageCodes[widget.targetLanguage];
+          print('Voice language code: $voiceLanguageCode');
+        }
+      }
+    } else {
+      print("Speech recognition is not available on this device.");
+    }
+  }
+
+  void _showLanguageNotSupportedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Voice Feature Not Supported'),
+          content: Text(
+              'The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
+          actions: [
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _startRecording() async {
