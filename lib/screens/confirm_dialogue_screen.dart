@@ -257,6 +257,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 }
 
                                 return ListView.builder(
+                                  itemCount: turns.length,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
                                     if (index >= turns.length) {
                                       return Container();
@@ -435,9 +438,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       ),
                                     );
                                   },
-                                  itemCount: turns.length,
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
                                 );
                               }).toList(),
                             ),
