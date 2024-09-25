@@ -323,54 +323,83 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       if (isMatch) {
                         _lastMatchedIndex = index;
                       }
+                      bool isEven = index % 2 == 0;
                       return Column(
                         children: [
-                          ListTile(
-                            title: Text("Dialogue ${index + 1}:"),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(dialogueNative),
-                                RichText(
-                                  text: TextSpan(
-                                    children:
-                                        dialogueTarget.split(' ').map((word) {
-                                      final cleanWord = word
-                                          .replaceAll(
-                                              RegExp(r'[^\p{L}\s]',
-                                                  unicode: true),
-                                              '')
-                                          .toLowerCase();
-                                      final match = widget.wordsToRepeat
-                                          .contains(cleanWord);
-                                      return TextSpan(
-                                        text: '$word ',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: match
-                                              ? Colors.green
-                                              : (index == _lastMatchedIndex
-                                                  ? Colors.purple
-                                                  : Colors.black),
-                                          fontWeight: index == _lastMatchedIndex
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          decoration: match
-                                              ? TextDecoration.underline
-                                              : TextDecoration.none,
-                                          decorationColor: match
-                                              ? const Color.fromARGB(
-                                                  255, 21, 87, 25)
-                                              : null, // Darker green for underline
-
-                                          decorationThickness:
-                                              match ? 2.0 : null,
-                                        ),
-                                      );
-                                    }).toList(),
+                          Align(
+                            alignment: isEven
+                                ? Alignment.centerLeft
+                                : Alignment.centerRight,
+                            child: Container(
+                              width: MediaQuery.of(context).size.width *
+                                  0.8, // Occupies 80% of the parent container width
+                              margin: EdgeInsets.symmetric(
+                                  vertical:
+                                      8), // Adds vertical spacing between messages
+                              padding: EdgeInsets.all(
+                                  12), // Adds padding inside the box
+                              decoration: BoxDecoration(
+                                color: isEven
+                                    ? Colors.purple[50]
+                                    : Colors.deepPurple[
+                                        100], // Different background colors for even/odd
+                                borderRadius: BorderRadius.circular(
+                                    15), // Rounded corners for the message box
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.3),
+                                    spreadRadius: 1,
+                                    blurRadius: 5,
+                                    offset:
+                                        Offset(0, 2), // Adds a shadow effect
                                   ),
-                                )
-                              ],
+                                ],
+                              ),
+                              child: ListTile(
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(dialogueNative),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: dialogueTarget
+                                            .split(' ')
+                                            .map((word) {
+                                          final cleanWord = word
+                                              .replaceAll(
+                                                  RegExp(r'[^\p{L}\s]',
+                                                      unicode: true),
+                                                  '')
+                                              .toLowerCase();
+                                          final match = widget.wordsToRepeat
+                                              .contains(cleanWord);
+                                          return TextSpan(
+                                            text: '$word ',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: match
+                                                  ? Colors.purple
+                                                  : (index == _lastMatchedIndex
+                                                      ? Colors.purple
+                                                      : Colors.black),
+                                              fontWeight:
+                                                  index == _lastMatchedIndex ||
+                                                          match
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                              decoration: match
+                                                  ? TextDecoration.underline
+                                                  : TextDecoration.none,
+                                              decorationThickness:
+                                                  match ? 1.0 : null,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],
