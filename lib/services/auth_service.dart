@@ -8,6 +8,8 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  User? get currentUser => _auth.currentUser;
+
   // Sign in with Apple
   Future<User?> signInWithApple() async {
     try {
