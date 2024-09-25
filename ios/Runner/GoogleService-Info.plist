@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>104439269977-lrnl2ekal0ke9eijra2eulcccu80avep.apps.googleusercontent.com</string>
+	<string>104439269977-h11b5o95n92afmciga4a9e5nh3nbtcf6.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.104439269977-lrnl2ekal0ke9eijra2eulcccu80avep</string>
+	<string>com.googleusercontent.apps.104439269977-h11b5o95n92afmciga4a9e5nh3nbtcf6</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>104439269977-87k7cgmrap986tlqrr22cn61d2hprj9v.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.parakeetapp.app</string>
+	<string>com.aparakeetapp.app</string>
 	<key>PROJECT_ID</key>
 	<string>noble-descent-420612</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:104439269977:ios:6fd9a379d5b7842c64bf48</string>
+	<string>1:104439269977:ios:cf12c8f9a3eea1d064bf48</string>
 </dict>
 </plist>
