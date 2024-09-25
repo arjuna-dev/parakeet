@@ -307,6 +307,8 @@ class _LibraryState extends State<Library> {
                                               .id,
                                           dialogue:
                                               documents[index].get('dialogue'),
+                                          targetLanguage: documents[index]
+                                              .get('target_language'),
                                           userID: FirebaseAuth
                                               .instance.currentUser!.uid,
                                           title: documents[index].get('title'),
