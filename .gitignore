@@ -141,3 +141,5 @@ overrides.json
 
 # Optionally, ignore pubspec.lock for library packages, but keep it for applications
 # pubspec.lock
+
+payment_verification_backend/lib/assets/service-account.json
