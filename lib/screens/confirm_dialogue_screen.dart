@@ -147,7 +147,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
             }
 
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
+              return const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple));
             }
 
             if (snapshot.hasData &&
