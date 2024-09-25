@@ -43,7 +43,16 @@ class AuthScreen extends StatelessWidget {
                 }
               },
               child: const Text('Sign In with Google'),
-            )
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                User? user = await AuthService().signInWithApple();
+                if (user != null) {
+                  Navigator.pushReplacementNamed(context, '/');
+                }
+              },
+              child: Text('Sign in with Apple'),
+            ),
           ],
         ),
       ),
