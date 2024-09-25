@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:parakeet/services/iap_service.dart';
+import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
+import 'package:parakeet/services/iap_service.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,7 +15,6 @@ import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/library_screen.dart';
-import 'screens/profile_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
