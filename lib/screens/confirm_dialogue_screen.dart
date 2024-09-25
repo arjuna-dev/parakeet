@@ -589,7 +589,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       String scriptDocumentID = docRef.id;
 
                                       http.post(
-                                        Uri.parse('http://127.0.0.1:8080'),
+                                        Uri.parse(
+                                            'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
                                         headers: <String, String>{
                                           'Content-Type':
                                               'application/json; charset=UTF-8',
