@@ -13,6 +13,7 @@ class DialogueList extends StatefulWidget {
   }) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _DialogueListState createState() => _DialogueListState();
 }
 
@@ -44,64 +45,87 @@ class _DialogueListState extends State<DialogueList> {
 
           // Check if this dialogue should be highlighted based on the last known dialogue index
           bool shouldHighlight = index == _lastHighlightedIndex;
+          bool isEven = index.isEven;
 
           return Column(
             children: [
-              ListTile(
-                title: Text(
-                  "Dialogue ${index + 1}:",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+              Align(
+                alignment:
+                    isEven ? Alignment.centerLeft : Alignment.centerRight,
+                child: Container(
+                  width: MediaQuery.of(context).size.width *
+                      0.8, // Occupies 80% of the parent container width
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8), // Adds vertical spacing between messages
+                  padding:
+                      const EdgeInsets.all(12), // Adds padding inside the box
+                  decoration: BoxDecoration(
+                    color: isEven
+                        ? Colors.purple[50]
+                        : Colors.deepPurple[
+                            100], // Different background colors for even/odd
+                    borderRadius: BorderRadius.circular(
+                        15), // Rounded corners for the message box
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2), // Adds a shadow effect
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dialogueNative,
+                          style: TextStyle(
+                            fontWeight: shouldHighlight
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: shouldHighlight ? Colors.blue : Colors.black,
+                          ),
+                        ),
+                        RichText(
+                          text: TextSpan(
+                            children: dialogueTarget.split(' ').map((word) {
+                              final cleanWord = word
+                                  .replaceAll(
+                                      RegExp(r'[^\p{L}\s]', unicode: true), '')
+                                  .toLowerCase();
+                              final match =
+                                  widget.wordsToRepeat.contains(cleanWord);
+                              return TextSpan(
+                                text: '$word ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: match
+                                      ? Colors.green
+                                      : (shouldHighlight
+                                          ? Colors.purple
+                                          : Colors.black),
+                                  fontWeight: shouldHighlight
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  decoration: match
+                                      ? TextDecoration.underline
+                                      : TextDecoration.none,
+                                  decorationColor: match
+                                      ? const Color.fromARGB(255, 21, 87, 25)
+                                      : null,
+                                  decorationThickness: match ? 2.0 : null,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dialogueNative,
-                      style: TextStyle(
-                        fontWeight: shouldHighlight
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: shouldHighlight ? Colors.blue : Colors.black,
-                      ),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        children: dialogueTarget.split(' ').map((word) {
-                          final cleanWord = word
-                              .replaceAll(
-                                  RegExp(r'[^\p{L}\s]', unicode: true), '')
-                              .toLowerCase();
-                          final match =
-                              widget.wordsToRepeat.contains(cleanWord);
-                          return TextSpan(
-                            text: '$word ',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: match
-                                  ? Colors.green
-                                  : (shouldHighlight
-                                      ? Colors.purple
-                                      : Colors.black),
-                              fontWeight: shouldHighlight
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              decoration: match
-                                  ? TextDecoration.underline
-                                  : TextDecoration.none,
-                              decorationColor: match
-                                  ? const Color.fromARGB(255, 21, 87, 25)
-                                  : null,
-                              decorationThickness: match ? 2.0 : null,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              )
             ],
           );
         },
