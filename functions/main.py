@@ -46,7 +46,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     document_id = request_data.get("document_id")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
     try:
         language_level = request_data.get("language_level")
     except:
@@ -174,7 +174,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     words_to_repeat = request_data.get("words_to_repeat")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
 
     print("request_data:", request_data)
 

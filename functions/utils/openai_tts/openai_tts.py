@@ -3,10 +3,18 @@ from pathlib import Path
 import openai
 from mutagen.mp3 import MP3
 from google.cloud import storage
-from .google_tts_voices import google_tts_voices
-from utilities import push_to_firestore
+from utilities import push_to_firestore, is_running_locally
 
-openai.api_key = 'YOUR_OPENAI_API_KEY'
+if is_running_locally:
+    from dotenv import load_dotenv
+    load_dotenv()
+    OPEN_AI_API_KEY = os.getenv('OPEN_AI_API_KEY')
+else:
+    OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
+
+assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
+
+openai.api_key = OPEN_AI_API_KEY
 
 # OpenAI voices mapping for Azerbaijani (hypothetical, replace with actual if different)
 openai_voices = {
