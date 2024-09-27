@@ -11,7 +11,7 @@ import time
 from threading import Timer, Lock
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, document_target_phrases, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
         self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
@@ -26,6 +26,7 @@ class APICalls:
         self.document_id = document_id
         self.target_language = target_language
         self.document = document
+        self.document_target_phrases = document_target_phrases
         self.document_durations = document_durations
         self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
@@ -76,16 +77,18 @@ class APICalls:
         if '"native_language":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
         elif '"target_language":' in current_line:
+            classified_text = self.extract_and_classify_enclosed_words(last_value)
+            text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)["text"]
             if self.turn_nr % 2 == 0:
                 if self.voice_1:
-                    self.futures.append(self.executor.submit(self.tts_function, last_value, self.voice_1, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_1, filename, self.document_durations))
                 else:
-                    self.pending_voice_1 = {"text": last_value, "filename": filename}
+                    self.pending_voice_1 = {"text": text_w_o_transliteration, "filename": filename}
             else:
                 if self.voice_2:
-                    self.futures.append(self.executor.submit(self.tts_function, last_value, self.voice_2, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_2, filename, self.document_durations))
                 else:
-                    self.pending_voice_2 = {"text": last_value, "filename": filename}
+                    self.pending_voice_2 = {"text": text_w_o_transliteration, "filename": filename}
         if '"title":' in current_line:
             self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations))
             self.push_to_firestore(full_json, self.document, operation="overwrite")
@@ -131,7 +134,6 @@ class APICalls:
         if '"narrator_translation":' in current_line:
             if (not self.skip):
                 enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
-                #found = False
                 for index, text_part in enumerate(enclosed_words_objects):
                     filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                     if text_part['enclosed']:
@@ -142,6 +144,7 @@ class APICalls:
                         #     else:
                         #         found = True
                         voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                        self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value.split()[0].replace('||', '')}, self.document_target_phrases, operation="add")
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
                     else:
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
@@ -165,6 +168,7 @@ class APICalls:
                 self.skip = True
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+            self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value}, self.document_target_phrases, operation="add")
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
             self.skip = False
         elif '"speaker":' in current_line:

@@ -147,7 +147,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
             }
 
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
+              return const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple));
             }
 
             if (snapshot.hasData &&
@@ -257,6 +258,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                 }
 
                                 return ListView.builder(
+                                  itemCount: turns.length,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
                                     if (index >= turns.length) {
                                       return Container();
@@ -276,168 +280,229 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                 selectAllNotifier.value);
                                       }
                                     });
+                                    bool isEven = index % 2 == 0;
 
-                                    return ListTile(
-                                      title:
-                                          Text('Dialogue ${turn['turn_nr']}:'),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(turn['native_language'] ??
-                                              "No native language"),
-                                          Wrap(
-                                            children: words
-                                                .asMap()
-                                                .entries
-                                                .map<Widget>((entry) {
-                                              int wordIndex = entry.key;
-                                              String word = entry.value;
-                                              ValueNotifier<bool>
-                                                  isSelectedNotifier =
-                                                  selectedWords[index]![word]!;
+                                    return Align(
+                                      alignment: isEven
+                                          ? Alignment.centerLeft
+                                          : Alignment.centerRight,
+                                      child: Container(
+                                        width: MediaQuery.of(context)
+                                                .size
+                                                .width *
+                                            0.8, // Occupies 80% of the parent container width
+                                        margin: EdgeInsets.symmetric(
+                                            vertical:
+                                                8), // Adds vertical spacing between messages
+                                        padding: EdgeInsets.all(
+                                            12), // Adds padding inside the box
+                                        decoration: BoxDecoration(
+                                          color: isEven
+                                              ? Colors.purple[50]
+                                              : Colors.deepPurple[
+                                                  100], // Different background colors for even/odd
+                                          borderRadius: BorderRadius.circular(
+                                              15), // Rounded corners for the message box
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.grey.withOpacity(0.3),
+                                              spreadRadius: 1,
+                                              blurRadius: 5,
+                                              offset: Offset(
+                                                  0, 2), // Adds a shadow effect
+                                            ),
+                                          ],
+                                        ),
+                                        child: ListTile(
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(turn['native_language'] ??
+                                                  "No native language"),
+                                              Wrap(
+                                                children: words
+                                                    .asMap()
+                                                    .entries
+                                                    .map<Widget>((entry) {
+                                                  int wordIndex = entry.key;
+                                                  String word = entry.value;
+                                                  ValueNotifier<bool>
+                                                      isSelectedNotifier =
+                                                      selectedWords[index]![
+                                                          word]!;
 
-                                              return ValueListenableBuilder(
-                                                valueListenable:
-                                                    isSelectedNotifier,
-                                                builder: (BuildContext context,
-                                                    bool isSelected,
-                                                    Widget? child) {
-                                                  bool isSpecialWord =
-                                                      index == 0 &&
-                                                          wordIndex == 0;
-                                                  return GestureDetector(
-                                                    onTap: () {
-                                                      isSelectedNotifier.value =
-                                                          !isSelectedNotifier
-                                                              .value;
-                                                      updateHasSelectedWords();
-                                                    },
-                                                    child: Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 2.0,
-                                                          vertical: 0.0),
-                                                      margin: EdgeInsets.zero,
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected
-                                                            ? Colors.lightGreen
-                                                            : Colors
-                                                                .transparent,
-                                                      ),
-                                                      child: isSpecialWord
-                                                          ? Showcase.withWidget(
-                                                              key: _one,
-                                                              container:
-                                                                  Container(
-                                                                width: 280,
-                                                                child:
-                                                                    CustomPaint(
-                                                                  painter: TooltipContainerPainter(
-                                                                      backgroundColor:
-                                                                          Colors
-                                                                              .deepPurple),
-                                                                  child:
-                                                                      const Padding(
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .only(
-                                                                      top: 20,
-                                                                      bottom:
-                                                                          10,
-                                                                      left: 10,
-                                                                      right: 10,
-                                                                    ),
-                                                                    child: Text(
-                                                                      'Click on the words you want to focus on learning',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: Colors
-                                                                            .white,
-                                                                        fontSize:
-                                                                            16,
+                                                  return ValueListenableBuilder(
+                                                    valueListenable:
+                                                        isSelectedNotifier,
+                                                    builder:
+                                                        (BuildContext context,
+                                                            bool isSelected,
+                                                            Widget? child) {
+                                                      bool isSpecialWord =
+                                                          index == 0 &&
+                                                              wordIndex == 0;
+                                                      return GestureDetector(
+                                                        onTap: () {
+                                                          isSelectedNotifier
+                                                                  .value =
+                                                              !isSelectedNotifier
+                                                                  .value;
+                                                          updateHasSelectedWords();
+                                                        },
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      2.0,
+                                                                  vertical:
+                                                                      0.0),
+                                                          margin:
+                                                              EdgeInsets.zero,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: isSelected
+                                                                ? Color
+                                                                    .fromARGB(
+                                                                        255,
+                                                                        97,
+                                                                        54,
+                                                                        255)
+                                                                : Colors
+                                                                    .transparent,
+                                                          ),
+                                                          child: isSpecialWord
+                                                              ? Showcase
+                                                                  .withWidget(
+                                                                  key: _one,
+                                                                  container:
+                                                                      Container(
+                                                                    width: 280,
+                                                                    child:
+                                                                        CustomPaint(
+                                                                      painter: TooltipContainerPainter(
+                                                                          backgroundColor:
+                                                                              Colors.deepPurple),
+                                                                      child:
+                                                                          const Padding(
+                                                                        padding:
+                                                                            EdgeInsets.only(
+                                                                          top:
+                                                                              20,
+                                                                          bottom:
+                                                                              10,
+                                                                          left:
+                                                                              10,
+                                                                          right:
+                                                                              10,
+                                                                        ),
+                                                                        child:
+                                                                            Text(
+                                                                          'Click on the words you want to focus on learning',
+                                                                          style:
+                                                                              TextStyle(
+                                                                            color:
+                                                                                Colors.white,
+                                                                            fontSize:
+                                                                                16,
+                                                                          ),
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   ),
-                                                                ),
-                                                              ),
-                                                              width: 280,
-                                                              height: 100,
-                                                              onTargetClick:
-                                                                  (() {
-                                                                isSelectedNotifier
-                                                                        .value =
-                                                                    !isSelectedNotifier
-                                                                        .value;
-                                                                updateHasSelectedWords();
-                                                              }),
-                                                              onBarrierClick: () =>
-                                                                  debugPrint(
-                                                                      'Barrier clicked'),
-                                                              targetPadding:
-                                                                  const EdgeInsets
-                                                                      .all(8),
-                                                              targetShapeBorder:
-                                                                  const CircleBorder(),
-                                                              child: Text(
-                                                                word,
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 16,
-                                                                  decoration: isSelected
-                                                                      ? TextDecoration
-                                                                          .underline
-                                                                      : TextDecoration
-                                                                          .none,
-                                                                  decorationColor:
-                                                                      isSelected
-                                                                          ? Colors
-                                                                              .green[800]
+                                                                  width: 280,
+                                                                  height: 100,
+                                                                  onTargetClick:
+                                                                      (() {
+                                                                    isSelectedNotifier
+                                                                            .value =
+                                                                        !isSelectedNotifier
+                                                                            .value;
+                                                                    updateHasSelectedWords();
+                                                                  }),
+                                                                  onBarrierClick: () =>
+                                                                      debugPrint(
+                                                                          'Barrier clicked'),
+                                                                  targetPadding:
+                                                                      const EdgeInsets
+                                                                          .all(
+                                                                          8),
+                                                                  targetShapeBorder:
+                                                                      const CircleBorder(),
+                                                                  child: Text(
+                                                                    word,
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          16,
+                                                                      decoration: isSelected
+                                                                          ? TextDecoration
+                                                                              .underline
+                                                                          : TextDecoration
+                                                                              .none,
+                                                                      decorationColor: isSelected
+                                                                          ? const Color
+                                                                              .fromARGB(
+                                                                              255,
+                                                                              255,
+                                                                              255,
+                                                                              255)
                                                                           : null,
-                                                                  color: Colors
-                                                                      .black,
-                                                                  decorationThickness:
-                                                                      isSelected
+                                                                      color: isSelected
+                                                                          ? Colors
+                                                                              .white
+                                                                          : Colors
+                                                                              .black,
+                                                                      decorationThickness: isSelected
                                                                           ? 2.0
                                                                           : null,
-                                                                ),
-                                                              ),
-                                                            )
-                                                          : Text(
-                                                              word,
-                                                              style: TextStyle(
-                                                                fontSize: 16,
-                                                                decoration: isSelected
-                                                                    ? TextDecoration
-                                                                        .underline
-                                                                    : TextDecoration
-                                                                        .none,
-                                                                decorationColor:
-                                                                    isSelected
+                                                                    ),
+                                                                  ),
+                                                                )
+                                                              : Text(
+                                                                  word,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    decoration: isSelected
+                                                                        ? TextDecoration
+                                                                            .underline
+                                                                        : TextDecoration
+                                                                            .none,
+                                                                    decorationColor: isSelected
+                                                                        ? const Color
+                                                                            .fromARGB(
+                                                                            255,
+                                                                            255,
+                                                                            255,
+                                                                            255)
+                                                                        : null,
+                                                                    color: isSelected
                                                                         ? Colors
-                                                                            .green[800]
-                                                                        : null,
-                                                                color: Colors
-                                                                    .black,
-                                                                decorationThickness:
-                                                                    isSelected
-                                                                        ? 2.0
-                                                                        : null,
-                                                              ),
-                                                            ),
-                                                    ),
+                                                                            .white
+                                                                        : Colors
+                                                                            .black,
+                                                                    decorationThickness:
+                                                                        isSelected
+                                                                            ? 2.0
+                                                                            : null,
+                                                                  ),
+                                                                ),
+                                                        ),
+                                                      );
+                                                    },
                                                   );
-                                                },
-                                              );
-                                            }).toList(),
+                                                }).toList(),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     );
                                   },
-                                  itemCount: turns.length,
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
                                 );
                               }).toList(),
                             ),
@@ -591,6 +656,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     scriptDocumentId:
                                                         scriptDocumentID,
                                                     generating: true,
+                                                    targetLanguage:
+                                                        widget.targetLanguage,
                                                     wordsToRepeat: selectedWords
                                                         .entries
                                                         .expand((entry) =>

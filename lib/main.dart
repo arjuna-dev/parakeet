@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:parakeet/screens/profile_screen.dart';
+import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:flutter/material.dart';
+import 'package:parakeet/services/iap_service.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -16,15 +22,41 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => HomeScreenModel(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => HomeScreenModel()),
+        Provider<AuthService>.value(value: AuthService()),
+      ],
       child: const MyApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
+
+    _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
+      print("Purchase stream started");
+      IAPService(context.read<AuthService>().currentUser!.uid)
+          .listenToPurchaseUpdated(purchaseDetailsList);
+    }, onDone: () {
+      _iapSubscription.cancel();
+    }, onError: (error) {
+      _iapSubscription.cancel();
+    }) as StreamSubscription<List<PurchaseDetails>>;
+  }
 
   // This widget is the root of your application.
   @override
@@ -76,6 +108,13 @@ class MyApp extends StatelessWidget {
               builder: (context) => ChangeNotifierProvider(
                 create: (context) => HomeScreenModel(),
                 child: const Library(),
+              ),
+            );
+          case '/profile':
+            return MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const ProfileScreen(),
               ),
             );
           default:
