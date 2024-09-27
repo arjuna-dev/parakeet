@@ -1,6 +1,7 @@
 from partialjson.json_parser import JSONParser
 from utils.google_tts.gcloud_text_to_speech_api import voice_finder_google, google_synthesize_text
 from utils.elevenlabs.elevenlabs_api import elevenlabs_tts
+from utils.openai_tts.openai_tts import voice_finder_openai, openai_synthesize_text
 from utils.utilities import push_to_firestore, remove_user_from_active_creation_by_id
 from utils.utilities import TTS_PROVIDERS
 import concurrent.futures
@@ -48,6 +49,8 @@ class APICalls:
             self.tts_function = google_synthesize_text
         elif self.tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
             self.tts_function = elevenlabs_tts
+        elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+            self.tts_function = openai_synthesize_text
         else:
             raise Exception("Invalid TTS provider")
         
@@ -89,13 +92,22 @@ class APICalls:
         elif '"gender":' in current_line:
             if self.generating_turns:
                 if self.turn_nr == 0:
-                    self.voice_1, self.voice_1_id = voice_finder_google(last_value, self.target_language)
+                    if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
+                        self.voice_1, self.voice_1_id = voice_finder_google(last_value, self.target_language)
+                    elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+                        self.voice_1_id = voice_finder_openai(last_value, self.target_language)
+                        self.voice_1 = self.voice_1_id
+                    
                     print('self.voice_1: ', self.voice_1)
                     if self.pending_voice_1:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_1['text'], self.voice_1, self.pending_voice_1['filename'], self.document_durations))
                         self.pending_voice_1 = None
                 if self.turn_nr == 1:
-                    self.voice_2, self.voice_2_id = voice_finder_google(last_value, self.target_language, self.voice_1_id)
+                    if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
+                        self.voice_2, self.voice_2_id = voice_finder_google(last_value, self.target_language, self.voice_1_id)
+                    elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+                        self.voice_2_id = voice_finder_openai(last_value, self.target_language, self.voice_1_id)
+                        self.voice_2 = self.voice_2_id
                     print('self.voice_2: ', self.voice_2)
                     if self.pending_voice_2:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations))

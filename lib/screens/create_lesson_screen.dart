@@ -23,6 +23,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
+  var TTS_provider = 1;
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
@@ -209,6 +210,11 @@ class _CreateLessonState extends State<CreateLesson> {
                         setState(() {
                           targetLanguage = value.toString();
                         });
+                        if (targetLanguage == 'Azerbaijani') {
+                          setState(() {
+                            TTS_provider = 3;
+                          });
+                        }
                       },
                       items: languageCodes.keys
                           .map<DropdownMenuItem<String>>((String key) {
@@ -319,7 +325,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                       .toString(),
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
-                                  "tts_provider": "1"
+                                  "tts_provider": TTS_provider.toString(),
                                 }),
                               );
                               int counter = 0;
