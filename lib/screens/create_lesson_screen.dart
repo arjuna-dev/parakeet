@@ -23,7 +23,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
-  var TTS_provider = 1;
+  var ttsProvider = 1;
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
@@ -254,7 +254,11 @@ class _CreateLessonState extends State<CreateLesson> {
                         });
                         if (targetLanguage == 'Azerbaijani') {
                           setState(() {
-                            TTS_provider = 3;
+                            ttsProvider = 3;
+                          });
+                        } else {
+                          setState(() {
+                            ttsProvider = 1;
                           });
                         }
                       },
@@ -349,6 +353,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               final DocumentReference docRef = firestore
                                   .collection('chatGPT_responses')
                                   .doc();
+                              print('TTS provider: $ttsProvider');
                               http.post(
                                 Uri.parse(
                                     'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
@@ -369,9 +374,10 @@ class _CreateLessonState extends State<CreateLesson> {
                                       .toString(),
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
-                                  "tts_provider": TTS_provider.toString(),
+                                  "tts_provider": ttsProvider.toString(),
                                 }),
                               );
+                              print(ttsProvider.toString());
                               int counter = 0;
                               bool docExists = false;
                               while (!docExists && counter < 15) {

@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-import openai
+from openai import OpenAI
 from mutagen.mp3 import MP3
 from google.cloud import storage
 from utilities import push_to_firestore, is_running_locally
+
 
 if is_running_locally:
     from dotenv import load_dotenv
@@ -14,7 +15,7 @@ else:
 
 assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
 
-openai.api_key = OPEN_AI_API_KEY
+client = OpenAI(api_key = OPEN_AI_API_KEY)
 
 # OpenAI voices mapping for Azerbaijani (hypothetical, replace with actual if different)
 openai_voices = {
@@ -42,7 +43,8 @@ def voice_finder_openai(gender, target_language, exclude_voice_id=None):
 
 def openai_synthesize_text(text, voice_id, output_path, doc_ref=None, local_run=False, bucket_name="conversations_audio_files"):
     speech_file_path = Path(output_path)
-    response = openai.Audio.create(
+    print(f"Synthesizing text: {text} with voice: {voice_id} to file: {speech_file_path}")
+    response = client.audio.speech.create(
         model="tts-1",
         voice=voice_id,
         input=text

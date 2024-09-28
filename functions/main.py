@@ -9,6 +9,7 @@ from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice
+from utils.openai_tts.openai_tts import language_to_language_code_openai
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
 from google.cloud import storage
@@ -191,19 +192,24 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
 
-    language_code = language_to_language_code(target_language)
+    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+        language_code = language_to_language_code(target_language)
 
-    voice_1 = create_google_voice(language_code, voice_1_id)
-    voice_2 = create_google_voice(language_code, voice_2_id)
+        voice_1 = create_google_voice(language_code, voice_1_id)
+        voice_2 = create_google_voice(language_code, voice_2_id)
+    elif tts_provider == TTS_PROVIDERS.OPENAI.value:
+        language_code = language_to_language_code_openai(target_language)
+        voice_1 = voice_1_id
+        voice_2 = voice_2_id
 
     second_API_calls = APICalls(native_language,
                                 tts_provider,
                                 document_id,
                                 document,
-                                document_target_phrases,
                                 target_language,
                                 document_durations,
                                 words_to_repeat,
+                                document_target_phrases,
                                 voice_1,
                                 voice_2,
                                 mock=is_mock
