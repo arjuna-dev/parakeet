@@ -11,10 +11,13 @@ import time
 from threading import Timer, Lock
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, document_target_phrases, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, document_target_phrases=None,  voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
-        self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
+        if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+            self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
+        else:
+            self.narrator_voice = "nova"
         self.voice_1 = voice_1
         self.voice_2 = voice_2
         self.voice_1_id = None

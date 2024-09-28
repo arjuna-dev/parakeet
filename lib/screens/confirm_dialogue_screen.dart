@@ -616,7 +616,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                               smallJsonDocument["voice_1_id"],
                                           "voice_2_id":
                                               smallJsonDocument["voice_2_id"],
-                                          "tts_provider": "1",
+                                          "tts_provider":
+                                              widget.targetLanguage ==
+                                                      "Azerbaijani"
+                                                  ? "3"
+                                                  : "1",
                                           "words_to_repeat": selectedWords
                                               .entries
                                               .expand((entry) =>
