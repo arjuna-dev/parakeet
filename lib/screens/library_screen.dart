@@ -316,6 +316,12 @@ class _LibraryState extends State<Library> {
                                           wordsToRepeat: documents[index]
                                               .get('words_to_repeat'),
                                           scriptDocumentId: documents[index].id,
+                                          voiceMode: (documents[index].data()!
+                                                      as Map<String, dynamic>)
+                                                  .containsKey('voice_mode')
+                                              ? documents[index]
+                                                  .get('voice_mode')
+                                              : false,
                                         ),
                                       ),
                                     );
