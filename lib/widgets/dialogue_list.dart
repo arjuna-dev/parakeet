@@ -50,22 +50,14 @@ class _DialogueListState extends State<DialogueList> {
           return Column(
             children: [
               Align(
-                alignment:
-                    isEven ? Alignment.centerLeft : Alignment.centerRight,
+                alignment: isEven ? Alignment.centerLeft : Alignment.centerRight,
                 child: Container(
-                  width: MediaQuery.of(context).size.width *
-                      0.8, // Occupies 80% of the parent container width
-                  margin: const EdgeInsets.symmetric(
-                      vertical: 8), // Adds vertical spacing between messages
-                  padding:
-                      const EdgeInsets.all(12), // Adds padding inside the box
+                  width: MediaQuery.of(context).size.width * 0.8, // Occupies 80% of the parent container width
+                  margin: const EdgeInsets.symmetric(vertical: 8), // Adds vertical spacing between messages
+                  padding: const EdgeInsets.all(12), // Adds padding inside the box
                   decoration: BoxDecoration(
-                    color: isEven
-                        ? Colors.purple[50]
-                        : Colors.deepPurple[
-                            100], // Different background colors for even/odd
-                    borderRadius: BorderRadius.circular(
-                        15), // Rounded corners for the message box
+                    color: isEven ? Colors.purple[50] : Colors.deepPurple[100], // Different background colors for even/odd
+                    borderRadius: BorderRadius.circular(15), // Rounded corners for the message box
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(0.3),
@@ -79,43 +71,20 @@ class _DialogueListState extends State<DialogueList> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          dialogueNative,
-                          style: TextStyle(
-                            fontWeight: shouldHighlight
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: shouldHighlight ? Colors.blue : Colors.black,
-                          ),
-                        ),
+                        Text(dialogueNative),
                         RichText(
                           text: TextSpan(
                             children: dialogueTarget.split(' ').map((word) {
-                              final cleanWord = word
-                                  .replaceAll(
-                                      RegExp(r'[^\p{L}\s]', unicode: true), '')
-                                  .toLowerCase();
-                              final match =
-                                  widget.wordsToRepeat.contains(cleanWord);
+                              final cleanWord = word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase();
+                              final match = widget.wordsToRepeat.contains(cleanWord);
                               return TextSpan(
                                 text: '$word ',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: match
-                                      ? Colors.green
-                                      : (shouldHighlight
-                                          ? Colors.purple
-                                          : Colors.black),
-                                  fontWeight: shouldHighlight
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  decoration: match
-                                      ? TextDecoration.underline
-                                      : TextDecoration.none,
-                                  decorationColor: match
-                                      ? const Color.fromARGB(255, 21, 87, 25)
-                                      : null,
-                                  decorationThickness: match ? 2.0 : null,
+                                  color: match ? Colors.purple : (shouldHighlight ? Colors.purple : Colors.black),
+                                  fontWeight: shouldHighlight || match ? FontWeight.bold : FontWeight.normal,
+                                  decoration: match ? TextDecoration.underline : TextDecoration.none,
+                                  decorationThickness: match ? 1.0 : null,
                                 ),
                               );
                             }).toList(),
