@@ -3,7 +3,7 @@ import {androidpublisher_v3 as AndroidPublisherApi} from "googleapis";
 import {GoogleAuth} from "google-auth-library";
 import {FirebaseCalls, NonSubscriptionPurchase, NonSubscriptionStatus, SubscriptionPurchase, SubscriptionStatus, Purchase} from "./firebase.calls";
 import {firestore} from "firebase-admin";
-import credentials from "../assets/service-account.json";
+import credentials from "../lib/assets/service-account.json";
 import {ANDROID_PACKAGE_ID, GOOGLE_PLAY_PUBSUB_TOPIC, CLOUD_REGION} from "./constants";
 import {ProductData, productDataMap} from "./products";
 import * as Functions from "firebase-functions";
