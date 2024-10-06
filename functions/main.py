@@ -136,6 +136,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["document_id"] = document_id
     final_response["voice_1_id"] = first_API_calls.voice_1_id
     final_response["voice_2_id"] = first_API_calls.voice_2_id
+    final_response["voice_mode"] = True
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 

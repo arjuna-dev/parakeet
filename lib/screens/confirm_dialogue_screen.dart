@@ -585,6 +585,8 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                             .instance.currentUser!.uid,
                                         "timestamp":
                                             FieldValue.serverTimestamp(),
+                                        "voice_mode":
+                                            smallJsonDocument["voice_mode"],
                                       });
                                       String scriptDocumentID = docRef.id;
 
@@ -651,6 +653,9 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                         "dialogue"],
                                                     title: smallJsonDocument[
                                                         "title"],
+                                                    voiceMode:
+                                                        smallJsonDocument[
+                                                            "voice_mode"],
                                                     documentID:
                                                         widget.documentID,
                                                     userID: FirebaseAuth
