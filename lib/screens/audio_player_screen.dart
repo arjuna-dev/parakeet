@@ -25,6 +25,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
+  final bool voiceMode;
 
   const AudioPlayerScreen({
     Key? key,
@@ -36,6 +37,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
+    required this.voiceMode,
   }) : super(key: key);
 
   @override
@@ -75,6 +77,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    print(widget.voiceMode);
     player = AudioPlayer();
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -87,8 +90,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         widget.documentID, widget.generating, updatePlaylist, updateTrack);
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
-    _initFeedbackAudioSources();
-    _checkIfLanguageSupported();
+    if (widget.voiceMode) {
+      _initFeedbackAudioSources();
+      _checkIfLanguageSupported();
+    }
   }
 
   // Initialize feedback audio sources
@@ -109,7 +114,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
-        _handleTrackChange(script[index]);
+        if (widget.voiceMode) {
+          _handleTrackChangeToCheckVoice(script[index]);
+        }
         setState(() {
           currentTrack = script[index];
         });
@@ -263,7 +270,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return {};
   }
 
-  void _handleTrackChange(String newTrack) async {
+  void _handleTrackChangeToCheckVoice(String newTrack) async {
     print(newTrack);
     if (newTrack.contains("target_language") ||
         newTrack.contains("narrator_translation") ||

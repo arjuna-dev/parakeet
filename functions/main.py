@@ -1,3 +1,4 @@
+
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
@@ -9,6 +10,7 @@ from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice
+from utils.openai_tts.openai_tts import language_to_language_code_openai
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
 from google.cloud import storage
@@ -46,7 +48,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     document_id = request_data.get("document_id")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
     try:
         language_level = request_data.get("language_level")
     except:
@@ -135,6 +137,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["document_id"] = document_id
     final_response["voice_1_id"] = first_API_calls.voice_1_id
     final_response["voice_2_id"] = first_API_calls.voice_2_id
+    final_response["voice_mode"] = True
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
@@ -171,7 +174,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     words_to_repeat = request_data.get("words_to_repeat")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
 
     print("request_data:", request_data)
 
@@ -191,19 +194,24 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
 
-    language_code = language_to_language_code(target_language)
+    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+        language_code = language_to_language_code(target_language)
 
-    voice_1 = create_google_voice(language_code, voice_1_id)
-    voice_2 = create_google_voice(language_code, voice_2_id)
+        voice_1 = create_google_voice(language_code, voice_1_id)
+        voice_2 = create_google_voice(language_code, voice_2_id)
+    elif tts_provider == TTS_PROVIDERS.OPENAI.value:
+        language_code = language_to_language_code_openai(target_language)
+        voice_1 = voice_1_id
+        voice_2 = voice_2_id
 
     second_API_calls = APICalls(native_language,
                                 tts_provider,
                                 document_id,
                                 document,
-                                document_target_phrases,
                                 target_language,
                                 document_durations,
                                 words_to_repeat,
+                                document_target_phrases,
                                 voice_1,
                                 voice_2,
                                 mock=is_mock
