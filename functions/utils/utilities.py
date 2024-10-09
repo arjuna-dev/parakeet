@@ -15,6 +15,7 @@ class GPT_MODEL(Enum):
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1
     ELEVENLABS = 2
+    OPENAI = 3
 
 def check_if_running_locally():
     current_dir = os.path.dirname(os.path.abspath(__file__))
