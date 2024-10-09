@@ -28,6 +28,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var targetLanguage = 'German';
   var length = '4';
   var languageLevel = 'Absolute beginner (A1)';
+  var voiceMode = false;
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
   final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
@@ -159,6 +160,20 @@ class _CreateLessonState extends State<CreateLesson> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const Text('Check Pronunciation (beta):'),
+                        Switch(
+                          value: voiceMode,
+                          onChanged: (bool value) {
+                            setState(() {
+                              voiceMode = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     Stack(children: [
                       TextFormField(
@@ -363,7 +378,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   "Access-Control-Allow-Origin":
                                       "*", // Required for CORS support to work
                                 },
-                                body: jsonEncode(<String, String>{
+                                body: jsonEncode(<String, dynamic>{
                                   "requested_scenario": topic,
                                   "keywords": keywords,
                                   "native_language": nativeLanguage,
@@ -375,6 +390,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
                                   "tts_provider": ttsProvider.toString(),
+                                  "voice_mode": voiceMode,
                                 }),
                               );
                               print(ttsProvider.toString());
