@@ -47,9 +47,12 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     user_ID = request_data.get("user_ID")
     document_id = request_data.get("document_id")
     tts_provider = request_data.get("tts_provider")
-    voice_mode = request_data.get("voice_mode")
     tts_provider = int(tts_provider)
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
+    try:
+        voice_mode = request_data.get("voice_mode")
+    except:
+        voice_mode = False
     try:
         language_level = request_data.get("language_level")
     except:
