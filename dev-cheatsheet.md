@@ -110,3 +110,9 @@ bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
 
 #### Note: this last command will install the app but not open it immediately, you must search and open the app manually
+
+### Build for iOS Deployment
+
+```
+flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
+```
