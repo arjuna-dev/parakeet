@@ -475,34 +475,37 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           int savedPosition = snapshot.data ?? 0;
           return Scaffold(
             appBar: AppBar(title: Text(widget.title)),
-            body: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                DialogueList(
-                  dialogue: widget.dialogue,
-                  currentTrack: currentTrack,
-                  wordsToRepeat: widget.wordsToRepeat,
-                ),
-                PositionSlider(
-                  positionDataStream: _positionDataStream,
-                  totalDuration: totalDuration,
-                  finalTotalDuration: finalTotalDuration,
-                  isPlaying: isPlaying,
-                  savedPosition: savedPosition,
-                  findTrackIndexForPosition: findTrackIndexForPosition,
-                  player: player,
-                  cumulativeDurationUpTo: cumulativeDurationUpTo,
-                  pause: _pause,
-                ),
-                ControlButtons(
-                  player: player,
-                  isPlaying: isPlaying,
-                  onPlay: _play,
-                  onPause: _pause,
-                  onStop: _stop,
-                ),
-              ],
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  DialogueList(
+                    dialogue: widget.dialogue,
+                    currentTrack: currentTrack,
+                    wordsToRepeat: widget.wordsToRepeat,
+                  ),
+                  PositionSlider(
+                    positionDataStream: _positionDataStream,
+                    totalDuration: totalDuration,
+                    finalTotalDuration: finalTotalDuration,
+                    isPlaying: isPlaying,
+                    savedPosition: savedPosition,
+                    findTrackIndexForPosition: findTrackIndexForPosition,
+                    player: player,
+                    cumulativeDurationUpTo: cumulativeDurationUpTo,
+                    pause: _pause,
+                  ),
+                  ControlButtons(
+                    player: player,
+                    isPlaying: isPlaying,
+                    onPlay: _play,
+                    onPause: _pause,
+                    onStop: _stop,
+                  ),
+                ],
+              ),
             ),
           );
         },
