@@ -116,3 +116,9 @@ bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
 flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
 ```
+
+### Build for web
+
+```
+flutter build web
+```
