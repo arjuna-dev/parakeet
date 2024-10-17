@@ -203,7 +203,7 @@ class _CreateLessonState extends State<CreateLesson> {
                       ),
                       Positioned(
                         right: 10,
-                        bottom: 10,
+                        bottom: 3,
                         child: GestureDetector(
                           onTap: () {
                             regenerateTopic();
