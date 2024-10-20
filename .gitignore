@@ -143,3 +143,6 @@ overrides.json
 # pubspec.lock
 
 payment_verification_backend/lib/assets/service-account.json
+
+
+data_analytics/build

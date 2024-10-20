@@ -62,6 +62,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool isStopped = false;
   bool _isPaused = false;
   int updateNumber = 0;
+  bool voiceMode = false;
+  bool? speechRecognitionSupported;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -77,7 +79,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    print(widget.voiceMode);
     player = AudioPlayer();
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -86,11 +87,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
-    firestoreService = UpdateFirestoreService.getInstance(
-        widget.documentID, widget.generating, updatePlaylist, updateTrack);
-    fileDurationUpdate = FileDurationUpdate.getInstance(
-        widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
-    if (widget.voiceMode) {
+    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack);
+    fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
+    if (voiceMode) {
       _initFeedbackAudioSources();
       _checkIfLanguageSupported();
     }
@@ -114,7 +113,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
-        if (widget.voiceMode) {
+        if (voiceMode) {
           _handleTrackChangeToCheckVoice(script[index]);
         }
         setState(() {
@@ -125,14 +124,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
-    List<String> fileUrls =
-        script.map((fileName) => _constructUrl(fileName)).toList();
-    List<AudioSource> audioSources = fileUrls
-        .where((url) => url.isNotEmpty)
-        .map((url) => AudioSource.uri(Uri.parse(url)))
-        .toList();
-    playlist = ConcatenatingAudioSource(
-        useLazyPreparation: false, children: audioSources);
+    List<String> fileUrls = script.map((fileName) => _constructUrl(fileName)).toList();
+    List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
+    playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
     await player.setAudioSource(playlist);
     if (widget.generating) {
       _play();
@@ -141,10 +135,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      script = script_generator.parseAndCreateScript(
-          snapshot.docs[0].data()["dialogue"] as List<dynamic>,
-          widget.wordsToRepeat,
-          widget.dialogue);
+      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
     } catch (e) {
       return;
     }
@@ -152,10 +143,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     var newScript = List.from(script);
     newScript.removeRange(0, playlist.children.length);
 
-    List<String> fileUrls =
-        newScript.map((fileName) => _constructUrl(fileName)).toList();
-    final newTracks =
-        fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
+    List<String> fileUrls = newScript.map((fileName) => _constructUrl(fileName)).toList();
+    final newTracks = fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
     await playlist.addAll(newTracks);
     if (!widget.generating) {
@@ -166,10 +155,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> updateTrack() async {
-    CollectionReference colRef = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(widget.documentID)
-        .collection('file_durations');
+    CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
       await calculateTotalDurationAndUpdateTrackDurations(querySnap);
@@ -177,9 +163,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   String _constructUrl(String fileName) {
-    if (fileName.startsWith("narrator_") ||
-        fileName == "one_second_break" ||
-        fileName == "five_second_break") {
+    if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
@@ -187,9 +171,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Duration cumulativeDurationUpTo(int currentIndex) {
-    return trackDurations
-        .take(currentIndex)
-        .fold(Duration.zero, (total, d) => total + d);
+    return trackDurations.take(currentIndex).fold(Duration.zero, (total, d) => total + d);
   }
 
   Stream<PositionData> get _positionDataStream {
@@ -204,15 +186,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
         if (hasIndexChanged) return null;
         if (position < duration) {
-          return PositionData(
-              position, duration, cumulativeDuration + position);
+          return PositionData(position, duration, cumulativeDuration + position);
         }
         return null;
       },
-    )
-        .where((positionData) => positionData != null)
-        .cast<PositionData>()
-        .distinct((prev, current) => prev.position == current.position);
+    ).where((positionData) => positionData != null).cast<PositionData>().distinct((prev, current) => prev.position == current.position);
   }
 
   int findTrackIndexForPosition(double milliseconds) {
@@ -224,8 +202,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return trackDurations.length - 1;
   }
 
-  Future<void> calculateTotalDurationAndUpdateTrackDurations(
-      QuerySnapshot snapshot) async {
+  Future<void> calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
@@ -235,8 +212,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       for (int i = 0; i < script.length; i++) {
         String fileName = script[i];
         double durationInSeconds = audioDurations?[fileName] ?? 0.0;
-        Duration duration =
-            Duration(milliseconds: (durationInSeconds * 1000).round());
+        Duration duration = Duration(milliseconds: (durationInSeconds * 1000).round());
         totalDuration += duration;
         trackDurations[i] = duration;
       }
@@ -249,8 +225,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void calculateFinalTotalDuration() {
-    finalTotalDuration =
-        trackDurations.fold(Duration.zero, (total, d) => total + d);
+    finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
     setState(() {});
   }
 
@@ -259,8 +234,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return cachedAudioDurations!;
     }
 
-    CollectionReference colRef = FirebaseFirestore.instance.collection(
-        'narrator_audio_files_durations/google_tts/narrator_english');
+    CollectionReference colRef = FirebaseFirestore.instance.collection('narrator_audio_files_durations/google_tts/narrator_english');
     QuerySnapshot querySnap = await colRef.get();
 
     if (querySnap.docs.isNotEmpty) {
@@ -272,18 +246,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _handleTrackChangeToCheckVoice(String newTrack) async {
     print(newTrack);
-    if (newTrack.contains("target_language") ||
-        newTrack.contains("narrator_translation") ||
-        newTrack.contains("native_language")) {
+    if (newTrack.contains("target_language") || newTrack.contains("narrator_translation") || newTrack.contains("native_language")) {
       // Update the previous phrase when a target_language phrase/word track starts
       previousTargetTrack = newTrack;
       if (newTrack.contains("native_language")) {
-        previousTargetTrack =
-            newTrack.replaceFirst("native_language", "target_language");
+        previousTargetTrack = newTrack.replaceFirst("native_language", "target_language");
       }
       print('The previous target track is: $previousTargetTrack');
-      previousTargetPhrase = await _fetchPreviousTargetPhrase(
-          widget.documentID, previousTargetTrack);
+      previousTargetPhrase = await _fetchPreviousTargetPhrase(widget.documentID, previousTargetTrack);
       print('The previous target phrase is: $previousTargetPhrase');
     } else if (newTrack == "five_second_break" && isLanguageSupported) {
       // Start recording during the 5-second break
@@ -294,27 +264,56 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<String?> _fetchPreviousTargetPhrase(
-      String documentId, String? previousTargetTrack) async {
+  Future<String?> _fetchPreviousTargetPhrase(String documentId, String? previousTargetTrack) async {
     try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
-          .collection('chatGPT_responses')
-          .doc(documentId)
-          .collection('target_phrases')
-          .doc('updatable_target_phrases')
-          .get();
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
 
       if (documentSnapshot.exists) {
-        Map<String, dynamic> data =
-            documentSnapshot.data() as Map<String, dynamic>;
+        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
         return data[previousTargetTrack] as String?;
       } else {
         print('Document does not exist');
+        setState(() {
+          speechRecognitionSupported = false;
+        });
         return null;
       }
     } catch (e) {
       print('Error fetching previous target phrase: $e');
       return null;
+    }
+  }
+
+  Future<bool> _checkIfTargetPhraseDocExists(String documentId) async {
+    print('Checking document ID: $documentId');
+    try {
+      if (speechRecognitionSupported != null) {
+        if (speechRecognitionSupported == true) {
+          return Future.value(true);
+        } else {
+          return Future.value(false);
+        }
+      } else {
+        if (widget.generating) {
+          speechRecognitionSupported = true;
+          return Future.value(true);
+        }
+        DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
+        print('Document snapshot: $documentSnapshot');
+
+        if (documentSnapshot.exists) {
+          print("Target phrase document exists");
+          speechRecognitionSupported = true;
+          return true;
+        } else {
+          print("Target phrase document does NOT exist");
+          speechRecognitionSupported = false;
+          return false;
+        }
+      }
+    } catch (e) {
+      print('Error fetching previous target phrase: $e');
+      return false;
     }
   }
 
@@ -333,8 +332,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         systemLocales = await speech.locales();
         print('System locales: $systemLocales');
 
-        isLanguageSupported = systemLocales.any((locale) =>
-            locale.localeId == languageCodes[widget.targetLanguage]);
+        isLanguageSupported = systemLocales.any((locale) => locale.localeId == languageCodes[widget.targetLanguage]);
 
         if (!isLanguageSupported) {
           _showLanguageNotSupportedDialog();
@@ -354,8 +352,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Voice Feature Not Supported'),
-          content: Text(
-              'The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
+          content:
+              Text('The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
           actions: [
             TextButton(
               child: const Text('OK'),
@@ -481,6 +479,35 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
+                  FutureBuilder(
+                    future: _checkIfTargetPhraseDocExists(widget.documentID),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        return snapshot.data!
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const Text('Check Pronunciation (beta):'),
+                                  Switch(
+                                    value: voiceMode,
+                                    onChanged: (bool value) {
+                                      if (value) {
+                                        _initFeedbackAudioSources();
+                                        _checkIfLanguageSupported();
+                                      }
+                                      setState(() {
+                                        voiceMode = value;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              )
+                            : Container(); // or SizedBox.shrink() to take up no space
+                      } else {
+                        return const CircularProgressIndicator(); // or a loading indicator of your choice
+                      }
+                    },
+                  ), // or SizedBox.shrink() to take up no space
                   DialogueList(
                     dialogue: widget.dialogue,
                     currentTrack: currentTrack,
@@ -519,12 +546,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final currentPosition = positionData.inMilliseconds;
     int currentIndex = player.currentIndex ?? 0;
 
-    await prefs.setInt(
-        'savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
-    await prefs.setInt(
-        'savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
-    await prefs.setBool(
-        "now_playing_${widget.documentID}_${widget.userID}", true);
+    await prefs.setInt('savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
+    await prefs.setInt('savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
+    await prefs.setBool("now_playing_${widget.documentID}_${widget.userID}", true);
 
     final nowPlayingKey = "now_playing_${widget.userID}";
     final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
@@ -547,18 +571,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<void> _play() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPosition =
-        prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
-    final savedTrackIndex =
-        prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
+    final savedPosition = prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
+    final savedTrackIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
 
     setState(() {
       isPlaying = true;
       _isPaused = false;
     });
     if (savedPosition != null && savedTrackIndex != null) {
-      await player.seek(Duration(milliseconds: savedPosition),
-          index: savedTrackIndex);
+      await player.seek(Duration(milliseconds: savedPosition), index: savedTrackIndex);
     }
     player.play();
     analyticsManager.storeAnalytics(widget.documentID, 'play');
@@ -570,8 +591,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     prefs.remove('savedTrackIndex_${widget.documentID}_${widget.userID}');
     prefs.remove("now_playing_${widget.documentID}_${widget.userID}");
 
-    List<String>? nowPlayingList =
-        prefs.getStringList("now_playing_${widget.userID}");
+    List<String>? nowPlayingList = prefs.getStringList("now_playing_${widget.userID}");
 
     if (nowPlayingList != null) {
       nowPlayingList.remove(widget.documentID);
@@ -589,12 +609,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<int> _getSavedPosition() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPosition =
-        prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
-    final savedIndex =
-        prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
-    final position =
-        savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
+    final savedPosition = prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
+    final savedIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
+    final position = savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
     return position;
   }
 
