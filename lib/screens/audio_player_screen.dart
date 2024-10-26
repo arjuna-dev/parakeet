@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -15,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:string_similarity/string_similarity.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'dart:async';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -64,6 +67,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int updateNumber = 0;
   bool voiceMode = false;
   bool? speechRecognitionSupported;
+  Timer? _timer;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -89,10 +93,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
     firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
-    if (voiceMode) {
-      _initFeedbackAudioSources();
-      _checkIfLanguageSupported();
-    }
+  }
+
+  void _initAndStartRecording() async {
+    await _initFeedbackAudioSources();
+    await _checkIfLanguageSupported();
+    _startRecording();
   }
 
   // Initialize feedback audio sources
@@ -257,10 +263,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('The previous target phrase is: $previousTargetPhrase');
     } else if (newTrack == "five_second_break" && isLanguageSupported) {
       // Start recording during the 5-second break
-      setState(() {
-        recordedText = '';
-      });
+      print('until now you\'ve said $recordedText');
+      speech.cancel();
       _startRecording();
+      await Future.delayed(const Duration(seconds: 5));
+      print('for text comparison you said $recordedText');
+      _compareTranscriptionWithPhrase(recordedText);
     }
   }
 
@@ -285,7 +293,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<bool> _checkIfTargetPhraseDocExists(String documentId) async {
-    print('Checking document ID: $documentId');
     try {
       if (speechRecognitionSupported != null) {
         if (speechRecognitionSupported == true) {
@@ -299,14 +306,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           return Future.value(true);
         }
         DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
-        print('Document snapshot: $documentSnapshot');
 
         if (documentSnapshot.exists) {
-          print("Target phrase document exists");
           speechRecognitionSupported = true;
           return true;
         } else {
-          print("Target phrase document does NOT exist");
           speechRecognitionSupported = false;
           return false;
         }
@@ -317,7 +321,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _checkIfLanguageSupported() async {
+  Future<void> _checkIfLanguageSupported() async {
     bool isAvailable = await speech.initialize();
     if (isAvailable) {
       List<stt.LocaleName> systemLocales;
@@ -368,31 +372,43 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _startRecording() async {
-    bool available = await speech.initialize();
-    if (available) {
-      speech.listen(
-        onResult: (result) {
-          setState(() {
-            recordedText = result.recognizedWords;
-          });
-          print('You said: ${result.recognizedWords}');
-        },
-        localeId: languageCodes[widget.targetLanguage],
-      );
+    // Check if speech recognition is already listening
+    if (!speech.isListening) {
+      bool available = await speech.initialize();
+      if (available) {
+        // Start listening if the initialization is successful
+        speech.listen(
+          onResult: (result) {
+            setState(() {
+              recordedText = result.recognizedWords;
+            });
+          },
+          localeId: languageCodes[widget.targetLanguage],
+        );
 
-      // Stop recording after the 5-second silent track ends
-      await Future.delayed(const Duration(seconds: 5));
-      speech.stop();
+        print('you said should be empty: $recordedText');
 
-      // After recording, compare the result with the previous phrase
-      _compareTranscriptionWithPhrase();
+        // Set up a periodic timer to check if listening is still active
+        _timer = Timer.periodic(Duration(milliseconds: 100), (timer) async {
+          if (!speech.isListening) {
+            // If speech recognition is no longer listening, restart it
+            print("Speech recognition stopped. Restarting...");
+            await _startRecording();
+            timer.cancel(); // Stop the timer once the speech recognition is restarted
+          }
+        });
+      } else {
+        print("Speech recognition is not available on this platform.");
+      }
+    } else {
+      print("Speech recognition is already active.");
     }
   }
 
-  void _compareTranscriptionWithPhrase() async {
+  void _compareTranscriptionWithPhrase(recordedText2) async {
     if (previousTargetPhrase != null) {
       // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedRecordedText = _normalizeString(recordedText);
+      String normalizedRecordedText = _normalizeString(recordedText2);
       String normalizedTargetPhrase = _normalizeString(previousTargetPhrase!);
 
       // Calculate similarity
@@ -492,8 +508,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                     value: voiceMode,
                                     onChanged: (bool value) {
                                       if (value) {
-                                        _initFeedbackAudioSources();
-                                        _checkIfLanguageSupported();
+                                        _initAndStartRecording();
+                                      } else {
+                                        speech.stop();
+                                        speech.cancel();
+                                        _timer?.cancel();
                                       }
                                       setState(() {
                                         voiceMode = value;
