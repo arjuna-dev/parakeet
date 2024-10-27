@@ -50,10 +50,6 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     tts_provider = int(tts_provider)
     assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
     try:
-        voice_mode = request_data.get("voice_mode")
-    except:
-        voice_mode = False
-    try:
         language_level = request_data.get("language_level")
     except:
         language_level = "A1"
@@ -141,7 +137,6 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["document_id"] = document_id
     final_response["voice_1_id"] = first_API_calls.voice_1_id
     final_response["voice_2_id"] = first_API_calls.voice_2_id
-    final_response["voice_mode"] = voice_mode
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 

@@ -149,11 +149,6 @@ class _HomeState extends State<Home> {
                                   title: audioFile.get('title'),
                                   scriptDocumentId: audioFile.id,
                                   generating: false,
-                                  voiceMode: (audioFile.data()!
-                                              as Map<String, dynamic>)
-                                          .containsKey('voice_mode')
-                                      ? audioFile.get('voice_mode')
-                                      : false,
                                 ),
                               ),
                             ).then((result) {
@@ -228,11 +223,6 @@ class _HomeState extends State<Home> {
                               title: audioFile.get('title'),
                               scriptDocumentId: audioFile.id,
                               generating: false,
-                              voiceMode:
-                                  (audioFile.data()! as Map<String, dynamic>)
-                                          .containsKey('voice_mode')
-                                      ? audioFile.get('voice_mode')
-                                      : false,
                             ),
                           ),
                         ).then((result) {
