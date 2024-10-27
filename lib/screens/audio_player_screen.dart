@@ -63,7 +63,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool isStopped = false;
   bool _isPaused = false;
   int updateNumber = 0;
-  bool voiceMode = false;
+  bool speechRecognitionActive = false;
   bool? speechRecognitionSupported;
   Timer? _timer;
   Map<String, dynamic>? latestSnapshot;
@@ -137,7 +137,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           currentTrack = script[index];
         });
         print('currentTrack: $currentTrack');
-        if (voiceMode) {
+        if (speechRecognitionActive) {
           _handleTrackChangeToCheckVoice(index);
         }
       }
@@ -617,7 +617,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 children: [
                                   const Text('Check Pronunciation (beta):'),
                                   Switch(
-                                    value: voiceMode,
+                                    value: speechRecognitionActive,
                                     onChanged: (bool value) {
                                       if (value) {
                                         _initAndStartRecording();
@@ -627,7 +627,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                         _timer?.cancel();
                                       }
                                       setState(() {
-                                        voiceMode = value;
+                                        speechRecognitionActive = value;
                                       });
                                     },
                                   ),
