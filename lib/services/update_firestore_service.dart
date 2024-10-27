@@ -9,18 +9,24 @@ class UpdateFirestoreService extends ChangeNotifier {
 
   late Stream<QuerySnapshot> _stream;
   StreamSubscription<QuerySnapshot>? _streamSubscription;
-  Function updatePlaylist;
-  Function updateTrack;
+  final Function(QuerySnapshot) updatePlaylist;
+  final Function(QuerySnapshot) saveSnapshot;
+  final Function updateTrack;
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
   UpdateFirestoreService._privateConstructor(
-      this.updatePlaylist, this.updateTrack);
+      this.updatePlaylist, this.updateTrack, this.saveSnapshot);
 
-  static UpdateFirestoreService getInstance(String documentID, bool generating,
-      Function updatePlaylist, Function updateTrack) {
-    _instance ??=
-        UpdateFirestoreService._privateConstructor(updatePlaylist, updateTrack);
+  static UpdateFirestoreService getInstance(
+      String documentID,
+      bool generating,
+      Function(QuerySnapshot) updatePlaylist, // Explicit type
+      Function updateTrack,
+      Function(QuerySnapshot) saveSnapshot) {
+    // Explicit type
+    _instance ??= UpdateFirestoreService._privateConstructor(
+        updatePlaylist, updateTrack, saveSnapshot);
     _instance!._initializeStream(documentID, generating);
     return _instance!;
   }
@@ -40,7 +46,9 @@ class UpdateFirestoreService extends ChangeNotifier {
   Future<void> processQueue(updateTrack, generating) async {
     if (!isUpdating && queue.isNotEmpty) {
       isUpdating = true;
-      await updatePlaylist(queue.removeFirst());
+      QuerySnapshot snapshot = queue.removeFirst();
+      await updatePlaylist(snapshot);
+      saveSnapshot(snapshot);
       isUpdating = false;
       if (queue.isEmpty && generating) {
         updateTrack();
