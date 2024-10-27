@@ -3,17 +3,17 @@
 ---
 
 
-##### Deploy all funcitons in codebase:
+##### Deploy all functions in codebase:
 
 ```bash
 firebase deploy --only functions
 ```
 
 
-##### Deploy specific funcitons in codebase:
+##### Deploy specific functions in codebase:
 
 ```bash
-firebase deploy --only functions:addMessage,functions:makeUppercase
+firebase deploy --only functions:fist_API_calls,functions:second_API_calls
 ```
 
 
