@@ -80,6 +80,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   stt.SpeechToText speech = stt.SpeechToText();
   String recordedText = '';
 
+  int previousIndex = -1; // P2029
+
   @override
   void initState() {
     super.initState();
@@ -133,12 +135,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
         setState(() {
-          currentTrack = script[index];
+          previousIndex = index; // Pc0ac
         });
-        print('currentTrack: $currentTrack');
         if (speechRecognitionActive) {
           _handleTrackChangeToCheckVoice(index);
         }
+        setState(() {
+          currentTrack = script[index];
+        });
+        print('currentTrack: $currentTrack');
       }
     });
   }
@@ -328,7 +333,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCheckVoice(int currentIndex) async {
-    if (currentTrack == "five_second_break" && isLanguageSupported) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex) { // P6b70
       if (widget.generating) {
         setState(() {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
