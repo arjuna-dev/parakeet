@@ -28,7 +28,6 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
-  final bool voiceMode;
 
   const AudioPlayerScreen({
     Key? key,
@@ -40,7 +39,6 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
-    required this.voiceMode,
   }) : super(key: key);
 
   @override
