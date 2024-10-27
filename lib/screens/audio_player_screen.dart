@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -51,8 +50,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late AudioSource positiveFeedbackAudio;
-  late AudioSource negativeFeedbackAudio;
+  late List<AudioSource> positiveFeedbackAudio;
+  late List<AudioSource> negativeFeedbackAudio;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -117,8 +116,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // Initialize feedback audio sources
   Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = AudioSource.asset('assets/correct_answer.mp3');
-    negativeFeedbackAudio = AudioSource.asset('assets/incorrect_answer.mp3');
+    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
+    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
   void _listenToPlayerStreams() {
@@ -547,6 +546,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
   }
 
+  AudioSource getRandomAudioSource(List<AudioSource> audioList) {
+    final random = Random();
+    int index = random.nextInt(audioList.length);
+    return audioList[index];
+  }
+
 // Method to provide audio feedback
   Future<void> _provideFeedback({required bool isPositive}) async {
     // Pause the main player if it's playing
@@ -559,7 +564,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Set the appropriate audio source
     await feedbackPlayer.setAudioSource(
-      isPositive ? positiveFeedbackAudio : negativeFeedbackAudio,
+      isPositive ? getRandomAudioSource(positiveFeedbackAudio) : getRandomAudioSource(negativeFeedbackAudio),
     );
 
     // Play the feedback
