@@ -11,7 +11,6 @@ class FirstAPIRequest(BaseModel):
     tts_provider: str
     language_level: Optional[str] = "A1"
     keywords: Optional[str] = ""
-    voice_mode: Optional[bool] = False
 
 class SecondAPIRequest(BaseModel):
     dialogue: List[dict[str, str]]
