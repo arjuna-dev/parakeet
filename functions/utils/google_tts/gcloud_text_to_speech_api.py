@@ -88,5 +88,5 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
             filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
             push_to_firestore(filename_duration, doc_ref)
 
-# narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
-# synthesize_text("Hello, World!", narrator_voice, "folder/file")
+# narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
+# google_synthesize_text("You could improve on that!", narrator_voice, "you_can_improve.mp3")
