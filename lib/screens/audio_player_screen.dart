@@ -58,7 +58,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   String currentTrack = '';
   String? previousTargetTrack;
-  String? previousTargetPhrase;
+  String? targetPhraseToCompareWith;
   String? voiceLanguageCode;
   bool isLanguageSupported = false;
   bool isPlaying = false;
@@ -68,6 +68,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool voiceMode = false;
   bool? speechRecognitionSupported;
   Timer? _timer;
+  Map<String, dynamic>? latestSnapshot;
+  Map<int, String> filesToCompare = {};
+  Map<String, dynamic>? existingBigJson;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -91,8 +94,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
-    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack);
+    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack, saveSnapshot);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
+    getExistingBigJson();
+  }
+
+  void getExistingBigJson() async {
+    if (!widget.generating) {
+      final firestore = FirebaseFirestore.instance;
+      final docRef = firestore.collection('chatGPT_responses').doc(widget.documentID).collection('all_breakdowns').doc('updatable_big_json');
+      final doc = await docRef.get();
+      if (doc.exists) {
+        existingBigJson = doc.data();
+      }
+      print('existingBigJson: $existingBigJson');
+    }
   }
 
   void _initAndStartRecording() async {
@@ -119,12 +135,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     player.currentIndexStream.listen((index) {
       if (index != null && index < script.length) {
-        if (voiceMode) {
-          _handleTrackChangeToCheckVoice(script[index]);
-        }
         setState(() {
           currentTrack = script[index];
         });
+        print('currentTrack: $currentTrack');
+        if (voiceMode) {
+          _handleTrackChangeToCheckVoice(index);
+        }
       }
     });
   }
@@ -139,6 +156,30 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  void buildFilesToCompare(List<dynamic> script) {
+    filesToCompare = {};
+    int occurrences = 0;
+    for (int i = 0; i < script.length; i++) {
+      String fileName = script[i];
+      if (!fileName.startsWith('\$')) {
+        // This file is included in the playlist
+        if (fileName == 'five_second_break') {
+          // Map the playlistIndex to the phrase
+          if (i > 0 && script[i - 1].startsWith('\$')) {
+            String fileNameWithDollar = script[i - 1];
+            String fileName = fileNameWithDollar.replaceFirst('\$', '');
+            setState(() {
+              filesToCompare[i - occurrences - 1] = fileName;
+            });
+            occurrences++;
+          } else {
+            print('Warning: Expected a \$-prefixed string before five_second_break at index $i');
+          }
+        }
+      }
+    }
+  }
+
   void updatePlaylist(snapshot) async {
     try {
       script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
@@ -146,8 +187,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return;
     }
 
+    Map<int, String> scriptMap = {};
+    for (int i = 0; i < script.length; i++) {
+      String fileName = script[i];
+      scriptMap[i] = fileName;
+    }
+    print('scriptMap: $scriptMap');
+
+    buildFilesToCompare(script);
+
+    script = script.where((fileName) => !fileName.startsWith('\$')).toList();
+
     var newScript = List.from(script);
     newScript.removeRange(0, playlist.children.length);
+
+    // Filter out files that start with a '$'
+    newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
 
     List<String> fileUrls = newScript.map((fileName) => _constructUrl(fileName)).toList();
     final newTracks = fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
@@ -158,6 +213,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     updateNumber++;
+  }
+
+  void saveSnapshot(QuerySnapshot snapshot) {
+    if (snapshot.docs.isNotEmpty) {
+      latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
+    }
   }
 
   Future<void> updateTrack() async {
@@ -250,25 +311,59 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return {};
   }
 
-  void _handleTrackChangeToCheckVoice(String newTrack) async {
-    print(newTrack);
-    if (newTrack.contains("target_language") || newTrack.contains("narrator_translation") || newTrack.contains("native_language")) {
-      // Update the previous phrase when a target_language phrase/word track starts
-      previousTargetTrack = newTrack;
-      if (newTrack.contains("native_language")) {
-        previousTargetTrack = newTrack.replaceFirst("native_language", "target_language");
+  String accessBigJson(Map<String, dynamic> listWithBigJson, String path) {
+    print('Accessing bigJSON: $path');
+    final pattern = RegExp(r'(\D+)|(\d+)');
+    final matches = pattern.allMatches(path);
+
+    dynamic currentMap = listWithBigJson;
+    for (var match in matches) {
+      final key = match.group(0)!;
+      final cleanedKey = key.replaceAll(RegExp(r'^_|_$'), '');
+
+      if (int.tryParse(cleanedKey) != null) {
+        // If it's a number, parse it as an index
+        int index = int.parse(cleanedKey);
+        currentMap = currentMap[index];
+      } else {
+        // If it's not a number, use it as a string key
+        currentMap = currentMap[cleanedKey];
       }
-      print('The previous target track is: $previousTargetTrack');
-      previousTargetPhrase = await _fetchPreviousTargetPhrase(widget.documentID, previousTargetTrack);
-      print('The previous target phrase is: $previousTargetPhrase');
-    } else if (newTrack == "five_second_break" && isLanguageSupported) {
-      // Start recording during the 5-second break
-      print('until now you\'ve said $recordedText');
-      speech.cancel();
+
+      // If at any point currentMap is null, the key path is invalid
+      if (currentMap == null) {
+        throw Exception("Invalid path: $path");
+      }
+    }
+    print('bigJsonValue: $currentMap');
+    return currentMap;
+  }
+
+  void _handleTrackChangeToCheckVoice(int currentIndex) async {
+    if (currentTrack == "five_second_break" && isLanguageSupported) {
+      print('five_second_break DETECTED');
+      if (widget.generating) {
+        setState(() {
+          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
+        });
+      } else {
+        print("filesToCompare: $filesToCompare");
+        print("currentIndex: $currentIndex");
+        print('currentTrack: $currentTrack');
+        setState(() {
+          targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
+        });
+      }
+      if (speech.isListening) {
+        await speech.stop(); // Wait for the speech recognition to stop
+      }
+      setState(() {
+        recordedText = "";
+      });
+      print('Got value from bigJSON and deleted string');
+      print(DateTime.now().toIso8601String());
       _startRecording();
-      await Future.delayed(const Duration(seconds: 5));
-      print('for text comparison you said $recordedText');
-      _compareTranscriptionWithPhrase(recordedText);
+      Future.delayed(Duration(seconds: 5), _compareTranscriptionWithPhrase);
     }
   }
 
@@ -372,44 +467,63 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _startRecording() async {
-    // Check if speech recognition is already listening
-    if (!speech.isListening) {
-      bool available = await speech.initialize();
-      if (available) {
-        // Start listening if the initialization is successful
-        speech.listen(
-          onResult: (result) {
-            setState(() {
-              recordedText = result.recognizedWords;
-            });
-          },
-          localeId: languageCodes[widget.targetLanguage],
-        );
-
-        print('you said should be empty: $recordedText');
-
-        // Set up a periodic timer to check if listening is still active
-        _timer = Timer.periodic(Duration(milliseconds: 100), (timer) async {
-          if (!speech.isListening) {
-            // If speech recognition is no longer listening, restart it
-            print("Speech recognition stopped. Restarting...");
-            await _startRecording();
-            timer.cancel(); // Stop the timer once the speech recognition is restarted
+    setState(() {
+      recordedText = "";
+    });
+    if (speech.isListening) {
+      print("Returning early: speech recognition is already active.");
+      return;
+    }
+    try {
+      // Check if speech recognition is already listening
+      if (!speech.isListening) {
+        bool available = await speech.initialize();
+        if (available) {
+          // Start listening if initialization is successful
+          try {
+            speech.listen(
+              onResult: (result) {
+                setState(() {
+                  recordedText = result.recognizedWords;
+                });
+              },
+              localeId: languageCodes[widget.targetLanguage],
+            );
+          } catch (e) {
+            print("Error: probably already listening");
           }
-        });
+
+          // Set up a periodic timer to check if listening is still active
+          _timer = Timer.periodic(Duration(milliseconds: 100), (timer) async {
+            if (!speech.isListening) {
+              // Restart speech recognition if it stops
+              print("Speech recognition stopped. Restarting...");
+              _startRecording();
+              timer.cancel();
+            }
+          });
+        } else {
+          print("Speech recognition is not available on this platform.");
+        }
       } else {
-        print("Speech recognition is not available on this platform.");
+        print("Speech recognition is already active.");
       }
-    } else {
-      print("Speech recognition is already active.");
+    } catch (e) {
+      print("Speech recognition was already active.");
     }
   }
 
-  void _compareTranscriptionWithPhrase(recordedText2) async {
-    if (previousTargetPhrase != null) {
+  void _compareTranscriptionWithPhrase() async {
+    print('starting comparison...');
+    // print a timestamp
+    print(DateTime.now().toIso8601String());
+    if (targetPhraseToCompareWith != null) {
       // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedRecordedText = _normalizeString(recordedText2);
-      String normalizedTargetPhrase = _normalizeString(previousTargetPhrase!);
+      String normalizedRecordedText = _normalizeString(recordedText);
+      String normalizedTargetPhrase = _normalizeString(targetPhraseToCompareWith!);
+
+      print('you said: $normalizedRecordedText');
+      print('target phrase: $normalizedTargetPhrase');
 
       // Calculate similarity
       double similarity = StringSimilarity.compareTwoStrings(
