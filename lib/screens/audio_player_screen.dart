@@ -184,13 +184,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return;
     }
 
-    Map<int, String> scriptMap = {};
-    for (int i = 0; i < script.length; i++) {
-      String fileName = script[i];
-      scriptMap[i] = fileName;
-    }
-    print('scriptMap: $scriptMap');
-
     buildFilesToCompare(script);
 
     script = script.where((fileName) => !fileName.startsWith('\$')).toList();
@@ -309,7 +302,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   String accessBigJson(Map<String, dynamic> listWithBigJson, String path) {
-    print('Accessing bigJSON: $path');
     final pattern = RegExp(r'(\D+)|(\d+)');
     final matches = pattern.allMatches(path);
 
@@ -332,13 +324,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         throw Exception("Invalid path: $path");
       }
     }
-    print('bigJsonValue: $currentMap');
     return currentMap;
   }
 
   void _handleTrackChangeToCheckVoice(int currentIndex) async {
     if (currentTrack == "five_second_break" && isLanguageSupported) {
-      print('five_second_break DETECTED');
       if (widget.generating) {
         setState(() {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
@@ -357,8 +347,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {
         recordedText = "";
       });
-      print('Got value from bigJSON and deleted string');
-      print(DateTime.now().toIso8601String());
       _startRecording();
       Future.delayed(Duration(seconds: 5), _compareTranscriptionWithPhrase);
     }
