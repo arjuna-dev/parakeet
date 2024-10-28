@@ -372,35 +372,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<bool> _checkIfTargetPhraseDocExists(String documentId) async {
-    try {
-      if (speechRecognitionSupported != null) {
-        if (speechRecognitionSupported == true) {
-          return Future.value(true);
-        } else {
-          return Future.value(false);
-        }
-      } else {
-        if (widget.generating) {
-          speechRecognitionSupported = true;
-          return Future.value(true);
-        }
-        DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
-
-        if (documentSnapshot.exists) {
-          speechRecognitionSupported = true;
-          return true;
-        } else {
-          speechRecognitionSupported = false;
-          return false;
-        }
-      }
-    } catch (e) {
-      print('Error fetching previous target phrase: $e');
-      return false;
-    }
-  }
-
   Future<void> _checkIfLanguageSupported() async {
     bool isAvailable = await speech.initialize();
     if (isAvailable) {
@@ -600,38 +571,27 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  FutureBuilder(
-                    future: _checkIfTargetPhraseDocExists(widget.documentID),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return snapshot.data!
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  const Text('Check Pronunciation (beta):'),
-                                  Switch(
-                                    value: speechRecognitionActive,
-                                    onChanged: (bool value) {
-                                      if (value) {
-                                        _initAndStartRecording();
-                                      } else {
-                                        speech.stop();
-                                        speech.cancel();
-                                        _timer?.cancel();
-                                      }
-                                      setState(() {
-                                        speechRecognitionActive = value;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              )
-                            : Container(); // or SizedBox.shrink() to take up no space
-                      } else {
-                        return const CircularProgressIndicator(); // or a loading indicator of your choice
-                      }
-                    },
-                  ), // or SizedBox.shrink() to take up no space
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Text('Check Pronunciation:'),
+                      Switch(
+                        value: speechRecognitionActive,
+                        onChanged: (bool value) {
+                          if (value) {
+                            _initAndStartRecording();
+                          } else {
+                            speech.stop();
+                            speech.cancel();
+                            _timer?.cancel();
+                          }
+                          setState(() {
+                            speechRecognitionActive = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                   DialogueList(
                     dialogue: widget.dialogue,
                     currentTrack: currentTrack,
