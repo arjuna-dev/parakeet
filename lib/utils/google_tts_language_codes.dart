@@ -1,5 +1,6 @@
 const languageCodes = {
   "Arabic": "ar-XA",
+  "Azerbaijani": "az-AZ",
   "Bengali": "bn-IN",
   "Danish": "da-DK",
   "English (Australia)": "en-AU",
