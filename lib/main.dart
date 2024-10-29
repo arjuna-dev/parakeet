@@ -15,6 +15,9 @@ import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/library_screen.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,71 @@ Future<void> main() async {
       ],
       child: const MyApp(),
     ),
+  );
+  await requestTrackingPermission();
+}
+
+Future<void> requestTrackingPermission() async {
+  // Check if the tracking status has not been determined
+  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
+    // Show an explainer dialog before the ATT prompt
+    await showCustomTrackingDialog();
+
+    // Wait a moment before presenting the ATT prompt
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Request tracking authorization
+    await AppTrackingTransparency.requestTrackingAuthorization();
+  }
+}
+
+// Method to display the custom explainer dialog
+Future<void> showCustomTrackingDialog() async {
+  return showDialog<void>(
+    context: navigatorKey.currentContext!,
+    barrierDismissible: false, // User must explicitly interact with dialog
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'Hi, there! 👋',
+          style: TextStyle(
+            fontSize: 24, // Increase font size
+            fontWeight: FontWeight.bold, // Make text bold
+          ),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'We kindly ask you to allow use of tracking data.\n\nYour permission helps us deliver a better and even more tailored experience!',
+              style: TextStyle(
+                fontSize: 18, // Increase font size for content
+                fontWeight: FontWeight.bold, // Make text bold
+              ),
+            ),
+            SizedBox(height: 10), // Add some spacing before the emoji line
+            Center(
+              child: Text(
+                '🤗',
+                style: TextStyle(
+                  fontSize: 40, // Make the emoji larger
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Continue'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Dismiss the dialog
+            },
+          ),
+        ],
+      );
+    },
   );
 }
 
@@ -49,8 +117,7 @@ class _MyAppState extends State<MyApp> {
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
       print("Purchase stream started");
-      IAPService(context.read<AuthService>().currentUser!.uid)
-          .listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -62,6 +129,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Parakeet',
       theme: ThemeData(
@@ -96,8 +164,7 @@ class _MyAppState extends State<MyApp> {
             );
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) =>
-                  const CreateLesson(title: 'Create an audio lesson'),
+              builder: (context) => const CreateLesson(title: 'Create an audio lesson'),
             );
           case '/login':
             return MaterialPageRoute(

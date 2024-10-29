@@ -52,6 +52,7 @@ dependencies:
   path_provider: ^2.1.4
   string_similarity: ^2.1.1
   sign_in_with_apple: ^6.1.2
+  app_tracking_transparency: ^2.0.6
 
 dev_dependencies:
   flutter_test:
