@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/services/auth_service.dart';
@@ -10,11 +10,17 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/library_screen.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+const String localShouldUpdateID = "bRj98tXx";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +35,136 @@ Future<void> main() async {
       ],
       child: const MyApp(),
     ),
+  );
+  await requestTrackingPermission();
+  if (!kIsWeb) {
+    await checkForMandatoryUpdate();
+  }
+}
+
+Future<void> checkForMandatoryUpdate() async {
+  final firestore = FirebaseFirestore.instance;
+  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+
+  final docSnapshot = await docRef.get();
+
+  if (docSnapshot.exists) {
+    final data = docSnapshot.data() as Map<String, dynamic>;
+    final String firebaseShouldUpdateID = data['should_update_app_ID'];
+    final String updateMessage = data['should_update_app_message'];
+
+    if (firebaseShouldUpdateID != localShouldUpdateID) {
+      _showUpdateDialog(updateMessage);
+    }
+  }
+}
+
+final Uri _url_iOS = Uri.parse('https://apps.apple.com/app/6618158139');
+final Uri _url_android = Uri.parse('https://play.google.com/store/apps/details?id=com.parakeetapp.app');
+
+void _showUpdateDialog(String message) {
+  showDialog(
+    context: navigatorKey.currentContext!,
+    barrierDismissible: false, // Prevent dialog dismissal
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Update Required'),
+        content: Text(
+          message, // Display message from Firebase
+          style: const TextStyle(
+            fontSize: 18, // Set a larger font size
+            fontWeight: FontWeight.bold, // Make the text bold
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Update'),
+            onPressed: () {
+              final appStoreUrl = Platform.isIOS ? _url_iOS : _url_android;
+              _launchURL(appStoreUrl); // Redirect to App Store/Play Store
+            },
+          ),
+          TextButton(
+            child: const Text('Close App'),
+            onPressed: () {
+              exit(0); // Close the app
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _launchURL(Uri url) async {
+  if (await canLaunchUrl(url)) {
+    await launchUrl(url);
+  } else {
+    throw 'Could not launch $url';
+  }
+}
+
+Future<void> requestTrackingPermission() async {
+  // Check if the tracking status has not been determined
+  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
+    // Show an explainer dialog before the ATT prompt
+    await showCustomTrackingDialog();
+
+    // Wait a moment before presenting the ATT prompt
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Request tracking authorization
+    await AppTrackingTransparency.requestTrackingAuthorization();
+  }
+}
+
+// Method to display the custom explainer dialog
+Future<void> showCustomTrackingDialog() async {
+  return showDialog<void>(
+    context: navigatorKey.currentContext!,
+    barrierDismissible: false, // User must explicitly interact with dialog
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'Hi, there! 👋',
+          style: TextStyle(
+            fontSize: 24, // Increase font size
+            fontWeight: FontWeight.bold, // Make text bold
+          ),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'We kindly ask you to allow use of tracking data.\n\nYour permission helps us deliver a better and even more tailored experience!',
+              style: TextStyle(
+                fontSize: 18, // Increase font size for content
+                fontWeight: FontWeight.bold, // Make text bold
+              ),
+            ),
+            SizedBox(height: 10), // Add some spacing before the emoji line
+            Center(
+              child: Text(
+                '🤗',
+                style: TextStyle(
+                  fontSize: 40, // Make the emoji larger
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Continue'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Dismiss the dialog
+            },
+          ),
+        ],
+      );
+    },
   );
 }
 
@@ -49,8 +185,7 @@ class _MyAppState extends State<MyApp> {
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
       print("Purchase stream started");
-      IAPService(context.read<AuthService>().currentUser!.uid)
-          .listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -62,6 +197,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Parakeet',
       theme: ThemeData(
@@ -96,8 +232,7 @@ class _MyAppState extends State<MyApp> {
             );
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) =>
-                  const CreateLesson(title: 'Create an audio lesson'),
+              builder: (context) => const CreateLesson(title: 'Create an audio lesson'),
             );
           case '/login':
             return MaterialPageRoute(
