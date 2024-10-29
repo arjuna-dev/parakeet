@@ -106,7 +106,7 @@ class _HomeState extends State<Home> {
           ],
         ),
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/favorite"),
     );
   }
 
@@ -230,7 +230,6 @@ class _HomeState extends State<Home> {
                             _reloadPage();
                           }
                         });
-                        ;
                       },
                     ),
                   );

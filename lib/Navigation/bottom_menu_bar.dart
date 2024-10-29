@@ -10,21 +10,23 @@ class BottomMenuBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('Current route in BottomMenuBar: $currentRoute');
+
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.favorite),
             onPressed: () {
-              if (currentRoute != '/') {
-                Navigator.pushReplacementNamed(context, '/');
+              if (currentRoute != '/favorite') {
+                Navigator.pushReplacementNamed(context, '/favorite');
               }
             },
-            color: currentRoute == '/' ? Colors.blue : null,
+            color: currentRoute == '/favorite' ? Colors.blue : null,
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline),
+            icon: const Icon(Icons.home),
             onPressed: () {
               if (currentRoute != '/create_lesson') {
                 Navigator.pushReplacementNamed(context, '/create_lesson');
