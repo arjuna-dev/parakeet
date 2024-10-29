@@ -44,7 +44,8 @@ Future<void> main() async {
 
 Future<void> checkForMandatoryUpdate() async {
   final firestore = FirebaseFirestore.instance;
-  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef =
+      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
@@ -60,7 +61,8 @@ Future<void> checkForMandatoryUpdate() async {
 }
 
 final Uri _url_iOS = Uri.parse('https://apps.apple.com/app/6618158139');
-final Uri _url_android = Uri.parse('https://play.google.com/store/apps/details?id=com.parakeetapp.app');
+final Uri _url_android = Uri.parse(
+    'https://play.google.com/store/apps/details?id=com.parakeetapp.app');
 
 void _showUpdateDialog(String message) {
   showDialog(
@@ -106,7 +108,8 @@ void _launchURL(Uri url) async {
 
 Future<void> requestTrackingPermission() async {
   // Check if the tracking status has not been determined
-  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
+  if (await AppTrackingTransparency.trackingAuthorizationStatus ==
+      TrackingStatus.notDetermined) {
     // Show an explainer dialog before the ATT prompt
     await showCustomTrackingDialog();
 
@@ -185,7 +188,8 @@ class _MyAppState extends State<MyApp> {
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
       print("Purchase stream started");
-      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid)
+          .listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -204,35 +208,32 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      initialRoute: '/',
+      initialRoute: '/create_lesson',
       onGenerateRoute: (RouteSettings settings) {
         switch (settings.name) {
-          case '/':
+          case '/create_lesson':
             return MaterialPageRoute(
               builder: (context) => StreamBuilder<User?>(
                 stream: FirebaseAuth.instance.authStateChanges(),
                 builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
                   if (snapshot.connectionState == ConnectionState.active) {
                     if (snapshot.data == null) {
-                      // If the user is not logged in, redirect to AuthScreen
                       return const AuthScreen();
                     } else {
-                      // If the user is logged in, show the Home page
-                      return ChangeNotifierProvider(
-                        create: (context) => HomeScreenModel(),
-                        child: const Home(),
-                      );
+                      return const CreateLesson(
+                          title: 'Create an audio lesson');
                     }
                   }
-
-                  // While the connection state is not active, show a loading spinner
                   return const CircularProgressIndicator();
                 },
               ),
             );
-          case '/create_lesson':
+          case '/favorite':
             return MaterialPageRoute(
-              builder: (context) => const CreateLesson(title: 'Create an audio lesson'),
+              builder: (context) => ChangeNotifierProvider(
+                create: (context) => HomeScreenModel(),
+                child: const Home(),
+              ),
             );
           case '/login':
             return MaterialPageRoute(
