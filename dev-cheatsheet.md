@@ -116,6 +116,9 @@ bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
 flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
 ```
+Then use the Transporter macOS app to upload it.
+
+Then choose that new version on appstoreconnect.
 
 ### Build for web
 
