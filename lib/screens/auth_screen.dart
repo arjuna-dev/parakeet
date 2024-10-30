@@ -39,7 +39,7 @@ class AuthScreen extends StatelessWidget {
                     });
                   }
 
-                  Navigator.pushReplacementNamed(context, '/');
+                  Navigator.pushReplacementNamed(context, '/create_lesson');
                 }
               },
               child: const Text('Sign In with Google'),
@@ -48,10 +48,10 @@ class AuthScreen extends StatelessWidget {
               onPressed: () async {
                 User? user = await AuthService().signInWithApple();
                 if (user != null) {
-                  Navigator.pushReplacementNamed(context, '/');
+                  Navigator.pushReplacementNamed(context, '/create_lesson');
                 }
               },
-              child: Text('Sign in with Apple'),
+              child: const Text('Sign in with Apple'),
             ),
           ],
         ),
