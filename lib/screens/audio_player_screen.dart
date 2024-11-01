@@ -80,6 +80,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   stt.SpeechToText speech = stt.SpeechToText();
   String recordedText = '';
 
+  int previousIndex = -1;
+
   @override
   void initState() {
     super.initState();
@@ -135,10 +137,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         setState(() {
           currentTrack = script[index];
         });
-        print('currentTrack: $currentTrack');
         if (speechRecognitionActive) {
           _handleTrackChangeToCheckVoice(index);
         }
+        setState(() {
+          previousIndex = index;
+        });
+        print('currentTrack: $currentTrack');
       }
     });
   }
@@ -232,14 +237,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Stream<PositionData> get _positionDataStream {
-    int previousIndex = -1;
+    int lastIndex = -1;
     return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
       player.positionStream.where((_) => !_isPaused),
       player.durationStream.whereType<Duration>(),
       player.currentIndexStream.whereType<int>().startWith(0),
       (position, duration, index) {
-        bool hasIndexChanged = index != previousIndex;
-        previousIndex = index;
+        bool hasIndexChanged = index != lastIndex;
+        lastIndex = index;
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
         if (hasIndexChanged) return null;
         if (position < duration) {
@@ -328,7 +333,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCheckVoice(int currentIndex) async {
-    if (currentTrack == "five_second_break" && isLanguageSupported) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex) {
       if (widget.generating) {
         setState(() {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
