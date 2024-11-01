@@ -44,7 +44,7 @@ class TooltipContainerPainter extends CustomPainter {
     // Draw the rectangle part
     path.addRRect(RRect.fromRectAndRadius(
       Rect.fromLTWH(0, triangleHeight, size.width, size.height),
-      Radius.circular(10),
+      const Radius.circular(10),
     ));
     // Draw the triangle part
     path.moveTo(size.width / 2 - triangleHeight, triangleHeight);
@@ -291,10 +291,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                 .size
                                                 .width *
                                             0.8, // Occupies 80% of the parent container width
-                                        margin: EdgeInsets.symmetric(
+                                        margin: const EdgeInsets.symmetric(
                                             vertical:
                                                 8), // Adds vertical spacing between messages
-                                        padding: EdgeInsets.all(
+                                        padding: const EdgeInsets.all(
                                             12), // Adds padding inside the box
                                         decoration: BoxDecoration(
                                           color: isEven
@@ -309,7 +309,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                   Colors.grey.withOpacity(0.3),
                                               spreadRadius: 1,
                                               blurRadius: 5,
-                                              offset: Offset(
+                                              offset: const Offset(
                                                   0, 2), // Adds a shadow effect
                                             ),
                                           ],
@@ -364,12 +364,12 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                           decoration:
                                                               BoxDecoration(
                                                             color: isSelected
-                                                                ? Color
+                                                                ? const Color
                                                                     .fromARGB(
-                                                                        255,
-                                                                        97,
-                                                                        54,
-                                                                        255)
+                                                                    255,
+                                                                    97,
+                                                                    54,
+                                                                    255)
                                                                 : Colors
                                                                     .transparent,
                                                           ),
@@ -378,7 +378,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                                   .withWidget(
                                                                   key: _one,
                                                                   container:
-                                                                      Container(
+                                                                      SizedBox(
                                                                     width: 280,
                                                                     child:
                                                                         CustomPaint(
@@ -641,7 +641,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       if (script.isNotEmpty) {
                                         await addUserToActiveCreation();
                                         Navigator.pop(context);
-                                        Navigator.pushNamed(context, '/');
                                         Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
