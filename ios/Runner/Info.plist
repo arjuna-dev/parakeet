@@ -7,7 +7,7 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>We use your data to improve our service.</string>
+	<string>We store your email address only for logging in purposes. We store your product interaction to personalize your experience based on your preferences.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
