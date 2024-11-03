@@ -36,7 +36,11 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
-  await requestTrackingPermission();
+
+  if (Platform.isIOS) {
+    await requestTrackingPermission();
+  }
+
   if (!kIsWeb) {
     await checkForMandatoryUpdate();
   }
@@ -44,8 +48,7 @@ Future<void> main() async {
 
 Future<void> checkForMandatoryUpdate() async {
   final firestore = FirebaseFirestore.instance;
-  final docRef =
-      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
@@ -61,8 +64,7 @@ Future<void> checkForMandatoryUpdate() async {
 }
 
 final Uri _url_iOS = Uri.parse('https://apps.apple.com/app/6618158139');
-final Uri _url_android = Uri.parse(
-    'https://play.google.com/store/apps/details?id=com.parakeetapp.app');
+final Uri _url_android = Uri.parse('https://play.google.com/store/apps/details?id=com.parakeetapp.app');
 
 void _showUpdateDialog(String message) {
   showDialog(
@@ -108,8 +110,7 @@ void _launchURL(Uri url) async {
 
 Future<void> requestTrackingPermission() async {
   // Check if the tracking status has not been determined
-  if (await AppTrackingTransparency.trackingAuthorizationStatus ==
-      TrackingStatus.notDetermined) {
+  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
     // Show an explainer dialog before the ATT prompt
     await showCustomTrackingDialog();
 
@@ -188,8 +189,7 @@ class _MyAppState extends State<MyApp> {
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
       print("Purchase stream started");
-      IAPService(context.read<AuthService>().currentUser!.uid)
-          .listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -220,8 +220,7 @@ class _MyAppState extends State<MyApp> {
                     if (snapshot.data == null) {
                       return const AuthScreen();
                     } else {
-                      return const CreateLesson(
-                          title: 'Create an audio lesson');
+                      return const CreateLesson(title: 'Create an audio lesson');
                     }
                   }
                   return const CircularProgressIndicator();
