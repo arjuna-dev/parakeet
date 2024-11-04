@@ -23,7 +23,7 @@ class BottomMenuBar extends StatelessWidget {
                 Navigator.pushReplacementNamed(context, '/favorite');
               }
             },
-            color: currentRoute == '/favorite' ? Colors.blue : null,
+            color: currentRoute == '/favorite' ? const Color.fromARGB(255, 187, 134, 252) : null,
           ),
           IconButton(
             icon: const Icon(Icons.home),
@@ -32,7 +32,7 @@ class BottomMenuBar extends StatelessWidget {
                 Navigator.pushReplacementNamed(context, '/create_lesson');
               }
             },
-            color: currentRoute == '/create_lesson' ? Colors.blue : null,
+            color: currentRoute == '/create_lesson' ? const Color.fromARGB(255, 187, 134, 252) : null,
           ),
           IconButton(
             icon: const Icon(Icons.library_music),
@@ -41,7 +41,7 @@ class BottomMenuBar extends StatelessWidget {
                 Navigator.pushReplacementNamed(context, '/library');
               }
             },
-            color: currentRoute == '/library' ? Colors.blue : null,
+            color: currentRoute == '/library' ? const Color.fromARGB(255, 187, 134, 252) : null,
           )
         ],
       ),
