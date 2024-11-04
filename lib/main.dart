@@ -18,6 +18,7 @@ import 'screens/library_screen.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
+import 'theme/theme.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 const String localShouldUpdateID = "bRj98tXx";
@@ -224,10 +225,8 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Parakeet',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      // theme: AppTheme.light,
+      theme: AppTheme.dark,
       initialRoute: '/create_lesson',
       onGenerateRoute: (RouteSettings settings) {
         switch (settings.name) {
