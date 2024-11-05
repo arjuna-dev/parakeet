@@ -205,7 +205,6 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
       if (Platform.isIOS) await requestTrackingPermission();
-      
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
