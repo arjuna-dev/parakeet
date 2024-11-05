@@ -133,18 +133,20 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
+        final colorScheme = Theme.of(context).colorScheme;
         return model.favoriteAudioFiles.isEmpty
             ? SizedBox(
                 height: 150,
                 child: Center(
                   child: RichText(
                     text: TextSpan(
-                      style: const TextStyle(color: Colors.black), // Default text style
+                      style: TextStyle(color: colorScheme.primary), // Default text style
                       children: <TextSpan>[
                         const TextSpan(text: 'Nothing here yet 😅.'),
                         TextSpan(
                           text: 'Go to library',
                           style: TextStyle(
+                            decoration: TextDecoration.underline,
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ), // Make text blue to indicate it's clickable
