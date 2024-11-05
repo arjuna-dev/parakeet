@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 const String localShouldUpdateID = "bRj98tXx";
+const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +51,24 @@ Future<void> checkForMandatoryUpdate() async {
     final String updateMessage = data['should_update_app_message'];
 
     if (firebaseShouldUpdateID != localShouldUpdateID) {
-      _showUpdateDialog(updateMessage);
+      _showUpdateDialog(updateMessage, true);
+    }
+  }
+}
+
+Future<void> checkForRecommendedUpdate() async {
+  final firestore = FirebaseFirestore.instance;
+  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+
+  final docSnapshot = await docRef.get();
+
+  if (docSnapshot.exists) {
+    final data = docSnapshot.data() as Map<String, dynamic>;
+    final String firebaseCouldUpdateID = data['could_update_app_ID'];
+    final String updateMessage = data['could_update_app_message'];
+
+    if (firebaseCouldUpdateID != localCouldUpdateID) {
+      _showUpdateDialog(updateMessage, false);
     }
   }
 }
@@ -58,13 +76,13 @@ Future<void> checkForMandatoryUpdate() async {
 final Uri _url_iOS = Uri.parse('https://apps.apple.com/app/6618158139');
 final Uri _url_android = Uri.parse('https://play.google.com/store/apps/details?id=com.parakeetapp.app');
 
-void _showUpdateDialog(String message) {
+void _showUpdateDialog(String message, bool brickApp) {
   showDialog(
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // Prevent dialog dismissal
     builder: (BuildContext context) {
       return AlertDialog(
-        title: const Text('Update Required'),
+        title: brickApp ? const Text('Update Required') : const Text('Update Available'),
         content: Text(
           message, // Display message from Firebase
           style: const TextStyle(
@@ -81,9 +99,14 @@ void _showUpdateDialog(String message) {
             },
           ),
           TextButton(
-            child: const Text('Close App'),
+            child: brickApp ? const Text('Close App') : const Text('Continue'),
             onPressed: () {
-              exit(0); // Close the app
+              if (brickApp) {
+                exit(0); // Close the app
+              } else {
+                // Close the dialog
+                Navigator.of(context).pop();
+              }
             },
           ),
         ],
@@ -180,7 +203,9 @@ class _MyAppState extends State<MyApp> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!kIsWeb) await checkForMandatoryUpdate();
+      if (!kIsWeb) await checkForRecommendedUpdate();
       if (Platform.isIOS) await requestTrackingPermission();
+      
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
