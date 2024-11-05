@@ -47,6 +47,7 @@ class _LibraryState extends State<Library> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Library'),
@@ -172,7 +173,7 @@ class _LibraryState extends State<Library> {
                                       }),
                                   leading: IconButton(
                                     icon: model.favoriteAudioFileIds.any((file) => file['docId'] == documents[index].reference.id && file['parentId'] == documents[index].reference.parent.parent!.id)
-                                        ? const Icon(Icons.favorite, color: const Color.fromARGB(255, 187, 134, 252))
+                                        ? Icon(Icons.favorite, color: colorScheme.primary)
                                         : const Icon(Icons.favorite_border),
                                     onPressed: () async {
                                       final user = FirebaseAuth.instance.currentUser;

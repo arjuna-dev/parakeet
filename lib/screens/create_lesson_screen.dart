@@ -132,6 +132,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.title!),
@@ -182,11 +183,11 @@ class _CreateLessonState extends State<CreateLesson> {
                             regenerateTopic();
                           },
                           child: RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                                 text: 'suggest+',
                                 style: TextStyle(
                                   decoration: TextDecoration.underline,
-                                  color: Color.fromARGB(255, 187, 134, 252),
+                                  color: colorScheme.primary,
                                   fontSize: 16,
                                 )),
                           ),

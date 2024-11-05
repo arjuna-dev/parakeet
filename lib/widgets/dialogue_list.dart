@@ -63,8 +63,8 @@ class _DialogueListState extends State<DialogueList> {
                       BoxShadow(
                         color: shouldHighlight ? colorScheme.onPrimaryContainer.withOpacity(0.5) : colorScheme.shadow.withOpacity(0.6),
                         spreadRadius: 1,
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        blurRadius: 4,
+                        offset: const Offset(-3, 3),
                       ),
                     ],
                   ),
