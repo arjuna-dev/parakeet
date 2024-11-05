@@ -579,7 +579,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text('Check Pronunciation:'),
+                      const Text('check pronunciation (beta):'),
                       Switch(
                         value: speechRecognitionActive,
                         onChanged: (bool value) {
