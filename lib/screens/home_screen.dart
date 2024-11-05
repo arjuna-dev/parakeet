@@ -87,6 +87,7 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
+        final colorScheme = Theme.of(context).colorScheme;
         return model.nowPlayingFiles.isEmpty
             ? const SizedBox(
                 height: 150,
@@ -101,7 +102,7 @@ class _HomeState extends State<Home> {
                           title: Text(audioFile.get('title')),
                           subtitle: Text("Learning language: ${audioFile.get('target_language')} \n"
                               "Difficulty: ${audioFile.get('language_level')} level \n"),
-                          leading: const Icon(Icons.audio_file, color: const Color.fromARGB(255, 187, 134, 252)),
+                          leading: Icon(Icons.audio_file, color: colorScheme.primary),
                           onTap: () async {
                             Navigator.push(
                               context,
@@ -173,7 +174,7 @@ class _HomeState extends State<Home> {
                         "Learning language: ${audioFile.get('target_language')} \n"
                         "Difficulty: ${audioFile.get('language_level')} level \n",
                       ),
-                      leading: const Icon(Icons.favorite, color: Color.fromARGB(255, 187, 134, 252)),
+                      leading: Icon(Icons.favorite, color: colorScheme.primary),
                       onTap: () async {
                         Navigator.push(
                           context,
