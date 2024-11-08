@@ -17,6 +17,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:string_similarity/string_similarity.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
+import '../utils/constants.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -435,6 +437,46 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
+  void displayPopupSTTSupport(BuildContext context) {
+    showDialog(
+      context: navigatorKey.currentContext!,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Feature Not Supported on Mobile Yet...'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Platform.isIOS
+                  ? const Text(
+                      'We are working to bring speech recognition to mobile devices! For now, you can try it in the web app 🦜',
+                    )
+                  : const Text("We are working to bring speech recognition to mobile devices! For now, you can try it in the web app at app.parakeet.world 🦜"),
+              const SizedBox(height: 8),
+            ],
+          ),
+          actions: [
+            Platform.isIOS
+                ? TextButton(
+                    onPressed: () {
+                      launchURL(urlWebApp);
+                    },
+                    child: const Text('Try the Web App'))
+                : Container(),
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  speechRecognitionActive = false;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _startRecording() async {
     setState(() {
       recordedText = "";
@@ -587,12 +629,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text('check pronunciation (beta):'),
+                      const Text('Check Pronunciation:'),
                       Switch(
                         value: speechRecognitionActive,
                         onChanged: (bool value) {
-                          if (value) {
+                          if (value & kIsWeb) {
                             _initAndStartRecording();
+                          } else if (value & !kIsWeb) {
+                            displayPopupSTTSupport(context);
                           } else {
                             speech.stop();
                             speech.cancel();
