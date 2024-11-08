@@ -26,8 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchUserData() async {
     if (_user != null) {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(_user!.uid).get();
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(_user!.uid).get();
       if (userDoc.exists) {
         setState(() {
           _name = userDoc['name'];
@@ -43,8 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Account'),
-          content: const Text(
-              'Are you sure you want to delete your account? This action cannot be undone.'),
+          content: const Text('Are you sure you want to delete your account? This action cannot be undone.'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -79,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -90,19 +89,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             RichText(
               text: TextSpan(
                 children: [
-                  const TextSpan(
+                  TextSpan(
                     text: 'Name: ',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colorScheme.primary,
                     ),
                   ),
                   TextSpan(
                     text: _name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
-                      color: Colors.black,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ],
@@ -112,19 +111,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             RichText(
               text: TextSpan(
                 children: [
-                  const TextSpan(
+                  TextSpan(
                     text: 'Email: ',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colorScheme.primary,
                     ),
                   ),
                   TextSpan(
                     text: _email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
-                      color: Colors.black,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ],
@@ -133,10 +132,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 50),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, // Background color
-                foregroundColor: Colors.white, // Text color
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12), // Padding
+                backgroundColor: colorScheme.error, // Background color
+                foregroundColor: colorScheme.onError, // Text color
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Padding
               ),
               onPressed: _deleteAccount,
               child: const Text('Delete Account'),
