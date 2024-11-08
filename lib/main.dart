@@ -38,11 +38,6 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
-  await requestTrackingPermission();
-  if (!kIsWeb) {
-    await checkForMandatoryUpdate();
-    await checkForRecommendedUpdate();
-  }
 }
 
 Future<void> checkForMandatoryUpdate() async {
@@ -206,6 +201,13 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!kIsWeb) await checkForMandatoryUpdate();
+      if (!kIsWeb) await checkForRecommendedUpdate();
+      if (Platform.isIOS) await requestTrackingPermission();
+    });
+
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
