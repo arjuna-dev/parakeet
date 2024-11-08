@@ -1,7 +1,9 @@
+import 'package:parakeet/widgets/trial_modal.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -10,18 +12,57 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  Future<User?> signInWithGoogle() async {
+  Future<void> _initializeUserDocument(User user, BuildContext context) async {
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+    if (!userDoc.exists) {
+      // Create new user document
+      await _firestore.collection('users').doc(user.uid).set({
+        'name': user.displayName,
+        'email': user.email,
+        'premium': false,
+        'trialOffered': false,
+      });
+
+      // Show trial modal for new users
+      if (context.mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => TrialModal(userId: user.uid),
+        );
+      }
+    } else {
+      // Check if premium field exists and is false, and trial hasn't been offered
+      final userData = userDoc.data();
+      if (userData != null &&
+          userData['premium'] == false &&
+          userData['trialOffered'] != true) {
+        // Update trialOffered status
+        await _firestore.collection('users').doc(user.uid).update({
+          'trialOffered': true,
+        });
+
+        // Show trial modal
+        if (context.mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => TrialModal(userId: user.uid),
+          );
+        }
+      }
+    }
+  }
+
+  Future<User?> signInWithGoogle(BuildContext context) async {
     try {
-      print('Attempting to sign in with Google...');
       final GoogleSignInAccount? googleSignInAccount =
           await _googleSignIn.signIn();
       if (googleSignInAccount != null) {
-        print('Google Sign-In account retrieved: ${googleSignInAccount.email}');
         final GoogleSignInAuthentication googleSignInAuthentication =
             await googleSignInAccount.authentication;
 
-        print(
-            'Google Sign-In authentication retrieved: accessToken=${googleSignInAuthentication.accessToken}, idToken=${googleSignInAuthentication.idToken}');
         final AuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleSignInAuthentication.accessToken,
           idToken: googleSignInAuthentication.idToken,
@@ -29,10 +70,12 @@ class AuthService {
 
         final UserCredential userCredential =
             await _auth.signInWithCredential(credential);
-        print('Firebase user signed in: ${userCredential.user?.email}');
+
+        if (userCredential.user != null) {
+          await _initializeUserDocument(userCredential.user!, context);
+        }
+
         return userCredential.user;
-      } else {
-        print('Google Sign-In account is null');
       }
     } catch (e) {
       print('Error signing in with Google: $e');
@@ -40,10 +83,8 @@ class AuthService {
     return null;
   }
 
-  // Sign in with Apple
-  Future<User?> signInWithApple() async {
+  Future<User?> signInWithApple(BuildContext context) async {
     try {
-      // Request Apple ID credentials
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -51,14 +92,17 @@ class AuthService {
         ],
       );
 
-      // Create an OAuth credential
       final oauthCredential = OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
       );
 
-      // Sign in to Firebase with the Apple credential
       final userCredential = await _auth.signInWithCredential(oauthCredential);
+
+      if (userCredential.user != null) {
+        await _initializeUserDocument(userCredential.user!, context);
+      }
+
       return userCredential.user;
     } catch (e) {
       print('Error signing in with Apple: $e');
@@ -66,7 +110,6 @@ class AuthService {
     }
   }
 
-  // Sign out from all providers
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();

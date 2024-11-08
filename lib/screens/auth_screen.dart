@@ -1,7 +1,6 @@
 import 'package:parakeet/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
@@ -20,25 +19,8 @@ class AuthScreen extends StatelessWidget {
           children: <Widget>[
             ElevatedButton(
               onPressed: () async {
-                // Sign in with Google
-                User? user = await AuthService().signInWithGoogle();
-                if (user != null) {
-                  // Get reference to the user's document in Firestore
-                  DocumentReference userDocRef = FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user.uid);
-
-                  // Check if user already exists in Firestore
-                  DocumentSnapshot userDocSnapshot = await userDocRef.get();
-                  if (!userDocSnapshot.exists) {
-                    // User does not exist, create new document
-                    await userDocRef.set({
-                      'name': user.displayName,
-                      'email': user.email,
-                      // Add more user data as needed
-                    });
-                  }
-
+                User? user = await AuthService().signInWithGoogle(context);
+                if (user != null && context.mounted) {
                   Navigator.pushReplacementNamed(context, '/');
                 }
               },
@@ -46,12 +28,12 @@ class AuthScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                User? user = await AuthService().signInWithApple();
+                User? user = await AuthService().signInWithApple(context);
                 if (user != null) {
                   Navigator.pushReplacementNamed(context, '/');
                 }
               },
-              child: Text('Sign in with Apple'),
+              child: const Text('Sign in with Apple'),
             ),
           ],
         ),
