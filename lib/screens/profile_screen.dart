@@ -17,6 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   User? _user;
   String _name = '';
   String _email = '';
+  bool _premium = false;
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _name = userDoc['name'];
           _email = userDoc['email'];
+          _premium = userDoc['premium'];
         });
       }
     }
@@ -76,6 +78,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  Widget _buildPremiumStatus() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _premium
+            ? Colors.green.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _premium ? Colors.green : Colors.grey,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _premium ? Icons.star : Icons.star_border,
+            color: _premium ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _premium ? 'Premium Member' : 'Free Account',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: _premium ? Colors.green : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -133,31 +169,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 24),
+                _buildPremiumStatus(),
+                const SizedBox(height: 24),
                 ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .primary, // Background color
-                      foregroundColor: Colors.white, // Text color
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12), // Padding
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const StoreView()));
-                    },
-                    child: const Text('🏬 Store')),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StoreView(),
+                      ),
+                    );
+                  },
+                  child: const Text('🏬 Store'),
+                ),
               ],
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, // Background color
-                foregroundColor: Colors.white, // Text color
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12), // Padding
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onPressed: _deleteAccount,
               child: const Text('Delete Account'),
