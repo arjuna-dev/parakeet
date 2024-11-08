@@ -16,11 +16,10 @@ import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/library_screen.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
+import 'utils/constants.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
 
@@ -79,9 +78,6 @@ Future<void> checkForRecommendedUpdate() async {
   }
 }
 
-final Uri _url_iOS = Uri.parse('https://apps.apple.com/app/6618158139');
-final Uri _url_android = Uri.parse('https://play.google.com/store/apps/details?id=com.parakeetapp.app');
-
 void _showUpdateDialog(String message, bool brickApp) {
   showDialog(
     context: navigatorKey.currentContext!,
@@ -100,8 +96,8 @@ void _showUpdateDialog(String message, bool brickApp) {
           TextButton(
             child: const Text('Update'),
             onPressed: () {
-              final appStoreUrl = Platform.isIOS ? _url_iOS : _url_android;
-              _launchURL(appStoreUrl); // Redirect to App Store/Play Store
+              final appStoreUrl = Platform.isIOS ? urlIOS : urlAndroid;
+              launchURL(appStoreUrl); // Redirect to App Store/Play Store
             },
           ),
           TextButton(
@@ -119,14 +115,6 @@ void _showUpdateDialog(String message, bool brickApp) {
       );
     },
   );
-}
-
-void _launchURL(Uri url) async {
-  if (await canLaunchUrl(url)) {
-    await launchUrl(url);
-  } else {
-    throw 'Could not launch $url';
-  }
 }
 
 Future<void> requestTrackingPermission() async {
