@@ -62,23 +62,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-<<<<<<< HEAD
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>sms</string>
 		<string>tel</string>
 		<string>https</string>
 		<string>http</string>
-=======
-	<key>CFBundleURLTypes</key>
-	<array>
-	<dict>
-		<key>CFBundleURLSchemes</key>
-		<array>
-		<string>com.googleusercontent.apps.104439269977-h11b5o95n92afmciga4a9e5nh3nbtcf6</string>
-		</array>
-	</dict>
->>>>>>> 2337a15d5e51e2737d18f1d920282f848e17d8de
 	</array>
 </dict>
 </plist>
