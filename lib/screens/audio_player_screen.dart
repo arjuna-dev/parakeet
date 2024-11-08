@@ -390,12 +390,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       } else {
         // Get system locales from the device
         systemLocales = await speech.locales();
-        print('System locales: $systemLocales');
 
-        isLanguageSupported = systemLocales.any((locale) => locale.localeId == languageCodes[widget.targetLanguage]);
+        // Convert target language code to match system locale format
+        String? targetLanguageCode = languageCodes[widget.targetLanguage]?.replaceAll('-', '_');
+
+        isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
 
         if (!isLanguageSupported) {
+          print('Language not supported.');
+          _timer?.cancel();
+          speech.cancel();
           _showLanguageNotSupportedDialog();
+          setState(() {
+            speechRecognitionActive = false;
+          });
         } else {
           voiceLanguageCode = languageCodes[widget.targetLanguage];
           print('Voice language code: $voiceLanguageCode');
