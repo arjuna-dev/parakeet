@@ -14,6 +14,7 @@ class AuthService {
 
   Future<void> _initializeUserDocument(User user, BuildContext context) async {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
 
     if (!userDoc.exists) {
       // Create new user document
@@ -21,37 +22,25 @@ class AuthService {
         'name': user.displayName,
         'email': user.email,
         'premium': false,
-        'trialOffered': false,
       });
+    } else if (userData != null && (!userData.containsKey('premium'))) {
+      // Add premium field if it doesn't exist
+      await _firestore.collection('users').doc(user.uid).update({
+        'premium': false,
+      });
+    }
 
-      // Show trial modal for new users
-      if (context.mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => TrialModal(userId: user.uid),
-        );
-      }
-    } else {
-      // Check if premium field exists and is false, and trial hasn't been offered
-      final userData = userDoc.data();
-      if (userData != null &&
-          userData['premium'] == false &&
-          userData['trialOffered'] != true) {
-        // Update trialOffered status
-        await _firestore.collection('users').doc(user.uid).update({
-          'trialOffered': true,
-        });
-
-        // Show trial modal
-        if (context.mounted) {
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => TrialModal(userId: user.uid),
-          );
-        }
-      }
+    // Show trial modal if user is not premium
+    if (context.mounted &&
+        ((!userDoc.exists) ||
+            (userData != null &&
+                (!userData.containsKey('premium') ||
+                    userData['premium'] == false)))) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TrialModal(userId: user.uid),
+      );
     }
   }
 
