@@ -10,27 +10,30 @@ class BottomMenuBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    print('Current route in BottomMenuBar: $currentRoute');
+
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.favorite),
             onPressed: () {
-              if (currentRoute != '/') {
-                Navigator.pushReplacementNamed(context, '/');
+              if (currentRoute != '/favorite') {
+                Navigator.pushReplacementNamed(context, '/favorite');
               }
             },
-            color: currentRoute == '/' ? Colors.blue : null,
+            color: currentRoute == '/favorite' ? colorScheme.primary : null,
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline),
+            icon: const Icon(Icons.home),
             onPressed: () {
               if (currentRoute != '/create_lesson') {
                 Navigator.pushReplacementNamed(context, '/create_lesson');
               }
             },
-            color: currentRoute == '/create_lesson' ? Colors.blue : null,
+            color: currentRoute == '/create_lesson' ? colorScheme.primary : null,
           ),
           IconButton(
             icon: const Icon(Icons.library_music),
@@ -39,7 +42,7 @@ class BottomMenuBar extends StatelessWidget {
                 Navigator.pushReplacementNamed(context, '/library');
               }
             },
-            color: currentRoute == '/library' ? Colors.blue : null,
+            color: currentRoute == '/library' ? colorScheme.primary : null,
           )
         ],
       ),

@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
+import 'package:parakeet/widgets/profile_popup_menu.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -23,6 +24,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
+  var ttsProvider = 1;
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
@@ -145,9 +147,13 @@ class _CreateLessonState extends State<CreateLesson> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.title!),
+          actions: <Widget>[
+            buildProfilePopupMenu(context),
+          ],
         ),
         body: Center(
           child: Form(
@@ -187,17 +193,17 @@ class _CreateLessonState extends State<CreateLesson> {
                       ),
                       Positioned(
                         right: 10,
-                        bottom: 10,
+                        bottom: 3,
                         child: GestureDetector(
                           onTap: () {
                             regenerateTopic();
                           },
                           child: RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                                 text: 'suggest+',
                                 style: TextStyle(
                                   decoration: TextDecoration.underline,
-                                  color: Colors.deepPurple,
+                                  color: colorScheme.primary,
                                   fontSize: 16,
                                 )),
                           ),
@@ -251,8 +257,15 @@ class _CreateLessonState extends State<CreateLesson> {
                         setState(() {
                           targetLanguage = value.toString();
                         });
-                        _saveUserPreferences(
-                            'target_language', value.toString());
+                        if (targetLanguage == 'Azerbaijani') {
+                          setState(() {
+                            ttsProvider = 3;
+                          });
+                        } else {
+                          setState(() {
+                            ttsProvider = 1;
+                          });
+                        }
                       },
                       items: languageCodes.keys
                           .map<DropdownMenuItem<String>>((String key) {
@@ -345,6 +358,7 @@ class _CreateLessonState extends State<CreateLesson> {
                               final DocumentReference docRef = firestore
                                   .collection('chatGPT_responses')
                                   .doc();
+                              print('TTS provider: $ttsProvider');
                               http.post(
                                 Uri.parse(
                                     'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
@@ -354,7 +368,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   "Access-Control-Allow-Origin":
                                       "*", // Required for CORS support to work
                                 },
-                                body: jsonEncode(<String, String>{
+                                body: jsonEncode(<String, dynamic>{
                                   "requested_scenario": topic,
                                   "keywords": keywords,
                                   "native_language": nativeLanguage,
@@ -365,9 +379,10 @@ class _CreateLessonState extends State<CreateLesson> {
                                       .toString(),
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
-                                  "tts_provider": "1"
+                                  "tts_provider": ttsProvider.toString(),
                                 }),
                               );
+                              print(ttsProvider.toString());
                               int counter = 0;
                               bool docExists = false;
                               while (!docExists && counter < 15) {

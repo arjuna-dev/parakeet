@@ -6,6 +6,7 @@ import 'package:parakeet/services/home_screen_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,9 +48,13 @@ class _LibraryState extends State<Library> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Library'),
+        actions: <Widget>[
+          buildProfilePopupMenu(context),
+        ],
       ),
       body: Consumer<HomeScreenModel>(
         builder: (context, model, child) {
@@ -237,7 +242,8 @@ class _LibraryState extends State<Library> {
                                                         .parent
                                                         .parent!
                                                         .id)
-                                        ? const Icon(Icons.favorite)
+                                        ? Icon(Icons.favorite,
+                                            color: colorScheme.primary)
                                         : const Icon(Icons.favorite_border),
                                     onPressed: () async {
                                       final user =
@@ -307,6 +313,8 @@ class _LibraryState extends State<Library> {
                                               .id,
                                           dialogue:
                                               documents[index].get('dialogue'),
+                                          targetLanguage: documents[index]
+                                              .get('target_language'),
                                           userID: FirebaseAuth
                                               .instance.currentUser!.uid,
                                           title: documents[index].get('title'),

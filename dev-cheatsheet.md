@@ -3,17 +3,17 @@
 ---
 
 
-##### Deploy all funcitons in codebase:
+##### Deploy all functions in codebase:
 
 ```bash
 firebase deploy --only functions
 ```
 
 
-##### Deploy specific funcitons in codebase:
+##### Deploy specific functions in codebase:
 
 ```bash
-firebase deploy --only functions:addMessage,functions:makeUppercase
+firebase deploy --only functions:fist_API_calls,functions:second_API_calls
 ```
 
 
@@ -88,12 +88,12 @@ flutter build appbundle
 
 ##### Installation:
 
-1. Download the .jar file from https://github.com/google/bundletool/releases 
+1. Download the .jar file from https://github.com/google/bundletool/releases
 2. Add this to .zshrc:
 ```bash
 alias bundletool='java -jar /path/to/bundletool-all-1.16.0.jar'
 ```
-Alternatively you'll have to point to the .jar file every time with 
+Alternatively you'll have to point to the .jar file every time with
 
 ```bash
 java -jar /path/to/bundletool-all-1.16.0.jar
@@ -110,3 +110,18 @@ bundletool install-apks --apks=build/app/outputs/bundle/release/app-release.apks
 ```
 
 #### Note: this last command will install the app but not open it immediately, you must search and open the app manually
+
+### Build for iOS Deployment
+
+```
+flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
+```
+Then use the Transporter macOS app to upload it.
+
+Then choose that new version on appstoreconnect.
+
+### Build for web
+
+```
+flutter build web
+```

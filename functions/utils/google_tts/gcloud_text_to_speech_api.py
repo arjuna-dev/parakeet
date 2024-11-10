@@ -67,10 +67,10 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
     else:
         # Load audio file
         audio = MP3(output_path)
-        
+
         # Get duration of audio file
         duration = audio.info.length
-        
+
         # Upload the audio file to the bucket
         blob_name = f"{output_path}"
         storage_client = storage.Client()
@@ -79,7 +79,7 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
         try:
             blob.upload_from_filename(output_path, timeout = 600)
         except Exception as e:
-            print(f'Error uploading file: {e}')    
+            print(f'Error uploading file: {e}')
 
         blob.patch()
         blob.make_public()
@@ -88,5 +88,5 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
             filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
             push_to_firestore(filename_duration, doc_ref)
 
-# narrator_voice = choose_voice('en-US', "f", "en-US-Standard-C")
-# synthesize_text("Hello, World!", narrator_voice, "folder/file")
+# narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
+# google_synthesize_text("That was... meh...", narrator_voice, "meh.mp3")

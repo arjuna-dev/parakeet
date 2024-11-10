@@ -1,6 +1,7 @@
 from partialjson.json_parser import JSONParser
 from utils.google_tts.gcloud_text_to_speech_api import voice_finder_google, google_synthesize_text
 from utils.elevenlabs.elevenlabs_api import elevenlabs_tts
+from utils.openai_tts.openai_tts import voice_finder_openai, openai_synthesize_text
 from utils.utilities import push_to_firestore, remove_user_from_active_creation_by_id
 from utils.utilities import TTS_PROVIDERS
 import concurrent.futures
@@ -10,10 +11,13 @@ import time
 from threading import Timer, Lock
 
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, document_durations, words_to_repeat, document_target_phrases=None,  voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
         self.generating_turns = False
-        self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
+        if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+            self.narrator_voice, self.narrator_voice_id = voice_finder_google("f", native_language)
+        else:
+            self.narrator_voice = "nova"
         self.voice_1 = voice_1
         self.voice_2 = voice_2
         self.voice_1_id = None
@@ -25,6 +29,7 @@ class APICalls:
         self.document_id = document_id
         self.target_language = target_language
         self.document = document
+        self.document_target_phrases = document_target_phrases
         self.document_durations = document_durations
         self.words_to_repeat = words_to_repeat
         self.select_tts_provider()
@@ -48,9 +53,11 @@ class APICalls:
             self.tts_function = google_synthesize_text
         elif self.tts_provider == TTS_PROVIDERS.ELEVENLABS.value:
             self.tts_function = elevenlabs_tts
+        elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+            self.tts_function = openai_synthesize_text
         else:
             raise Exception("Invalid TTS provider")
-        
+
     def handle_line_1st_API(self, current_line, full_json):
 
         last_value_path = self.get_last_value_path(full_json)
@@ -91,18 +98,27 @@ class APICalls:
         elif '"gender":' in current_line:
             if self.generating_turns:
                 if self.turn_nr == 0:
-                    self.voice_1, self.voice_1_id = voice_finder_google(last_value, self.target_language)
+                    if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
+                        self.voice_1, self.voice_1_id = voice_finder_google(last_value, self.target_language)
+                    elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+                        self.voice_1_id = voice_finder_openai(last_value, self.target_language)
+                        self.voice_1 = self.voice_1_id
+
                     print('self.voice_1: ', self.voice_1)
                     if self.pending_voice_1:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_1['text'], self.voice_1, self.pending_voice_1['filename'], self.document_durations))
                         self.pending_voice_1 = None
                 if self.turn_nr == 1:
-                    self.voice_2, self.voice_2_id = voice_finder_google(last_value, self.target_language, self.voice_1_id)
+                    if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
+                        self.voice_2, self.voice_2_id = voice_finder_google(last_value, self.target_language, self.voice_1_id)
+                    elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
+                        self.voice_2_id = voice_finder_openai(last_value, self.target_language, self.voice_1_id)
+                        self.voice_2 = self.voice_2_id
                     print('self.voice_2: ', self.voice_2)
                     if self.pending_voice_2:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations))
                         self.pending_voice_2 = None
-        
+
     def handle_line_2nd_API(self, current_line, full_json):
 
         if self.mock:
@@ -131,6 +147,7 @@ class APICalls:
                         #     else:
                         #         found = True
                         voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                        self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value.split()[0].replace('||', '')}, self.document_target_phrases, operation="add")
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
                     else:
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations))
@@ -154,6 +171,7 @@ class APICalls:
                 self.skip = True
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+            self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value}, self.document_target_phrases, operation="add")
             self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
             self.skip = False
         elif '"speaker":' in current_line:
@@ -176,7 +194,7 @@ class APICalls:
             last_key = list(json_obj.keys())[-1]
             path.append(last_key)
             return self.get_last_value_path(json_obj[last_key], path)
-        
+
         elif isinstance(json_obj, list):
             if not json_obj:
                 return path
@@ -189,11 +207,11 @@ class APICalls:
     def get_value_from_path(self, json_obj, path):
         """
         Access the value in a JSON object using the provided path.
-        
+
         Args:
         - json_obj: The JSON object (dict or list).
         - path: The path to the value (list of keys and indexes).
-        
+
         Returns:
         - The value at the specified path.
         """
@@ -238,19 +256,19 @@ class APICalls:
                 end_of_line = False
                 current_line = []
         return rectified_JSON
-    
+
     def extract_and_classify_enclosed_words(self, input_string):
         parts = input_string.split('||')
         result = []
         is_enclosed = False
-        
+
         for part in parts:
             if part:
                 result.append({'text': part, 'enclosed': is_enclosed})
             is_enclosed = not is_enclosed
-        
+
         return result
-    
+
     def use_mock_voices(self):
         self.voice_1 = self.mock_voice_1
         self.voice_2 = self.mock_voice_2
