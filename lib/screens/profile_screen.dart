@@ -140,9 +140,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       TextSpan(
                         text: _name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 20,
-                          color: colorScheme.primary,
                         ),
                       ),
                     ],
@@ -162,9 +161,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       TextSpan(
                         text: _email,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 20,
-                          color: colorScheme.primary,
                         ),
                       ),
                     ],
@@ -197,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,

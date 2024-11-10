@@ -103,18 +103,37 @@ class _StoreViewState extends State<StoreView> {
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                     8.0, 25.0, 8.0, 8.0),
-                                child: Text(productDetails.title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium),
+                                child: Text(
+                                  productDetails.title,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
                               ),
-                              Text(productDetails.description),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    8.0, 8.0, 8.0, 8.0),
+                                child: Text(
+                                  productDetails.description,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                            ),
                             child: _buyText(productDetails),
                             onPressed: () {
                               late PurchaseParam purchaseParam;
@@ -179,7 +198,9 @@ class _StoreViewState extends State<StoreView> {
       children: [
         TextButton(
           style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor),
+            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () => _inAppPurchase.restorePurchases(),
           child: const Text('Restore Purchases'),
         )
@@ -198,7 +219,9 @@ class _StoreViewState extends State<StoreView> {
       children: [
         TextButton(
           style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor),
+            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () => _launchURL(Uri(
               scheme: "https",
               host: "gregarious-giant-4a5.notion.site",
@@ -220,7 +243,9 @@ class _StoreViewState extends State<StoreView> {
       children: [
         TextButton(
           style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor),
+            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () =>
               _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
           child: const Text('Privacy Policy'),
