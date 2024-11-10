@@ -1,3 +1,4 @@
+
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
@@ -9,6 +10,7 @@ from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice
+from utils.openai_tts.openai_tts import language_to_language_code_openai
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
 from google.cloud import storage
@@ -46,7 +48,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     document_id = request_data.get("document_id")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
     try:
         language_level = request_data.get("language_level")
     except:
@@ -80,7 +82,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                 # If the last call was not made today, reset the count and date
                 transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
         return True
-    
+
     # Start the transaction
     transaction = db.transaction()
     if not check_and_update_call_count(transaction, user_doc_ref):
@@ -121,8 +123,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
         prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
 
-    
-    if first_API_calls.mock == True: 
+
+    if first_API_calls.mock == True:
         chatGPT_response = mock_response_first_API
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
@@ -171,7 +173,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     words_to_repeat = request_data.get("words_to_repeat")
     tts_provider = request_data.get("tts_provider")
     tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value]
+    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
 
     print("request_data:", request_data)
 
@@ -184,15 +186,22 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         db = firestore.client()
         doc_ref = db.collection('chatGPT_responses').document(document_id)
         subcollection_ref = doc_ref.collection('all_breakdowns')
+        subcollection_ref_target_phrases = doc_ref.collection('target_phrases')
         document = subcollection_ref.document('updatable_big_json')
+        document_target_phrases = subcollection_ref_target_phrases.document('updatable_target_phrases')
 
         subcollection_ref_durations = doc_ref.collection('file_durations')
         document_durations = subcollection_ref_durations.document('file_durations')
 
-    language_code = language_to_language_code(target_language)
+    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+        language_code = language_to_language_code(target_language)
 
-    voice_1 = create_google_voice(language_code, voice_1_id)
-    voice_2 = create_google_voice(language_code, voice_2_id)
+        voice_1 = create_google_voice(language_code, voice_1_id)
+        voice_2 = create_google_voice(language_code, voice_2_id)
+    elif tts_provider == TTS_PROVIDERS.OPENAI.value:
+        language_code = language_to_language_code_openai(target_language)
+        voice_1 = voice_1_id
+        voice_2 = voice_2_id
 
     second_API_calls = APICalls(native_language,
                                 tts_provider,
@@ -201,6 +210,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 target_language,
                                 document_durations,
                                 words_to_repeat,
+                                document_target_phrases,
                                 voice_1,
                                 voice_2,
                                 mock=is_mock
@@ -215,7 +225,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
-    if second_API_calls.mock == True: 
+    if second_API_calls.mock == True:
         chatGPT_response = mock_response_second_API
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
@@ -276,6 +286,6 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
         except Exception as e:
             print(f"Blob {blob.name} not found.")
     # delete the folder as well
-    
-    
+
+
     return https_fn.Response(status=200)

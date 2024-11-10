@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/widgets/profile_popup_menu.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -39,34 +40,9 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Favorites'),
         actions: <Widget>[
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.account_circle),
-            onSelected: (String result) {
-              switch (result) {
-                case 'Profile':
-                  Navigator.pushNamed(context, '/profile');
-                  break;
-                case 'Logout':
-                  FirebaseAuth.instance.signOut().then((value) {
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/login', (route) => false);
-                  });
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'Profile',
-                child: Text('Profile'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'Logout',
-                child: Text('Logout'),
-              ),
-            ],
-          ),
+          buildProfilePopupMenu(context),
         ],
       ),
       body: Padding(
@@ -106,7 +82,7 @@ class _HomeState extends State<Home> {
           ],
         ),
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: "/"),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/favorite"),
     );
   }
 
@@ -114,6 +90,7 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
+        final colorScheme = Theme.of(context).colorScheme;
         return model.nowPlayingFiles.isEmpty
             ? const SizedBox(
                 height: 150,
@@ -131,7 +108,8 @@ class _HomeState extends State<Home> {
                           subtitle: Text(
                               "Learning language: ${audioFile.get('target_language')} \n"
                               "Difficulty: ${audioFile.get('language_level')} level \n"),
-                          leading: const Icon(Icons.audio_file),
+                          leading: Icon(Icons.audio_file,
+                              color: colorScheme.primary),
                           onTap: () async {
                             Navigator.push(
                               context,
@@ -140,6 +118,8 @@ class _HomeState extends State<Home> {
                                   documentID:
                                       audioFile.reference.parent.parent!.id,
                                   dialogue: audioFile.get('dialogue'),
+                                  targetLanguage:
+                                      audioFile.get('target_language'),
                                   wordsToRepeat:
                                       audioFile.get('words_to_repeat'),
                                   userID:
@@ -165,19 +145,21 @@ class _HomeState extends State<Home> {
     return Consumer<HomeScreenModel>(
       // Replace the body with this
       builder: (context, model, child) {
+        final colorScheme = Theme.of(context).colorScheme;
         return model.favoriteAudioFiles.isEmpty
             ? SizedBox(
                 height: 150,
                 child: Center(
                   child: RichText(
                     text: TextSpan(
-                      style: const TextStyle(
-                          color: Colors.black), // Default text style
+                      style: TextStyle(
+                          color: colorScheme.primary), // Default text style
                       children: <TextSpan>[
                         const TextSpan(text: 'Nothing here yet 😅.'),
                         TextSpan(
                           text: 'Go to library',
                           style: TextStyle(
+                            decoration: TextDecoration.underline,
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ), // Make text blue to indicate it's clickable
@@ -207,7 +189,7 @@ class _HomeState extends State<Home> {
                         "Learning language: ${audioFile.get('target_language')} \n"
                         "Difficulty: ${audioFile.get('language_level')} level \n",
                       ),
-                      leading: const Icon(Icons.favorite),
+                      leading: Icon(Icons.favorite, color: colorScheme.primary),
                       onTap: () async {
                         Navigator.push(
                           context,
@@ -215,6 +197,7 @@ class _HomeState extends State<Home> {
                             builder: (context) => AudioPlayerScreen(
                               documentID: audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
+                              targetLanguage: audioFile.get('target_language'),
                               wordsToRepeat: audioFile.get('words_to_repeat'),
                               userID: FirebaseAuth.instance.currentUser!.uid,
                               title: audioFile.get('title'),
@@ -227,7 +210,6 @@ class _HomeState extends State<Home> {
                             _reloadPage();
                           }
                         });
-                        ;
                       },
                     ),
                   );

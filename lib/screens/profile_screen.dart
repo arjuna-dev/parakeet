@@ -116,6 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -129,19 +130,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 RichText(
                   text: TextSpan(
                     children: [
-                      const TextSpan(
+                      TextSpan(
                         text: 'Name: ',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: colorScheme.primary,
                         ),
                       ),
                       TextSpan(
                         text: _name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
-                          color: Colors.black,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ],
@@ -151,19 +152,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 RichText(
                   text: TextSpan(
                     children: [
-                      const TextSpan(
+                      TextSpan(
                         text: 'Email: ',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: colorScheme.primary,
                         ),
                       ),
                       TextSpan(
                         text: _email,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
-                          color: Colors.black,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ],
@@ -195,8 +196,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
