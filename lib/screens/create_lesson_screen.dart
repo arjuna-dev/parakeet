@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
 import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
@@ -31,7 +32,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
-  final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
+  final numberOfAPIcallsAllowed = 10; // change this to allow more API calls
 
   final _formKey = GlobalKey<FormState>();
 
@@ -314,6 +315,67 @@ class _CreateLessonState extends State<CreateLesson> {
                         foregroundColor: Colors.white,
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
+                            // Check premium status first
+                            final userDoc = await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(FirebaseAuth.instance.currentUser!.uid)
+                                .get();
+
+                            final isPremium =
+                                userDoc.data()?['premium'] ?? false;
+                            final isTrialOffered =
+                                userDoc.data()?['trialOffered'] ?? false;
+
+                            if (!isPremium) {
+                              final apiCalls = await countAPIcallsByUser();
+                              if (apiCalls >= 2) {
+                                // Activate premium mode prompt
+                                final shouldEnablePremium =
+                                    await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text(
+                                          'Get access to unlimited lesson creation'),
+                                      content: const Text(
+                                          'You\'ve reached the free limit. Activate premium mode!!'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('No, thanks'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            final success =
+                                                await activateFreeTrial(
+                                                    context,
+                                                    FirebaseAuth.instance
+                                                        .currentUser!.uid);
+                                            if (success) {
+                                              Navigator.pop(context, true);
+                                            } else {
+                                              Navigator.pop(context, false);
+                                            }
+                                          },
+                                          child: Text(isTrialOffered
+                                              ? 'Get premium for 1 month'
+                                              : 'Try out free for 30 days'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (shouldEnablePremium != true) {
+                                  Navigator.pushReplacementNamed(
+                                      context, '/create_lesson');
+                                  return;
+                                }
+                              }
+                            }
+
                             print("pressed");
                             showDialog(
                               context: context,

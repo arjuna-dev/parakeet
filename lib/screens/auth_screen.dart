@@ -21,7 +21,7 @@ class AuthScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 // Sign in with Google
-                User? user = await AuthService().signInWithGoogle();
+                User? user = await AuthService().signInWithGoogle(context);
                 if (user != null) {
                   // Get reference to the user's document in Firestore
                   DocumentReference userDocRef = FirebaseFirestore.instance
@@ -46,7 +46,7 @@ class AuthScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                User? user = await AuthService().signInWithApple();
+                User? user = await AuthService().signInWithApple(context);
                 if (user != null) {
                   Navigator.pushReplacementNamed(context, '/create_lesson');
                 }

@@ -72,7 +72,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         else:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
-                if user_doc_snapshot.get('call_count') >= 5:
+                if user_doc_snapshot.get('call_count') >= 10:
                     # If the call count for today is 5 or more, return False
                     return False
                 else:

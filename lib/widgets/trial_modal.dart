@@ -1,63 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:parakeet/utils/activate_free_trial.dart';
 
 class TrialModal extends StatelessWidget {
   final String userId;
 
   const TrialModal({super.key, required this.userId});
-
-  Future<void> _activateFreeTrial(BuildContext context) async {
-    final bool available = await InAppPurchase.instance.isAvailable();
-    if (!available) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Store is not available')),
-        );
-      }
-      return;
-    }
-
-    // Query for the trial product
-    final ProductDetailsResponse response =
-        await InAppPurchase.instance.queryProductDetails({'1m'}.toSet());
-
-    if (response.notFoundIDs.isNotEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trial subscription not found')),
-        );
-      }
-      return;
-    }
-
-    final ProductDetails product = response.productDetails.first;
-
-    final PurchaseParam purchaseParam = PurchaseParam(
-      productDetails: product,
-    );
-
-    try {
-      final bool success = await InAppPurchase.instance
-          .buyNonConsumable(purchaseParam: purchaseParam);
-
-      if (success) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .update({
-          'premium': true,
-          'trialOffered': true,
-        });
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start trial: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +27,7 @@ class TrialModal extends StatelessWidget {
         ),
         ElevatedButton(
           onPressed: () async {
-            await _activateFreeTrial(context);
+            await activateFreeTrial(context, userId);
             if (context.mounted) {
               Navigator.of(context).pop();
             }
