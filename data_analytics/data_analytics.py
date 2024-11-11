@@ -8,12 +8,17 @@ import seaborn as sns
 from matplotlib.colors import ListedColormap
 from enum import Enum
 
-# ['Solarize_Light2', '_classic_test_patch', '_mpl-gallery', '_mpl-gallery-nogrid', 'bmh', 'classic', 'dark_background', 'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn-v0_8', 'seaborn-v0_8-bright', 'seaborn-v0_8-colorblind', 'seaborn-v0_8-dark', 'seaborn-v0_8-dark-palette', 'seaborn-v0_8-darkgrid', 'seaborn-v0_8-deep', 'seaborn-v0_8-muted', 'seaborn-v0_8-notebook', 'seaborn-v0_8-paper', 'seaborn-v0_8-pastel', 'seaborn-v0_8-poster', 'seaborn-v0_8-talk', 'seaborn-v0_8-ticks', 'seaborn-v0_8-white', 'seaborn-v0_8-whitegrid', 'tableau-colorblind10']
+# ['Solarize_Light2', '_classic_test_patch', '_mpl-gallery', '_mpl-gallery-nogrid', 'bmh', 'classic',
+#  'dark_background', 'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn-v0_8',
+#  'seaborn-v0_8-bright', 'seaborn-v0_8-colorblind', 'seaborn-v0_8-dark', 'seaborn-v0_8-dark-palette',
+#  'seaborn-v0_8-darkgrid', 'seaborn-v0_8-deep', 'seaborn-v0_8-muted', 'seaborn-v0_8-notebook',
+#  'seaborn-v0_8-paper', 'seaborn-v0_8-pastel', 'seaborn-v0_8-poster', 'seaborn-v0_8-talk',
+#  'seaborn-v0_8-ticks', 'seaborn-v0_8-white', 'seaborn-v0_8-whitegrid', 'tableau-colorblind10']
 
 # plt.style.use('seaborn-v0_8') # Marginally better
 # plt.style.use('Solarize_Light2') # Stylish/pale yellow
 # plt.style.use('fivethirtyeight') # bold
-# plt.style.use('seaborn-v0_8-muted') # Nice pallette
+# plt.style.use('seaborn-v0_8-muted') # Nice palette
 # plt.style.use('bmh') #
 # plt.style.use('ggplot') #
 
@@ -21,7 +26,7 @@ class Style(Enum):
     CYBERPUNK = 1
     SKETCH = 2
 
-# update_csvs()
+
 def generate_all_charts(style):
 
     if style == Style.CYBERPUNK:
@@ -67,13 +72,16 @@ def generate_all_charts(style):
     user_id_counts = df_big_jsons['user_ID'].value_counts()
     df_counts = user_id_counts.rename_axis('id').reset_index(name='# of Lessons')  # Convert to DataFrame
     df_users = pd.merge(df_users, df_counts, how='left', on='id')
-    df_users['# of Lessons'].fillna(0, inplace=True)
+    df_users['# of Lessons'] = df_users['# of Lessons'].fillna(0)
+
     df_users.sort_values(by='# of Lessons', ascending=False, inplace=True)
+
+    # Convert counts to integer type
+    df_users['# of Lessons'] = df_users['# of Lessons'].astype(int)
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     # _-_-_-_-_-_Visualize users by number of lessons-_-_-_-_-_-_-_-
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-
 
     users_N_lessons = df_users.groupby('name')['# of Lessons'].sum().sort_values(ascending=False)
     users_N_lessons.to_csv('csv/users_N_lessons.csv')
@@ -102,25 +110,18 @@ def generate_all_charts(style):
     # Add # of Lessons column
     df_daily_usage['# of Lessons'] = df_daily_usage['user_ID'].map(df_users.set_index('id')['# of Lessons'])
 
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # _-_-_-_-_-_Users and lessons by date of creation for top users-_-_-_-_-_-_-_-_
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # Convert timestamp to datetime and extract only the date part
+    df_daily_usage['timestamp'] = pd.to_datetime(df_daily_usage['timestamp']).dt.date
 
     # Find top unique users by # of Lessons
     number_of_top_users = 5
-    top_5_users = df_daily_usage.groupby('user_ID')['# of Lessons'].max().nlargest(number_of_top_users).index
+    top_users = df_daily_usage.groupby('user_ID')['# of Lessons'].max().nlargest(number_of_top_users).index
 
-    # Find top 10 users by # of Lessons
-    top_10_users = df_daily_usage.groupby('user_ID')['# of Lessons'].max().nlargest(10).index
-
-    # Filter the original DataFrame to keep only the top 10 users
-    df_daily_usage_top = df_daily_usage[df_daily_usage['user_ID'].isin(top_5_users)]
-
-    # Convert timestamp to datetime and extract only the date part
-    df_daily_usage_top['timestamp'] = pd.to_datetime(df_daily_usage_top['timestamp']).dt.date
+    # Filter the original DataFrame to keep only the top users
+    df_daily_usage_top = df_daily_usage[df_daily_usage['user_ID'].isin(top_users)]
 
     # Group by 'name' and 'timestamp', then count the number of lessons created per day
-    lessons_per_day = df_daily_usage_top.groupby([df_daily_usage_top['name'], df_daily_usage_top['timestamp']]).size().reset_index(name='lesson_count')
+    lessons_per_day = df_daily_usage_top.groupby(['name', 'timestamp']).size().reset_index(name='lesson_count')
 
     # Pivot the table so each name becomes a column
     pivot_table = lessons_per_day.pivot(index='timestamp', columns='name', values='lesson_count').fillna(0)
@@ -131,7 +132,7 @@ def generate_all_charts(style):
     # Add labels and title
     plt.xlabel('Date')
     plt.ylabel('Number of Lessons')
-    plt.title('Lessons Created Per Day by Top 5 Users')
+    plt.title('Lessons Created Per Day by Top Users')
     plt.xticks(rotation=45)
     plt.legend(title='User')
 
@@ -140,9 +141,54 @@ def generate_all_charts(style):
     # plt.show()
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # _-_-_-_-_-_Users that re-listen to lessons on different dates-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-_Add Analysis of Recent Usage (Last 30 Days)-_-_-_-_-_-_-_-_-_-_-_-_
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 
+    # Define the date range (e.g., last 30 days)
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=30)
+
+    # Filter data for the last 30 days
+    df_recent_usage = df_daily_usage[df_daily_usage['timestamp'] >= start_date]
+
+    # Group by date and count total lessons created per day
+    recent_lessons_per_day = df_recent_usage.groupby('timestamp').size().reset_index(name='lesson_count')
+
+    # Plot total lessons created per day for the last 30 days
+    plt.figure(figsize=(12, 6))
+    plt.plot(recent_lessons_per_day['timestamp'], recent_lessons_per_day['lesson_count'], marker='o')
+    plt.title('Total Lessons Created Per Day (Last 30 Days)')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Lessons')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'lessons_per_day_last_30_days.png')
+    # plt.show()
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-_Visualize Active Users Over Time (Last 30 Days)-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+    # Calculate the number of active users per day
+    active_users_per_day = df_recent_usage.groupby('timestamp')['user_ID'].nunique().reset_index(name='active_users')
+
+    # Plot the number of active users per day
+    plt.figure(figsize=(12, 6))
+    plt.plot(active_users_per_day['timestamp'], active_users_per_day['active_users'], marker='o', color='green')
+    plt.title('Active Users Per Day (Last 30 Days)')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Active Users')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'active_users_per_day_last_30_days.png')
+    # plt.show()
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-_Visualize Total Plays Per Day (Last 30 Days)-_-_-_-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+    # --- Include the code to create 'timestamps' in df_analytics ---
+    # Define functions to extract creation date and timestamps
     def return_creation_date(play):
         # Remove 'DatetimeWithNanoseconds' and replace it with just a placeholder or proper datetime
         data_str = play.replace('DatetimeWithNanoseconds', 'datetime.datetime')
@@ -164,25 +210,92 @@ def generate_all_charts(style):
 
         return timestamps
 
+    # Apply the functions to create 'creation_date' and 'timestamps' columns
     df_analytics['creation_date'] = df_analytics['play'].apply(return_creation_date)
-
     df_analytics['timestamps'] = df_analytics['play'].apply(return_timestamps_dates)
 
-    print(df_analytics['timestamps'])
-    df_analytics['timestamps'].to_csv('timestamps.csv', index=False)
+    # Explode the 'timestamps' column to get one row per timestamp
+    df_analytics_exploded = df_analytics.explode('timestamps')
 
+    # Convert 'timestamps' to datetime
+    df_analytics_exploded['timestamps'] = pd.to_datetime(df_analytics_exploded['timestamps'])
 
-    def timestamps_count(row):
-        timestamps = row['timestamps']
-        timestamps_count = len(timestamps)
-        return timestamps_count
+    # Extract date
+    df_analytics_exploded['date'] = df_analytics_exploded['timestamps'].dt.date
 
-    # Apply the function and create a new column to flag rows where timestamps differ
-    df_analytics['played_on_different_date'] = df_analytics.apply(timestamps_count, axis=1)
+    # Filter for the last 30 days
+    df_recent_analytics = df_analytics_exploded[df_analytics_exploded['date'] >= start_date]
 
+    # Group by date and count plays
+    plays_per_day = df_recent_analytics.groupby('date').size().reset_index(name='play_count')
+
+    # Plot plays per day over the last 30 days
+    plt.figure(figsize=(12, 6))
+    plt.plot(plays_per_day['date'], plays_per_day['play_count'], marker='o', color='orange')
+    plt.title('Number of Lesson Plays Per Day (Last 30 Days)')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Plays')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'plays_per_day_last_30_days.png')
+    # plt.show()
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-_Update Existing Visualizations to Include Current Data-_-_-_-_-_-_-
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+    # Ensure 'date' is a datetime index
+    activity_df = df_recent_usage.copy()
+    activity_df['date'] = pd.to_datetime(activity_df['timestamp'])
+
+    # Identify top 5 users in the last 30 days
+    recent_user_counts = activity_df.groupby('name')['date'].nunique().reset_index(name='active_days')
+    recent_top_users = recent_user_counts.nlargest(5, 'active_days')['name'].tolist()
+
+    # Prepare data for heatmap
+    all_dates = pd.date_range(start=start_date, end=today)
+    activity_matrix = pd.DataFrame({'date': all_dates})
+
+    for user in recent_top_users:
+        user_dates = activity_df[activity_df['name'] == user]['date'].unique()
+        activity_matrix[user] = activity_matrix['date'].isin(user_dates).astype(int)
+
+    activity_matrix.set_index('date', inplace=True)
+    heatmap_data = activity_matrix.T
+
+    # Plot heatmap of user activity over the last 30 days
+    plt.figure(figsize=(15, 6))
+    sns.heatmap(
+        heatmap_data,
+        cmap='YlGnBu',
+        cbar=True,
+        linewidths=0.5,
+        linecolor='white',
+        square=False,
+        cbar_kws={'ticks': [0, 1]}
+    )
+
+    plt.xlabel('Date')
+    plt.ylabel('User')
+    plt.title('User Activity Heatmap Over Last 30 Days (Top 5 Users)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'user_activity_heatmap_last_30_days.png')
+    # plt.show()
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # Continue with your existing processing
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+    # Users that re-listen to lessons on different dates
+
+    # Apply the functions again if necessary (already applied above)
+
+    # Create 'played_on_different_date' column in df_analytics
+    df_analytics['played_on_different_date'] = df_analytics['timestamps'].apply(lambda x: len(x))
+
+    # Filter files played on different dates
     df_played_on_different_date = df_analytics[df_analytics['played_on_different_date'] > 1]
-
-
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     # _-_-_-_-_-_-_Usage per user (counts)-_-_-_-_-_-_-_-_-_
@@ -191,10 +304,6 @@ def generate_all_charts(style):
     # Explode the 'timestamps' column to get one row per timestamp
     df_analytics_exploded = df_analytics.explode('timestamps')
 
-    # Drop 'id' from df_analytics_exploded to avoid conflict
-    df_analytics_exploded.drop(columns=['id'], inplace=True)
-
-    # Continue with your processing
     # Convert 'timestamps' to datetime
     df_analytics_exploded['timestamps'] = pd.to_datetime(df_analytics_exploded['timestamps'])
 
@@ -207,19 +316,19 @@ def generate_all_charts(style):
     )
 
     # Now, you can group by 'id' without issues
-    user_unique_date_counts = df_analytics_with_users.groupby('id')['date'].nunique().reset_index()
-    user_unique_date_counts.rename(columns={'date': 'Number of Unique Active Days'}, inplace=True)
+    user_unique_date_counts = df_analytics_with_users.groupby('user_id')['date'].nunique().reset_index()
+    user_unique_date_counts.rename(columns={'date': 'Number of Unique Active Days', 'user_id': 'id'}, inplace=True)
+
 
     # Sort the counts in descending order
     user_unique_date_counts = user_unique_date_counts.sort_values(by='Number of Unique Active Days', ascending=False)
 
     # Merge 'Number of Unique Active Days' into df_users
     df_users = pd.merge(df_users, user_unique_date_counts[['id', 'Number of Unique Active Days']], how='left', on='id')
-    df_users['Number of Unique Active Days'].fillna(0, inplace=True)
+    df_users['Number of Unique Active Days'] = df_users['Number of Unique Active Days'].fillna(0)
+    df_users['Number of Unique Active Days'] = df_users['Number of Unique Active Days'].astype(int)
 
     # Convert counts to integer type
-    df_users['# of Lessons'] = df_users['# of Lessons'].astype(int)
-    df_users['Number of Unique Active Days'] = df_users['Number of Unique Active Days'].astype(int)
     df_users['Favorite Files Count'] = df_users['Favorite Files Count'].astype(int)
 
     # Now create df_data
@@ -262,14 +371,6 @@ def generate_all_charts(style):
 
     # Initialize activity DataFrame
     activity_df = pd.DataFrame({'date': all_dates})
-
-    # # Create binary activity columns
-    # for user in top_5_users:
-    #     user_dates = df_top_users[df_top_users['name'] == user]['date'].unique()
-    #     activity_df[user] = activity_df['date'].isin(user_dates).astype(int)
-
-    # Convert 'date' columns to datetime64[ns]
-    activity_df['date'] = pd.to_datetime(activity_df['date'])
 
     # Adjust the loop for creating binary activity columns
     for user in top_5_users:
@@ -320,8 +421,6 @@ def generate_all_charts(style):
         linewidths=0.5,
         linecolor='white',
         square=False,
-        # annot=True,             # Annotate cells with data values (0 or 1)
-        # fmt='d',                # Format annotations as integers
         cbar_kws={'ticks': [0, 1]}  # Set color bar ticks to 0 and 1
     )
 
@@ -334,9 +433,12 @@ def generate_all_charts(style):
     plt.savefig(img_dir+'user_activity_heatmap_custom.png')
     # plt.show()
 
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-    # _-_-_-_-_-Re-listen Pie Chart-_-_-_-_-_-_-_-_-
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-Re-listen Pie Chart-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+
+    # Get top 10 users
+    top_10_users = df_daily_usage.groupby('user_ID')['# of Lessons'].max().nlargest(10).index
 
     files_played_on_different_date = df_played_on_different_date[df_played_on_different_date['user_id'].isin(top_10_users)].shape[0]
     all_files = df_analytics[df_analytics['user_id'].isin(top_10_users)].shape[0]
@@ -344,7 +446,6 @@ def generate_all_charts(style):
     percentage_of_files_played_on_different_date = files_played_on_different_date / all_files * 100
 
     list_for_pie = [files_played_on_different_date, all_files - files_played_on_different_date]
-    # print('list_for_pie: ', list_for_pie)
 
     # Create pie chart of files played on different date
     plt.figure(figsize=(10, 6))
@@ -363,7 +464,6 @@ def generate_all_charts(style):
     percentage_of_files_played_on_different_date = files_played_on_different_date / all_files * 100
 
     list_for_pie = [files_played_on_different_date, all_files - files_played_on_different_date]
-    # print('list_for_pie: ', list_for_pie)
 
     # Pie chart of users by lessons created
     lesson_counts = df_users['# of Lessons'].apply(lambda x: '0 lessons' if x == 0 else ('1 lesson' if x == 1 else ('2 lessons' if x == 2 else 'More than 2 lessons'))).value_counts()
@@ -383,14 +483,14 @@ def generate_all_charts(style):
     # Create bar chart of files played on different date
     plt.figure(figsize=(10, 6))
     plt.bar(df_played_on_different_date['id'], df_played_on_different_date['played_on_different_date'])
-    plt.title('Files played on different date')
+    plt.title('Files Played on Different Date')
     plt.xlabel('File')
-    plt.ylabel('Number of days')
+    plt.ylabel('Number of Days')
     plt.savefig(img_dir+'relisten_bar.png')
     # plt.show()
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-    # _-_-_-_-_-Top re-listened With User, Target Language and File Name-_-_-_-_-_-_-_-_-
+    # _-_-_-_-_-Top Re-listened Files with User, Target Language, and File Name-_-_-_-_-_
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 
     # Get the top 10 re-listened files
@@ -410,9 +510,8 @@ def generate_all_charts(style):
     top_10_relistened = top_10_relistened[['played_on_different_date', 'name', 'title', 'target_language']]
 
     # Display top_10_relistened as a table with matplotlib
-    plt.style.use('seaborn-v0_8') # bold
+    plt.style.use('seaborn-v0_8')  # bold
     fig, ax = plt.subplots(figsize=(13, 6))
-    # ax.table(cellText=top_10_relistened.values, colLabels=top_10_relistened.columns, loc='center')
     # Create the table
     table = ax.table(cellText=top_10_relistened.values, colLabels=top_10_relistened.columns, cellLoc='center', loc='center')
 
@@ -420,7 +519,6 @@ def generate_all_charts(style):
     table.auto_set_font_size(False)
     table.set_fontsize(12)  # Set the font size for all cells
 
-    # Make the header bold and larger
     # Make the header bold and larger
     for key, cell in table.get_celld().items():
         row, col = key
@@ -434,14 +532,74 @@ def generate_all_charts(style):
     # Make lines thicker
     table.auto_set_column_width(col=list(range(len(top_10_relistened.columns))))  # Set column width automatically
 
-
     ax.axis('off')
     plt.savefig(img_dir+'top_10_relistened.png')
     # plt.show()
 
-
+    # Save df_data again if needed
     df_data = df_users[['id', 'name', 'email', 'Favorite Files Count', '# of Lessons', 'Number of Unique Active Days']]
+    # Save to CSV
+    df_data.to_csv('csv/data.csv', index=False)
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-Active users last 30 days-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+
+    # Define the date range (e.g., last 30 days)
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=30)
+
+    # Filter df_daily_usage for the last 30 days
+    df_recent_usage = df_daily_usage[df_daily_usage['timestamp'] >= start_date]
+
+    # Group by 'name' and count the number of lessons
+    lessons_per_user = df_recent_usage.groupby('name').size().reset_index(name='lesson_count')
+
+    # Sort the DataFrame by 'lesson_count' in descending order
+    lessons_per_user = lessons_per_user.sort_values(by='lesson_count', ascending=False)
+
+    # Plot the bar chart
+    plt.figure(figsize=(12, 6))
+    plt.bar(lessons_per_user['name'], lessons_per_user['lesson_count'], color='skyblue')
+    plt.xlabel('User')
+    plt.ylabel('Number of Lessons Created')
+    plt.title('Active Users in the Last 30 Days')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'active_users_last_30_days.png')
+    # plt.show()
+
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-Active users last 15 days-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+
+    # Define the date range (e.g., last 15 days)
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=15)
+
+    # Filter df_daily_usage for the last 15 days
+    df_recent_usage = df_daily_usage[df_daily_usage['timestamp'] >= start_date]
+
+    # Group by 'name' and count the number of lessons
+    lessons_per_user = df_recent_usage.groupby('name').size().reset_index(name='lesson_count')
+
+    # Sort the DataFrame by 'lesson_count' in descending order
+    lessons_per_user = lessons_per_user.sort_values(by='lesson_count', ascending=False)
+
+    # Plot the bar chart
+    plt.figure(figsize=(12, 6))
+    plt.bar(lessons_per_user['name'], lessons_per_user['lesson_count'], color='skyblue')
+    plt.xlabel('User')
+    plt.ylabel('Number of Lessons Created')
+    plt.title('Active Users in the Last 15 Days')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(img_dir+'active_users_last_15_days.png')
+    # plt.show()
 
 
-generate_all_charts(Style.SKETCH)
+# Uncomment the following line if you need to update the CSV files before analysis
+# update_csvs()
+
 generate_all_charts(Style.CYBERPUNK)
+generate_all_charts(Style.SKETCH)
