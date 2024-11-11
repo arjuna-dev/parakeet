@@ -77,7 +77,7 @@ class _LibraryState extends State<Library> {
                         child: Center(
                           child: RichText(
                             text: TextSpan(
-                              style: const TextStyle(color: Colors.black), // Default text style
+                              style: TextStyle(color: colorScheme.onPrimaryContainer), // Default text style
                               children: <TextSpan>[
                                 const TextSpan(text: 'Your library is empty. '),
                                 TextSpan(
