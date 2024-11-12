@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/auth_service.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,12 +17,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   User? _user;
   String _name = '';
   String _email = '';
+  late FirebaseAnalytics _analytics;
 
   @override
   void initState() {
     super.initState();
     _user = FirebaseAuth.instance.currentUser;
     _fetchUserData();
+    _analytics = FirebaseAnalytics.instance;
   }
 
   Future<void> _fetchUserData() async {
@@ -64,6 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (confirm == true) {
       try {
         await _authService.deleteAccount();
+        await _analytics.logEvent(name: 'delete_account', parameters: {'user_id': _user!.uid});
         // Navigate to login or home screen after account deletion
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       } catch (e) {

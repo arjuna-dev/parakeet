@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class Library extends StatefulWidget {
   const Library({super.key});
@@ -23,6 +24,7 @@ class _LibraryState extends State<Library> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   //get current user id
   final String userId = FirebaseAuth.instance.currentUser!.uid;
+  late FirebaseAnalytics _analytics;
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _LibraryState extends State<Library> {
 
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+    _analytics = FirebaseAnalytics.instance;
   }
 
   void deleteFromCloudStorage(documentId) {
@@ -88,7 +91,7 @@ class _LibraryState extends State<Library> {
                                   ), // Make text blue to indicate it's clickable
                                   recognizer: TapGestureRecognizer()
                                     ..onTap = () {
-                                      // Navigator code to navigate to LibraryScreen
+                                      _analytics.logEvent(name: 'create_first_lesson from library');
                                       Navigator.pushReplacementNamed(context, '/create_lesson');
                                     },
                                 ),
@@ -190,6 +193,7 @@ class _LibraryState extends State<Library> {
                                             {'parentId': parentId, 'docId': docId}
                                           ])
                                         });
+                                        _analytics.logEvent(name: 'remove_favorite', parameters: {'documentID': docId});
                                       } else {
                                         // Add the audio file to the home screen
                                         model.addAudioFile(documents[index]);
@@ -200,6 +204,7 @@ class _LibraryState extends State<Library> {
                                             {'parentId': parentId, 'docId': docId}
                                           ])
                                         }, SetOptions(merge: true));
+                                        _analytics.logEvent(name: 'add_favorite', parameters: {'documentID': docId});
                                       }
                                     },
                                   ),
