@@ -239,87 +239,92 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      builder: (context, child) => ResponsiveBreakpoints.builder(
-        child: child!,
-        breakpoints: [
-          const Breakpoint(start: 0, end: 450, name: MOBILE),
-          const Breakpoint(start: 451, end: 800, name: TABLET),
-          const Breakpoint(start: 451, end: 1920, name: DESKTOP),
-          const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
-        ],
-      ),
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'Parakeet',
-      // theme: AppTheme.light,
-      theme: AppTheme.dark,
-      initialRoute: '/create_lesson',
-      onGenerateRoute: (RouteSettings settings) {
-        switch (settings.name) {
-          case '/create_lesson':
-            return MaterialPageRoute(
-              builder: (context) => ResponsiveScreenWrapper(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Scaffold(
-                      body: StreamBuilder<User?>(
-                        stream: FirebaseAuth.instance.authStateChanges(),
-                        builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-                          if (snapshot.connectionState == ConnectionState.active) {
-                            if (snapshot.hasData) {
-                              return const CreateLesson(title: 'Create an audio lesson');
-                            } else {
-                              return const AuthScreen();
-                            }
-                          } else if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Center(child: const CircularProgressIndicator());
-                          } else {
-                            return Center(child: Text('Failed to load'));
-                          }
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            );
-          case '/favorite':
-            return MaterialPageRoute(
-              builder: (context) => ResponsiveScreenWrapper(
-                child: ChangeNotifierProvider(
-                  create: (context) => HomeScreenModel(),
-                  child: const Home(),
-                ),
-              ),
-            );
-          case '/login':
-            return MaterialPageRoute(
-              builder: (context) => const ResponsiveScreenWrapper(
-                child: AuthScreen(),
-              ),
-            );
-          case '/library':
-            return MaterialPageRoute(
-              builder: (context) => ResponsiveScreenWrapper(
-                child: ChangeNotifierProvider(
-                  create: (context) => HomeScreenModel(),
-                  child: const Library(),
-                ),
-              ),
-            );
-          case '/profile':
-            return MaterialPageRoute(
-              builder: (context) => ResponsiveScreenWrapper(
-                child: ChangeNotifierProvider(
-                  create: (context) => HomeScreenModel(),
-                  child: const ProfileScreen(),
-                ),
-              ),
-            );
-          default:
-            return null;
-        }
-      },
-    );
+        builder: (context, child) => ResponsiveBreakpoints.builder(
+              child: child!,
+              breakpoints: [
+                const Breakpoint(start: 0, end: 450, name: MOBILE),
+                const Breakpoint(start: 451, end: 800, name: TABLET),
+                const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+                const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+              ],
+            ),
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        title: 'Parakeet',
+        // theme: AppTheme.light,
+        theme: AppTheme.dark,
+        initialRoute: '/create_lesson',
+        onGenerateRoute: (RouteSettings settings) {
+          WidgetBuilder builder;
+          switch (settings.name) {
+            case '/create_lesson':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Scaffold(
+                          body: StreamBuilder<User?>(
+                            stream: FirebaseAuth.instance.authStateChanges(),
+                            builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+                              if (snapshot.connectionState == ConnectionState.active) {
+                                if (snapshot.hasData) {
+                                  return const CreateLesson(title: 'Create an audio lesson');
+                                } else {
+                                  return const AuthScreen();
+                                }
+                              } else if (snapshot.connectionState == ConnectionState.waiting) {
+                                return Center(child: const CircularProgressIndicator());
+                              } else {
+                                return Center(child: Text('Failed to load'));
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  );
+              break;
+            case '/favorite':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: ChangeNotifierProvider(
+                      create: (context) => HomeScreenModel(),
+                      child: const Home(),
+                    ),
+                  );
+              break;
+            case '/login':
+              builder = (context) => const ResponsiveScreenWrapper(
+                    child: AuthScreen(),
+                  );
+              break;
+            case '/library':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: ChangeNotifierProvider(
+                      create: (context) => HomeScreenModel(),
+                      child: const Library(),
+                    ),
+                  );
+              break;
+            case '/profile':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: ChangeNotifierProvider(
+                      create: (context) => HomeScreenModel(),
+                      child: const ProfileScreen(),
+                    ),
+                  );
+              break;
+            default:
+              return null;
+          }
+
+          return PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+          );
+        });
   }
 }
