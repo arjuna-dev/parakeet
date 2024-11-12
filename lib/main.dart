@@ -211,7 +211,7 @@ class _MyAppState extends State<MyApp> {
       _iapSubscription.cancel();
     }) as StreamSubscription<List<PurchaseDetails>>;
 
-    _analytics = FirebaseAnalytics();
+    _analytics = FirebaseAnalytics.instance;
     _observer = FirebaseAnalyticsObserver(analytics: _analytics);
   }
 
