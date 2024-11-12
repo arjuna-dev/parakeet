@@ -20,3 +20,12 @@ void launchURL(Uri url) async {
     throw 'Could not launch $url';
   }
 }
+
+enum TTSProvider {
+  googleTTS(1),
+  openAI(3),
+  elevenLabs(2);
+
+  final int value;
+  const TTSProvider(this.value);
+}
