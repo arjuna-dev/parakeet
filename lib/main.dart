@@ -19,6 +19,7 @@ import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -183,6 +184,29 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+class ResponsiveScreenWrapper extends StatelessWidget {
+  final Widget child;
+
+  const ResponsiveScreenWrapper({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ResponsiveBreakpoints.of(context).largerThan(MOBILE)
+        ? Container(
+            color: colorScheme.surface,
+            child: Center(
+              child: SizedBox(
+                width: 400, // Mobile-like width for desktop views
+                height: 900,
+                child: child,
+              ),
+            ),
+          )
+        : child;
+  }
+}
+
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
 
@@ -212,6 +236,15 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) => ResponsiveBreakpoints.builder(
+        child: child!,
+        breakpoints: [
+          const Breakpoint(start: 0, end: 450, name: MOBILE),
+          const Breakpoint(start: 451, end: 800, name: TABLET),
+          const Breakpoint(start: 451, end: 1920, name: DESKTOP),
+          const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+        ],
+      ),
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Parakeet',
@@ -222,43 +255,62 @@ class _MyAppState extends State<MyApp> {
         switch (settings.name) {
           case '/create_lesson':
             return MaterialPageRoute(
-              builder: (context) => StreamBuilder<User?>(
-                stream: FirebaseAuth.instance.authStateChanges(),
-                builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-                  if (snapshot.connectionState == ConnectionState.active) {
-                    if (snapshot.data == null) {
-                      return const AuthScreen();
-                    } else {
-                      return const CreateLesson(title: 'Create an audio lesson');
-                    }
-                  }
-                  return const CircularProgressIndicator();
-                },
+              builder: (context) => ResponsiveScreenWrapper(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Scaffold(
+                      body: StreamBuilder<User?>(
+                        stream: FirebaseAuth.instance.authStateChanges(),
+                        builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+                          if (snapshot.connectionState == ConnectionState.active) {
+                            if (snapshot.hasData) {
+                              return const CreateLesson(title: 'Create an audio lesson');
+                            } else {
+                              return const AuthScreen();
+                            }
+                          } else if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Center(child: const CircularProgressIndicator());
+                          } else {
+                            return Center(child: Text('Failed to load'));
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
             );
           case '/favorite':
             return MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider(
-                create: (context) => HomeScreenModel(),
-                child: const Home(),
+              builder: (context) => ResponsiveScreenWrapper(
+                child: ChangeNotifierProvider(
+                  create: (context) => HomeScreenModel(),
+                  child: const Home(),
+                ),
               ),
             );
           case '/login':
             return MaterialPageRoute(
-              builder: (context) => const AuthScreen(),
+              builder: (context) => const ResponsiveScreenWrapper(
+                child: AuthScreen(),
+              ),
             );
           case '/library':
             return MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider(
-                create: (context) => HomeScreenModel(),
-                child: const Library(),
+              builder: (context) => ResponsiveScreenWrapper(
+                child: ChangeNotifierProvider(
+                  create: (context) => HomeScreenModel(),
+                  child: const Library(),
+                ),
               ),
             );
           case '/profile':
             return MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider(
-                create: (context) => HomeScreenModel(),
-                child: const ProfileScreen(),
+              builder: (context) => ResponsiveScreenWrapper(
+                child: ChangeNotifierProvider(
+                  create: (context) => HomeScreenModel(),
+                  child: const ProfileScreen(),
+                ),
               ),
             );
           default:
