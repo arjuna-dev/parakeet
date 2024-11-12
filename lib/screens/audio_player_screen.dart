@@ -19,6 +19,7 @@ import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -84,6 +85,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   int previousIndex = -1;
 
+  late FirebaseAnalytics _analytics;
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +101,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack, saveSnapshot);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
+    _analytics = FirebaseAnalytics.instance;
   }
 
   void getExistingBigJson() async {
@@ -707,6 +711,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     if (analyticsOn) {
       analyticsManager.storeAnalytics(widget.documentID, 'pause');
+      await _analytics.logEvent(name: 'audio_pause', parameters: {'documentID': widget.documentID});
     }
   }
 
@@ -724,6 +729,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     player.play();
     analyticsManager.storeAnalytics(widget.documentID, 'play');
+    await _analytics.logEvent(name: 'audio_play', parameters: {'documentID': widget.documentID});
   }
 
   Future<void> _stop() async {
@@ -746,6 +752,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       isStopped = true;
       currentTrack = script[0];
     });
+    await _analytics.logEvent(name: 'audio_stop', parameters: {'documentID': widget.documentID});
   }
 
   Future<int> _getSavedPosition() async {

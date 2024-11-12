@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:showcaseview/showcaseview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class ConfirmDialogue extends StatefulWidget {
   const ConfirmDialogue({
@@ -70,11 +71,13 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   final GlobalKey _one = GlobalKey();
   bool isShowingShowcase = false;
   late bool isFirstLaunch;
+  late FirebaseAnalytics _analytics;
 
   @override
   void initState() {
     super.initState();
     initPrefs();
+    _analytics = FirebaseAnalytics.instance;
   }
 
   Future<void> initPrefs() async {
@@ -210,6 +213,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               Checkbox(
                                 value: selectAll,
                                 onChanged: (bool? value) {
+                                  _analytics.logEvent(name: 'pressed_select_all', parameters: {'value': value.toString()});
                                   selectAllNotifier.value = value ?? false;
                                   for (var entry in selectedWords.entries) {
                                     for (var wordEntry in entry.value.entries) {
@@ -304,13 +308,14 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                     bool isSpecialWord = index == 0 && wordIndex == 0;
                                                     return GestureDetector(
                                                       onTap: () {
+                                                        _analytics.logEvent(name: 'tapped_word', parameters: {'word': word, 'wordIndex': wordIndex});
                                                         isSelectedNotifier.value = !isSelectedNotifier.value;
                                                         updateHasSelectedWords();
                                                       },
                                                       child: Container(
                                                         padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
                                                         margin: EdgeInsets.zero,
-                                                        child: isSpecialWord
+                                                        child: isSpecialWord //boolean to show tour or not
                                                             ? Showcase.withWidget(
                                                                 key: _one,
                                                                 container: SizedBox(
@@ -458,6 +463,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                   if (script.isNotEmpty) {
                                     await addUserToActiveCreation();
                                     Navigator.pop(context);
+                                    await _analytics.logEvent(name: 'generate_audio', parameters: {'documentID': widget.documentID});
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(

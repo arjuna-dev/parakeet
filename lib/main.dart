@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_analytics/observer.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -186,6 +187,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
+  late FirebaseAnalytics _analytics;
+  late FirebaseAnalyticsObserver _observer;
 
   @override
   void initState() {
@@ -207,6 +210,9 @@ class _MyAppState extends State<MyApp> {
     }, onError: (error) {
       _iapSubscription.cancel();
     }) as StreamSubscription<List<PurchaseDetails>>;
+
+    _analytics = FirebaseAnalytics();
+    _observer = FirebaseAnalyticsObserver(analytics: _analytics);
   }
 
   // This widget is the root of your application.
@@ -219,6 +225,7 @@ class _MyAppState extends State<MyApp> {
       // theme: AppTheme.light,
       theme: AppTheme.dark,
       initialRoute: '/create_lesson',
+      navigatorObservers: [_observer],
       onGenerateRoute: (RouteSettings settings) {
         switch (settings.name) {
           case '/create_lesson':

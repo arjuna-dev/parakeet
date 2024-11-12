@@ -1,4 +1,3 @@
-// import math package
 import 'dart:math';
 import 'package:parakeet/screens/confirm_dialogue_screen.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
@@ -11,6 +10,7 @@ import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -36,6 +36,7 @@ class _CreateLessonState extends State<CreateLesson> {
   final _formKey = GlobalKey<FormState>();
 
   Map<String, dynamic> firstDialogue = {};
+  late FirebaseAnalytics _analytics;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _CreateLessonState extends State<CreateLesson> {
     _controller.text = example_scenarios[Random().nextInt(example_scenarios.length)]; // Set initial random topic
     topic = _controller.text;
     _loadUserPreferences();
+    _analytics = FirebaseAnalytics.instance;
   }
 
   void _loadUserPreferences() async {
@@ -84,6 +86,7 @@ class _CreateLessonState extends State<CreateLesson> {
   }
 
   void regenerateTopic() {
+    _analytics.logEvent(name: 'pressed_regenerate_topic', parameters: {'last_topic': _controller.text});
     setState(() {
       _controller.text = example_scenarios[Random().nextInt(example_scenarios.length)]; // Update with new random topic
       topic = _controller.text;
@@ -357,6 +360,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
                                   if (firstDialogue.isNotEmpty) {
                                     Navigator.pop(context);
+                                    await _analytics.logEvent(name: 'create_lesson', parameters: {'documentID': docRef.id});
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(

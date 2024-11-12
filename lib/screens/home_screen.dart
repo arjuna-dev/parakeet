@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -16,6 +17,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  late FirebaseAnalytics _analytics;
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +27,13 @@ class _HomeState extends State<Home> {
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
 
     Provider.of<HomeScreenModel>(context, listen: false).loadNowPlayingFromPreference();
+
+    _analytics = FirebaseAnalytics.instance;
+    _logHomeScreenLoaded();
+  }
+
+  void _logHomeScreenLoaded() async {
+    await _analytics.logEvent(name: 'home_screen_loaded');
   }
 
   void _reloadPage() {
