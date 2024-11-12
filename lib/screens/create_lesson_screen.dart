@@ -250,7 +250,7 @@ class _CreateLessonState extends State<CreateLesson> {
                       items: languageCodes.keys.map<DropdownMenuItem<String>>((String key) {
                         return DropdownMenuItem<String>(
                           value: key,
-                          child: Text(key),
+                          child: Text(key == 'Filipino' ? 'Tagalog' : key),
                         );
                       }).toList(),
                     ),
