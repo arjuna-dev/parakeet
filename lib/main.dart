@@ -194,7 +194,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return ResponsiveBreakpoints.of(context).largerThan(MOBILE)
         ? Container(
-            color: colorScheme.surface,
+            color: colorScheme.surfaceBright,
             child: Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
