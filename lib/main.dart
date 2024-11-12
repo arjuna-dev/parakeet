@@ -196,10 +196,13 @@ class ResponsiveScreenWrapper extends StatelessWidget {
         ? Container(
             color: colorScheme.surface,
             child: Center(
-              child: SizedBox(
-                width: 400, // Mobile-like width for desktop views
-                height: 900,
-                child: child,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  width: 350, // Mobile-like width for desktop views
+                  height: 700,
+                  child: child,
+                ),
               ),
             ),
           )
