@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/services/cloud_function_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/utils/constants.dart';
 
 class NicknamePopup extends StatefulWidget {
   @override
@@ -11,6 +13,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
   final TextEditingController _nicknameController = TextEditingController();
   bool _isLoading = false;
   bool _isSubmitEnabled = false;
+  final player = AudioPlayer();
 
   @override
   void initState() {
@@ -55,9 +58,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
     while (!audioFetched) {
       try {
-        // TODO: Fetch audio from google bucket https://storage.googleapis.com/user_nicknames/<user-id>_nickname.mp3
-        // TODO: Play audio
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        bool nicknameAudioExists = await urlExists(
+          'https://storage.googleapis.com/user_nicknames/${userId}_nickname.mp3?timestamp=${timestamp}',
+        );
+
+        final timestamp2 = DateTime.now().millisecondsSinceEpoch;
+        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${userId}_nickname.mp3?timestamp2=${timestamp2}');
         audioFetched = true;
+        player.play();
       } catch (e) {
         await Future.delayed(Duration(seconds: 1));
       }
@@ -67,7 +76,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Enter your nickname'),
+      title: Text('Enter your name'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -75,7 +84,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
             controller: _nicknameController,
             maxLength: 25,
             decoration: InputDecoration(
-              labelText: 'What should I call you?',
+              labelText: 'What should we call you?',
             ),
           ),
           if (_isLoading) CircularProgressIndicator(),
@@ -84,9 +93,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
       actions: [
         TextButton(
           onPressed: () {
+            player.dispose();
             Navigator.of(context).pop();
           },
-          child: Text('Ask me later'),
+          child: Text('Close'),
         ),
         TextButton(
           onPressed: _isSubmitEnabled ? _handleGenerate : null,
