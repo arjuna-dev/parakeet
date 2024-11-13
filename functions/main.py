@@ -304,7 +304,7 @@ def generate_audio_and_store(text, user_id):
         cors_methods=["GET", "POST"]
     )
 )
-def trigger_generate_audio_and_store(req: https_fn.Request) -> https_fn.Response:
+def generate_audio_and_store(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = req.get_json()
         text = request_data.get("text")
