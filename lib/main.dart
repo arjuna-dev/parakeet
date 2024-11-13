@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'screens/nickname_popup.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -220,7 +221,8 @@ class _MyAppState extends State<MyApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
-      if (Platform.isIOS) await requestTrackingPermission();
+      if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
+      await _checkNicknameAudio();
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
@@ -233,6 +235,19 @@ class _MyAppState extends State<MyApp> {
     }, onError: (error) {
       _iapSubscription.cancel();
     }) as StreamSubscription<List<PurchaseDetails>>;
+  }
+
+  Future<void> _checkNicknameAudio() async {
+    // TODO: Check if audio exists in google bucket https://storage.googleapis.com/user_nicknames/<user-id>_nickname.mp3
+    bool hasNicknameAudio = false;
+    if (!hasNicknameAudio) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        builder: (BuildContext context) {
+          return NicknamePopup();
+        },
+      );
+    }
   }
 
   // This widget is the root of your application.
