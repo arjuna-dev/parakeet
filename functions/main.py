@@ -1,4 +1,3 @@
-
 from firebase_functions import https_fn, options
 from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
@@ -9,11 +8,12 @@ from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_tr
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
-from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice
+from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice, google_synthesize_text
 from utils.openai_tts.openai_tts import language_to_language_code_openai
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
 from google.cloud import storage
+from google.cloud import texttospeech
 
 
 import os
@@ -289,3 +289,34 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
     
     
     return https_fn.Response(status=200)
+
+
+def generate_audio_and_store(text, user_id):
+    file_name = f"{user_id}_nickname.mp3"
+    narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
+    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
+
+    return f"Audio content written to and uploaded to bucket."
+
+@https_fn.on_request(
+        cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
+)
+def trigger_generate_audio_and_store(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        text = request_data.get("text")
+        user_id = request_data.get("user_id")
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=400,
+        )
+
+    result = generate_audio_and_store(text, user_id)
+    return https_fn.Response(
+        json.dumps({"message": result}),
+        status=200,
+    )
