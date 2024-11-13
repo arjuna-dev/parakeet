@@ -31,16 +31,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(_user!.uid).get();
       if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        print('userDoc email: ${userData['email']}');
         setState(() {
-          _name = userDoc['name'];
-          _email = userDoc['email'];
-          _premium = userDoc['premium'];
+          _name = userData['name'] ?? '';
+          _email = userData['email'] ?? '';
+          _premium = userData['premium'] ?? false;
         });
       }
     }
   }
 
   void _deleteAccount() async {
+    print('email: $_email');
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -131,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: 'Name: ',
+                        text: _name.isNotEmpty ? 'Name: ' : '',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -139,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       TextSpan(
-                        text: _name,
+                        text: _name.isNotEmpty ? _name : '',
                         style: const TextStyle(
                           fontSize: 20,
                         ),
@@ -152,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: 'Email: ',
+                        text: _email.isNotEmpty ? 'Email: ' : '',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -160,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       TextSpan(
-                        text: _email,
+                        text: _email.isNotEmpty ? _email : '',
                         style: const TextStyle(
                           fontSize: 20,
                         ),
