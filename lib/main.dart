@@ -222,7 +222,7 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
       if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
-      await _checkNicknameAudio();
+      await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
@@ -237,9 +237,12 @@ class _MyAppState extends State<MyApp> {
     }) as StreamSubscription<List<PurchaseDetails>>;
   }
 
-  Future<void> _checkNicknameAudio() async {
-    // TODO: Check if audio exists in google bucket https://storage.googleapis.com/user_nicknames/<user-id>_nickname.mp3
-    bool hasNicknameAudio = false;
+  Future<void> _checkNicknameAudio(String userId) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    bool hasNicknameAudio = await urlExists(
+      'https://storage.googleapis.com/user_nicknames/${userId}_nickname.mp3?timestamp=${timestamp}',
+    );
+
     if (!hasNicknameAudio) {
       showDialog(
         context: navigatorKey.currentContext!,
