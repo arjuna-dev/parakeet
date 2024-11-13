@@ -229,6 +229,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String _constructUrl(String fileName) {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+    } else if (fileName == "nickname") {
+      return "https://storage.googleapis.com/user_nicknames/${widget.userID}_nickname.mp3";
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
