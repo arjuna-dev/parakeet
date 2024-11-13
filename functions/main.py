@@ -304,7 +304,7 @@ def generate_audio_and_store(text, user_id):
         cors_methods=["GET", "POST"]
     )
 )
-def generate_audio_and_store(req: https_fn.Request) -> https_fn.Response:
+def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = req.get_json()
         text = request_data.get("text")
@@ -313,6 +313,40 @@ def generate_audio_and_store(req: https_fn.Request) -> https_fn.Response:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
+        )
+    
+    db = firestore.client()
+    # Reference to the user's document in the 'users' collection
+    user_doc_ref = db.collection('users').document(user_id).collection('api_call_count').document('generate_nickname')
+
+    # Transaction to check and update the user's API call count
+    @firestore.transactional
+    def check_and_update_call_count(transaction, user_doc_ref):
+        user_doc_snapshot = user_doc_ref.get(transaction=transaction)
+        if not user_doc_snapshot.exists:
+            # If the document doesn't exist, create it with the current call count set to 1
+            transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
+        else:
+            # If the document exists, check the call count and date
+            if user_doc_snapshot.get('last_call_date') == today:
+                if user_doc_snapshot.get('call_count') >= 5:
+                    # If the call count for today is 5 or more, return False
+                    return False
+                else:
+                    # If the call count is less than 5, increment it
+                    transaction.update(user_doc_ref, {'call_count': firestore.Increment(1)})
+            else:
+                # If the last call was not made today, reset the count and date
+                transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
+        return True
+    
+    # Start the transaction
+    transaction = db.transaction()
+    if not check_and_update_call_count(transaction, user_doc_ref):
+        # If the user has reached their limit, return an error response
+        return https_fn.Response(
+            json.dumps({"error": "API call limit reached for today"}),
+            status=429,  # HTTP status code for Too Many Requests
         )
 
     result = generate_audio_and_store(text, user_id)
