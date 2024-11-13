@@ -294,7 +294,7 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
 def generate_audio_and_store(text, user_id):
     file_name = f"{user_id}_nickname.mp3"
     narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
-    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
+    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", make_public= False)
 
     return f"Audio content written to and uploaded to bucket."
 
