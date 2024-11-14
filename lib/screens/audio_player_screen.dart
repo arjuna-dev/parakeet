@@ -71,6 +71,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<int, String> filesToCompare = {};
   Map<String, dynamic>? existingBigJson;
   bool hasNicknameAudio = false;
+  bool addressByNickname = true;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -101,6 +102,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
     updateHasNicknameAudio().then((_) => _initPlaylist());
+    _loadAddressByNicknamePreference();
   }
 
   updateHasNicknameAudio() async {
@@ -264,7 +266,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
-      if (hasNicknameAudio) {
+      if (hasNicknameAudio && addressByNickname) {
         print("had nickname audio, setting url");
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3";
       } else {
@@ -795,6 +797,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final savedIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
     final position = savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
     return position;
+  }
+
+  Future<void> _loadAddressByNicknamePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      addressByNickname = prefs.getBool('addressByNickname') ?? true;
+    });
   }
 
   @override

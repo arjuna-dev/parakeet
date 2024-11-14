@@ -246,6 +246,7 @@ class _MyAppState extends State<MyApp> {
     if (!hasNicknameAudio) {
       showDialog(
         context: navigatorKey.currentContext!,
+        barrierDismissible: false,
         builder: (BuildContext context) {
           return NicknamePopup();
         },
