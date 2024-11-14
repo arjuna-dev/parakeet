@@ -14,7 +14,6 @@ List<String> introSequence1() {
 
 List<String> introSequence2() {
   List<String> scriptPart = [
-    "narrator_opening_phrases_10",
     "nickname",
     "narrator_opening_phrases_5_1", // today's lesson is
     "title",
@@ -37,7 +36,6 @@ List<String> introSequence3() {
 
 List<String> introSequence4() {
   List<String> scriptPart = [
-    "narrator_opening_phrases_13",
     "nickname",
     "narrator_opening_phrases_14",
     "narrator_opening_phrases_5_1", // today's lesson is
@@ -50,7 +48,6 @@ List<String> introSequence4() {
 
 List<String> introSequence5() {
   List<String> scriptPart = [
-    "narrator_opening_phrases_12",
     "nickname",
     "narrator_opening_phrases_4_0", // welcome back today we're going to practice phrases that will help you with the topic...
     "title",
