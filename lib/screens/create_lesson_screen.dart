@@ -10,6 +10,7 @@ import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -155,10 +156,10 @@ class _CreateLessonState extends State<CreateLesson> {
                         keyboardType: TextInputType.multiline,
                         maxLines: null,
                         maxLength: 400,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           contentPadding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
                           border: OutlineInputBorder(),
-                          labelText: 'Topic of the lesson',
+                          labelText: ResponsiveBreakpoints.of(context).isDesktop ? 'Topic of the lesson WEBwebWEB' : 'Topic of the lesson',
                           counterText: '',
                         ),
                         onChanged: (value) {
