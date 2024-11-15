@@ -63,7 +63,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
       String userId_N = FirebaseAuth.instance.currentUser!.uid + "_1";
       String text = "$greeting ${_nicknameController.text}!";
 
-      await CloudFunctionService.generateNicknameAudio(text, userId_N);
+      await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
       await _fetchAndPlayAudio(userId_N);
     } catch (e) {
       // Handle error
@@ -95,12 +95,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   Future<void> _generateRemainingAudios(String text, String userId) async {
+    int firstIndexPassed = 0;
     for (int i = 0; i < greetings.length; i++) {
       if (i == firstIndexUsed) {
+        firstIndexPassed = 1;
         continue;
       }
-      String newUserId_N = "${userId}_${i + 2}";
-      await CloudFunctionService.generateNicknameAudio(greetings[i], newUserId_N);
+      String newUserId_N = "${userId}_${i + 2 - firstIndexPassed}";
+      String text = "${greetings[i]} $_nicknameController!";
+      await CloudFunctionService.generateNicknameAudio(text, newUserId_N);
     }
   }
 
@@ -108,40 +111,47 @@ class _NicknamePopupState extends State<NicknamePopup> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Enter your name'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+      content: Stack(
+        alignment: Alignment.center, // Centers the loading indicator
         children: [
-          TextField(
-            controller: _nicknameController,
-            maxLength: 25,
-            decoration: const InputDecoration(
-              labelText: 'What should we call you?',
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Use name'),
-              Switch(
-                value: _useName,
-                onChanged: (value) {
-                  setState(() {
-                    _useName = value;
-                  });
-                  _saveUseNamePreference(value);
-                },
+              TextField(
+                controller: _nicknameController,
+                maxLength: 25,
+                decoration: const InputDecoration(
+                  labelText: 'What should we call you?',
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Use name'),
+                  Switch(
+                    value: _useName,
+                    onChanged: (value) {
+                      setState(() {
+                        _useName = value;
+                      });
+                      _saveUseNamePreference(value);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
-          if (_isLoading) CircularProgressIndicator(),
+          if (_isLoading)
+            Positioned(
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () async {
-            String userId = FirebaseAuth.instance.currentUser!.uid;
             String text = _nicknameController.text;
-            await _generateRemainingAudios(text, userId);
+            _generateRemainingAudios(text, userId);
             player.dispose();
             Navigator.of(context).pop();
           },

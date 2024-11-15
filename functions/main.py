@@ -291,8 +291,8 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
     return https_fn.Response(status=200)
 
 
-def generate_audio_and_store(text, user_id):
-    file_name = f"{user_id}_nickname.mp3"
+def generate_audio_and_store(text, user_id_N):
+    file_name = f"{user_id_N}_nickname.mp3"
     narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
     google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", make_public= False)
 
@@ -309,6 +309,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
         request_data = req.get_json()
         text = request_data.get("text")
         user_id = request_data.get("user_id")
+        user_id_N = request_data.get("user_id_N")
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
@@ -329,7 +330,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
         else:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
-                if user_doc_snapshot.get('call_count') >= 5:
+                if user_doc_snapshot.get('call_count') >= 15:
                     # If the call count for today is 5 or more, return False
                     return False
                 else:
@@ -349,7 +350,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
             status=429,  # HTTP status code for Too Many Requests
         )
 
-    result = generate_audio_and_store(text, user_id)
+    result = generate_audio_and_store(text, user_id_N)
     return https_fn.Response(
         json.dumps({"message": result}),
         status=200,
