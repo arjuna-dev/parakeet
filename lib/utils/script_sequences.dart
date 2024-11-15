@@ -1,9 +1,21 @@
-List<Function> introSequences = [introSequence1, introSequence3, introSequence4];
+List<Function> introSequences = [introSequence1, introSequence2, introSequence3, introSequence4, introSequence5];
 
 List<String> introSequence1() {
   List<String> scriptPart = [
-    "narrator_opening_phrases_5_0",
+    "nickname",
+    "narrator_opening_phrases_15",
     "narrator_opening_phrases_5_1",
+    "title",
+    "narrator_opening_phrases_8", //Now just listen to the whole conversation
+    "one_second_break",
+  ];
+  return scriptPart;
+}
+
+List<String> introSequence2() {
+  List<String> scriptPart = [
+    "nickname",
+    "narrator_opening_phrases_5_1", // today's lesson is
     "title",
     "narrator_opening_phrases_8", //Now just listen to the whole conversation
     "one_second_break",
@@ -13,6 +25,7 @@ List<String> introSequence1() {
 
 List<String> introSequence3() {
   List<String> scriptPart = [
+    "nickname",
     "narrator_opening_phrases_0",
     "title",
     "narrator_opening_phrases_7", //Let's first listen to the whole conversation
@@ -23,8 +36,20 @@ List<String> introSequence3() {
 
 List<String> introSequence4() {
   List<String> scriptPart = [
-    "narrator_opening_phrases_2",
-    "narrator_opening_phrases_5_1",
+    "nickname",
+    "narrator_opening_phrases_14",
+    "narrator_opening_phrases_5_1", // today's lesson is
+    "title",
+    "narrator_opening_phrases_8", //Now just listen to the whole conversation
+    "one_second_break",
+  ];
+  return scriptPart;
+}
+
+List<String> introSequence5() {
+  List<String> scriptPart = [
+    "nickname",
+    "narrator_opening_phrases_4_0", // welcome back today we're going to practice phrases that will help you with the topic...
     "title",
     "narrator_opening_phrases_8", //Now just listen to the whole conversation
     "one_second_break",

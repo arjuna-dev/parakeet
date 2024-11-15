@@ -35,6 +35,7 @@ class AuthScreen extends StatelessWidget {
                     await userDocRef.set({
                       'name': user.displayName,
                       'email': user.email,
+                      'nickname': '',
                       // Add more user data as needed
                     });
                   }
