@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CloudFunctionService {
-  static Future<void> generateNicknameAudio(String text, String userId) async {
+  static Future<void> generateNicknameAudio(String text, String userId, String userId_N) async {
     final url = 'https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_nickname_audio';
     final response = await http.post(
       Uri.parse(url),
@@ -12,8 +12,13 @@ class CloudFunctionService {
       body: jsonEncode(<String, String>{
         'text': text,
         'user_id': userId,
+        'user_id_N': userId_N,
       }),
     );
+
+    if (response.statusCode == 429) {
+      // TODO: show snackbar explaining that the user has reached the limit of nickname generation for today
+    }
 
     if (response.statusCode != 200) {
       throw Exception('Failed to generate nickname audio');
