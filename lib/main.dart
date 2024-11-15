@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'screens/nickname_popup.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -212,6 +213,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
 
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
+  late StreamSubscription<User?> _authSubscription;
 
   @override
   void initState() {
@@ -220,7 +222,8 @@ class _MyAppState extends State<MyApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
-      if (Platform.isIOS) await requestTrackingPermission();
+      if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
+      await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
@@ -233,6 +236,38 @@ class _MyAppState extends State<MyApp> {
     }, onError: (error) {
       _iapSubscription.cancel();
     }) as StreamSubscription<List<PurchaseDetails>>;
+
+    // Monitor authentication state changes
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (user != null) {
+        await _checkNicknameAudio(user.uid);
+      }
+    });
+  }
+
+  Future<void> _checkNicknameAudio(String userId) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    bool hasNicknameAudio = await urlExists(
+      'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=${timestamp}',
+    );
+
+    if (!hasNicknameAudio) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return NicknamePopup();
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    // Cancel subscriptions to avoid memory leaks
+    _iapSubscription.cancel();
+    _authSubscription.cancel();
+    super.dispose();
   }
 
   // This widget is the root of your application.

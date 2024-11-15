@@ -70,6 +70,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? latestSnapshot;
   Map<int, String> filesToCompare = {};
   Map<String, dynamic>? existingBigJson;
+  bool hasNicknameAudio = false;
+  bool addressByNickname = true;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -90,7 +92,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player = AudioPlayer();
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
-    _initPlaylist();
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
@@ -98,6 +99,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack, saveSnapshot);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
+    updateHasNicknameAudio().then((_) => _initPlaylist());
+    _loadAddressByNicknamePreference();
+  }
+
+  updateHasNicknameAudio() async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_1_nickname.mp3?timestamp=$timestamp';
+    hasNicknameAudio = await urlExists(
+      url,
+    );
+    setState(() {
+      hasNicknameAudio = hasNicknameAudio;
+    });
   }
 
   void getExistingBigJson() async {
@@ -151,12 +165,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
-    List<String> fileUrls = script.map((fileName) => _constructUrl(fileName)).toList();
-    List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-    playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
-    await player.setAudioSource(playlist);
-    if (widget.generating) {
-      _play();
+    List<String> fileUrls = [];
+    for (var fileName in script) {
+      String url = await _constructUrl(fileName);
+      if (url != "") {
+        fileUrls.add(url);
+      } else {
+        print("Empty string URL for $fileName");
+      }
+    }
+
+    if (fileUrls.isNotEmpty) {
+      List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
+      playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
+      await player.setAudioSource(playlist).catchError((error) {
+        print("Error setting audio source: $error");
+      });
+
+      if (widget.generating) {
+        _play();
+      }
+    } else {
+      print("No valid URLs available to initialize the playlist.");
     }
   }
 
@@ -201,9 +231,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Filter out files that start with a '$'
     newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
 
-    List<String> fileUrls = newScript.map((fileName) => _constructUrl(fileName)).toList();
-    final newTracks = fileUrls.map((url) => AudioSource.uri(Uri.parse(url))).toList();
+    List<String> fileUrls = [];
+    for (var fileName in newScript) {
+      fileUrls.add(await _constructUrl(fileName));
+    }
 
+    final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
     await playlist.addAll(newTracks);
     if (!widget.generating) {
       _play();
@@ -226,9 +259,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  String _constructUrl(String fileName) {
+  Future<String> _constructUrl(String fileName) async {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+    } else if (fileName == "nickname") {
+      int randomNumber = Random().nextInt(5) + 1;
+      print("hasNicknameAudio: $hasNicknameAudio");
+      print("addressByNickname: $addressByNickname");
+      if (hasNicknameAudio && addressByNickname) {
+        print("had nickname audio, setting url");
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+      } else {
+        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_${randomNumber}.mp3";
+      }
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
@@ -754,6 +798,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final savedIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
     final position = savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
     return position;
+  }
+
+  Future<void> _loadAddressByNicknamePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      addressByNickname = prefs.getBool('addressByNickname') ?? true;
+    });
   }
 
   @override

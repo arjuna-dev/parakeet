@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 
 class AppConstants {
   // Define standard padding for the app
@@ -28,4 +29,14 @@ enum TTSProvider {
 
   final int value;
   const TTSProvider(this.value);
+}
+
+Future<bool> urlExists(String url) async {
+  try {
+    final response = await http.head(Uri.parse(url));
+    return response.statusCode == 200;
+  } catch (e) {
+    print("Error checking URL existence: $e");
+    return false;
+  }
 }

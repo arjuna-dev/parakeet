@@ -44,7 +44,7 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None):
 
     return speaker_voice, speaker_voice_id
 
-def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files"):
+def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", make_public=True):
 
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -82,7 +82,8 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
             print(f'Error uploading file: {e}')    
 
         blob.patch()
-        blob.make_public()
+        if make_public:
+            blob.make_public()
 
         if doc_ref:
             filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
