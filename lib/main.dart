@@ -213,6 +213,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
 
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
+  late StreamSubscription<User?> _authSubscription;
 
   @override
   void initState() {
@@ -235,6 +236,13 @@ class _MyAppState extends State<MyApp> {
     }, onError: (error) {
       _iapSubscription.cancel();
     }) as StreamSubscription<List<PurchaseDetails>>;
+
+    // Monitor authentication state changes
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (user != null) {
+        await _checkNicknameAudio(user.uid);
+      }
+    });
   }
 
   Future<void> _checkNicknameAudio(String userId) async {
@@ -252,6 +260,14 @@ class _MyAppState extends State<MyApp> {
         },
       );
     }
+  }
+
+  @override
+  void dispose() {
+    // Cancel subscriptions to avoid memory leaks
+    _iapSubscription.cancel();
+    _authSubscription.cancel();
+    super.dispose();
   }
 
   // This widget is the root of your application.
