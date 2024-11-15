@@ -1,4 +1,3 @@
-// import math package
 import 'dart:math';
 import 'package:parakeet/screens/confirm_dialogue_screen.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
@@ -24,7 +23,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
-  var ttsProvider = 1;
+  var ttsProvider = TTSProvider.googleTTS;
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
@@ -240,18 +239,18 @@ class _CreateLessonState extends State<CreateLesson> {
                         });
                         if (targetLanguage == 'Azerbaijani') {
                           setState(() {
-                            ttsProvider = 3;
+                            ttsProvider = TTSProvider.openAI;
                           });
                         } else {
                           setState(() {
-                            ttsProvider = 1;
+                            ttsProvider = TTSProvider.googleTTS;
                           });
                         }
                       },
                       items: languageCodes.keys.map<DropdownMenuItem<String>>((String key) {
                         return DropdownMenuItem<String>(
                           value: key,
-                          child: Text(key),
+                          child: Text(key == 'Filipino' ? 'Tagalog' : key),
                         );
                       }).toList(),
                     ),
@@ -324,7 +323,6 @@ class _CreateLessonState extends State<CreateLesson> {
                             try {
                               final FirebaseFirestore firestore = FirebaseFirestore.instance;
                               final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
-                              print('TTS provider: $ttsProvider');
                               http.post(
                                 Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
                                 headers: <String, String>{
@@ -340,10 +338,9 @@ class _CreateLessonState extends State<CreateLesson> {
                                   "user_ID": FirebaseAuth.instance.currentUser!.uid.toString(),
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
-                                  "tts_provider": ttsProvider.toString(),
+                                  "tts_provider": ttsProvider.value.toString(),
                                 }),
                               );
-                              print(ttsProvider.toString());
                               int counter = 0;
                               bool docExists = false;
                               while (!docExists && counter < 15) {

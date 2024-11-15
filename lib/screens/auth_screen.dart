@@ -2,6 +2,8 @@ import 'package:parakeet/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
@@ -24,9 +26,7 @@ class AuthScreen extends StatelessWidget {
                 User? user = await AuthService().signInWithGoogle();
                 if (user != null) {
                   // Get reference to the user's document in Firestore
-                  DocumentReference userDocRef = FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user.uid);
+                  DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
 
                   // Check if user already exists in Firestore
                   DocumentSnapshot userDocSnapshot = await userDocRef.get();
@@ -44,15 +44,16 @@ class AuthScreen extends StatelessWidget {
               },
               child: const Text('Sign In with Google'),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                User? user = await AuthService().signInWithApple();
-                if (user != null) {
-                  Navigator.pushReplacementNamed(context, '/create_lesson');
-                }
-              },
-              child: const Text('Sign in with Apple'),
-            ),
+            if (!kIsWeb && (Platform.isIOS || Platform.isMacOS))
+              ElevatedButton(
+                onPressed: () async {
+                  User? user = await AuthService().signInWithApple();
+                  if (user != null) {
+                    Navigator.pushReplacementNamed(context, '/create_lesson');
+                  }
+                },
+                child: const Text('Sign in with Apple'),
+              ),
           ],
         ),
       ),
