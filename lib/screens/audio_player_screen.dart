@@ -268,7 +268,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print("addressByNickname: $addressByNickname");
       if (hasNicknameAudio && addressByNickname) {
         print("had nickname audio, setting url");
-        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3";
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_${randomNumber}.mp3";
       }
