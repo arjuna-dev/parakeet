@@ -137,7 +137,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Enter your name'),
       content: Stack(
         alignment: Alignment.center, // Centers the loading indicator
         children: [
@@ -152,9 +151,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                 ),
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Use name'),
                   Switch(
                     value: _useName,
                     onChanged: (value) {
@@ -164,6 +161,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
                       _saveUseNamePreference(value);
                     },
                   ),
+                  const SizedBox(width: 8),
+                  const Text('Address me by name'),
                 ],
               ),
             ],
