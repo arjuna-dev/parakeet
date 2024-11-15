@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NicknamePopup extends StatefulWidget {
   @override
@@ -56,6 +57,21 @@ class _NicknamePopupState extends State<NicknamePopup> {
     setState(() {
       _isLoading = true;
     });
+
+    // Check the call count before generating
+    final callCount = await _getCallCount();
+    if (callCount >= 11) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Your name is officially trending! But it’s time to pause and let it cool down. You can try again some other time!"),
+        ),
+      );
+      return;
+    }
+
     firstIndexUsed = Random().nextInt(greetings.length);
     String greeting = greetings[firstIndexUsed];
 
@@ -72,6 +88,16 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<int> _getCallCount() async {
+    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('api_call_count').doc('generate_nickname');
+    final docSnapshot = await userDocRef.get();
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      return data['call_count'] ?? 0;
+    }
+    return 0;
   }
 
   Future<void> _fetchAndPlayAudio(String userId_N) async {
@@ -94,7 +120,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
   }
 
-  Future<void> _generateRemainingAudios(String text, String userId) async {
+  Future<void> _generateRemainingAudios(String userId) async {
     int firstIndexPassed = 0;
     for (int i = 0; i < greetings.length; i++) {
       if (i == firstIndexUsed) {
@@ -102,8 +128,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
         continue;
       }
       String newUserId_N = "${userId}_${i + 2 - firstIndexPassed}";
-      String text = "${greetings[i]} $_nicknameController!";
-      await CloudFunctionService.generateNicknameAudio(text, newUserId_N);
+      String text = "${greetings[i]} ${_nicknameController.text}!";
+      print("text: $text");
+      await CloudFunctionService.generateNicknameAudio(text, userId, newUserId_N);
     }
   }
 
@@ -150,8 +177,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
       actions: [
         TextButton(
           onPressed: () async {
-            String text = _nicknameController.text;
-            _generateRemainingAudios(text, userId);
+            _generateRemainingAudios(userId);
             player.dispose();
             Navigator.of(context).pop();
           },
