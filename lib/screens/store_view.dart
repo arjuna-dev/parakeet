@@ -15,8 +15,6 @@ class StoreView extends StatefulWidget {
 
 const List<String> _productIds = <String>[
   '1m',
-  '1y',
-  '1year',
 ];
 
 class _StoreViewState extends State<StoreView> {
@@ -61,6 +59,7 @@ class _StoreViewState extends State<StoreView> {
         _notice = "There was a problem connecting to the store";
       });
     } else if (productDetailsResponse.productDetails.isEmpty) {
+      print("No products founds");
       setState(() {
         _notice = "There are no upgrades at this time";
       });
