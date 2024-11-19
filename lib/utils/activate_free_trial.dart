@@ -57,7 +57,6 @@ Future<bool> activateFreeTrial(BuildContext context, String userId) async {
                 .doc(userId)
                 .update({
               'trialOffered': true,
-              'premium': true, // Also set premium status
             });
 
             // Complete the purchase
