@@ -15,6 +15,7 @@ class StoreView extends StatefulWidget {
 
 const List<String> _productIds = <String>[
   '1m',
+  '1year',
 ];
 
 class _StoreViewState extends State<StoreView> {
@@ -146,7 +147,8 @@ class _StoreViewState extends State<StoreView> {
                                     productDetails: productDetails);
                               }
 
-                              if (productDetails.id == "1m") {
+                              if (productDetails.id == "1m" ||
+                                  productDetails.id == "1year") {
                                 InAppPurchase.instance.buyNonConsumable(
                                     purchaseParam: purchaseParam);
                               }
@@ -169,7 +171,7 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Widget _getIAPIcon(productId) {
-    if (productId == "1m" || productId == "1y" || productId == "1year") {
+    if (productId == "1m" || productId == "1year") {
       return const Icon(Icons.subscriptions_rounded, size: 25);
     } else {
       return const Icon(Icons.post_add_outlined, size: 50);
@@ -179,7 +181,7 @@ class _StoreViewState extends State<StoreView> {
   Widget _buyText(productDetails) {
     if (productDetails.id == "1m") {
       return Text("${productDetails.price} / month");
-    } else if (productDetails.id == "1y" || productDetails.id == "1year") {
+    } else if (productDetails.id == "1year") {
       return Text("${productDetails.price} / year");
     } else {
       return Text("Buy for ${productDetails.price}");
