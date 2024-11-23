@@ -5,6 +5,8 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 // ignore: depend_on_referenced_packages
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class StoreView extends StatefulWidget {
   const StoreView({super.key});
@@ -24,11 +26,50 @@ class _StoreViewState extends State<StoreView> {
   String? _notice;
   List<ProductDetails> _products = [];
   bool _loading = true;
+  bool _hasPremium = false;
 
   @override
   void initState() {
     super.initState();
-    initStoreInfo();
+    checkPremiumStatus();
+  }
+
+  Future<void> checkPremiumStatus() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        setState(() {
+          _loading = false;
+          _notice = "Please sign in to access the store";
+        });
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      final isPremium = userDoc.data()?['premium'] ?? false;
+
+      setState(() {
+        _hasPremium = isPremium;
+      });
+
+      if (!_hasPremium) {
+        await initStoreInfo();
+      } else {
+        setState(() {
+          _loading = false;
+          _notice = "You already have premium access!";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _notice = "Error loading premium status";
+      });
+    }
   }
 
   Future<void> initStoreInfo() async {
@@ -83,85 +124,86 @@ class _StoreViewState extends State<StoreView> {
               ),
             if (_loading)
               const Expanded(child: Center(child: CircularProgressIndicator())),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _products.length,
-                itemBuilder: (context, index) {
-                  final ProductDetails productDetails = _products[index];
+            if (!_hasPremium && _products.isNotEmpty)
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    final ProductDetails productDetails = _products[index];
 
-                  return Card(
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: _getIAPIcon(productDetails.id),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    8.0, 25.0, 8.0, 8.0),
-                                child: Text(
-                                  productDetails.title,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    8.0, 8.0, 8.0, 8.0),
-                                child: Text(
-                                  productDetails.description,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    return Card(
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: _getIAPIcon(productDetails.id),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      8.0, 25.0, 8.0, 8.0),
+                                  child: Text(
+                                    productDetails.title,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      8.0, 8.0, 8.0, 8.0),
+                                  child: Text(
+                                    productDetails.description,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: _buyText(productDetails),
-                            onPressed: () {
-                              late PurchaseParam purchaseParam;
-
-                              if (Platform.isAndroid) {
-                                purchaseParam = GooglePlayPurchaseParam(
-                                    productDetails: productDetails,
-                                    changeSubscriptionParam: null);
-                              } else {
-                                purchaseParam = PurchaseParam(
-                                    productDetails: productDetails);
-                              }
-
-                              if (productDetails.id == "1m" ||
-                                  productDetails.id == "1year") {
-                                InAppPurchase.instance.buyNonConsumable(
-                                    purchaseParam: purchaseParam);
-                              }
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: _buyText(productDetails),
+                              onPressed: () {
+                                late PurchaseParam purchaseParam;
+
+                                if (Platform.isAndroid) {
+                                  purchaseParam = GooglePlayPurchaseParam(
+                                      productDetails: productDetails,
+                                      changeSubscriptionParam: null);
+                                } else {
+                                  purchaseParam = PurchaseParam(
+                                      productDetails: productDetails);
+                                }
+
+                                if (productDetails.id == "1m" ||
+                                    productDetails.id == "1year") {
+                                  InAppPurchase.instance.buyNonConsumable(
+                                      purchaseParam: purchaseParam);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            _buildRestoreButton(),
+            if (!_hasPremium) _buildRestoreButton(),
             _buildTermsButton(),
             _buildPrivacyButton(),
           ],
