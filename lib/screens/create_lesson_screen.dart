@@ -159,7 +159,7 @@ class _CreateLessonState extends State<CreateLesson> {
                         decoration: InputDecoration(
                           contentPadding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
                           border: OutlineInputBorder(),
-                          labelText: ResponsiveBreakpoints.of(context).isDesktop ? 'Topic of the lesson WEBwebWEB' : 'Topic of the lesson',
+                          labelText: ResponsiveBreakpoints.of(context).isDesktop ? 'Topic of the lesson' : 'Topic of the lesson',
                           counterText: '',
                         ),
                         onChanged: (value) {
