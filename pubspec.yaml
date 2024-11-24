@@ -56,6 +56,7 @@ dependencies:
   url_launcher: ^6.3.1
   flex_color_scheme: ^8.0.0
   in_app_purchase_storekit: ^0.3.20+2
+  google_mobile_ads: ^5.2.0
 
 dev_dependencies:
   flutter_test:

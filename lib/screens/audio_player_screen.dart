@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/services/ad_service.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/utils/save_analytics.dart';
@@ -83,6 +84,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String recordedText = '';
 
   int previousIndex = -1;
+  bool _hasPremium = false;
+  //final bool _isAdLoading = false;
 
   @override
   void initState() {
@@ -100,6 +103,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userID)
+        .get();
+
+    setState(() {
+      _hasPremium = userDoc.data()?['premium'] ?? false;
+    });
+
+    if (!_hasPremium) {
+      await AdService.loadInterstitialAd();
+    }
   }
 
   void getExistingBigJson() async {
@@ -784,11 +803,27 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       isPlaying = true;
       _isPaused = false;
     });
+
     if (savedPosition != null && savedTrackIndex != null) {
       await player.seek(Duration(milliseconds: savedPosition),
           index: savedTrackIndex);
     }
     player.play();
+
+    if (!_hasPremium) {
+      await AdService.incrementPlayCount();
+      if (await AdService.shouldShowAd()) {
+        await player.pause();
+
+        // Show the ad and wait for completion
+        await AdService.showInterstitialAd(
+          onAdDismissed: () {
+            // Resume playback after ad is dismissed
+            player.play();
+          },
+        );
+      }
+    }
     analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 
