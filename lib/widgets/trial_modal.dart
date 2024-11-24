@@ -15,9 +15,8 @@ class TrialModal extends StatelessWidget {
         children: [
           Text('Try Premium free for 1 month!'),
           SizedBox(height: 10),
-          Text('• Unlimited lesson creation'),
-          Text('• Access to all premium voices'),
-          Text('• No ads'),
+          Center(child: Text('• No ads')),
+          Center(child: Text('• Up to 10 lessons generation per day')),
         ],
       ),
       actions: [
@@ -32,7 +31,7 @@ class TrialModal extends StatelessWidget {
               Navigator.of(context).pop();
             }
           },
-          child: const Text('Start Free Trial for 30 Days'),
+          child: const Text('Start Free Trial for 30 Days!'),
         ),
       ],
     );

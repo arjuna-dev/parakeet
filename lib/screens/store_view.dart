@@ -7,6 +7,7 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 
 class StoreView extends StatefulWidget {
   const StoreView({super.key});
@@ -27,6 +28,7 @@ class _StoreViewState extends State<StoreView> {
   List<ProductDetails> _products = [];
   bool _loading = true;
   bool _hasPremium = false;
+  bool _hasUsedTrial = false;
 
   @override
   void initState() {
@@ -51,9 +53,11 @@ class _StoreViewState extends State<StoreView> {
           .get();
 
       final isPremium = userDoc.data()?['premium'] ?? false;
+      final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
 
       setState(() {
         _hasPremium = isPremium;
+        _hasUsedTrial = hasUsedTrial;
       });
 
       if (!_hasPremium) {
@@ -108,6 +112,59 @@ class _StoreViewState extends State<StoreView> {
     }
   }
 
+  bool _hasIntroductoryOffer(ProductDetails product) {
+    if (Platform.isAndroid) {
+      final GooglePlayProductDetails googleProduct =
+          product as GooglePlayProductDetails;
+      final offerDetails =
+          googleProduct.productDetails.subscriptionOfferDetails;
+
+      // Check if there are any offers and the first phase is free
+      return offerDetails != null &&
+          offerDetails.isNotEmpty &&
+          offerDetails.first.pricingPhases.first.priceAmountMicros == 0;
+    } else if (Platform.isIOS) {
+      final AppStoreProductDetails iOSProduct =
+          product as AppStoreProductDetails;
+      return iOSProduct.skProduct.introductoryPrice != null;
+    }
+    return false;
+  }
+
+  Future<void> _makePurchase(ProductDetails productDetails) async {
+    print('Attempting purchase of ${productDetails.id}');
+    print('Product status: ${productDetails.price}');
+    if (Platform.isAndroid) {
+      final googleProduct = productDetails as GooglePlayProductDetails;
+      print(
+          'Subscription offer details: ${googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.first.priceAmountMicros}');
+    }
+    print(_hasIntroductoryOffer(productDetails));
+    late PurchaseParam purchaseParam;
+
+    if (Platform.isAndroid) {
+      purchaseParam = GooglePlayPurchaseParam(
+          productDetails: productDetails, changeSubscriptionParam: null);
+    } else {
+      purchaseParam = PurchaseParam(productDetails: productDetails);
+    }
+
+    if (productDetails.id == "1m" || productDetails.id == "1year") {
+      await InAppPurchase.instance
+          .buyNonConsumable(purchaseParam: purchaseParam);
+      if (_hasIntroductoryOffer(productDetails) && !_hasUsedTrial) {
+        // Update the user's trial status in Firestore
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({'hasUsedTrial': true});
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,9 +184,10 @@ class _StoreViewState extends State<StoreView> {
             if (!_hasPremium && _products.isNotEmpty)
               Expanded(
                 child: ListView.builder(
-                  itemCount: _products.length,
+                  itemCount: _getUniqueProducts().length,
                   itemBuilder: (context, index) {
-                    final ProductDetails productDetails = _products[index];
+                    final ProductDetails productDetails =
+                        _getUniqueProducts()[index];
 
                     return Card(
                       child: Row(
@@ -177,24 +235,7 @@ class _StoreViewState extends State<StoreView> {
                                 foregroundColor: Colors.white,
                               ),
                               child: _buyText(productDetails),
-                              onPressed: () {
-                                late PurchaseParam purchaseParam;
-
-                                if (Platform.isAndroid) {
-                                  purchaseParam = GooglePlayPurchaseParam(
-                                      productDetails: productDetails,
-                                      changeSubscriptionParam: null);
-                                } else {
-                                  purchaseParam = PurchaseParam(
-                                      productDetails: productDetails);
-                                }
-
-                                if (productDetails.id == "1m" ||
-                                    productDetails.id == "1year") {
-                                  InAppPurchase.instance.buyNonConsumable(
-                                      purchaseParam: purchaseParam);
-                                }
-                              },
+                              onPressed: () => _makePurchase(productDetails),
                             ),
                           ),
                         ],
@@ -220,10 +261,22 @@ class _StoreViewState extends State<StoreView> {
     }
   }
 
-  Widget _buyText(productDetails) {
+  Widget _buyText(ProductDetails productDetails) {
+    bool hasIntro = _hasIntroductoryOffer(productDetails);
+
+    if (hasIntro && !_hasUsedTrial) {
+      return const Text("Free trial for 30 days");
+    }
+
     if (productDetails.id == "1m") {
+      if (productDetails.price == "Free") {
+        return const Text("Free for 30 days");
+      }
       return Text("${productDetails.price} / month");
     } else if (productDetails.id == "1year") {
+      if (productDetails.price == "Free") {
+        return const Text("Free for 30 days");
+      }
       return Text("${productDetails.price} / year");
     } else {
       return Text("Buy for ${productDetails.price}");
@@ -301,5 +354,15 @@ class _StoreViewState extends State<StoreView> {
     await canLaunchUrl(url)
         ? await launchUrl(url)
         : throw 'Could not launch $url';
+  }
+
+  List<ProductDetails> _getUniqueProducts() {
+    final uniqueProducts = <ProductDetails>[];
+    for (var product in _products) {
+      if (!uniqueProducts.any((p) => p.id == product.id)) {
+        uniqueProducts.add(product);
+      }
+    }
+    return uniqueProducts;
   }
 }
