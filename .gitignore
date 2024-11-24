@@ -144,5 +144,4 @@ overrides.json
 
 payment_verification_backend/lib/assets/service-account.json
 
-
-data_analytics/build
+bundletool-all-1.17.2.jar
