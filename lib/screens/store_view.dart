@@ -165,94 +165,6 @@ class _StoreViewState extends State<StoreView> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Store"),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_notice != null)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(_notice!),
-              ),
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator())),
-            if (!_hasPremium && _products.isNotEmpty)
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _getUniqueProducts().length,
-                  itemBuilder: (context, index) {
-                    final ProductDetails productDetails =
-                        _getUniqueProducts()[index];
-
-                    return Card(
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: _getIAPIcon(productDetails.id),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                      8.0, 25.0, 8.0, 8.0),
-                                  child: Text(
-                                    productDetails.title,
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                      8.0, 8.0, 8.0, 8.0),
-                                  child: Text(
-                                    productDetails.description,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: _buyText(productDetails),
-                              onPressed: () => _makePurchase(productDetails),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            if (!_hasPremium) _buildRestoreButton(),
-            _buildTermsButton(),
-            _buildPrivacyButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _getIAPIcon(productId) {
     if (productId == "1m" || productId == "1year") {
       return const Icon(Icons.subscriptions_rounded, size: 25);
@@ -304,49 +216,52 @@ class _StoreViewState extends State<StoreView> {
     );
   }
 
-  Widget _buildTermsButton() {
+  Widget _buildFooterButtons() {
     if (_loading) {
       return Container();
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: Theme.of(context).colorScheme.primary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => _launchURL(Uri(
+                scheme: "https",
+                host: "gregarious-giant-4a5.notion.site",
+                path:
+                    "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
+            child: const Text(
+              'Terms and Conditions',
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+              ),
+            ),
           ),
-          onPressed: () => _launchURL(Uri(
-              scheme: "https",
-              host: "gregarious-giant-4a5.notion.site",
-              path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
-          child: const Text('Terms and Conditions'),
-        )
-      ],
-    );
-  }
-
-  Widget _buildPrivacyButton() {
-    if (_loading) {
-      return Container();
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: Theme.of(context).colorScheme.primary,
+          const Text(' • '), // Separator dot
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () =>
+                _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
+            child: const Text(
+              'Privacy Policy',
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+              ),
+            ),
           ),
-          onPressed: () =>
-              _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
-          child: const Text('Privacy Policy'),
-        )
-      ],
+        ],
+      ),
     );
   }
 
@@ -364,5 +279,97 @@ class _StoreViewState extends State<StoreView> {
       }
     }
     return uniqueProducts;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Store"),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Column(
+            children: [
+              if (_notice != null)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(_notice!),
+                ),
+              if (_loading)
+                const Expanded(
+                    child: Center(child: CircularProgressIndicator())),
+              if (!_hasPremium && _products.isNotEmpty)
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _getUniqueProducts().length,
+                    itemBuilder: (context, index) {
+                      final ProductDetails productDetails =
+                          _getUniqueProducts()[index];
+
+                      return Card(
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: _getIAPIcon(productDetails.id),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        8.0, 25.0, 8.0, 8.0),
+                                    child: Text(
+                                      productDetails.title,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        8.0, 8.0, 8.0, 8.0),
+                                    child: Text(
+                                      productDetails.description,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: _buyText(productDetails),
+                                onPressed: () => _makePurchase(productDetails),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              if (!_hasPremium) _buildRestoreButton(),
+              _buildFooterButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
