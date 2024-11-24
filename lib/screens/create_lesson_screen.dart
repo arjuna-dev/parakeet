@@ -32,7 +32,6 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
-  final numberOfAPIcallsAllowed = 10; // change this to allow more API calls
 
   final _formKey = GlobalKey<FormState>();
 
@@ -144,6 +143,10 @@ class _CreateLessonState extends State<CreateLesson> {
       print('Error fetching api_call counts from user collection: $e');
       return -1; // Return -1 or handle the error as appropriate
     }
+  }
+
+  int getAPICallLimit(bool isPremium) {
+    return isPremium ? 15 : 5;
   }
 
   @override
@@ -323,8 +326,8 @@ class _CreateLessonState extends State<CreateLesson> {
 
                             final isPremium =
                                 userDoc.data()?['premium'] ?? false;
-                            final isTrialOffered =
-                                userDoc.data()?['trialOffered'] ?? false;
+                            final hasUsedTrial =
+                                userDoc.data()?['hasUsedTrial'] ?? false;
 
                             if (!isPremium) {
                               final apiCalls = await countAPIcallsByUser();
@@ -337,7 +340,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                   builder: (BuildContext context) {
                                     return AlertDialog(
                                       title: const Text(
-                                          'Get access to unlimited lesson creation'),
+                                          'Generate up to 15 lessons per day'),
                                       content: const Text(
                                           'You\'ve reached the free limit. Activate premium mode!!'),
                                       actions: [
@@ -359,7 +362,7 @@ class _CreateLessonState extends State<CreateLesson> {
                                               Navigator.pop(context, false);
                                             }
                                           },
-                                          child: Text(isTrialOffered
+                                          child: Text(hasUsedTrial
                                               ? 'Get premium for 1 month'
                                               : 'Try out free for 30 days'),
                                         ),
@@ -402,13 +405,14 @@ class _CreateLessonState extends State<CreateLesson> {
                             }
                             var apiCallsByUser = await countAPIcallsByUser();
                             if (apiCallsByUser != -1 &&
-                                apiCallsByUser >= numberOfAPIcallsAllowed) {
+                                apiCallsByUser >= getAPICallLimit(isPremium)) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'),
-                                  duration: Duration(seconds: 5),
+                                SnackBar(
+                                  content: Text(isPremium
+                                      ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'
+                                      : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
+                                  duration: const Duration(seconds: 5),
                                 ),
                               );
                               return;
