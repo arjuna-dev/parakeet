@@ -30,14 +30,14 @@ class AuthService {
       });
     }
 
-    // Show trial modal if user is not premium, trial not offered, and trialOffered field doesn't exist or is false
+    // Show trial modal if user is not premium, and hasUsedTrial field doesn't exist or is false
     if (context.mounted &&
         ((!userDoc.exists) ||
             (userData != null &&
                 (!userData.containsKey('premium') ||
                     userData['premium'] == false) &&
-                (!userData.containsKey('trialOffered') ||
-                    userData['trialOffered'] == false)))) {
+                (!userData.containsKey('hasUsedTrial') ||
+                    userData['hasUsedTrial'] == false)))) {
       await showDialog(
         context: context,
         barrierDismissible: false,

@@ -13,6 +13,7 @@ class IAPService {
           purchaseDetails.status == PurchaseStatus.restored) {
         bool valid = await _verifyPurchase(purchaseDetails);
         if (valid) {
+          print("Purchase verified");
           _handleSuccessfulPurchase(purchaseDetails);
         }
       }
