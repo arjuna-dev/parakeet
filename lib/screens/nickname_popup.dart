@@ -90,6 +90,11 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
       await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
       await _fetchAndPlayAudio(userId_N);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Your nickname has been saved! 🎉"),
+        ),
+      );
     } catch (e) {
       // Handle error
     } finally {
@@ -197,7 +202,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         ),
         TextButton(
           onPressed: _isSubmitEnabled ? _handleGenerate : null,
-          child: const Text('Generate'),
+          child: const Text('Create & Save'),
         ),
       ],
     );
