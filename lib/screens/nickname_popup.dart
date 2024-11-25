@@ -109,6 +109,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
       await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
       await _fetchAndPlayAudio(userId_N);
       await _saveNicknameToFirestore(nicknameText); // Save nickname to Firestore
+      setState(() {
+        _currentNickname = nicknameText;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Your nickname has been saved! 🎉"),
