@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,6 +7,9 @@ class AdService {
   static InterstitialAd? _interstitialAd;
   static bool _isAdLoading = false;
   static const int playCountThreshold = 3;
+  static final adUnitId = Platform.isAndroid
+      ? 'ca-app-pub-8442868776505925/6924045775'
+      : 'ca-app-pub-8442868776505925/8513908749';
 
   static Future<void> initialize() async {
     await loadInterstitialAd();
@@ -15,7 +20,7 @@ class AdService {
     _isAdLoading = true;
 
     await InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+      adUnitId: adUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
@@ -29,7 +34,10 @@ class AdService {
     );
   }
 
-  static Future<void> showInterstitialAd({Function? onAdDismissed}) async {
+  static Future<void> showInterstitialAd({
+    Function? onAdDismissed,
+    Function? onAdShown,
+  }) async {
     if (_interstitialAd == null) {
       print('Warning: attempt to show ad before loaded');
       onAdDismissed?.call(); // Call callback even if ad isn't available
@@ -49,6 +57,10 @@ class AdService {
         _interstitialAd = null;
         loadInterstitialAd(); // Load the next ad
         onAdDismissed?.call(); // Call the callback even if ad fails
+      },
+      onAdShowedFullScreenContent: (ad) {
+        _interstitialAd = ad;
+        onAdShown?.call();
       },
     );
 
