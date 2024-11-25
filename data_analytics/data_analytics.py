@@ -443,5 +443,5 @@ def generate_all_charts(style):
     df_data = df_users[['id', 'name', 'email', 'Favorite Files Count', '# of Lessons', 'Number of Unique Active Days']]
 
 
-generate_all_charts(Style.SKETCH)
 generate_all_charts(Style.CYBERPUNK)
+generate_all_charts(Style.SKETCH)

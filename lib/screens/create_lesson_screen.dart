@@ -1,4 +1,3 @@
-// import math package
 import 'dart:math';
 import 'package:parakeet/screens/confirm_dialogue_screen.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
@@ -12,6 +11,7 @@ import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -25,7 +25,7 @@ class CreateLesson extends StatefulWidget {
 class _CreateLessonState extends State<CreateLesson> {
   var topic = '';
   var keywords = '';
-  var ttsProvider = 1;
+  var ttsProvider = TTSProvider.googleTTS;
   var nativeLanguage = 'English (US)';
   var targetLanguage = 'German';
   var length = '4';
@@ -175,11 +175,13 @@ class _CreateLessonState extends State<CreateLesson> {
                         keyboardType: TextInputType.multiline,
                         maxLines: null,
                         maxLength: 400,
-                        decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
                               vertical: 20.0, horizontal: 10.0),
-                          border: OutlineInputBorder(),
-                          labelText: 'Topic of the lesson',
+                          border: const OutlineInputBorder(),
+                          labelText: ResponsiveBreakpoints.of(context).isDesktop
+                              ? 'Topic of the lesson'
+                              : 'Topic of the lesson',
                           counterText: '',
                         ),
                         onChanged: (value) {
@@ -263,11 +265,11 @@ class _CreateLessonState extends State<CreateLesson> {
                         });
                         if (targetLanguage == 'Azerbaijani') {
                           setState(() {
-                            ttsProvider = 3;
+                            ttsProvider = TTSProvider.openAI;
                           });
                         } else {
                           setState(() {
-                            ttsProvider = 1;
+                            ttsProvider = TTSProvider.googleTTS;
                           });
                         }
                       },
@@ -275,7 +277,7 @@ class _CreateLessonState extends State<CreateLesson> {
                           .map<DropdownMenuItem<String>>((String key) {
                         return DropdownMenuItem<String>(
                           value: key,
-                          child: Text(key),
+                          child: Text(key == 'Filipino' ? 'Tagalog' : key),
                         );
                       }).toList(),
                     ),
@@ -445,10 +447,9 @@ class _CreateLessonState extends State<CreateLesson> {
                                       .toString(),
                                   "language_level": languageLevel,
                                   "document_id": docRef.id,
-                                  "tts_provider": ttsProvider.toString(),
+                                  "tts_provider": ttsProvider.value.toString(),
                                 }),
                               );
-                              print(ttsProvider.toString());
                               int counter = 0;
                               bool docExists = false;
                               while (!docExists && counter < 15) {

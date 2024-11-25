@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../screens/nickname_popup.dart';
 
 Widget buildProfilePopupMenu(BuildContext context) {
   return PopupMenuButton<String>(
@@ -11,10 +12,16 @@ Widget buildProfilePopupMenu(BuildContext context) {
           break;
         case 'Logout':
           FirebaseAuth.instance.signOut().then((value) {
-            Navigator.pushNamedAndRemoveUntil(
-                context, '/login', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
           });
           break;
+        case 'Edit Name':
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return NicknamePopup();
+            },
+          );
       }
     },
     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -25,6 +32,10 @@ Widget buildProfilePopupMenu(BuildContext context) {
       const PopupMenuItem<String>(
         value: 'Logout',
         child: Text('Logout'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'Edit Name',
+        child: Text('Edit Name'),
       ),
     ],
   );
