@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'services/ad_service.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -30,6 +31,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize AdService to preload first ad
+  await AdService.initialize();
+
   runApp(
     MultiProvider(
       providers: [

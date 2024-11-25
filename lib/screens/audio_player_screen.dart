@@ -85,7 +85,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   int previousIndex = -1;
   bool _hasPremium = false;
-  //final bool _isAdLoading = false;
 
   @override
   void initState() {
@@ -104,6 +103,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
     _checkPremiumStatus();
+  }
+
+  // Add new method to handle initial ad
+  Future<void> _showAd() async {
+    if (!_hasPremium) {
+      await AdService.showInterstitialAd(
+        onAdShown: () async {
+          await player.pause();
+        },
+        onAdDismissed: () async {
+          await player.play();
+        },
+      );
+    }
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -194,7 +207,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         useLazyPreparation: false, children: audioSources);
     await player.setAudioSource(playlist);
     if (widget.generating) {
-      _play();
+      await _play();
+      _showAd();
     }
   }
 
@@ -251,7 +265,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     await playlist.addAll(newTracks);
     if (!widget.generating) {
-      _play();
+      await _play();
+      _showAd();
     }
 
     updateNumber++;
@@ -300,10 +315,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         bool hasIndexChanged = index != lastIndex;
         lastIndex = index;
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
+        Duration totalPosition = cumulativeDuration + position;
+
         if (hasIndexChanged) return null;
         if (position < duration) {
-          return PositionData(
-              position, duration, cumulativeDuration + position);
+          return PositionData(position, duration, totalPosition);
         }
         return null;
       },
@@ -813,10 +829,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!_hasPremium) {
       await AdService.incrementPlayCount();
       if (await AdService.shouldShowAd()) {
-        await player.pause();
-
         // Show the ad and wait for completion
         await AdService.showInterstitialAd(
+          onAdShown: () async {
+            await player.pause();
+          },
           onAdDismissed: () {
             // Resume playback after ad is dismissed
             player.play();

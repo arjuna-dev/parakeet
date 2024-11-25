@@ -16,7 +16,7 @@ class TrialModal extends StatelessWidget {
           Text('Try Premium free for 1 month!'),
           SizedBox(height: 10),
           Center(child: Text('• No ads')),
-          Center(child: Text('• Up to 10 lessons generation per day')),
+          Center(child: Text('• Up to 15 lessons generation per day')),
         ],
       ),
       actions: [
