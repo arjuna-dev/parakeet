@@ -21,12 +21,30 @@ class _NicknamePopupState extends State<NicknamePopup> {
   List<String> greetings = ["hello", "How's it going", "Hi", "Hi, there", "Good day"];
   late int firstIndexUsed;
   String userId = FirebaseAuth.instance.currentUser!.uid;
+  String? _currentNickname;
 
   @override
   void initState() {
     super.initState();
     _nicknameController.addListener(_onTextChanged);
     _loadUseNamePreference();
+    _fetchNickname();
+  }
+
+  Future<void> _fetchNickname() async {
+    try {
+      final String? nickname = await fetchCurrentNickname();
+      setState(() {
+        _currentNickname = nickname;
+        _isLoading = false; // Loading complete
+      });
+    } catch (error) {
+      // Handle error (optional)
+      setState(() {
+        _isLoading = false; // Loading complete even if there's an error
+      });
+      print("Error fetching nickname: $error");
+    }
   }
 
   @override
@@ -74,7 +92,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Your name is officially trending! But it’s time to pause and let it cool down. You can try again some other time!"),
         ),
       );
@@ -112,6 +130,20 @@ class _NicknamePopupState extends State<NicknamePopup> {
       return data['call_count'] ?? 0;
     }
     return 0;
+  }
+
+  Future<String?> fetchCurrentNickname() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null && data.containsKey('nickname') && data['nickname'].isNotEmpty) {
+          return data['nickname'];
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> _fetchAndPlayAudio(String userId_N) async {
@@ -155,8 +187,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      title: Text(_currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!"),
       content: Stack(
-        alignment: Alignment.center, // Centers the loading indicator
+        alignment: Alignment.center,
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -186,7 +219,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
             ],
           ),
           if (_isLoading)
-            Positioned(
+            const Positioned(
               child: CircularProgressIndicator(),
             ),
         ],
