@@ -54,6 +54,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   Future<void> _handleGenerate() async {
+    String nicknameText = _nicknameController.text.trim();
+    if (nicknameText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Hmmm, it seems like you haven't entered a nickname yet! 🧐"),
+        ),
+      );
+      return;
+    }
     setState(() {
       _isLoading = true;
     });
@@ -77,7 +86,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
     try {
       String userId_N = FirebaseAuth.instance.currentUser!.uid + "_1";
-      String text = "$greeting ${_nicknameController.text}!";
+      String text = "$greeting ${nicknameText}!";
 
       await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
       await _fetchAndPlayAudio(userId_N);
@@ -121,6 +130,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   Future<void> _generateRemainingAudios(String userId) async {
+    String nicknameText = _nicknameController.text.trim();
+    if (nicknameText.isEmpty) {
+      return;
+    }
     int firstIndexPassed = 0;
     for (int i = 0; i < greetings.length; i++) {
       if (i == firstIndexUsed) {
