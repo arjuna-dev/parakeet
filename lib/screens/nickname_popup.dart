@@ -108,6 +108,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
       await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
       await _fetchAndPlayAudio(userId_N);
+      await _saveNicknameToFirestore(nicknameText); // Save nickname to Firestore
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Your nickname has been saved! 🎉"),
@@ -184,6 +185,14 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
   }
 
+  Future<void> _saveNicknameToFirestore(String nickname) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await userDocRef.update({'nickname': nickname});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -197,8 +206,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
               TextField(
                 controller: _nicknameController,
                 maxLength: 25,
-                decoration: const InputDecoration(
-                  labelText: 'What should we call you?',
+                decoration: InputDecoration(
+                  labelText: _currentNickname != null ? 'Change current name' : "What should we call you?",
                 ),
               ),
               Row(
