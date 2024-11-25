@@ -210,7 +210,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                 controller: _nicknameController,
                 maxLength: 25,
                 decoration: InputDecoration(
-                  labelText: _currentNickname != null ? 'Change current name' : "What should we call you?",
+                  labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
                 ),
               ),
               Row(
