@@ -21,6 +21,7 @@ import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'screens/nickname_popup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -255,6 +256,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _checkNicknameAudio(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    bool addressByNickname = prefs.getBool('addressByNickname') ?? true;
+
+    if (!addressByNickname) {
+      return;
+    }
+
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     bool hasNicknameAudio = await urlExists(
       'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=${timestamp}',
