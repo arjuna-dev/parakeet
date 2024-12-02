@@ -44,8 +44,7 @@ class _StoreViewState extends State<StoreView> {
     }
 
     // get IAP.
-    ProductDetailsResponse productDetailsResponse =
-        await _inAppPurchase.queryProductDetails(_productIds.toSet());
+    ProductDetailsResponse productDetailsResponse = await _inAppPurchase.queryProductDetails(_productIds.toSet());
 
     setState(() {
       _loading = false;
@@ -78,8 +77,7 @@ class _StoreViewState extends State<StoreView> {
                 padding: const EdgeInsets.all(8.0),
                 child: Text(_notice!),
               ),
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator())),
+            if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
             Expanded(
               child: ListView.builder(
                 itemCount: _products.length,
@@ -98,12 +96,8 @@ class _StoreViewState extends State<StoreView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    8.0, 25.0, 8.0, 8.0),
-                                child: Text(productDetails.title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium),
+                                padding: const EdgeInsets.fromLTRB(8.0, 25.0, 8.0, 8.0),
+                                child: Text(productDetails.title, style: Theme.of(context).textTheme.titleMedium),
                               ),
                               Text(productDetails.description),
                             ],
@@ -117,17 +111,13 @@ class _StoreViewState extends State<StoreView> {
                               late PurchaseParam purchaseParam;
 
                               if (Platform.isAndroid) {
-                                purchaseParam = GooglePlayPurchaseParam(
-                                    productDetails: productDetails,
-                                    changeSubscriptionParam: null);
+                                purchaseParam = GooglePlayPurchaseParam(productDetails: productDetails, changeSubscriptionParam: null);
                               } else {
-                                purchaseParam = PurchaseParam(
-                                    productDetails: productDetails);
+                                purchaseParam = PurchaseParam(productDetails: productDetails);
                               }
 
                               if (productDetails.id == "1m") {
-                                InAppPurchase.instance.buyNonConsumable(
-                                    purchaseParam: purchaseParam);
+                                InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
                               }
                             },
                           ),
@@ -171,10 +161,9 @@ class _StoreViewState extends State<StoreView> {
       mainAxisSize: MainAxisSize.max,
       children: [
         TextButton(
-          child: Text('Restore Purchases'),
-          style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor),
+          style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
           onPressed: () => _inAppPurchase.restorePurchases(),
+          child: Text('Restore Purchases'),
         )
       ],
     );

@@ -2,8 +2,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CloudFunctionService {
-  static Future<void> generateNicknameAudio(String text, String userId, String userId_N) async {
-    final url = 'https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_nickname_audio';
+  static Future<void> generateNicknameAudio(String text, String userId, String useridN) async {
+    const url = 'https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_nickname_audio';
     final response = await http.post(
       Uri.parse(url),
       headers: <String, String>{
@@ -12,7 +12,7 @@ class CloudFunctionService {
       body: jsonEncode(<String, String>{
         'text': text,
         'user_id': userId,
-        'user_id_N': userId_N,
+        'user_id_N': useridN,
       }),
     );
 

@@ -157,8 +157,8 @@ class _CreateLessonState extends State<CreateLesson> {
                         maxLines: null,
                         maxLength: 400,
                         decoration: InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
-                          border: OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
+                          border: const OutlineInputBorder(),
                           labelText: ResponsiveBreakpoints.of(context).isDesktop ? 'Topic of the lesson' : 'Topic of the lesson',
                           counterText: '',
                         ),

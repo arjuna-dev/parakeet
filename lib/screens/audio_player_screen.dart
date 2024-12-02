@@ -272,7 +272,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
-        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_${randomNumber}.mp3";
+        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
       }
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
@@ -400,7 +400,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         recordedText = "";
       });
       _startRecording();
-      Future.delayed(Duration(seconds: 5), _compareTranscriptionWithPhrase);
+      Future.delayed(const Duration(seconds: 5), _compareTranscriptionWithPhrase);
     }
   }
 
@@ -550,7 +550,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           }
 
           // Set up a periodic timer to check if listening is still active
-          _timer = Timer.periodic(Duration(milliseconds: 100), (timer) async {
+          _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
             if (!speech.isListening) {
               // Restart speech recognition if it stops
               print("Speech recognition stopped. Restarting...");

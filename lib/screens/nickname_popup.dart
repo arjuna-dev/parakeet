@@ -8,6 +8,8 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NicknamePopup extends StatefulWidget {
+  const NicknamePopup({super.key});
+
   @override
   _NicknamePopupState createState() => _NicknamePopupState();
 }
@@ -65,7 +67,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Your name is officially trending! But it’s time to pause and let it cool down. You can try again some other time!"),
         ),
       );
@@ -76,11 +78,11 @@ class _NicknamePopupState extends State<NicknamePopup> {
     String greeting = greetings[firstIndexUsed];
 
     try {
-      String userId_N = FirebaseAuth.instance.currentUser!.uid + "_1";
+      String useridN = "${FirebaseAuth.instance.currentUser!.uid}_1";
       String text = "$greeting ${_nicknameController.text}!";
 
-      await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
-      await _fetchAndPlayAudio(userId_N);
+      await CloudFunctionService.generateNicknameAudio(text, userId, useridN);
+      await _fetchAndPlayAudio(useridN);
     } catch (e) {
       // Handle error
     } finally {
@@ -100,22 +102,22 @@ class _NicknamePopupState extends State<NicknamePopup> {
     return 0;
   }
 
-  Future<void> _fetchAndPlayAudio(String userId_N) async {
+  Future<void> _fetchAndPlayAudio(String useridN) async {
     bool audioFetched = false;
 
     while (!audioFetched) {
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         bool nicknameAudioExists = await urlExists(
-          'https://storage.googleapis.com/user_nicknames/${userId_N}_nickname.mp3?timestamp=${timestamp}',
+          'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp=$timestamp',
         );
 
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${userId_N}_nickname.mp3?timestamp2=${timestamp2}');
+        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
         audioFetched = true;
         player.play();
       } catch (e) {
-        await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
       }
     }
   }
@@ -127,10 +129,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
         firstIndexPassed = 1;
         continue;
       }
-      String newUserId_N = "${userId}_${i + 2 - firstIndexPassed}";
+      String newuseridN = "${userId}_${i + 2 - firstIndexPassed}";
       String text = "${greetings[i]} ${_nicknameController.text}!";
       print("text: $text");
-      await CloudFunctionService.generateNicknameAudio(text, userId, newUserId_N);
+      await CloudFunctionService.generateNicknameAudio(text, userId, newuseridN);
     }
   }
 
@@ -168,7 +170,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
             ],
           ),
           if (_isLoading)
-            Positioned(
+            const Positioned(
               child: CircularProgressIndicator(),
             ),
         ],
