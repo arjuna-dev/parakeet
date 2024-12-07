@@ -29,12 +29,30 @@ class _NicknamePopupState extends State<NicknamePopup> {
   ];
   late int firstIndexUsed;
   String userId = FirebaseAuth.instance.currentUser!.uid;
+  String? _currentNickname;
 
   @override
   void initState() {
     super.initState();
     _nicknameController.addListener(_onTextChanged);
     _loadUseNamePreference();
+    _fetchNickname();
+  }
+
+  Future<void> _fetchNickname() async {
+    try {
+      final String? nickname = await fetchCurrentNickname();
+      setState(() {
+        _currentNickname = nickname;
+        _isLoading = false; // Loading complete
+      });
+    } catch (error) {
+      // Handle error (optional)
+      setState(() {
+        _isLoading = false; // Loading complete even if there's an error
+      });
+      print("Error fetching nickname: $error");
+    }
   }
 
   @override
@@ -62,6 +80,16 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   Future<void> _handleGenerate() async {
+    String nicknameText = _nicknameController.text.trim();
+    if (nicknameText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              "Hmmm, it seems like you haven't entered a nickname yet! 🧐"),
+        ),
+      );
+      return;
+    }
     setState(() {
       _isLoading = true;
     });
@@ -85,11 +113,21 @@ class _NicknamePopupState extends State<NicknamePopup> {
     String greeting = greetings[firstIndexUsed];
 
     try {
-      String useridN = "${FirebaseAuth.instance.currentUser!.uid}_1";
-      String text = "$greeting ${_nicknameController.text}!";
+      String userIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
+      String text = "$greeting $nicknameText!";
 
-      await CloudFunctionService.generateNicknameAudio(text, userId, useridN);
-      await _fetchAndPlayAudio(useridN);
+      await CloudFunctionService.generateNicknameAudio(text, userId, userIdN);
+      await _fetchAndPlayAudio(userIdN);
+      await _saveNicknameToFirestore(
+          nicknameText); // Save nickname to Firestore
+      setState(() {
+        _currentNickname = nicknameText;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Your nickname has been saved! 🎉"),
+        ),
+      );
     } catch (e) {
       // Handle error
     } finally {
@@ -113,18 +151,37 @@ class _NicknamePopupState extends State<NicknamePopup> {
     return 0;
   }
 
+  Future<String?> fetchCurrentNickname() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null &&
+            data.containsKey('nickname') &&
+            data['nickname'].isNotEmpty) {
+          return data['nickname'];
+        }
+      }
+    }
+    return null;
+  }
+
   Future<void> _fetchAndPlayAudio(String useridN) async {
     bool audioFetched = false;
 
     while (!audioFetched) {
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        bool nicknameAudioExists = await urlExists(
+        await urlExists(
           'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp=$timestamp',
         );
 
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        final duration = await player.setUrl(
+        await player.setUrl(
             'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
         audioFetched = true;
         player.play();
@@ -135,25 +192,40 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   Future<void> _generateRemainingAudios(String userId) async {
+    String nicknameText = _nicknameController.text.trim();
+    if (nicknameText.isEmpty) {
+      return;
+    }
     int firstIndexPassed = 0;
     for (int i = 0; i < greetings.length; i++) {
       if (i == firstIndexUsed) {
         firstIndexPassed = 1;
         continue;
       }
-      String newuseridN = "${userId}_${i + 2 - firstIndexPassed}";
+      String newUserIdN = "${userId}_${i + 2 - firstIndexPassed}";
       String text = "${greetings[i]} ${_nicknameController.text}!";
       print("text: $text");
       await CloudFunctionService.generateNicknameAudio(
-          text, userId, newuseridN);
+          text, userId, newUserIdN);
+    }
+  }
+
+  Future<void> _saveNicknameToFirestore(String nickname) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDocRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await userDocRef.update({'nickname': nickname});
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      title: Text(
+          _currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!"),
       content: Stack(
-        alignment: Alignment.center, // Centers the loading indicator
+        alignment: Alignment.center,
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -161,8 +233,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
               TextField(
                 controller: _nicknameController,
                 maxLength: 25,
-                decoration: const InputDecoration(
-                  labelText: 'What should we call you?',
+                decoration: InputDecoration(
+                  labelText: _currentNickname != null
+                      ? 'Want to change your name?'
+                      : "What should we call you?",
                 ),
               ),
               Row(
@@ -199,7 +273,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         ),
         TextButton(
           onPressed: _isSubmitEnabled ? _handleGenerate : null,
-          child: const Text('Generate'),
+          child: const Text('Create & Save'),
         ),
       ],
     );
