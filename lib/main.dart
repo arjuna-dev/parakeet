@@ -314,7 +314,8 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         title: 'Parakeet',
         // theme: AppTheme.light,
-        theme: AppTheme.dark,
+        // theme: AppTheme.dark,
+        theme: AppTheme.customTheme(),
         initialRoute: '/create_lesson',
         onGenerateRoute: (RouteSettings settings) {
           WidgetBuilder builder;
