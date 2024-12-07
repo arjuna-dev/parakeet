@@ -30,13 +30,17 @@ const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  MobileAds.instance.initialize();
+
+  // Only initialize MobileAds on mobile platforms
+  if (!kIsWeb) {
+    MobileAds.instance.initialize();
+    // Initialize AdService to preload first ad
+    await AdService.initialize();
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // Initialize AdService to preload first ad
-  await AdService.initialize();
 
   runApp(
     MultiProvider(

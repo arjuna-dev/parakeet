@@ -34,12 +34,18 @@ class AuthScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Welcome to Parakeet!'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
+            // Add logo image
+            Center(
+              child: Image.asset(
+                'assets/parakeet_logo_home.png',
+                height: 150, // Adjust size as needed
+                fit: BoxFit.contain,
+              ),
+            ),
             ElevatedButton(
               onPressed: () async {
                 // Sign in with Google
