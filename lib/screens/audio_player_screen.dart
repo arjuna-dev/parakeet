@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
+import 'package:flutter/services.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -73,6 +74,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? existingBigJson;
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
+  bool isLoading = false;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -139,13 +141,86 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
+  void _handlePlaybackError(Object? error) async {
+    setState(() {
+      isLoading = true; // Show spinning wheel
+    });
+
+    print("Handling playback error: $error");
+
+    // Attempt to retry loading the playlist
+    bool success = await _retryPlayCurrentTrack(10, Duration(seconds: 1));
+
+    if (success) {
+      print("Successfully recovered from playback error.");
+      setState(() {
+        isLoading = false; // Hide spinning wheel after success
+      });
+      _play(); // Restart playback if successful
+    } else {
+      print("Failed to recover after 10 retries.");
+      setState(() {
+        isLoading = false; // Hide spinning wheel after failure
+      });
+      // show snackbar with error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An error occurred while playing the audio. Please try again later.'),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<bool> _retryPlayCurrentTrack(int retries, Duration delay) async {
+    for (int attempt = 1; attempt <= retries; attempt++) {
+      try {
+        print("Retrying playback (attempt $attempt/$retries)...");
+        await player.play();
+        return true; // If successful, return true
+      } catch (e) {
+        print("Retry attempt $attempt failed: $e");
+        if (attempt < retries) {
+          await Future.delayed(delay); // Wait before retrying
+        }
+      }
+    }
+    return false; // If all retries fail, return false
+  }
+
   void _listenToPlayerStreams() {
+    // Listen to playback events for error monitoring
+    player.playbackEventStream.listen(
+      (event) {},
+      onError: (Object e, StackTrace st) {
+        print("Error in playbackEventStream: $e");
+        if (e is PlatformException) {
+          print('Error code: ${e.code}');
+          print('Error message: ${e.message}');
+          print('AudioSource index: ${e.details?["index"]}');
+          _handlePlaybackError(e.message);
+        } else {
+          print('An unknown error occurred: $e');
+          _handlePlaybackError('An unknown error occurred');
+        }
+      },
+    );
+
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
         }
         _stop();
+      }
+      if (playerState.processingState == ProcessingState.idle && !playerState.playing) {
+        print("Error: Player is idle. Possible playback failure.");
+        _handlePlaybackError('Playback failed: Player is idle');
       }
     });
 
@@ -275,7 +350,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
       }
     } else {
-      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
+      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/wrongName.mp3";
+      // return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
   }
 
@@ -657,84 +733,98 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
-      child: PopScope(
-        canPop: false,
-        onPopInvoked: (bool didPop) async {
-          if (didPop) return;
-          final NavigatorState navigator = Navigator.of(context);
-          if (!widget.generating) {
-            if (!isStopped && isPlaying) await _pause();
-            navigator.pop('reload');
-          } else {
-            if (!isStopped && isPlaying) await _pause();
-            navigator.popUntil((route) => route.isFirst);
-            navigator.pushReplacementNamed('/');
-          }
-        },
-        child: FutureBuilder<int>(
-          future: _getSavedPosition(),
-          builder: (context, snapshot) {
-            int savedPosition = snapshot.data ?? 0;
-            return Scaffold(
-              appBar: AppBar(title: Text(widget.title)),
-              body: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Text('Check Pronunciation:'),
-                        Switch(
-                          value: speechRecognitionActive,
-                          onChanged: (bool value) {
-                            if (value & kIsWeb) {
-                              _initAndStartRecording();
-                            } else if (value & !kIsWeb) {
-                              displayPopupSTTSupport(context);
-                            } else {
-                              speech.stop();
-                              speech.cancel();
-                              _timer?.cancel();
-                            }
-                            setState(() {
-                              speechRecognitionActive = value;
-                            });
-                          },
+      child: Stack(
+        children: [
+          // Main content
+          PopScope(
+            canPop: false,
+            onPopInvoked: (bool didPop) async {
+              if (didPop) return;
+              final NavigatorState navigator = Navigator.of(context);
+              if (!widget.generating) {
+                if (!isStopped && isPlaying) await _pause();
+                navigator.pop('reload');
+              } else {
+                if (!isStopped && isPlaying) await _pause();
+                navigator.popUntil((route) => route.isFirst);
+                navigator.pushReplacementNamed('/');
+              }
+            },
+            child: FutureBuilder<int>(
+              future: _getSavedPosition(),
+              builder: (context, snapshot) {
+                int savedPosition = snapshot.data ?? 0;
+                return Scaffold(
+                  appBar: AppBar(title: Text(widget.title)),
+                  body: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Text('Check Pronunciation:'),
+                            Switch(
+                              value: speechRecognitionActive,
+                              onChanged: (bool value) {
+                                if (value & kIsWeb) {
+                                  _initAndStartRecording();
+                                } else if (value & !kIsWeb) {
+                                  displayPopupSTTSupport(context);
+                                } else {
+                                  speech.stop();
+                                  speech.cancel();
+                                  _timer?.cancel();
+                                }
+                                setState(() {
+                                  speechRecognitionActive = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        DialogueList(
+                          dialogue: widget.dialogue,
+                          currentTrack: currentTrack,
+                          wordsToRepeat: widget.wordsToRepeat,
+                        ),
+                        PositionSlider(
+                          positionDataStream: _positionDataStream,
+                          totalDuration: totalDuration,
+                          finalTotalDuration: finalTotalDuration,
+                          isPlaying: isPlaying,
+                          savedPosition: savedPosition,
+                          findTrackIndexForPosition: findTrackIndexForPosition,
+                          player: player,
+                          cumulativeDurationUpTo: cumulativeDurationUpTo,
+                          pause: _pause,
+                        ),
+                        ControlButtons(
+                          player: player,
+                          isPlaying: isPlaying,
+                          onPlay: _play,
+                          onPause: _pause,
+                          onStop: _stop,
                         ),
                       ],
                     ),
-                    DialogueList(
-                      dialogue: widget.dialogue,
-                      currentTrack: currentTrack,
-                      wordsToRepeat: widget.wordsToRepeat,
-                    ),
-                    PositionSlider(
-                      positionDataStream: _positionDataStream,
-                      totalDuration: totalDuration,
-                      finalTotalDuration: finalTotalDuration,
-                      isPlaying: isPlaying,
-                      savedPosition: savedPosition,
-                      findTrackIndexForPosition: findTrackIndexForPosition,
-                      player: player,
-                      cumulativeDurationUpTo: cumulativeDurationUpTo,
-                      pause: _pause,
-                    ),
-                    ControlButtons(
-                      player: player,
-                      isPlaying: isPlaying,
-                      onPlay: _play,
-                      onPause: _pause,
-                      onStop: _stop,
-                    ),
-                  ],
-                ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Spinner overlay
+          if (isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              child: Center(
+                child: CircularProgressIndicator(),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
     );
   }
