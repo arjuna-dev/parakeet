@@ -21,6 +21,7 @@ import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'screens/nickname_popup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -214,6 +215,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
   late StreamSubscription<User?> _authSubscription;
+  bool _hasCheckedNicknameAudio = false;
 
   @override
   void initState() {
@@ -223,7 +225,12 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
       if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
-      await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
+
+      // Check nickname audio for already logged-in users
+      if (FirebaseAuth.instance.currentUser != null && !_hasCheckedNicknameAudio) {
+        _hasCheckedNicknameAudio = true;
+        await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
+      }
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
@@ -240,12 +247,22 @@ class _MyAppState extends State<MyApp> {
     // Monitor authentication state changes
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
+        // Reset the flag for new logins and check nickname audio
+        _hasCheckedNicknameAudio = false;
+        _hasCheckedNicknameAudio = true;
         await _checkNicknameAudio(user.uid);
       }
     });
   }
 
   Future<void> _checkNicknameAudio(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    bool addressByNickname = prefs.getBool('addressByNickname') ?? true;
+
+    if (!addressByNickname) {
+      return;
+    }
+
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     bool hasNicknameAudio = await urlExists(
       'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=$timestamp',
@@ -264,7 +281,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    // Cancel subscriptions to avoid memory leaks
     _iapSubscription.cancel();
     _authSubscription.cancel();
     super.dispose();
