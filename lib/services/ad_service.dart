@@ -6,9 +6,7 @@ class AdService {
   static InterstitialAd? _interstitialAd;
   static bool _isAdLoading = false;
   static const int playCountThreshold = 3;
-  static final adUnitId = Platform.isAndroid
-      ? 'ca-app-pub-8442868776505925/6924045775'
-      : 'ca-app-pub-8442868776505925/7219559244';
+  static final adUnitId = Platform.isAndroid ? 'ca-app-pub-8442868776505925/6924045775' : 'ca-app-pub-8442868776505925/7219559244';
 
   static Future<void> initialize() async {
     await loadInterstitialAd();

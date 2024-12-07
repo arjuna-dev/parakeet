@@ -23,16 +23,14 @@ class _HomeState extends State<Home> {
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
 
-    Provider.of<HomeScreenModel>(context, listen: false)
-        .loadNowPlayingFromPreference();
+    Provider.of<HomeScreenModel>(context, listen: false).loadNowPlayingFromPreference();
   }
 
   void _reloadPage() {
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
 
-    Provider.of<HomeScreenModel>(context, listen: false)
-        .loadNowPlayingFromPreference();
+    Provider.of<HomeScreenModel>(context, listen: false).loadNowPlayingFromPreference();
     //setState(() {});
   }
 
@@ -69,8 +67,7 @@ class _HomeState extends State<Home> {
             ),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Favorite Audio Lessons',
-                  style: TextStyle(fontSize: 18)),
+              child: Text('Favorite Audio Lessons', style: TextStyle(fontSize: 18)),
             ),
             const SizedBox(
               height: 10,
@@ -94,9 +91,7 @@ class _HomeState extends State<Home> {
         return model.nowPlayingFiles.isEmpty
             ? const SizedBox(
                 height: 150,
-                child: Center(
-                    child: Text(
-                        'Start playing audio lessons to see them here! 🎧🎶🎵')),
+                child: Center(child: Text('Start playing audio lessons to see them here! 🎧🎶🎵')),
               )
             : ListView.builder(
                 itemCount: model.nowPlayingFiles.length,
@@ -105,25 +100,19 @@ class _HomeState extends State<Home> {
                   return Card(
                       child: ListTile(
                           title: Text(audioFile.get('title')),
-                          subtitle: Text(
-                              "Learning language: ${audioFile.get('target_language')} \n"
+                          subtitle: Text("Learning language: ${audioFile.get('target_language')} \n"
                               "Difficulty: ${audioFile.get('language_level')} level \n"),
-                          leading: Icon(Icons.audio_file,
-                              color: colorScheme.primary),
+                          leading: Icon(Icons.audio_file, color: colorScheme.primary),
                           onTap: () async {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => AudioPlayerScreen(
-                                  documentID:
-                                      audioFile.reference.parent.parent!.id,
+                                  documentID: audioFile.reference.parent.parent!.id,
                                   dialogue: audioFile.get('dialogue'),
-                                  targetLanguage:
-                                      audioFile.get('target_language'),
-                                  wordsToRepeat:
-                                      audioFile.get('words_to_repeat'),
-                                  userID:
-                                      FirebaseAuth.instance.currentUser!.uid,
+                                  targetLanguage: audioFile.get('target_language'),
+                                  wordsToRepeat: audioFile.get('words_to_repeat'),
+                                  userID: FirebaseAuth.instance.currentUser!.uid,
                                   title: audioFile.get('title'),
                                   scriptDocumentId: audioFile.id,
                                   generating: false,
@@ -152,9 +141,7 @@ class _HomeState extends State<Home> {
                 child: Center(
                   child: RichText(
                     text: TextSpan(
-                      style: TextStyle(
-                          color: colorScheme
-                              .onPrimaryContainer), // Default text style
+                      style: TextStyle(color: colorScheme.onPrimaryContainer), // Default text style
                       children: <TextSpan>[
                         const TextSpan(text: 'Nothing here yet 😅. '),
                         TextSpan(
@@ -167,13 +154,10 @@ class _HomeState extends State<Home> {
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
                               // Navigator code to navigate to LibraryScreen
-                              Navigator.pushReplacementNamed(
-                                  context, '/library');
+                              Navigator.pushReplacementNamed(context, '/library');
                             },
                         ),
-                        const TextSpan(
-                            text:
-                                ' to add audio lessons to your favorite list!'),
+                        const TextSpan(text: ' to add audio lessons to your favorite list!'),
                       ],
                     ),
                   ),

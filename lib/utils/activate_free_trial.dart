@@ -20,8 +20,7 @@ Future<bool> activateFreeTrial(BuildContext context, String userId) async {
   }
 
   // Query for the trial product
-  final ProductDetailsResponse response =
-      await InAppPurchase.instance.queryProductDetails({'1m'}.toSet());
+  final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({'1m'}.toSet());
 
   if (response.notFoundIDs.isNotEmpty) {
     if (context.mounted) {
@@ -35,8 +34,7 @@ Future<bool> activateFreeTrial(BuildContext context, String userId) async {
   final ProductDetails product = response.productDetails.first;
 
   if (Platform.isAndroid) {
-    purchaseParam = GooglePlayPurchaseParam(
-        productDetails: product, changeSubscriptionParam: null);
+    purchaseParam = GooglePlayPurchaseParam(productDetails: product, changeSubscriptionParam: null);
   } else {
     purchaseParam = PurchaseParam(productDetails: product);
   }
@@ -52,10 +50,7 @@ Future<bool> activateFreeTrial(BuildContext context, String userId) async {
         for (final purchase in purchases) {
           if (purchase.status == PurchaseStatus.purchased) {
             // Purchase was successful
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(userId)
-                .update({
+            await FirebaseFirestore.instance.collection('users').doc(userId).update({
               'hasUsedTrial': true,
             });
 
