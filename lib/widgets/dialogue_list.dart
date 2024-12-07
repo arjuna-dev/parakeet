@@ -57,7 +57,7 @@ class _DialogueListState extends State<DialogueList> {
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isEven ? Color.fromARGB(255, 85, 52, 115) : Color.fromARGB(255, 62, 59, 124),
+                    color: isEven ? const Color.fromARGB(255, 85, 52, 115) : const Color.fromARGB(255, 62, 59, 124),
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
