@@ -248,7 +248,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _checkNicknameAudio(String userId) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     bool hasNicknameAudio = await urlExists(
-      'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=${timestamp}',
+      'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=$timestamp',
     );
 
     if (!hasNicknameAudio) {
@@ -307,9 +307,9 @@ class _MyAppState extends State<MyApp> {
                                   return const AuthScreen();
                                 }
                               } else if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Center(child: const CircularProgressIndicator());
+                                return const Center(child: CircularProgressIndicator());
                               } else {
-                                return Center(child: Text('Failed to load'));
+                                return const Center(child: Text('Failed to load'));
                               }
                             },
                           ),
