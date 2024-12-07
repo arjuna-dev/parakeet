@@ -88,6 +88,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   int previousIndex = -1;
   bool _hasPremium = false;
+  bool _hasShownInitialAd = false;
 
   @override
   void initState() {
@@ -104,7 +105,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
-    updateHasNicknameAudio().then((_) => _initPlaylist());
+    updateHasNicknameAudio().then((_) {
+      _initPlaylist();
+    });
     _loadAddressByNicknamePreference();
   }
 
@@ -119,20 +122,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       hasNicknameAudio = hasNicknameAudio;
     });
     _checkPremiumStatus();
-  }
-
-  // Add new method to handle initial ad
-  Future<void> _showAd() async {
-    if (!_hasPremium) {
-      await AdService.showInterstitialAd(
-        onAdShown: () async {
-          await player.pause();
-        },
-        onAdDismissed: () async {
-          await player.play();
-        },
-      );
-    }
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -235,10 +224,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      if (widget.generating) {
-        await _play();
-        _showAd();
-      }
+      // _showAd();
+      await _play();
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
@@ -302,7 +289,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await playlist.addAll(newTracks);
     if (!widget.generating) {
       await _play();
-      _showAd();
     }
 
     updateNumber++;
@@ -875,21 +861,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     player.play();
 
-    if (!_hasPremium) {
-      await AdService.incrementPlayCount();
-      if (await AdService.shouldShowAd()) {
-        // Show the ad and wait for completion
-        await AdService.showInterstitialAd(
-          onAdShown: () async {
-            await player.pause();
-          },
-          onAdDismissed: () {
-            // Resume playback after ad is dismissed
-            player.play();
-          },
-        );
-      }
+    // Show ad for non-premium users every time they start playing
+    if (!_hasPremium && !_hasShownInitialAd) {
+      _hasShownInitialAd =
+          true; // Prevent showing ad multiple times in same session
+      await AdService.showInterstitialAd(
+        onAdShown: () async {
+          await _pause();
+        },
+        onAdDismissed: () async {
+          await _play();
+        },
+      );
     }
+
     analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 

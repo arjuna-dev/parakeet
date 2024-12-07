@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AdService {
   static InterstitialAd? _interstitialAd;
@@ -65,17 +64,5 @@ class AdService {
     );
 
     await _interstitialAd!.show();
-  }
-
-  static Future<bool> shouldShowAd() async {
-    final prefs = await SharedPreferences.getInstance();
-    int playCount = prefs.getInt('audio_play_count') ?? 0;
-    return playCount % playCountThreshold == 0 && playCount > 0;
-  }
-
-  static Future<void> incrementPlayCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    int playCount = prefs.getInt('audio_play_count') ?? 0;
-    await prefs.setInt('audio_play_count', playCount + 1);
   }
 }
