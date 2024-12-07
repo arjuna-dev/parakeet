@@ -57,7 +57,7 @@ class APICalls:
             self.tts_function = openai_synthesize_text
         else:
             raise Exception("Invalid TTS provider")
-        
+
     def handle_line_1st_API(self, current_line, full_json):
 
         last_value_path = self.get_last_value_path(full_json)
@@ -103,7 +103,7 @@ class APICalls:
                     elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
                         self.voice_1_id = voice_finder_openai(last_value, self.target_language)
                         self.voice_1 = self.voice_1_id
-                    
+
                     print('self.voice_1: ', self.voice_1)
                     if self.pending_voice_1:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_1['text'], self.voice_1, self.pending_voice_1['filename'], self.document_durations))
@@ -118,7 +118,7 @@ class APICalls:
                     if self.pending_voice_2:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations))
                         self.pending_voice_2 = None
-        
+
     def handle_line_2nd_API(self, current_line, full_json):
 
         if self.mock:
@@ -194,7 +194,7 @@ class APICalls:
             last_key = list(json_obj.keys())[-1]
             path.append(last_key)
             return self.get_last_value_path(json_obj[last_key], path)
-        
+
         elif isinstance(json_obj, list):
             if not json_obj:
                 return path
@@ -207,11 +207,11 @@ class APICalls:
     def get_value_from_path(self, json_obj, path):
         """
         Access the value in a JSON object using the provided path.
-        
+
         Args:
         - json_obj: The JSON object (dict or list).
         - path: The path to the value (list of keys and indexes).
-        
+
         Returns:
         - The value at the specified path.
         """
@@ -256,19 +256,19 @@ class APICalls:
                 end_of_line = False
                 current_line = []
         return rectified_JSON
-    
+
     def extract_and_classify_enclosed_words(self, input_string):
         parts = input_string.split('||')
         result = []
         is_enclosed = False
-        
+
         for part in parts:
             if part:
                 result.append({'text': part, 'enclosed': is_enclosed})
             is_enclosed = not is_enclosed
-        
+
         return result
-    
+
     def use_mock_voices(self):
         self.voice_1 = self.mock_voice_1
         self.voice_2 = self.mock_voice_2

@@ -31,39 +31,28 @@ class HomeScreenModel extends ChangeNotifier {
       'docId': audioFile.id,
       'parentId': audioFile.reference.parent.parent!.id,
     });
-    favoriteAudioFileIdsNotifier.value =
-        List.from(favoriteAudioFileIds); // Update the notifier
+    favoriteAudioFileIdsNotifier.value = List.from(favoriteAudioFileIds); // Update the notifier
     safeNotifyListeners();
   }
 
   void removeAudioFile(DocumentSnapshot audioFile) {
     favoriteAudioFiles.remove(audioFile);
-    favoriteAudioFileIds.removeWhere((file) =>
-        file['docId'] == audioFile.id &&
-        file['parentId'] == audioFile.reference.parent.parent!.id);
-    favoriteAudioFileIdsNotifier.value =
-        List.from(favoriteAudioFileIds); // Update the notifier
+    favoriteAudioFileIds.removeWhere((file) => file['docId'] == audioFile.id && file['parentId'] == audioFile.reference.parent.parent!.id);
+    favoriteAudioFileIdsNotifier.value = List.from(favoriteAudioFileIds); // Update the notifier
     safeNotifyListeners();
   }
 
   Future<void> loadAudioFiles() async {
-    final userDocRef =
-        FirebaseFirestore.instance.collection('users').doc(user!.uid);
+    final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
     final userDoc = await userDocRef.get();
     if (userDoc.data()!.containsKey('favoriteAudioFiles')) {
-      favoriteAudioFileIds =
-          userDoc.get('favoriteAudioFiles') as List<dynamic>? ?? [];
+      favoriteAudioFileIds = userDoc.get('favoriteAudioFiles') as List<dynamic>? ?? [];
     }
 
     favoriteAudioFileIdsNotifier.value = favoriteAudioFileIds;
 
-    favoriteAudioFiles =
-        await Future.wait(favoriteAudioFileIds.map((map) async {
-      final scriptDocRef = FirebaseFirestore.instance
-          .collection('chatGPT_responses')
-          .doc(map['parentId'])
-          .collection('script-${user!.uid}')
-          .doc(map['docId']);
+    favoriteAudioFiles = await Future.wait(favoriteAudioFileIds.map((map) async {
+      final scriptDocRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(map['parentId']).collection('script-${user!.uid}').doc(map['docId']);
       final scriptDoc = await scriptDocRef.get();
       return scriptDoc;
     }));
@@ -79,10 +68,7 @@ class HomeScreenModel extends ChangeNotifier {
 
     if (nowPlayingIds.isNotEmpty) {
       nowPlayingFiles = await Future.wait(nowPlayingIds.map((id) async {
-        final scriptCollectionRef = FirebaseFirestore.instance
-            .collection('chatGPT_responses')
-            .doc(id)
-            .collection('script-${user!.uid}');
+        final scriptCollectionRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(id).collection('script-${user!.uid}');
         final scriptDocs = await scriptCollectionRef.get();
         if (scriptDocs.docs.isNotEmpty) {
           return scriptDocs.docs.first;

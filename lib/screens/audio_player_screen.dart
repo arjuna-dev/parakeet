@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/services/ad_service.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/utils/save_analytics.dart';
@@ -86,6 +87,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String recordedText = '';
 
   int previousIndex = -1;
+  bool _hasPremium = false;
+  bool _hasShownInitialAd = false;
 
   @override
   void initState() {
@@ -100,7 +103,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack, saveSnapshot);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
-    updateHasNicknameAudio().then((_) => _initPlaylist());
+    updateHasNicknameAudio().then((_) {
+      _initPlaylist();
+    });
     _loadAddressByNicknamePreference();
   }
 
@@ -113,6 +118,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     setState(() {
       hasNicknameAudio = hasNicknameAudio;
     });
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userID).get();
+
+    setState(() {
+      _hasPremium = userDoc.data()?['premium'] ?? false;
+    });
+
+    if (!_hasPremium) {
+      await AdService.loadInterstitialAd();
+    }
   }
 
   void getExistingBigJson() async {
@@ -181,11 +199,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
       await player.setAudioSource(playlist).catchError((error) {
         print("Error setting audio source: $error");
+        return null;
       });
 
-      if (widget.generating) {
-        _play();
-      }
+      // _showAd();
+      await _play();
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
@@ -240,7 +258,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
     await playlist.addAll(newTracks);
     if (!widget.generating) {
-      _play();
+      await _play();
     }
 
     updateNumber++;
@@ -293,9 +311,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         bool hasIndexChanged = index != lastIndex;
         lastIndex = index;
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
+        Duration totalPosition = cumulativeDuration + position;
+
         if (hasIndexChanged) return null;
         if (position < duration) {
-          return PositionData(position, duration, cumulativeDuration + position);
+          return PositionData(position, duration, totalPosition);
         }
         return null;
       },
@@ -777,10 +797,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       isPlaying = true;
       _isPaused = false;
     });
+
     if (savedPosition != null && savedTrackIndex != null) {
       await player.seek(Duration(milliseconds: savedPosition), index: savedTrackIndex);
     }
     player.play();
+
+    // Show ad for non-premium users every time they start playing
+    if (!_hasPremium && !_hasShownInitialAd) {
+      _hasShownInitialAd = true; // Prevent showing ad multiple times in same session
+      await AdService.showInterstitialAd(
+        onAdShown: () async {
+          await _pause();
+        },
+        onAdDismissed: () async {
+          await _play();
+        },
+      );
+    }
+
     analyticsManager.storeAnalytics(widget.documentID, 'play');
   }
 

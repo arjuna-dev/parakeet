@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
 import 'package:parakeet/utils/google_tts_language_codes.dart';
 import 'package:parakeet/utils/constants.dart';
@@ -31,7 +32,6 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
-  final numberOfAPIcallsAllowed = 5; // change this to allow more API calls
 
   final _formKey = GlobalKey<FormState>();
 
@@ -128,6 +128,10 @@ class _CreateLessonState extends State<CreateLesson> {
       print('Error fetching api_call counts from user collection: $e');
       return -1; // Return -1 or handle the error as appropriate
     }
+  }
+
+  int getAPICallLimit(bool isPremium) {
+    return isPremium ? 15 : 5;
   }
 
   @override
@@ -288,6 +292,51 @@ class _CreateLessonState extends State<CreateLesson> {
                         foregroundColor: Colors.white,
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
+                            // Check premium status first
+                            final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
+
+                            final isPremium = userDoc.data()?['premium'] ?? false;
+                            final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
+
+                            if (!isPremium) {
+                              final apiCalls = await countAPIcallsByUser();
+                              if (apiCalls >= 2) {
+                                // Activate premium mode prompt
+                                final shouldEnablePremium = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('Generate up to 15 lessons per day'),
+                                      content: const Text('You\'ve reached the free limit. Activate premium mode!!'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text('No, thanks'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
+                                            if (success) {
+                                              Navigator.pop(context, true);
+                                            } else {
+                                              Navigator.pop(context, false);
+                                            }
+                                          },
+                                          child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 30 days'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (shouldEnablePremium != true) {
+                                  Navigator.pushReplacementNamed(context, '/create_lesson');
+                                  return;
+                                }
+                              }
+                            }
+
                             print("pressed");
                             showDialog(
                               context: context,
@@ -310,12 +359,14 @@ class _CreateLessonState extends State<CreateLesson> {
                               return;
                             }
                             var apiCallsByUser = await countAPIcallsByUser();
-                            if (apiCallsByUser != -1 && apiCallsByUser >= numberOfAPIcallsAllowed) {
+                            if (apiCallsByUser != -1 && apiCallsByUser >= getAPICallLimit(isPremium)) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'),
-                                  duration: Duration(seconds: 5),
+                                SnackBar(
+                                  content: Text(isPremium
+                                      ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'
+                                      : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
+                                  duration: const Duration(seconds: 5),
                                 ),
                               );
                               return;
@@ -324,6 +375,7 @@ class _CreateLessonState extends State<CreateLesson> {
                             try {
                               final FirebaseFirestore firestore = FirebaseFirestore.instance;
                               final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+                              print('TTS provider: $ttsProvider');
                               http.post(
                                 Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
                                 headers: <String, String>{

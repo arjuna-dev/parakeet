@@ -1,11 +1,15 @@
 export interface ProductData {
-    productId: string;
-    type: "SUBSCRIPTION" | "NON_SUBSCRIPTION";
-  }
+  productId: string;
+  type: 'SUBSCRIPTION' | 'NON_SUBSCRIPTION';
+}
 
-export const productDataMap: { [productId: string]: ProductData} = {
-  "1m": {
-    productId: "1m",
-    type: "SUBSCRIPTION",
+export const productDataMap: { [productId: string]: ProductData } = {
+  '1m': {
+    productId: '1m',
+    type: 'SUBSCRIPTION',
+  },
+  '1year': {
+    productId: '1year',
+    type: 'SUBSCRIPTION',
   },
 };

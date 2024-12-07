@@ -9,8 +9,7 @@ class FirestoreService {
   }
 
   // Get a document reference
-  DocumentReference getDocumentReference(
-      String collectionPath, String documentId) {
+  DocumentReference getDocumentReference(String collectionPath, String documentId) {
     return _db.collection(collectionPath).doc(documentId);
   }
 
@@ -20,20 +19,17 @@ class FirestoreService {
   }
 
   // Get a document
-  Future<DocumentSnapshot> getDocument(
-      String collectionPath, String documentId) async {
+  Future<DocumentSnapshot> getDocument(String collectionPath, String documentId) async {
     return await _db.collection(collectionPath).doc(documentId).get();
   }
 
   // Add a document
-  Future<DocumentReference> addDocument(
-      String collectionPath, Map<String, dynamic> data) async {
+  Future<DocumentReference> addDocument(String collectionPath, Map<String, dynamic> data) async {
     return await _db.collection(collectionPath).add(data);
   }
 
   // Update a document
-  Future<void> updateDocument(String collectionPath, String documentId,
-      Map<String, dynamic> data) async {
+  Future<void> updateDocument(String collectionPath, String documentId, Map<String, dynamic> data) async {
     await _db.collection(collectionPath).doc(documentId).update(data);
   }
 

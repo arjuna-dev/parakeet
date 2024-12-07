@@ -22,15 +22,26 @@ import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'screens/nickname_popup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'services/ad_service.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Only initialize MobileAds on mobile platforms
+  if (!kIsWeb) {
+    MobileAds.instance.initialize();
+    // Initialize AdService to preload first ad
+    await AdService.initialize();
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(
     MultiProvider(
       providers: [

@@ -88,12 +88,12 @@ flutter build appbundle  --obfuscate --split-debug-info=build/app/outputs/symbol
 
 ##### Installation:
 
-1. Download the .jar file from https://github.com/google/bundletool/releases 
+1. Download the .jar file from https://github.com/google/bundletool/releases
 2. Add this to .zshrc:
 ```bash
 alias bundletool='java -jar /path/to/bundletool-all-1.16.0.jar'
 ```
-Alternatively you'll have to point to the .jar file every time with 
+Alternatively you'll have to point to the .jar file every time with
 
 ```bash
 java -jar /path/to/bundletool-all-1.16.0.jar

@@ -15,6 +15,10 @@
   },
   "main": "lib/src/index.js",
   "dependencies": {
+    "app-store-server-api": "^0.16.0",
+    "axios": "^1.7.7",
+    "crypto": "^1.0.1",
+    "fetch": "^1.1.0",
     "firebase-admin": "^12.2.0",
     "firebase-functions": "^5.0.0",
     "firestore": "^1.1.6",

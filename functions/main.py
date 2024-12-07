@@ -72,7 +72,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         else:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
-                if user_doc_snapshot.get('call_count') >= 5:
+                if user_doc_snapshot.get('call_count') >= 10:
                     # If the call count for today is 5 or more, return False
                     return False
                 else:
@@ -82,7 +82,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                 # If the last call was not made today, reset the count and date
                 transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
         return True
-    
+
     # Start the transaction
     transaction = db.transaction()
     if not check_and_update_call_count(transaction, user_doc_ref):
@@ -123,8 +123,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
         prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
 
-    
-    if first_API_calls.mock == True: 
+
+    if first_API_calls.mock == True:
         chatGPT_response = mock_response_first_API
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
@@ -225,7 +225,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
-    if second_API_calls.mock == True: 
+    if second_API_calls.mock == True:
         chatGPT_response = mock_response_second_API
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
@@ -286,8 +286,8 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
         except Exception as e:
             print(f"Blob {blob.name} not found.")
     # delete the folder as well
-    
-    
+
+
     return https_fn.Response(status=200)
 
 

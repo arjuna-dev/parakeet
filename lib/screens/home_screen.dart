@@ -143,7 +143,7 @@ class _HomeState extends State<Home> {
                     text: TextSpan(
                       style: TextStyle(color: colorScheme.onPrimaryContainer), // Default text style
                       children: <TextSpan>[
-                        const TextSpan(text: 'Nothing here yet 😅.'),
+                        const TextSpan(text: 'Nothing here yet 😅. '),
                         TextSpan(
                           text: 'Go to library',
                           style: TextStyle(

@@ -105,8 +105,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
     String greeting = greetings[firstIndexUsed];
 
     try {
-      String userIdN = FirebaseAuth.instance.currentUser!.uid + "_1";
-      String text = "$greeting ${nicknameText}!";
+      String userIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
+      String text = "$greeting $nicknameText!";
 
       await CloudFunctionService.generateNicknameAudio(text, userId, userIdN);
       await _fetchAndPlayAudio(userIdN);
@@ -158,12 +158,12 @@ class _NicknamePopupState extends State<NicknamePopup> {
     while (!audioFetched) {
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        bool nicknameAudioExists = await urlExists(
+        await urlExists(
           'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp=$timestamp',
         );
 
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
+        await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
         audioFetched = true;
         player.play();
       } catch (e) {

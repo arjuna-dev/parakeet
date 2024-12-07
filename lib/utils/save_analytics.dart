@@ -39,13 +39,7 @@ class AnalyticsManager {
   AnalyticsManager(this.userId, this.documentId);
 
   void loadAnalyticsFromFirebase() {
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('analytics')
-        .doc(documentId)
-        .get()
-        .then((DocumentSnapshot<Map<String, dynamic>> snapshot) {
+    FirebaseFirestore.instance.collection('users').doc(userId).collection('analytics').doc(documentId).get().then((DocumentSnapshot<Map<String, dynamic>> snapshot) {
       if (snapshot.exists) {
         _loadAnalytics(snapshot.data()!);
       }
@@ -83,12 +77,7 @@ class AnalyticsManager {
   Future<void> _saveToFirebase(String fileId, String action) async {
     AnalyticsData data = analytics[action]!;
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('analytics')
-        .doc(fileId)
-        .set(data.toMap(), SetOptions(merge: true));
+    await FirebaseFirestore.instance.collection('users').doc(userId).collection('analytics').doc(fileId).set(data.toMap(), SetOptions(merge: true));
   }
 
   Map<String, AnalyticsData> getAnalytics() {
