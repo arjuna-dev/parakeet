@@ -81,7 +81,7 @@ dart run flutter_launcher_icons:main
 
 Run:
 ```bash
-flutter build appbundle
+flutter build appbundle  --obfuscate --split-debug-info=build/app/outputs/symbols
 ```
 
 #### How te test an apk from the bundle on a device

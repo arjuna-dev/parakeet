@@ -656,6 +656,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (targetPhraseToCompareWith != null) {
       // Normalize both strings: remove punctuation and convert to lowercase
       String normalizedRecordedText = _normalizeString(recordedText);
+      // Duplicate normalizedRecordedText for web doubled text bug
+      String doubledNormalizedRecordedText =
+          '$normalizedRecordedText $normalizedRecordedText';
       String normalizedTargetPhrase =
           _normalizeString(targetPhraseToCompareWith!);
 
@@ -667,6 +670,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         normalizedRecordedText,
         normalizedTargetPhrase,
       );
+
+      double similarityForDoubled = StringSimilarity.compareTwoStrings(
+        doubledNormalizedRecordedText,
+        normalizedTargetPhrase,
+      );
+
+      if (similarityForDoubled > similarity) {
+        similarity = similarityForDoubled;
+      }
 
       print('Similarity: $similarity');
 
