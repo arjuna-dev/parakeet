@@ -1,5 +1,7 @@
 # Compiled JavaScript files
+lib/assets/service-account.json
 lib/**/*.js
+lib/**/*.json
 lib/**/*.js.map
 
 # TypeScript v1 declaration files
@@ -8,3 +10,7 @@ typings/
 # Node.js dependency directory
 node_modules/
 *.local
+
+# Service account files
+src/assets/service-account.json
+
