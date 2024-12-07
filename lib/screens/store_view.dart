@@ -163,7 +163,7 @@ class _StoreViewState extends State<StoreView> {
         TextButton(
           style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
           onPressed: () => _inAppPurchase.restorePurchases(),
-          child: Text('Restore Purchases'),
+          child: const Text('Restore Purchases'),
         )
       ],
     );
