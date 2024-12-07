@@ -15,8 +15,7 @@ class UpdateFirestoreService extends ChangeNotifier {
   Queue<QuerySnapshot> queue = Queue<QuerySnapshot>();
   bool isUpdating = false;
 
-  UpdateFirestoreService._privateConstructor(
-      this.updatePlaylist, this.updateTrack, this.saveSnapshot);
+  UpdateFirestoreService._privateConstructor(this.updatePlaylist, this.updateTrack, this.saveSnapshot);
 
   static UpdateFirestoreService getInstance(
       String documentID,
@@ -25,18 +24,13 @@ class UpdateFirestoreService extends ChangeNotifier {
       Function updateTrack,
       Function(QuerySnapshot) saveSnapshot) {
     // Explicit type
-    _instance ??= UpdateFirestoreService._privateConstructor(
-        updatePlaylist, updateTrack, saveSnapshot);
+    _instance ??= UpdateFirestoreService._privateConstructor(updatePlaylist, updateTrack, saveSnapshot);
     _instance!._initializeStream(documentID, generating);
     return _instance!;
   }
 
   void _initializeStream(String documentID, bool generating) {
-    _stream = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(documentID)
-        .collection('all_breakdowns')
-        .snapshots();
+    _stream = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('all_breakdowns').snapshots();
     _streamSubscription = _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue(updateTrack, generating);

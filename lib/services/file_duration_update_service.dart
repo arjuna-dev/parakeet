@@ -12,23 +12,16 @@ class FileDurationUpdate extends ChangeNotifier {
   bool isUpdating = false;
   Function calculateTotalDurationAndUpdateTrackDurations;
 
-  FileDurationUpdate._privateConstructor(
-      this.calculateTotalDurationAndUpdateTrackDurations);
+  FileDurationUpdate._privateConstructor(this.calculateTotalDurationAndUpdateTrackDurations);
 
-  static FileDurationUpdate getInstance(String documentID,
-      Function calculateTotalDurationAndUpdateTrackDurations) {
-    _instance ??= FileDurationUpdate._privateConstructor(
-        calculateTotalDurationAndUpdateTrackDurations);
+  static FileDurationUpdate getInstance(String documentID, Function calculateTotalDurationAndUpdateTrackDurations) {
+    _instance ??= FileDurationUpdate._privateConstructor(calculateTotalDurationAndUpdateTrackDurations);
     _instance!._initializeStream(documentID);
     return _instance!;
   }
 
   void _initializeStream(String documentID) {
-    _stream = FirebaseFirestore.instance
-        .collection('chatGPT_responses')
-        .doc(documentID)
-        .collection('file_durations')
-        .snapshots();
+    _stream = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('file_durations').snapshots();
     _streamSubscription = _stream.listen((snapshot) {
       queue.add(snapshot);
       processQueue();

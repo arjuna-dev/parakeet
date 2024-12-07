@@ -32,12 +32,7 @@ class AuthService {
 
     // Show trial modal if user is not premium, and hasUsedTrial field doesn't exist or is false
     if (context.mounted &&
-        ((!userDoc.exists) ||
-            (userData != null &&
-                (!userData.containsKey('premium') ||
-                    userData['premium'] == false) &&
-                (!userData.containsKey('hasUsedTrial') ||
-                    userData['hasUsedTrial'] == false)))) {
+        ((!userDoc.exists) || (userData != null && (!userData.containsKey('premium') || userData['premium'] == false) && (!userData.containsKey('hasUsedTrial') || userData['hasUsedTrial'] == false)))) {
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -48,19 +43,16 @@ class AuthService {
 
   Future<User?> signInWithGoogle(BuildContext context) async {
     try {
-      final GoogleSignInAccount? googleSignInAccount =
-          await _googleSignIn.signIn();
+      final GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
       if (googleSignInAccount != null) {
-        final GoogleSignInAuthentication googleSignInAuthentication =
-            await googleSignInAccount.authentication;
+        final GoogleSignInAuthentication googleSignInAuthentication = await googleSignInAccount.authentication;
 
         final AuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleSignInAuthentication.accessToken,
           idToken: googleSignInAuthentication.idToken,
         );
 
-        final UserCredential userCredential =
-            await _auth.signInWithCredential(credential);
+        final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
         if (userCredential.user != null) {
           await _initializeUserDocument(userCredential.user!, context);

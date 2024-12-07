@@ -51,8 +51,7 @@ Future<void> main() async {
 
 Future<void> checkForMandatoryUpdate() async {
   final firestore = FirebaseFirestore.instance;
-  final docRef =
-      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
@@ -69,8 +68,7 @@ Future<void> checkForMandatoryUpdate() async {
 
 Future<void> checkForRecommendedUpdate() async {
   final firestore = FirebaseFirestore.instance;
-  final docRef =
-      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
@@ -91,9 +89,7 @@ void _showUpdateDialog(String message, bool brickApp) {
     barrierDismissible: false, // Prevent dialog dismissal
     builder: (BuildContext context) {
       return AlertDialog(
-        title: brickApp
-            ? const Text('Update Required')
-            : const Text('Update Available'),
+        title: brickApp ? const Text('Update Required') : const Text('Update Available'),
         content: Text(
           message, // Display message from Firebase
           style: const TextStyle(
@@ -128,8 +124,7 @@ void _showUpdateDialog(String message, bool brickApp) {
 
 Future<void> requestTrackingPermission() async {
   // Check if the tracking status has not been determined
-  if (await AppTrackingTransparency.trackingAuthorizationStatus ==
-      TrackingStatus.notDetermined) {
+  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
     // Show an explainer dialog before the ATT prompt
     await showCustomTrackingDialog();
 
@@ -201,8 +196,7 @@ class MyApp extends StatefulWidget {
 class ResponsiveScreenWrapper extends StatelessWidget {
   final Widget child;
 
-  const ResponsiveScreenWrapper({Key? key, required this.child})
-      : super(key: key);
+  const ResponsiveScreenWrapper({Key? key, required this.child}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -240,8 +234,7 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
 
       // Check nickname audio for already logged-in users
-      if (FirebaseAuth.instance.currentUser != null &&
-          !_hasCheckedNicknameAudio) {
+      if (FirebaseAuth.instance.currentUser != null && !_hasCheckedNicknameAudio) {
         _hasCheckedNicknameAudio = true;
         await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
       }
@@ -251,8 +244,7 @@ class _MyAppState extends State<MyApp> {
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
       print("Purchase stream started");
-      IAPService(context.read<AuthService>().currentUser!.uid)
-          .listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -260,8 +252,7 @@ class _MyAppState extends State<MyApp> {
     }) as StreamSubscription<List<PurchaseDetails>>;
 
     // Monitor authentication state changes
-    _authSubscription =
-        FirebaseAuth.instance.authStateChanges().listen((user) async {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
         // Reset the flag for new logins and check nickname audio
         _hasCheckedNicknameAudio = false;
@@ -331,23 +322,17 @@ class _MyAppState extends State<MyApp> {
                         return Scaffold(
                           body: StreamBuilder<User?>(
                             stream: FirebaseAuth.instance.authStateChanges(),
-                            builder: (BuildContext context,
-                                AsyncSnapshot<User?> snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.active) {
+                            builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+                              if (snapshot.connectionState == ConnectionState.active) {
                                 if (snapshot.hasData) {
-                                  return const CreateLesson(
-                                      title: 'Create an audio lesson');
+                                  return const CreateLesson(title: 'Create an audio lesson');
                                 } else {
                                   return const AuthScreen();
                                 }
-                              } else if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                    child: CircularProgressIndicator());
+                              } else if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
                               } else {
-                                return const Center(
-                                    child: Text('Failed to load'));
+                                return const Center(child: Text('Failed to load'));
                               }
                             },
                           ),
@@ -390,10 +375,8 @@ class _MyAppState extends State<MyApp> {
           }
 
           return PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                builder(context),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
+            pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: animation,
                 child: child,

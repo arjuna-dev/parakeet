@@ -1,10 +1,4 @@
-List<Function> introSequences = [
-  introSequence1,
-  introSequence2,
-  introSequence3,
-  introSequence4,
-  introSequence5
-];
+List<Function> introSequences = [introSequence1, introSequence2, introSequence3, introSequence4, introSequence5];
 
 List<String> introSequence1() {
   List<String> scriptPart = [
@@ -75,12 +69,8 @@ List<String> introOutroSequence1() {
 }
 
 List<Function> sentenceSequences = [sentenceSequence1];
-List<String> sentenceSequence1(String native, String target,
-    String narratorExplanation, List<String> narratorFunFact,
-    {bool isFirstSentence = false}) {
-  String firstPhrase = isFirstSentence
-      ? "narrator_navigation_phrases_20"
-      : "narrator_navigation_phrases_21";
+List<String> sentenceSequence1(String native, String target, String narratorExplanation, List<String> narratorFunFact, {bool isFirstSentence = false}) {
+  String firstPhrase = isFirstSentence ? "narrator_navigation_phrases_20" : "narrator_navigation_phrases_21";
   List<String> scriptPart = [
     firstPhrase, //For now just listen
     "one_second_break",
@@ -116,17 +106,10 @@ List<String> activeRecallSequence1(String native, String target) {
 }
 
 List<Function> chunkSequences = [chunkSequence1];
-List<String> chunkSequence1(
-    List<String> narratorTranslationsChunk,
-    String nativeLanguage,
-    String targetLanguage,
-    List<Map<String, dynamic>> wordObjects,
-    int chunkNumber) {
+List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordObjects, int chunkNumber) {
   List<String> allWordsRepetitions = words2Reps(wordObjects);
   //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
-  String firstPhrase = chunkNumber == 0
-      ? "narrator_navigation_phrases_17"
-      : "narrator_navigation_phrases_23";
+  String firstPhrase = chunkNumber == 0 ? "narrator_navigation_phrases_17" : "narrator_navigation_phrases_23";
   List<String> scriptPart = [
     firstPhrase,
     "narrator_navigation_phrases_22", // Just listen

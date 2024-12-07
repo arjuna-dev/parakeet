@@ -47,10 +47,7 @@ class _StoreViewState extends State<StoreView> {
         return;
       }
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
       final isPremium = userDoc.data()?['premium'] ?? false;
       final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
@@ -91,8 +88,7 @@ class _StoreViewState extends State<StoreView> {
     }
 
     // get IAP.
-    ProductDetailsResponse productDetailsResponse =
-        await _inAppPurchase.queryProductDetails(_productIds.toSet());
+    ProductDetailsResponse productDetailsResponse = await _inAppPurchase.queryProductDetails(_productIds.toSet());
 
     setState(() {
       _loading = false;
@@ -114,18 +110,13 @@ class _StoreViewState extends State<StoreView> {
 
   bool _hasIntroductoryOffer(ProductDetails product) {
     if (Platform.isAndroid) {
-      final GooglePlayProductDetails googleProduct =
-          product as GooglePlayProductDetails;
-      final offerDetails =
-          googleProduct.productDetails.subscriptionOfferDetails;
+      final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
+      final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
 
       // Check if there are any offers and the first phase is free
-      return offerDetails != null &&
-          offerDetails.isNotEmpty &&
-          offerDetails.first.pricingPhases.first.priceAmountMicros == 0;
+      return offerDetails != null && offerDetails.isNotEmpty && offerDetails.first.pricingPhases.first.priceAmountMicros == 0;
     } else if (Platform.isIOS) {
-      final AppStoreProductDetails iOSProduct =
-          product as AppStoreProductDetails;
+      final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
       return iOSProduct.skProduct.introductoryPrice != null;
     }
     return false;
@@ -136,30 +127,24 @@ class _StoreViewState extends State<StoreView> {
     print('Product status: ${productDetails.price}');
     if (Platform.isAndroid) {
       final googleProduct = productDetails as GooglePlayProductDetails;
-      print(
-          'Subscription offer details: ${googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.first.priceAmountMicros}');
+      print('Subscription offer details: ${googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.first.priceAmountMicros}');
     }
     print(_hasIntroductoryOffer(productDetails));
     late PurchaseParam purchaseParam;
 
     if (Platform.isAndroid) {
-      purchaseParam = GooglePlayPurchaseParam(
-          productDetails: productDetails, changeSubscriptionParam: null);
+      purchaseParam = GooglePlayPurchaseParam(productDetails: productDetails, changeSubscriptionParam: null);
     } else {
       purchaseParam = PurchaseParam(productDetails: productDetails);
     }
 
     if (productDetails.id == "1m" || productDetails.id == "1year") {
-      await InAppPurchase.instance
-          .buyNonConsumable(purchaseParam: purchaseParam);
+      await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
       if (_hasIntroductoryOffer(productDetails) && !_hasUsedTrial) {
         // Update the user's trial status in Firestore
         final userId = FirebaseAuth.instance.currentUser?.uid;
         if (userId != null) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .update({'hasUsedTrial': true});
+          await FirebaseFirestore.instance.collection('users').doc(userId).update({'hasUsedTrial': true});
         }
       }
     }
@@ -232,11 +217,7 @@ class _StoreViewState extends State<StoreView> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: () => _launchURL(Uri(
-                scheme: "https",
-                host: "gregarious-giant-4a5.notion.site",
-                path:
-                    "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
+            onPressed: () => _launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
             child: const Text(
               'Terms and Conditions',
               style: TextStyle(
@@ -251,8 +232,7 @@ class _StoreViewState extends State<StoreView> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: () =>
-                _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
+            onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
             child: const Text(
               'Privacy Policy',
               style: TextStyle(
@@ -266,9 +246,7 @@ class _StoreViewState extends State<StoreView> {
   }
 
   void _launchURL(Uri url) async {
-    await canLaunchUrl(url)
-        ? await launchUrl(url)
-        : throw 'Could not launch $url';
+    await canLaunchUrl(url) ? await launchUrl(url) : throw 'Could not launch $url';
   }
 
   List<ProductDetails> _getUniqueProducts() {
@@ -297,16 +275,13 @@ class _StoreViewState extends State<StoreView> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text(_notice!),
                 ),
-              if (_loading)
-                const Expanded(
-                    child: Center(child: CircularProgressIndicator())),
+              if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
               if (!_hasPremium && _products.isNotEmpty)
                 Expanded(
                   child: ListView.builder(
                     itemCount: _getUniqueProducts().length,
                     itemBuilder: (context, index) {
-                      final ProductDetails productDetails =
-                          _getUniqueProducts()[index];
+                      final ProductDetails productDetails = _getUniqueProducts()[index];
 
                       return Card(
                         child: Row(
@@ -320,21 +295,17 @@ class _StoreViewState extends State<StoreView> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        8.0, 25.0, 8.0, 8.0),
+                                    padding: const EdgeInsets.fromLTRB(8.0, 25.0, 8.0, 8.0),
                                     child: Text(
                                       productDetails.title,
                                       style: TextStyle(
                                         fontSize: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
                                     ),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        8.0, 8.0, 8.0, 8.0),
+                                    padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 8.0),
                                     child: Text(
                                       productDetails.description,
                                       style: const TextStyle(
@@ -350,8 +321,7 @@ class _StoreViewState extends State<StoreView> {
                               padding: const EdgeInsets.all(8.0),
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.primary,
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
                                   foregroundColor: Colors.white,
                                 ),
                                 child: _buyText(productDetails),

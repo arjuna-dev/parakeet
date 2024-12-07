@@ -9,12 +9,10 @@ class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
 
   // Extract common sign-in logic
-  Future<void> _handleSignIn(
-      BuildContext context, Future<User?> Function() signInMethod) async {
+  Future<void> _handleSignIn(BuildContext context, Future<User?> Function() signInMethod) async {
     final user = await signInMethod();
     if (user != null) {
-      final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
 
       final userDocSnapshot = await userDocRef.get();
       if (!userDocSnapshot.exists) {
@@ -48,9 +46,7 @@ class AuthScreen extends StatelessWidget {
                 User? user = await AuthService().signInWithGoogle(context);
                 if (user != null) {
                   // Get reference to the user's document in Firestore
-                  DocumentReference userDocRef = FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user.uid);
+                  DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
 
                   // Check if user already exists in Firestore
                   DocumentSnapshot userDocSnapshot = await userDocRef.get();

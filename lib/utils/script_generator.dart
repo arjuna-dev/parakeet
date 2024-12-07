@@ -32,8 +32,7 @@ List<String> createFirstScript(List<dynamic> data) {
   return script;
 }
 
-List<String> parseAndCreateScript(
-    List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue) {
+List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue) {
   List<String> script = [];
 
   script = createFirstScript(dialogue);
@@ -49,8 +48,7 @@ List<String> parseAndCreateScript(
       String narratorFunFactText = data[i]["narrator_fun_fact"];
 
       // Classify and process the text into parts enclosed by || (target_language text)
-      List<Map<String, dynamic>> classifiedText =
-          extractAndClassifyEnclosedWords(narratorFunFactText);
+      List<Map<String, dynamic>> classifiedText = extractAndClassifyEnclosedWords(narratorFunFactText);
       List<String> narratorFunFact = [];
       for (int index = 0; index < classifiedText.length; index++) {
         String narratorFunFactChunks = "dialogue_${i}_narrator_fun_fact_$index";
@@ -58,84 +56,50 @@ List<String> parseAndCreateScript(
         // narratorFunFact.add("one_second_break");
       }
 
-      List<String> sentenceSequence = sequences.sentenceSequence1(
-          nativeSentence, targetSentence, narratorExplanation, narratorFunFact,
-          isFirstSentence: i == 0);
+      List<String> sentenceSequence = sequences.sentenceSequence1(nativeSentence, targetSentence, narratorExplanation, narratorFunFact, isFirstSentence: i == 0);
       script.addAll(sentenceSequence);
 
       List<int> chunkNumberExcludeList = [];
 
       // Process words in the sentence
-      if (wordsToRepeat.any((element) => data[i]["target_language"]
-          .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
-          .toLowerCase()
-          .split(' ')
-          .contains(element))) {
+      if (wordsToRepeat.any((element) => data[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
         // Process split_sentence items
         for (int j = 0; j < data[i]["split_sentence"].length; j++) {
           // Check if user wants to repeat the split sentence (only if at least one word they want is there)
-          if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
-                  ["target_language"]
-              .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
-              .toLowerCase()
-              .split(' ')
-              .contains(element))) {
+          if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
             String text = data[i]["split_sentence"][j]["narrator_translation"];
 
             // Classify and process the text into parts enclosed by || (target_language text)
-            List<Map<String, dynamic>> classifiedText1 =
-                extractAndClassifyEnclosedWords(text);
+            List<Map<String, dynamic>> classifiedText1 = extractAndClassifyEnclosedWords(text);
             List<String> narratorTranslationsChunk = [];
             for (int index = 0; index < classifiedText1.length; index++) {
-              String narratorTranslation =
-                  "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
+              String narratorTranslation = "dialogue_${i}_split_sentence_${j}_narrator_translation_$index";
               narratorTranslationsChunk.add(narratorTranslation);
               narratorTranslationsChunk.add("one_second_break");
             }
 
-            String splitNative =
-                "dialogue_${i}_split_sentence_${j}_native_language";
-            String splitTarget =
-                "dialogue_${i}_split_sentence_${j}_target_language";
+            String splitNative = "dialogue_${i}_split_sentence_${j}_native_language";
+            String splitTarget = "dialogue_${i}_split_sentence_${j}_target_language";
 
             List<Map<String, dynamic>> wordObjects = [];
-            for (int index = 0;
-                index < data[i]["split_sentence"][j]['words'].length;
-                index++) {
-              if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]
-                      ["words"][index]["target_language"]
-                  .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
-                  .toLowerCase()
-                  .split(' ')
-                  .contains(element))) {
-                String wordFile =
-                    "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
-                String text = data[i]["split_sentence"][j]['words'][index]
-                    ["narrator_translation"];
+            for (int index = 0; index < data[i]["split_sentence"][j]['words'].length; index++) {
+              if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]["words"][index]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
+                String wordFile = "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
+                String text = data[i]["split_sentence"][j]['words'][index]["narrator_translation"];
 
                 // Classify and process the text into parts enclosed by || (target_language text)
-                List<Map<String, dynamic>> classifiedText2 =
-                    extractAndClassifyEnclosedWords(text);
+                List<Map<String, dynamic>> classifiedText2 = extractAndClassifyEnclosedWords(text);
                 List<String> narratorTranslations = [];
-                for (int index2 = 0;
-                    index2 < classifiedText2.length;
-                    index2++) {
-                  String narratorTranslation =
-                      "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_$index2";
+                for (int index2 = 0; index2 < classifiedText2.length; index2++) {
+                  String narratorTranslation = "dialogue_${i}_split_sentence_${j}_words_${index}_narrator_translation_$index2";
                   narratorTranslations.add(narratorTranslation);
                 }
 
-                wordObjects.add(
-                    {"word": wordFile, "translation": narratorTranslations});
+                wordObjects.add({"word": wordFile, "translation": narratorTranslations});
               }
             }
 
-            List<String> chunkSequence = sequences.chunkSequence1(
-                narratorTranslationsChunk,
-                splitNative,
-                splitTarget,
-                wordObjects,
-                j);
+            List<String> chunkSequence = sequences.chunkSequence1(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
             script.addAll(chunkSequence);
           } else {
             chunkNumberExcludeList.add(j);

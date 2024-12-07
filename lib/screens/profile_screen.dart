@@ -28,8 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchUserData() async {
     if (_user != null) {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(_user!.uid).get();
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(_user!.uid).get();
       if (userDoc.exists) {
         final userData = userDoc.data() as Map<String, dynamic>;
         print('userDoc email: ${userData['email']}');
@@ -49,8 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Account'),
-          content: const Text(
-              'Are you sure you want to delete your account? This action cannot be undone.'),
+          content: const Text('Are you sure you want to delete your account? This action cannot be undone.'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -87,9 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _premium
-            ? Colors.green.withOpacity(0.1)
-            : Colors.grey.withOpacity(0.1),
+        color: _premium ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _premium ? Colors.green : Colors.grey,

@@ -19,7 +19,7 @@ Widget buildProfilePopupMenu(BuildContext context) {
           showDialog(
             context: context,
             builder: (BuildContext context) {
-              return NicknamePopup();
+              return const NicknamePopup();
             },
           );
       }

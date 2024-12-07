@@ -38,22 +38,10 @@ class PositionSlider extends StatelessWidget {
             Slider(
               min: 0.0,
               max: totalDuration.inMilliseconds.toDouble(),
-              value: isPlaying
-                  ? positionData.cumulativePosition.inMilliseconds
-                      .clamp(0, totalDuration.inMilliseconds)
-                      .toDouble()
-                  : savedPosition
-                      .clamp(0, totalDuration.inMilliseconds)
-                      .toDouble(),
+              value: isPlaying ? positionData.cumulativePosition.inMilliseconds.clamp(0, totalDuration.inMilliseconds).toDouble() : savedPosition.clamp(0, totalDuration.inMilliseconds).toDouble(),
               onChanged: (value) {
                 final trackIndex = findTrackIndexForPosition(value);
-                player.seek(
-                    Duration(
-                        milliseconds: (value.toInt() -
-                                cumulativeDurationUpTo(trackIndex)
-                                    .inMilliseconds)
-                            .toInt()),
-                    index: trackIndex);
+                player.seek(Duration(milliseconds: (value.toInt() - cumulativeDurationUpTo(trackIndex).inMilliseconds).toInt()), index: trackIndex);
                 if (!isPlaying) {
                   pause(analyticsOn: false);
                 }
@@ -61,9 +49,7 @@ class PositionSlider extends StatelessWidget {
             ),
             Text(
               finalTotalDuration == Duration.zero
-                  ? formatDuration(isPlaying
-                      ? positionData.cumulativePosition
-                      : Duration(milliseconds: savedPosition))
+                  ? formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))
                   : "${formatDuration(isPlaying ? positionData.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
             ),
           ],
