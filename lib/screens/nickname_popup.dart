@@ -8,6 +8,8 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NicknamePopup extends StatefulWidget {
+  const NicknamePopup({super.key});
+
   @override
   _NicknamePopupState createState() => _NicknamePopupState();
 }
@@ -103,11 +105,11 @@ class _NicknamePopupState extends State<NicknamePopup> {
     String greeting = greetings[firstIndexUsed];
 
     try {
-      String userId_N = FirebaseAuth.instance.currentUser!.uid + "_1";
+      String userIdN = FirebaseAuth.instance.currentUser!.uid + "_1";
       String text = "$greeting ${nicknameText}!";
 
-      await CloudFunctionService.generateNicknameAudio(text, userId, userId_N);
-      await _fetchAndPlayAudio(userId_N);
+      await CloudFunctionService.generateNicknameAudio(text, userId, userIdN);
+      await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText); // Save nickname to Firestore
       setState(() {
         _currentNickname = nicknameText;
@@ -150,22 +152,22 @@ class _NicknamePopupState extends State<NicknamePopup> {
     return null;
   }
 
-  Future<void> _fetchAndPlayAudio(String userId_N) async {
+  Future<void> _fetchAndPlayAudio(String useridN) async {
     bool audioFetched = false;
 
     while (!audioFetched) {
       try {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         bool nicknameAudioExists = await urlExists(
-          'https://storage.googleapis.com/user_nicknames/${userId_N}_nickname.mp3?timestamp=${timestamp}',
+          'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp=$timestamp',
         );
 
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${userId_N}_nickname.mp3?timestamp2=${timestamp2}');
+        final duration = await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
         audioFetched = true;
         player.play();
       } catch (e) {
-        await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
       }
     }
   }
@@ -181,10 +183,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
         firstIndexPassed = 1;
         continue;
       }
-      String newUserId_N = "${userId}_${i + 2 - firstIndexPassed}";
+      String newUserIdN = "${userId}_${i + 2 - firstIndexPassed}";
       String text = "${greetings[i]} ${_nicknameController.text}!";
       print("text: $text");
-      await CloudFunctionService.generateNicknameAudio(text, userId, newUserId_N);
+      await CloudFunctionService.generateNicknameAudio(text, userId, newUserIdN);
     }
   }
 
