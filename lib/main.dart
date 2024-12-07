@@ -273,7 +273,7 @@ class _MyAppState extends State<MyApp> {
         context: navigatorKey.currentContext!,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return NicknamePopup();
+          return const NicknamePopup();
         },
       );
     }
@@ -303,7 +303,8 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         title: 'Parakeet',
         // theme: AppTheme.light,
-        theme: AppTheme.dark,
+        // theme: AppTheme.dark,
+        theme: AppTheme.customTheme(),
         initialRoute: '/create_lesson',
         onGenerateRoute: (RouteSettings settings) {
           WidgetBuilder builder;
