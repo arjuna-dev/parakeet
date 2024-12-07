@@ -62,4 +62,16 @@ sealed class AppTheme {
     visualDensity: FlexColorScheme.comfortablePlatformDensity,
     cupertinoOverrideTheme: const CupertinoThemeData(applyThemeToAll: true),
   );
+
+  // Custom theme method to modify a specific color in the ThemeData object
+  static ThemeData customTheme() {
+    return dark.copyWith(
+      colorScheme: dark.colorScheme.copyWith(
+        primary: const Color.fromARGB(255, 148, 146, 255),
+        primaryFixedDim: const Color.fromARGB(255, 148, 146, 255),
+        inversePrimary: const Color.fromARGB(255, 79, 75, 129),
+        surfaceTint: const Color.fromARGB(255, 136, 134, 252),
+      ),
+    );
+  }
 }
