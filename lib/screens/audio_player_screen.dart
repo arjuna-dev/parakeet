@@ -125,7 +125,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (doc.exists) {
         existingBigJson = doc.data();
       }
-      print('existingBigJson: $existingBigJson');
     }
   }
 
@@ -141,76 +140,69 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
-  void _handlePlaybackError(Object? error) async {
-    setState(() {
-      isLoading = true; // Show spinning wheel
-    });
-
-    print("Handling playback error: $error");
-
-    // Attempt to retry loading the playlist
-    bool success = await _retryPlayCurrentTrack(10, Duration(seconds: 1));
-
-    if (success) {
-      print("Successfully recovered from playback error.");
+  Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
+    for (int i = 1; i <= retries; i++) {
+      bool exists = await urlExists(url);
+      if (exists) {
+        setState(() {
+          isLoading = false;
+        });
+        return true;
+      }
       setState(() {
-        isLoading = false; // Hide spinning wheel after success
+        isLoading = true;
       });
-      _play(); // Restart playback if successful
-    } else {
-      print("Failed to recover after 10 retries.");
-      setState(() {
-        isLoading = false; // Hide spinning wheel after failure
-      });
-      // show snackbar with error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('An error occurred while playing the audio. Please try again later.'),
-          action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            },
+      if (i == 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('We\'re having trouble finding an audio file 🧐'),
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
+
+      await Future.delayed(delay);
     }
+    return false;
   }
 
-  Future<bool> _retryPlayCurrentTrack(int retries, Duration delay) async {
-    for (int attempt = 1; attempt <= retries; attempt++) {
-      try {
-        print("Retrying playback (attempt $attempt/$retries)...");
-        await player.play();
-        return true; // If successful, return true
-      } catch (e) {
-        print("Retry attempt $attempt failed: $e");
-        if (attempt < retries) {
-          await Future.delayed(delay); // Wait before retrying
-        }
+  Future<void> _showAudioErrorDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleFetchingUrlError(int? index) async {
+    if (index != null) {
+      final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
+      bool available = await retryUrlExists(currentUrl, retries: 10, delay: Duration(seconds: 1));
+      if (!available) {
+        setState(() => isLoading = false);
+        await _showAudioErrorDialog(context);
       }
     }
-    return false; // If all retries fail, return false
   }
 
   void _listenToPlayerStreams() {
-    // Listen to playback events for error monitoring
-    player.playbackEventStream.listen(
-      (event) {},
-      onError: (Object e, StackTrace st) {
-        print("Error in playbackEventStream: $e");
-        if (e is PlatformException) {
-          print('Error code: ${e.code}');
-          print('Error message: ${e.message}');
-          print('AudioSource index: ${e.details?["index"]}');
-          _handlePlaybackError(e.message);
-        } else {
-          print('An unknown error occurred: $e');
-          _handlePlaybackError('An unknown error occurred');
-        }
-      },
-    );
-
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
@@ -218,13 +210,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
         _stop();
       }
-      if (playerState.processingState == ProcessingState.idle && !playerState.playing) {
-        print("Error: Player is idle. Possible playback failure.");
-        _handlePlaybackError('Playback failed: Player is idle');
-      }
     });
 
-    player.currentIndexStream.listen((index) {
+    player.currentIndexStream.listen((index) async {
+      await _handleFetchingUrlError(index);
+
       if (index != null && index < script.length) {
         setState(() {
           currentTrack = script[index];
