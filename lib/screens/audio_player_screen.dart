@@ -93,6 +93,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void initState() {
     super.initState();
     player = AudioPlayer();
+    playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
@@ -243,7 +244,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     if (fileUrls.isNotEmpty) {
       List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-      playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
+      playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: audioSources);
       await player.setAudioSource(playlist).catchError((error) {
         print("Error setting audio source: $error");
       });
@@ -330,10 +331,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
-      print("hasNicknameAudio: $hasNicknameAudio");
-      print("addressByNickname: $addressByNickname");
       if (hasNicknameAudio && addressByNickname) {
-        print("had nickname audio, setting url");
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
@@ -452,9 +450,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
         });
       } else {
-        print("filesToCompare: $filesToCompare");
-        print("currentIndex: $currentIndex");
-        print('currentTrack: $currentTrack');
         setState(() {
           targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
         });
@@ -498,7 +493,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (kIsWeb) {
         // Get system locales from the browser
         voiceLanguageCode = languageCodes[widget.targetLanguage];
-        print('Voice language code: $voiceLanguageCode');
         isLanguageSupported = true;
       } else {
         // Get system locales from the device
@@ -519,7 +513,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           });
         } else {
           voiceLanguageCode = languageCodes[widget.targetLanguage];
-          print('Voice language code: $voiceLanguageCode');
         }
       }
     } else {
@@ -810,7 +803,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(),
               ),
             ),
