@@ -68,7 +68,7 @@ class _StoreViewState extends State<StoreView> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _notice = "Error loading premium status";
+        _notice = "No store access";
       });
     }
   }
