@@ -48,7 +48,6 @@ dependencies:
   firebase_app_check: ^0.2.2+7
   showcaseview: ^3.0.0
   in_app_purchase: ^3.2.0
-  speech_to_text: ^6.6.2
   path_provider: ^2.1.4
   string_similarity: ^2.1.1
   sign_in_with_apple: ^6.1.2
@@ -58,6 +57,7 @@ dependencies:
   responsive_framework: ^1.5.1
   in_app_purchase_storekit: ^0.3.20+2
   google_mobile_ads: ^5.2.0
+  speech_to_text: ^6.6.2
 
 dev_dependencies:
   flutter_test:

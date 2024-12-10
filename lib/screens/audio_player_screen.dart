@@ -7,6 +7,7 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/utils/speech_recognition.dart';
 import 'package:parakeet/widgets/position_data.dart';
 import 'package:parakeet/widgets/control_buttons.dart';
 import 'package:parakeet/widgets/dialogue_list.dart';
@@ -14,13 +15,12 @@ import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:string_similarity/string_similarity.dart';
-import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -68,7 +68,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int updateNumber = 0;
   bool speechRecognitionActive = false;
   bool? speechRecognitionSupported;
-  Timer? _timer;
   Map<String, dynamic>? latestSnapshot;
   Map<int, String> filesToCompare = {};
   Map<String, dynamic>? existingBigJson;
@@ -83,8 +82,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>? cachedAudioDurations;
 
-  stt.SpeechToText speech = stt.SpeechToText();
-  String recordedText = '';
+  // stt.SpeechToText speech = stt.SpeechToText();
+
+  bool isListening = false;
+  String entireResponse = '';
+  String liveResponse = '';
 
   int previousIndex = -1;
   bool _hasPremium = false;
@@ -145,18 +147,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _initAndStartRecording() async {
-    await _initFeedbackAudioSources();
-    await _checkIfLanguageSupported();
-    _startRecording();
-  }
-
-  // Initialize feedback audio sources
-  Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
-    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
-  }
-
   void _listenToPlayerStreams() {
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
@@ -202,7 +192,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      // _showAd();
       await _play();
     } else {
       print("No valid URLs available to initialize the playlist.");
@@ -406,20 +395,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
         });
       } else {
-        print("filesToCompare: $filesToCompare");
-        print("currentIndex: $currentIndex");
-        print('currentTrack: $currentTrack');
         setState(() {
           targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
         });
       }
-      if (speech.isListening) {
-        await speech.stop(); // Wait for the speech recognition to stop
-      }
-      setState(() {
-        recordedText = "";
-      });
-      _startRecording();
+      liveResponse = '';
+
       Future.delayed(const Duration(seconds: 5), _compareTranscriptionWithPhrase);
     }
   }
@@ -444,41 +425,42 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<void> _checkIfLanguageSupported() async {
-    bool isAvailable = await speech.initialize();
-    if (isAvailable) {
-      List<stt.LocaleName> systemLocales;
+  // Initialize feedback audio sources
+  Future<void> _initFeedbackAudioSources() async {
+    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
+    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
+  }
 
-      if (kIsWeb) {
-        // Get system locales from the browser
-        voiceLanguageCode = languageCodes[widget.targetLanguage];
-        print('Voice language code: $voiceLanguageCode');
-        isLanguageSupported = true;
+  void initializeSpeechRecognition() async {
+    void ultraCallback(String liveText, String finalText, bool isListening) {
+      if (isListening) {
+        print('Currently Listening...');
+        print('Live transcription: $liveText');
+        print('Finalized transcript: $finalText');
       } else {
-        // Get system locales from the device
-        systemLocales = await speech.locales();
-
-        // Convert target language code to match system locale format
-        String? targetLanguageCode = languageCodes[widget.targetLanguage]?.replaceAll('-', '_');
-
-        isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
-
-        if (!isLanguageSupported) {
-          print('Language not supported.');
-          _timer?.cancel();
-          speech.cancel();
-          _showLanguageNotSupportedDialog();
-          setState(() {
-            speechRecognitionActive = false;
-          });
-        } else {
-          voiceLanguageCode = languageCodes[widget.targetLanguage];
-          print('Voice language code: $voiceLanguageCode');
-        }
+        print('Stopped listening.');
       }
-    } else {
-      print("Speech recognition is not available on this device.");
     }
+
+    // Create an instance of the handler
+    SpeechToTextUltra handler = SpeechToTextUltra(
+      ultraCallback: ultraCallback,
+      languageName: widget.targetLanguage, // Specify the language name
+    );
+
+    // TODO: Error handling
+    // Initialize the speech recognition
+    SpeechToText speechInstance = await handler.startListening();
+
+    // TODO: Error handling
+    // Check if the specified language is supported
+    bool isSupported = await handler.checkIfLanguageSupported(speechInstance);
+
+    if (!isSupported) {
+      print('The specified language is not supported.');
+      return;
+    }
+    _initFeedbackAudioSources();
   }
 
   void _showLanguageNotSupportedDialog() {
@@ -542,75 +524,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
-  Future<void> _startRecording() async {
-    setState(() {
-      recordedText = "";
-    });
-    if (speech.isListening) {
-      print("Returning early: speech recognition is already active.");
-      return;
-    }
-    try {
-      // Check if speech recognition is already listening
-      if (!speech.isListening) {
-        bool available = await speech.initialize();
-        if (available) {
-          // Start listening if initialization is successful
-          try {
-            speech.listen(
-              onResult: (result) {
-                setState(() {
-                  recordedText = result.recognizedWords;
-                });
-              },
-              localeId: languageCodes[widget.targetLanguage],
-            );
-          } catch (e) {
-            print("Error: probably already listening");
-          }
-
-          // Set up a periodic timer to check if listening is still active
-          _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
-            if (!speech.isListening) {
-              // Restart speech recognition if it stops
-              print("Speech recognition stopped. Restarting...");
-              _startRecording();
-              timer.cancel();
-            }
-          });
-        } else {
-          print("Speech recognition is not available on this platform.");
-        }
-      } else {
-        print("Speech recognition is already active.");
-      }
-    } catch (e) {
-      print("Speech recognition was already active.");
-    }
-  }
-
   void _compareTranscriptionWithPhrase() async {
     print('starting comparison...');
     // print a timestamp
     print(DateTime.now().toIso8601String());
     if (targetPhraseToCompareWith != null) {
       // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedRecordedText = _normalizeString(recordedText);
-      // Duplicate normalizedRecordedText for web doubled text bug
-      String doubledNormalizedRecordedText = '$normalizedRecordedText $normalizedRecordedText';
+      String normalizedEntireResponse = _normalizeString(entireResponse);
+      // Duplicate normalizedEntireResponse for web doubled text bug
+      String doubledNormalizedEntireResponse = '$normalizedEntireResponse $normalizedEntireResponse';
       String normalizedTargetPhrase = _normalizeString(targetPhraseToCompareWith!);
 
-      print('you said: $normalizedRecordedText');
+      print('you said: $normalizedEntireResponse');
       print('target phrase: $normalizedTargetPhrase');
 
       // Calculate similarity
       double similarity = StringSimilarity.compareTwoStrings(
-        normalizedRecordedText,
+        normalizedEntireResponse,
         normalizedTargetPhrase,
       );
 
       double similarityForDoubled = StringSimilarity.compareTwoStrings(
-        doubledNormalizedRecordedText,
+        doubledNormalizedEntireResponse,
         normalizedTargetPhrase,
       );
 
@@ -711,13 +646,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           value: speechRecognitionActive,
                           onChanged: (bool value) {
                             if (value & kIsWeb) {
-                              _initAndStartRecording();
+                              initializeSpeechRecognition();
                             } else if (value & !kIsWeb) {
                               displayPopupSTTSupport(context);
-                            } else {
-                              speech.stop();
-                              speech.cancel();
-                              _timer?.cancel();
                             }
                             setState(() {
                               speechRecognitionActive = value;
@@ -726,6 +657,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         ),
                       ],
                     ),
+                    isListening ? Text('$entireResponse $liveResponse') : Text(entireResponse),
+                    const SizedBox(height: 20),
                     DialogueList(
                       dialogue: widget.dialogue,
                       currentTrack: currentTrack,
