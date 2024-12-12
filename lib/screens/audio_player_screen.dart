@@ -56,6 +56,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AnalyticsManager analyticsManager;
   late List<AudioSource> positiveFeedbackAudio;
   late List<AudioSource> negativeFeedbackAudio;
+  late AudioSource audioCue;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -79,18 +80,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   List<Duration> trackDurations = [];
   List<dynamic> script = [];
 
+  SpeechToText speechInstance = SpeechToText();
+  String liveTextSpeechToText = '';
+
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>? cachedAudioDurations;
-
-  // stt.SpeechToText speech = stt.SpeechToText();
-
-  bool isListening = false;
-  String entireResponse = '';
-  String liveResponse = '';
 
   int previousIndex = -1;
   bool _hasPremium = false;
   bool _hasShownInitialAd = false;
+
+  late SpeechToTextUltra speechToTextUltra;
 
   @override
   void initState() {
@@ -109,6 +109,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _initPlaylist();
     });
     _loadAddressByNicknamePreference();
+    speechToTextUltra = SpeechToTextUltra(
+      languageName: widget.targetLanguage,
+      ultraCallback: (String liveText, String finalText, bool isListening) {
+        // Handle the callback
+        print('Live Text: $liveText');
+        print('Final Text: $finalText');
+        print('Is Listening: $isListening');
+        setState(() {
+          liveTextSpeechToText = liveText;
+        });
+      },
+    );
   }
 
   updateHasNicknameAudio() async {
@@ -162,13 +174,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         setState(() {
           currentTrack = script[index];
         });
+        print('currentTrack: $currentTrack');
+        print('index: $index');
         if (speechRecognitionActive) {
-          _handleTrackChangeToCheckVoice(index);
+          _handleTrackChangeToCompareSpeech(index);
         }
         setState(() {
           previousIndex = index;
         });
-        print('currentTrack: $currentTrack');
       }
     });
   }
@@ -271,16 +284,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else if (fileName == "nickname") {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       int randomNumber = Random().nextInt(5) + 1;
-      print("hasNicknameAudio: $hasNicknameAudio");
-      print("addressByNickname: $addressByNickname");
       if (hasNicknameAudio && addressByNickname) {
-        print("had nickname audio, setting url");
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        // Personalized greeting
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
+        // Generic greeting
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
       }
+    } else if (fileName == "audio_cue") {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      return "https://storage.googleapis.com/narrator_audio_files/general/audio_cue.mp3?timestamp=$timestamp";
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
@@ -388,20 +403,34 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return currentMap;
   }
 
-  void _handleTrackChangeToCheckVoice(int currentIndex) async {
+  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
     if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex) {
-      if (widget.generating) {
+      print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
+
+      final jsonFile = filesToCompare[currentIndex];
+      if (jsonFile == null) {
+        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+        return;
+      }
+
+      if (widget.generating && latestSnapshot != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
+          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, jsonFile);
+        });
+      } else if (existingBigJson != null) {
+        setState(() {
+          targetPhraseToCompareWith = accessBigJson(existingBigJson!, jsonFile);
         });
       } else {
-        setState(() {
-          targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
-        });
+        print("Error: Required JSON data is null.");
+        return;
       }
-      liveResponse = '';
 
-      Future.delayed(const Duration(seconds: 5), _compareTranscriptionWithPhrase);
+      // await _playLocalAudio(audioSource: audioCue);
+
+      String stringWhenStarting = liveTextSpeechToText;
+
+      Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
     }
   }
 
@@ -429,34 +458,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initFeedbackAudioSources() async {
     positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
     negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
+    audioCue = AudioSource.asset('assets/audio_cue.mp3');
   }
 
   void initializeSpeechRecognition() async {
-    void ultraCallback(String liveText, String finalText, bool isListening) {
-      if (isListening) {
-        print('Currently Listening...');
-        print('Live transcription: $liveText');
-        print('Finalized transcript: $finalText');
-      } else {
-        print('Stopped listening.');
-      }
-    }
-
-    // Create an instance of the handler
-    SpeechToTextUltra handler = SpeechToTextUltra(
-      ultraCallback: ultraCallback,
-      languageName: widget.targetLanguage, // Specify the language name
-    );
-
     // TODO: Error handling
     // Initialize the speech recognition
-    SpeechToText speechInstance = await handler.startListening();
+    SpeechToText speechRecognition = await speechToTextUltra.startListening();
 
     // TODO: Error handling
     // Check if the specified language is supported
-    bool isSupported = await handler.checkIfLanguageSupported(speechInstance);
+    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
 
-    if (!isSupported) {
+    if (!isLanguageSupported) {
       print('The specified language is not supported.');
       return;
     }
@@ -524,28 +538,39 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
-  void _compareTranscriptionWithPhrase() async {
-    print('starting comparison...');
-    // print a timestamp
-    print(DateTime.now().toIso8601String());
+  String getAddedCharacters(String newString, String previousString) {
+    // Check if the newString starts with the previousString
+    if (newString.startsWith(previousString)) {
+      // Return the part of the newString that comes after the substring
+      return newString.substring(previousString.length);
+    } else {
+      // If the substring is not at the beginning, return an empty string or handle as needed
+      print("STRING NOT MATCHING!!! Should tell user there was a problem? Or just let them have it right?");
+      return "";
+    }
+  }
+
+  void _compareSpeechWithPhrase(stringWhenStarting) async {
+    print('_compareSpeechWithPhrase called, ${DateTime.now().toIso8601String()}');
     if (targetPhraseToCompareWith != null) {
+      String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
       // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedEntireResponse = _normalizeString(entireResponse);
-      // Duplicate normalizedEntireResponse for web doubled text bug
-      String doubledNormalizedEntireResponse = '$normalizedEntireResponse $normalizedEntireResponse';
+      String normalizedResponse = _normalizeString(newSpeech);
+      // Duplicate normalizedResponse for web doubled text bug
+      String doubledNormalizedResponse = '$normalizedResponse $normalizedResponse';
       String normalizedTargetPhrase = _normalizeString(targetPhraseToCompareWith!);
 
-      print('you said: $normalizedEntireResponse');
-      print('target phrase: $normalizedTargetPhrase');
+      print('you said: $normalizedResponse, timestamp: ${DateTime.now().toIso8601String()}');
+      print('target phrase: $normalizedTargetPhrase, timestamp: ${DateTime.now().toIso8601String()}');
 
       // Calculate similarity
       double similarity = StringSimilarity.compareTwoStrings(
-        normalizedEntireResponse,
+        normalizedResponse,
         normalizedTargetPhrase,
       );
 
       double similarityForDoubled = StringSimilarity.compareTwoStrings(
-        doubledNormalizedEntireResponse,
+        doubledNormalizedResponse,
         normalizedTargetPhrase,
       );
 
@@ -555,13 +580,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       print('Similarity: $similarity');
 
-      if (similarity >= 0.7) {
-        print('Good job! You repeated the phrase correctly.');
-        await _provideFeedback(isPositive: true);
-      } else {
-        print('Try again. The phrase didn\'t match.');
-        await _provideFeedback(isPositive: false);
+      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
+        final random = Random();
+        int index = random.nextInt(audioList.length);
+        return audioList[index];
       }
+
+      AudioSource feedbackAudio;
+
+      if (similarity >= 0.7) {
+        feedbackAudio = getRandomAudioSource(positiveFeedbackAudio);
+      } else {
+        feedbackAudio = getRandomAudioSource(negativeFeedbackAudio);
+      }
+
+      await _playLocalAudio(audioSource: feedbackAudio);
     }
   }
 
@@ -571,37 +604,29 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
   }
 
-  AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-    final random = Random();
-    int index = random.nextInt(audioList.length);
-    return audioList[index];
-  }
-
 // Method to provide audio feedback
-  Future<void> _provideFeedback({required bool isPositive}) async {
+  Future<void> _playLocalAudio({required AudioSource audioSource}) async {
     // Pause the main player if it's playing
     if (player.playing) {
       await player.pause();
     }
 
     // Create a separate AudioPlayer for feedback to avoid conflicts
-    AudioPlayer feedbackPlayer = AudioPlayer();
+    AudioPlayer localFilePlayer = AudioPlayer();
 
     // Set the appropriate audio source
-    await feedbackPlayer.setAudioSource(
-      isPositive ? getRandomAudioSource(positiveFeedbackAudio) : getRandomAudioSource(negativeFeedbackAudio),
-    );
+    await localFilePlayer.setAudioSource(audioSource);
 
     // Play the feedback
-    await feedbackPlayer.play();
+    await localFilePlayer.play();
 
     // Wait for the feedback to finish
-    await feedbackPlayer.processingStateStream.firstWhere(
+    await localFilePlayer.processingStateStream.firstWhere(
       (state) => state == ProcessingState.completed,
     );
 
     // Release the feedback player resources
-    await feedbackPlayer.dispose();
+    await localFilePlayer.dispose();
 
     // Resume the main player if it was playing before
     if (!isStopped && isPlaying) {
@@ -657,8 +682,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         ),
                       ],
                     ),
-                    isListening ? Text('$entireResponse $liveResponse') : Text(entireResponse),
-                    const SizedBox(height: 20),
                     DialogueList(
                       dialogue: widget.dialogue,
                       currentTrack: currentTrack,
