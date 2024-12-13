@@ -93,6 +93,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   bool isSliderMoving = false; // Pc4af
 
+  bool _isSkipping = false; // P926e
+
   @override
   void initState() {
     super.initState();
@@ -405,6 +407,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+    if (_isSkipping) return;
+
     if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
@@ -726,7 +730,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.skip_next),
-                          onPressed: player.hasNext ? () => player.seekToNext() : null,
+                          onPressed: player.hasNext
+                              ? () {
+                                  setState(() {
+                                    _isSkipping = true; // P945a
+                                  });
+                                  player.seekToNext();
+                                  Future.delayed(const Duration(seconds: 1), () {
+                                    setState(() {
+                                      _isSkipping = false; // P47bd
+                                    });
+                                  });
+                                }
+                              : null,
                         ),
                       ],
                     ),
