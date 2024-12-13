@@ -12,6 +12,8 @@ class PositionSlider extends StatelessWidget {
   final AudioPlayer player;
   final Function(int) cumulativeDurationUpTo;
   final Future<void> Function({bool analyticsOn}) pause;
+  final VoidCallback onSliderChangeStart; // Pf506
+  final VoidCallback onSliderChangeEnd; // Pf506
 
   const PositionSlider({
     Key? key,
@@ -24,6 +26,8 @@ class PositionSlider extends StatelessWidget {
     required this.player,
     required this.cumulativeDurationUpTo,
     required this.pause,
+    required this.onSliderChangeStart, // Pf506
+    required this.onSliderChangeEnd, // Pf506
   }) : super(key: key);
 
   @override
@@ -45,6 +49,12 @@ class PositionSlider extends StatelessWidget {
                 if (!isPlaying) {
                   pause(analyticsOn: false);
                 }
+              },
+              onChangeStart: (value) {
+                onSliderChangeStart(); // Pf506
+              },
+              onChangeEnd: (value) {
+                onSliderChangeEnd(); // Pf506
               },
             ),
             Text(
