@@ -92,6 +92,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   late SpeechToTextUltra speechToTextUltra;
 
+  bool isSliderMoving = false; // Pc4af
+
   @override
   void initState() {
     super.initState();
@@ -404,7 +406,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) { // Pba67
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
       final jsonFile = filesToCompare[currentIndex];
@@ -552,7 +554,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     print('_compareSpeechWithPhrase called, ${DateTime.now().toIso8601String()}');
-    if (targetPhraseToCompareWith != null) {
+    if (targetPhraseToCompareWith != null && !isSliderMoving) { // P6e0c
       String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
       // Normalize both strings: remove punctuation and convert to lowercase
       String normalizedResponse = _normalizeString(newSpeech);
@@ -697,6 +699,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       player: player,
                       cumulativeDurationUpTo: cumulativeDurationUpTo,
                       pause: _pause,
+                      onSliderChangeStart: () {
+                        setState(() {
+                          isSliderMoving = true;
+                        });
+                      },
+                      onSliderChangeEnd: () {
+                        setState(() {
+                          isSliderMoving = false;
+                        });
+                      },
                     ),
                     ControlButtons(
                       player: player,
