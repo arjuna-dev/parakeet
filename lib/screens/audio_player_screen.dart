@@ -55,6 +55,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AnalyticsManager analyticsManager;
   late List<AudioSource> positiveFeedbackAudio;
   late List<AudioSource> negativeFeedbackAudio;
+  late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
   String currentTrack = '';
@@ -116,9 +117,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       languageName: widget.targetLanguage,
       ultraCallback: (String liveText, String finalText, bool isListening) {
         // Handle the callback
-        print('Live Text: $liveText');
-        print('Final Text: $finalText');
-        print('Is Listening: $isListening');
+        // print('Live Text: $liveText');
+        // print('Final Text: $finalText');
+        // print('Is Listening: $isListening');
         setState(() {
           liveTextSpeechToText = liveText;
         });
@@ -178,7 +179,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           currentTrack = script[index];
         });
         print('currentTrack: $currentTrack');
-        print('index: $index');
         if (speechRecognitionActive) {
           _handleTrackChangeToCompareSpeech(index);
         }
@@ -463,6 +463,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initFeedbackAudioSources() async {
     positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
     negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
+    couldNotListenFeedbackAudio = [AudioSource.asset('assets/I_couldnt_hear_what_you_said!.mp3'), AudioSource.asset('assets/I_didnt_quite_get_that!.mp3')];
     audioCue = AudioSource.asset('assets/audio_cue.mp3');
   }
 
@@ -549,8 +550,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Return the part of the newString that comes after the substring
       return newString.substring(previousString.length);
     } else {
-      // If the substring is not at the beginning, return an empty string or handle as needed
-      print("STRING NOT MATCHING!!! Should tell user there was a problem? Or just let them have it right?");
       return "";
     }
   }
@@ -559,6 +558,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     print('_compareSpeechWithPhrase called, ${DateTime.now().toIso8601String()}');
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
+      print('newSpeech: $newSpeech, timestamp: ${DateTime.now().toIso8601String()}');
+      AudioSource feedbackAudio;
+
+      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
+        final random = Random();
+        int index = random.nextInt(audioList.length);
+        return audioList[index];
+      }
+
+      if (newSpeech == '') {
+        feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
+        await _playLocalAudio(audioSource: feedbackAudio);
+        return;
+      }
       // Normalize both strings: remove punctuation and convert to lowercase
       String normalizedResponse = _normalizeString(newSpeech);
       // Duplicate normalizedResponse for web doubled text bug
@@ -584,14 +597,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       print('Similarity: $similarity');
-
-      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-        final random = Random();
-        int index = random.nextInt(audioList.length);
-        return audioList[index];
-      }
-
-      AudioSource feedbackAudio;
 
       if (similarity >= 0.7) {
         feedbackAudio = getRandomAudioSource(positiveFeedbackAudio);
