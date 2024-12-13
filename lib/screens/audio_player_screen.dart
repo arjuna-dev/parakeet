@@ -555,10 +555,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
-    print('_compareSpeechWithPhrase called, ${DateTime.now().toIso8601String()}');
+    if (isPlaying == false || isStopped == true) {
+      return;
+    }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
-      print('newSpeech: $newSpeech, timestamp: ${DateTime.now().toIso8601String()}');
       AudioSource feedbackAudio;
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
