@@ -9,7 +9,6 @@ import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:parakeet/utils/speech_recognition.dart';
 import 'package:parakeet/widgets/position_data.dart';
-import 'package:parakeet/widgets/control_buttons.dart';
 import 'package:parakeet/widgets/dialogue_list.dart';
 import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -406,7 +405,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) { // Pba67
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
       final jsonFile = filesToCompare[currentIndex];
@@ -554,7 +553,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     print('_compareSpeechWithPhrase called, ${DateTime.now().toIso8601String()}');
-    if (targetPhraseToCompareWith != null && !isSliderMoving) { // P6e0c
+    if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
       // Normalize both strings: remove punctuation and convert to lowercase
       String normalizedResponse = _normalizeString(newSpeech);
@@ -710,12 +709,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         });
                       },
                     ),
-                    ControlButtons(
-                      player: player,
-                      isPlaying: isPlaying,
-                      onPlay: _play,
-                      onPause: _pause,
-                      onStop: _stop,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.skip_previous),
+                          onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                        ),
+                        IconButton(
+                          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                          onPressed: isPlaying ? () => _pause() : _play,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.stop),
+                          onPressed: _stop,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.skip_next),
+                          onPressed: player.hasNext ? () => player.seekToNext() : null,
+                        ),
+                      ],
                     ),
                   ],
                 ),
