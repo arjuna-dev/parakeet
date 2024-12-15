@@ -117,9 +117,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       languageName: widget.targetLanguage,
       ultraCallback: (String liveText, String finalText, bool isListening) {
         // Handle the callback
-        // print('Live Text: $liveText');
-        // print('Final Text: $finalText');
-        // print('Is Listening: $isListening');
+        print('Live Text: $liveText');
+        print('Final Text: $finalText');
+        print('Is Listening: $isListening');
         setState(() {
           liveTextSpeechToText = liveText;
         });
@@ -433,7 +433,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // await _playLocalAudio(audioSource: audioCue);
 
-      String stringWhenStarting = liveTextSpeechToText;
+      final String stringWhenStarting = liveTextSpeechToText;
 
       Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
     }
@@ -545,22 +545,45 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   String getAddedCharacters(String newString, String previousString) {
-    // Check if the newString starts with the previousString
-    if (newString.startsWith(previousString)) {
-      // Return the part of the newString that comes after the substring
-      return newString.substring(previousString.length);
-    } else {
-      return "";
+    // Split the strings into word lists
+    List<String> newWords = newString.split(RegExp(r'\s+'));
+    List<String> previousWords = previousString.split(RegExp(r'\s+'));
+
+    // Compare word-by-word and find differences
+    int minLength = previousWords.length;
+    for (int i = 0; i < minLength; i++) {
+      if (newWords[i] != previousWords[i]) {
+        // Word has been replaced; return from this point onward
+        return newWords.skip(i).join(' ');
+      }
     }
+
+    // If all previous words match, return the new additions
+    if (newWords.length > previousWords.length) {
+      return newWords.skip(previousWords.length).join(' ');
+    }
+
+    // If no new words are detected, return an empty string
+    return "";
   }
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     if (isPlaying == false || isStopped == true) {
+      print("Brooooke!");
+      print("Brooooke!");
+      print("Brooooke!");
+      print("Brooooke!");
       return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
-      String newSpeech = getAddedCharacters(liveTextSpeechToText, stringWhenStarting);
+      print("liveTextSpeechToText: $liveTextSpeechToText");
+      print("stringWhenStarting: $stringWhenStarting");
+      String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
+      String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
+      String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
+
       AudioSource feedbackAudio;
+      print("newSpeech: $newSpeech");
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
         final random = Random();
