@@ -104,7 +104,8 @@ class _LibraryState extends State<Library> {
                           return Card(
                               child: ListTile(
                                   title: Text(documents[index].get('title')),
-                                  subtitle: Text("Learning language: ${documents[index].get('target_language')} \n"
+                                  subtitle: Text("Target: ${documents[index].get('target_language')} \n"
+                                      "Native: ${(documents[index].data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? documents[index].get('native_language') : 'English (US)'} \n"
                                       "Difficulty: ${documents[index].get('language_level')} level \n"),
                                   trailing: IconButton(
                                       icon: const Icon(Icons.delete),
@@ -211,6 +212,7 @@ class _LibraryState extends State<Library> {
                                           documentID: documents[index].reference.parent.parent!.id,
                                           dialogue: documents[index].get('dialogue'),
                                           targetLanguage: documents[index].get('target_language'),
+                                          nativeLanguage: (documents[index].data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? documents[index].get('native_language') : 'English (US)',
                                           userID: FirebaseAuth.instance.currentUser!.uid,
                                           title: documents[index].get('title'),
                                           generating: false,

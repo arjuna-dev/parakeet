@@ -705,18 +705,18 @@ google_tts_voices =  [
     },
     {
         "language": "Portuguese (Brazil)",
-        "gender": "m",
-        "voice_id": "pt-BR-Studio-B",
-        "voice_category": "Studio",
-        "voice_type": "Studio",
+        "gender": "f",
+        "voice_id": "pt-BR-Wavenet-A",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
         "language_code": "pt-BR"
     },
     {
         "language": "Portuguese (Brazil)",
-        "gender": "f",
-        "voice_id": "pt-BR-Studio-C",
-        "voice_category": "Studio",
-        "voice_type": "Studio",
+        "gender": "m",
+        "voice_id": "pt-BR-Wavenet-B",
+        "voice_category": "Premium",
+        "voice_type": "Wavenet",
         "language_code": "pt-BR"
     },
     {

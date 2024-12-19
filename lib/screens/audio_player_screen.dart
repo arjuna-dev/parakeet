@@ -28,6 +28,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String userID;
   final String title;
   final String targetLanguage;
+  final String nativeLanguage;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
@@ -39,6 +40,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.userID,
     required this.title,
     required this.targetLanguage,
+    required this.nativeLanguage,
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
@@ -280,7 +282,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<String> _constructUrl(String fileName) async {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
-      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
+      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
       print("hasNicknameAudio: $hasNicknameAudio");
@@ -290,7 +292,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
-        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
+        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/narrator_greetings_$randomNumber.mp3";
       }
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
@@ -363,7 +365,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return cachedAudioDurations!;
     }
 
-    CollectionReference colRef = FirebaseFirestore.instance.collection('narrator_audio_files_durations/google_tts/narrator_english');
+    CollectionReference colRef = FirebaseFirestore.instance.collection('narrator_audio_files_durations/google_tts/narrator_${widget.nativeLanguage}');
     QuerySnapshot querySnap = await colRef.get();
 
     if (querySnap.docs.isNotEmpty) {
