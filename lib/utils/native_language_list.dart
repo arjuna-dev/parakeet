@@ -4,6 +4,8 @@ const nativeLanguageCodes = {
   "Bengali": "bn-IN",
   "Danish": "da-DK",
   "English (US)": "en-US",
+  "English (UK)": "en-GB",
+  "English (Australia)": "en-AU",
   "Filipino": "fil-PH",
   "French (Canada)": "fr-CA",
   "French (France)": "fr-FR",
