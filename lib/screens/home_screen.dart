@@ -98,34 +98,79 @@ class _HomeState extends State<Home> {
                 itemBuilder: (context, index) {
                   final audioFile = model.nowPlayingFiles[index];
                   return Card(
-                      child: ListTile(
-                          title: Text(audioFile.get('title')),
-                          subtitle: Text("Target: ${audioFile.get('target_language')} \n"
-                              "Native: ${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} \n"
-                              "Difficulty: ${audioFile.get('language_level')} level \n"),
-                          leading: Icon(Icons.audio_file, color: colorScheme.primary),
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AudioPlayerScreen(
-                                  documentID: audioFile.reference.parent.parent!.id,
-                                  dialogue: audioFile.get('dialogue'),
-                                  targetLanguage: audioFile.get('target_language'),
-                                  nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
-                                  wordsToRepeat: audioFile.get('words_to_repeat'),
-                                  userID: FirebaseAuth.instance.currentUser!.uid,
-                                  title: audioFile.get('title'),
-                                  scriptDocumentId: audioFile.id,
-                                  generating: false,
+                    child: ListTile(
+                      title: Text(
+                        audioFile.get('title'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.translate, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        "${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} → ${audioFile.get('target_language')}",
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ).then((result) {
-                              if (result == 'reload') {
-                                _reloadPage();
-                              }
-                            });
-                          }));
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.stairs, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${audioFile.get('language_level')} level",
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: colorScheme.primaryContainer,
+                        child: Icon(
+                          index == 0 ? Icons.play_circle : Icons.history, // For nowPlayingList
+                          // OR
+                          // Icons.favorite,  // For favoriteAudioList
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
+                      onTap: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                              documentID: audioFile.reference.parent.parent!.id,
+                              dialogue: audioFile.get('dialogue'),
+                              targetLanguage: audioFile.get('target_language'),
+                              nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
+                              wordsToRepeat: audioFile.get('words_to_repeat'),
+                              userID: FirebaseAuth.instance.currentUser!.uid,
+                              title: audioFile.get('title'),
+                              scriptDocumentId: audioFile.id,
+                              generating: false,
+                            ),
+                          ),
+                        ).then((result) {
+                          if (result == 'reload') {
+                            _reloadPage();
+                          }
+                        });
+                      },
+                    ),
+                  );
                 },
               );
       },
@@ -171,13 +216,52 @@ class _HomeState extends State<Home> {
                   final audioFile = model.favoriteAudioFiles[index];
                   return Card(
                     child: ListTile(
-                      title: Text(audioFile.get('title')),
-                      subtitle: Text(
-                        "Target: ${audioFile.get('target_language')} \n"
-                        "Native: ${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} \n"
-                        "Difficulty: ${audioFile.get('language_level')} level \n",
+                      title: Text(
+                        audioFile.get('title'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      leading: Icon(Icons.favorite, color: colorScheme.primary),
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.translate, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        "${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} → ${audioFile.get('target_language')}",
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.stairs, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${audioFile.get('language_level')} level",
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: colorScheme.primaryContainer,
+                        child: Icon(
+                          Icons.favorite, // For favoriteAudioList
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                       onTap: () async {
                         Navigator.push(
                           context,

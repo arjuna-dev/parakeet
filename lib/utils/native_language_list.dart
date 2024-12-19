@@ -1,6 +1,5 @@
 const nativeLanguageCodes = {
   "Arabic": "ar-XA",
-  "Azerbaijani": "az-AZ",
   "Bengali": "bn-IN",
   "Danish": "da-DK",
   "English (US)": "en-US",
@@ -17,7 +16,6 @@ const nativeLanguageCodes = {
   "Japanese": "ja-JP",
   "Korean": "ko-KR",
   "Malay": "ms-MY",
-  "Malayalam": "ml-IN",
   "Mandarin Chinese": "cmn-TW",
   "Norwegian": "nb-NO",
   "Polish": "pl-PL",
