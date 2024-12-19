@@ -259,6 +259,106 @@ class _StoreViewState extends State<StoreView> {
     return uniqueProducts;
   }
 
+  Widget _buildSubscriptionCard(ProductDetails productDetails) {
+    bool hasIntro = _hasIntroductoryOffer(productDetails);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: colorScheme.primaryContainer,
+              child: Icon(
+                productDetails.id == "1year" ? Icons.star : Icons.star_half,
+                color: colorScheme.primary,
+              ),
+            ),
+            title: Text(
+              productDetails.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Text(
+              productDetails.description,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    hasIntro && !_hasUsedTrial
+                        ? '30-day free trial'
+                        : productDetails.id == "1m"
+                            ? 'Monthly subscription'
+                            : 'Annual subscription',
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  onPressed: () => _makePurchase(productDetails),
+                  child: Text(
+                    hasIntro && !_hasUsedTrial ? 'Start Free Trial' : productDetails.price,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(
+              _hasPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
+              size: 48,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _hasPremium ? 'Premium Member' : 'Upgrade to Premium',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _hasPremium ? 'Enjoy all premium features' : 'Get unlimited access to all features',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -266,76 +366,32 @@ class _StoreViewState extends State<StoreView> {
         title: const Text("Store"),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: SingleChildScrollView(
           child: Column(
             children: [
+              _buildHeader(),
               if (_notice != null)
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(16),
                   child: Text(_notice!),
                 ),
-              if (_loading) const Expanded(child: Center(child: CircularProgressIndicator())),
-              if (!_hasPremium && _products.isNotEmpty)
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _getUniqueProducts().length,
-                    itemBuilder: (context, index) {
-                      final ProductDetails productDetails = _getUniqueProducts()[index];
-
-                      return Card(
-                        child: Row(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: _getIAPIcon(productDetails.id),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(8.0, 25.0, 8.0, 8.0),
-                                    child: Text(
-                                      productDetails.title,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 8.0),
-                                    child: Text(
-                                      productDetails.description,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: _buyText(productDetails),
-                                onPressed: () => _makePurchase(productDetails),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              if (!_hasPremium && _products.isNotEmpty) ..._getUniqueProducts().map(_buildSubscriptionCard),
+              if (!_hasPremium)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.restore),
+                    label: const Text('Restore Purchases'),
+                    onPressed: () => _inAppPurchase.restorePurchases(),
                   ),
                 ),
-              if (!_hasPremium) _buildRestoreButton(),
               _buildFooterButtons(),
+              const SizedBox(height: 16),
             ],
           ),
         ),
