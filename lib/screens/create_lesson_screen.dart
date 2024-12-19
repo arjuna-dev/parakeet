@@ -301,7 +301,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
                             if (!isPremium) {
                               final apiCalls = await countAPIcallsByUser();
-                              if (apiCalls >= 2) {
+                              if (apiCalls >= 5) {
                                 // Activate premium mode prompt
                                 final shouldEnablePremium = await showDialog<bool>(
                                   context: context,
