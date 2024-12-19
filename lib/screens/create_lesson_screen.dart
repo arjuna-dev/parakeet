@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
 import 'package:parakeet/utils/google_tts_language_codes.dart';
+import 'package:parakeet/utils/native_language_list.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
@@ -224,10 +225,10 @@ class _CreateLessonState extends State<CreateLesson> {
                         });
                         _saveUserPreferences('native_language', value.toString());
                       },
-                      items: <String>['English (US)'].map<DropdownMenuItem<String>>((String value) {
+                      items: nativeLanguageCodes.keys.map<DropdownMenuItem<String>>((String key) {
                         return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
+                          value: key,
+                          child: Text(key),
                         );
                       }).toList(),
                     ),

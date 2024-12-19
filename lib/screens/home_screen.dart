@@ -100,7 +100,8 @@ class _HomeState extends State<Home> {
                   return Card(
                       child: ListTile(
                           title: Text(audioFile.get('title')),
-                          subtitle: Text("Learning language: ${audioFile.get('target_language')} \n"
+                          subtitle: Text("Target: ${audioFile.get('target_language')} \n"
+                              "Native: ${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} \n"
                               "Difficulty: ${audioFile.get('language_level')} level \n"),
                           leading: Icon(Icons.audio_file, color: colorScheme.primary),
                           onTap: () async {
@@ -111,6 +112,7 @@ class _HomeState extends State<Home> {
                                   documentID: audioFile.reference.parent.parent!.id,
                                   dialogue: audioFile.get('dialogue'),
                                   targetLanguage: audioFile.get('target_language'),
+                                  nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
                                   wordsToRepeat: audioFile.get('words_to_repeat'),
                                   userID: FirebaseAuth.instance.currentUser!.uid,
                                   title: audioFile.get('title'),
@@ -171,7 +173,8 @@ class _HomeState extends State<Home> {
                     child: ListTile(
                       title: Text(audioFile.get('title')),
                       subtitle: Text(
-                        "Learning language: ${audioFile.get('target_language')} \n"
+                        "Target: ${audioFile.get('target_language')} \n"
+                        "Native: ${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} \n"
                         "Difficulty: ${audioFile.get('language_level')} level \n",
                       ),
                       leading: Icon(Icons.favorite, color: colorScheme.primary),
@@ -183,6 +186,7 @@ class _HomeState extends State<Home> {
                               documentID: audioFile.reference.parent.parent!.id,
                               dialogue: audioFile.get('dialogue'),
                               targetLanguage: audioFile.get('target_language'),
+                              nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
                               wordsToRepeat: audioFile.get('words_to_repeat'),
                               userID: FirebaseAuth.instance.currentUser!.uid,
                               title: audioFile.get('title'),
