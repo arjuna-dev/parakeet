@@ -138,29 +138,53 @@ class _CreateLessonState extends State<CreateLesson> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+    final padding = isSmallScreen ? 6.0 : 16.0;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title!),
-        actions: <Widget>[
-          buildProfilePopupMenu(context),
-        ],
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(isSmallScreen ? 48.0 : 56.0),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.title!,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isSmallScreen ? 18 : 20,
+            ),
+          ),
+          actions: <Widget>[
+            buildProfilePopupMenu(context),
+          ],
+        ),
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: AppConstants.horizontalPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                _buildTopicSection(colorScheme),
-                const SizedBox(height: 24),
-                _buildLanguageSection(colorScheme),
-                const SizedBox(height: 24),
-                _buildCreateButton(colorScheme),
-                const SizedBox(height: 32),
-              ],
+      body: Container(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppConstants.horizontalPadding.left,
+                vertical: padding,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader('Topic', Icons.edit_note, isSmallScreen, colorScheme),
+                  SizedBox(height: padding / 2),
+                  _buildTopicSection(colorScheme, isSmallScreen),
+                  SizedBox(height: padding),
+                  _buildSectionHeader('Language Settings', Icons.language, isSmallScreen, colorScheme),
+                  SizedBox(height: padding / 2),
+                  _buildLanguageSection(colorScheme, isSmallScreen),
+                  SizedBox(height: padding),
+                  _buildCreateButton(colorScheme),
+                ],
+              ),
             ),
           ),
         ),
@@ -169,158 +193,208 @@ class _CreateLessonState extends State<CreateLesson> {
     );
   }
 
-  Widget _buildTopicSection(ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Topic',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget _buildSectionHeader(String title, IconData icon, bool isSmallScreen, ColorScheme colorScheme) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        vertical: isSmallScreen ? 6 : 12,
+        horizontal: isSmallScreen ? 10 : 16,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: isSmallScreen ? 18 : 24,
+            color: colorScheme.primary,
           ),
-        ),
-        const SizedBox(height: 8),
-        Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  controller: _controller,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: 2,
-                  maxLength: 400,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.only(
-                      left: 16,
-                      right: 70,
-                      top: 12,
-                      bottom: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    hintText: 'What would you like to learn about?',
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    counterText: '', // Hide default counter
-                  ),
-                  onChanged: (value) => setState(() => topic = value),
-                  validator: (value) => value?.isEmpty ?? true ? 'Please enter a topic' : null,
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 4),
-                  child: Text(
-                    '${_controller.text.length}/400',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
+          SizedBox(width: isSmallScreen ? 6 : 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 14 : 18,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
             ),
-            Positioned(
-              right: 8,
-              top: 0,
-              bottom: 24,
-              child: Center(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    minimumSize: const Size(0, 24),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onPressed: regenerateTopic,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.refresh,
-                        color: colorScheme.primary,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        'Suggest',
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            labelText: 'Optional Keywords',
-            hintText: 'Enter specific words you want to learn',
-            prefixIcon: const Icon(Icons.bookmark_border),
-            filled: true,
-            fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
           ),
-          onChanged: (value) => setState(() => keywords = value),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildLanguageSection(ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Language Settings',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget _buildTopicSection(ColorScheme colorScheme, bool isSmallScreen) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _controller,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: 2,
+                    minLines: 1,
+                    maxLength: 400,
+                    style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.only(
+                        left: 12,
+                        right: 60,
+                        top: isSmallScreen ? 6 : 12,
+                        bottom: isSmallScreen ? 6 : 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      hintText: 'What would you like to learn about?',
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      counterText: '', // Hide default counter
+                    ),
+                    onChanged: (value) => setState(() => topic = value),
+                    validator: (value) => value?.isEmpty ?? true ? 'Please enter a topic' : null,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: 12, top: isSmallScreen ? 2 : 4),
+                    child: Text(
+                      '${_controller.text.length}/400',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 4,
+                top: 0,
+                bottom: 24,
+                child: Center(
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 4 : 8,
+                        vertical: isSmallScreen ? 2 : 4,
+                      ),
+                      minimumSize: Size(0, isSmallScreen ? 20 : 24),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: regenerateTopic,
+                    icon: Icon(
+                      Icons.refresh,
+                      color: colorScheme.primary,
+                      size: isSmallScreen ? 14 : 16,
+                    ),
+                    label: Text(
+                      'Suggest',
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: isSmallScreen ? 11 : 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+          SizedBox(height: isSmallScreen ? 8 : 12),
+          TextField(
+            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              labelText: 'Optional Keywords',
+              labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+              hintText: 'Enter specific words you want to learn',
+              hintStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+              prefixIcon: Icon(Icons.bookmark_border, color: colorScheme.primary, size: isSmallScreen ? 18 : 24),
+              filled: true,
+              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: isSmallScreen ? 6 : 12,
+              ),
+            ),
+            onChanged: (value) => setState(() => keywords = value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageSection(ColorScheme colorScheme, bool isSmallScreen) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
         ),
-        const SizedBox(height: 16),
-        _buildDropdown(
-          value: nativeLanguage,
-          items: nativeLanguageCodes.keys.toList(),
-          label: 'Your Language',
-          icon: Icons.person,
-          onChanged: (value) {
-            setState(() => nativeLanguage = value.toString());
-            _saveUserPreferences('native_language', value.toString());
-          },
-        ),
-        const SizedBox(height: 16),
-        _buildDropdown(
-          value: targetLanguage,
-          items: languageCodes.keys.toList(),
-          label: 'Learning Language',
-          icon: Icons.school,
-          onChanged: (value) {
-            setState(() {
-              targetLanguage = value.toString();
-              ttsProvider = value == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        _buildDropdown(
-          value: languageLevel,
-          items: ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'],
-          label: 'Proficiency Level',
-          icon: Icons.trending_up,
-          onChanged: (value) {
-            setState(() => languageLevel = value.toString());
-            _saveUserPreferences('language_level', value.toString());
-          },
-        ),
-      ],
+      ),
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDropdown(
+            value: nativeLanguage,
+            items: nativeLanguageCodes.keys.toList(),
+            label: 'Your Language',
+            icon: Icons.person,
+            onChanged: (value) {
+              setState(() => nativeLanguage = value.toString());
+              _saveUserPreferences('native_language', value.toString());
+            },
+            isSmallScreen: isSmallScreen,
+            colorScheme: colorScheme,
+          ),
+          SizedBox(height: isSmallScreen ? 8 : 16),
+          _buildDropdown(
+            value: targetLanguage,
+            items: languageCodes.keys.toList(),
+            label: 'Learning Language',
+            icon: Icons.school,
+            onChanged: (value) {
+              setState(() {
+                targetLanguage = value.toString();
+                ttsProvider = value == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
+              });
+            },
+            isSmallScreen: isSmallScreen,
+            colorScheme: colorScheme,
+          ),
+          SizedBox(height: isSmallScreen ? 8 : 16),
+          _buildDropdown(
+            value: languageLevel,
+            items: ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'],
+            label: 'Proficiency Level',
+            icon: Icons.trending_up,
+            onChanged: (value) {
+              setState(() => languageLevel = value.toString());
+              _saveUserPreferences('language_level', value.toString());
+            },
+            isSmallScreen: isSmallScreen,
+            colorScheme: colorScheme,
+          ),
+        ],
+      ),
     );
   }
 
@@ -330,6 +404,8 @@ class _CreateLessonState extends State<CreateLesson> {
     required String label,
     required IconData icon,
     required Function(String?) onChanged,
+    required bool isSmallScreen,
+    required ColorScheme colorScheme,
   }) {
     return DropdownButtonFormField<String>(
       value: value,
@@ -338,14 +414,23 @@ class _CreateLessonState extends State<CreateLesson> {
           borderRadius: BorderRadius.circular(12),
         ),
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+        prefixIcon: Icon(icon, color: colorScheme.primary, size: isSmallScreen ? 18 : 24),
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: isSmallScreen ? 6 : 12,
+        ),
       ),
+      style: TextStyle(fontSize: isSmallScreen ? 13 : 16),
       items: items.map((String item) {
         return DropdownMenuItem<String>(
           value: item,
-          child: Text(item == 'Filipino' ? 'Tagalog' : item),
+          child: Text(
+            item == 'Filipino' ? 'Tagalog' : item,
+            style: TextStyle(fontSize: isSmallScreen ? 13 : 16),
+          ),
         );
       }).toList(),
       onChanged: onChanged,
@@ -353,21 +438,27 @@ class _CreateLessonState extends State<CreateLesson> {
   }
 
   Widget _buildCreateButton(ColorScheme colorScheme) {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 56,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.primary,
+      ),
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
+          backgroundColor: Colors.transparent,
           foregroundColor: colorScheme.onPrimary,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
-        icon: const Icon(Icons.create),
+        icon: const Icon(Icons.create, size: 20),
         label: const Text(
           'Create Audio Lesson',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         onPressed: () async {
           if (_formKey.currentState!.validate()) {
