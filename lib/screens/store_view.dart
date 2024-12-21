@@ -262,36 +262,58 @@ class _StoreViewState extends State<StoreView> {
   Widget _buildSubscriptionCard(ProductDetails productDetails) {
     bool hasIntro = _hasIntroductoryOffer(productDetails);
     final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      margin: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isSmallScreen ? 4 : 8,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Column(
         children: [
           ListTile(
-            leading: CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 16,
+              vertical: isSmallScreen ? 8 : 12,
+            ),
+            leading: Container(
+              width: isSmallScreen ? 40 : 48,
+              height: isSmallScreen ? 40 : 48,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(
                 productDetails.id == "1year" ? Icons.star : Icons.star_half,
                 color: colorScheme.primary,
+                size: isSmallScreen ? 20 : 24,
               ),
             ),
             title: Text(
               productDetails.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 15 : 16,
               ),
             ),
             subtitle: Text(
               productDetails.description,
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
-                fontSize: 13,
+                fontSize: isSmallScreen ? 12 : 13,
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Row(
               children: [
                 Expanded(
@@ -303,6 +325,7 @@ class _StoreViewState extends State<StoreView> {
                             : 'Annual subscription',
                     style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
+                      fontSize: isSmallScreen ? 13 : 14,
                     ),
                   ),
                 ),
@@ -310,11 +333,21 @@ class _StoreViewState extends State<StoreView> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 16 : 24,
+                      vertical: isSmallScreen ? 8 : 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () => _makePurchase(productDetails),
                   child: Text(
                     hasIntro && !_hasUsedTrial ? 'Start Free Trial' : productDetails.price,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -326,31 +359,53 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Widget _buildHeader() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
     return Card(
-      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      margin: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isSmallScreen ? 8 : 12,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
         child: Column(
           children: [
-            Icon(
-              _hasPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary,
+            Container(
+              width: isSmallScreen ? 48 : 56,
+              height: isSmallScreen ? 48 : 56,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                _hasPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
+                size: isSmallScreen ? 28 : 32,
+                color: colorScheme.primary,
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               _hasPremium ? 'Premium Member' : 'Upgrade to Premium',
-              style: const TextStyle(
-                fontSize: 24,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 20 : 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
             Text(
               _hasPremium ? 'Enjoy all premium features' : 'Get unlimited access to all features',
               style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: isSmallScreen ? 14 : 16,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -361,9 +416,19 @@ class _StoreViewState extends State<StoreView> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Store"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          "Store",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -372,26 +437,131 @@ class _StoreViewState extends State<StoreView> {
               _buildHeader(),
               if (_notice != null)
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(_notice!),
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  child: Text(
+                    _notice!,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: isSmallScreen ? 14 : 16,
+                    ),
+                  ),
                 ),
               if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
+                Padding(
+                  padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  ),
                 ),
               if (!_hasPremium && _products.isNotEmpty) ..._getUniqueProducts().map(_buildSubscriptionCard),
               if (!_hasPremium)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.restore),
-                    label: const Text('Restore Purchases'),
-                    onPressed: () => _inAppPurchase.restorePurchases(),
+                Card(
+                  elevation: 2,
+                  margin: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: isSmallScreen ? 4 : 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 12 : 16,
+                      vertical: isSmallScreen ? 8 : 12,
+                    ),
+                    leading: Container(
+                      width: isSmallScreen ? 40 : 48,
+                      height: isSmallScreen ? 40 : 48,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.restore,
+                        color: colorScheme.primary,
+                        size: isSmallScreen ? 20 : 24,
+                      ),
+                    ),
+                    title: Text(
+                      'Restore Purchases',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isSmallScreen ? 15 : 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Recover your previous purchases',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: isSmallScreen ? 12 : 13,
+                      ),
+                    ),
+                    onTap: () => _inAppPurchase.restorePurchases(),
                   ),
                 ),
-              _buildFooterButtons(),
-              const SizedBox(height: 16),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: isSmallScreen ? 8 : 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () => _launchURL(Uri(
+                        scheme: "https",
+                        host: "gregarious-giant-4a5.notion.site",
+                        path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26",
+                      )),
+                      child: Text(
+                        'Terms and Conditions',
+                        style: TextStyle(
+                          decoration: TextDecoration.underline,
+                          fontSize: isSmallScreen ? 12 : 13,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      ' • ',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: isSmallScreen ? 12 : 13,
+                      ),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
+                      child: Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          decoration: TextDecoration.underline,
+                          fontSize: isSmallScreen ? 12 : 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
             ],
           ),
         ),
