@@ -21,6 +21,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
+import 'package:flutter/services.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -74,6 +75,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, dynamic>? existingBigJson;
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
+  bool isLoading = false;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -94,6 +96,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void initState() {
     super.initState();
     player = AudioPlayer();
+    playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
@@ -141,7 +144,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (doc.exists) {
         existingBigJson = doc.data();
       }
-      print('existingBigJson: $existingBigJson');
     }
   }
 
@@ -157,6 +159,68 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
+  Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
+    for (int i = 1; i <= retries; i++) {
+      bool exists = await urlExists(url);
+      if (exists) {
+        setState(() {
+          isLoading = false;
+        });
+        return true;
+      }
+      setState(() {
+        isLoading = true;
+      });
+      if (i == 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('We\'re having trouble finding an audio file 🧐'),
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+
+      await Future.delayed(delay);
+    }
+    return false;
+  }
+
+  Future<void> _showAudioErrorDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleFetchingUrlError(int? index) async {
+    if (index != null) {
+      final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
+      bool available = await retryUrlExists(currentUrl, retries: 10, delay: Duration(seconds: 1));
+      if (!available) {
+        setState(() => isLoading = false);
+        await _showAudioErrorDialog(context);
+      }
+    }
+  }
+
   void _listenToPlayerStreams() {
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
@@ -167,7 +231,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
-    player.currentIndexStream.listen((index) {
+    player.currentIndexStream.listen((index) async {
+      await _handleFetchingUrlError(index);
+
       if (index != null && index < script.length) {
         setState(() {
           currentTrack = script[index];
@@ -196,7 +262,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     if (fileUrls.isNotEmpty) {
       List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-      playlist = ConcatenatingAudioSource(useLazyPreparation: false, children: audioSources);
+      playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: audioSources);
       await player.setAudioSource(playlist).catchError((error) {
         print("Error setting audio source: $error");
         return null;
@@ -283,17 +349,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
-      print("hasNicknameAudio: $hasNicknameAudio");
-      print("addressByNickname: $addressByNickname");
       if (hasNicknameAudio && addressByNickname) {
-        print("had nickname audio, setting url");
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
       } else {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
       }
     } else {
-      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
+      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/wrongName.mp3";
+      // return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
   }
 
@@ -406,9 +470,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
         });
       } else {
-        print("filesToCompare: $filesToCompare");
-        print("currentIndex: $currentIndex");
-        print('currentTrack: $currentTrack');
         setState(() {
           targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
         });
@@ -452,7 +513,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (kIsWeb) {
         // Get system locales from the browser
         voiceLanguageCode = languageCodes[widget.targetLanguage];
-        print('Voice language code: $voiceLanguageCode');
         isLanguageSupported = true;
       } else {
         // Get system locales from the device
@@ -473,7 +533,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           });
         } else {
           voiceLanguageCode = languageCodes[widget.targetLanguage];
-          print('Voice language code: $voiceLanguageCode');
         }
       }
     } else {
@@ -677,84 +736,98 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
-      child: PopScope(
-        canPop: false,
-        onPopInvoked: (bool didPop) async {
-          if (didPop) return;
-          final NavigatorState navigator = Navigator.of(context);
-          if (!widget.generating) {
-            if (!isStopped && isPlaying) await _pause();
-            navigator.pop('reload');
-          } else {
-            if (!isStopped && isPlaying) await _pause();
-            navigator.popUntil((route) => route.isFirst);
-            navigator.pushReplacementNamed('/');
-          }
-        },
-        child: FutureBuilder<int>(
-          future: _getSavedPosition(),
-          builder: (context, snapshot) {
-            int savedPosition = snapshot.data ?? 0;
-            return Scaffold(
-              appBar: AppBar(title: Text(widget.title)),
-              body: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Text('Check Pronunciation:'),
-                        Switch(
-                          value: speechRecognitionActive,
-                          onChanged: (bool value) {
-                            if (value & kIsWeb) {
-                              _initAndStartRecording();
-                            } else if (value & !kIsWeb) {
-                              displayPopupSTTSupport(context);
-                            } else {
-                              speech.stop();
-                              speech.cancel();
-                              _timer?.cancel();
-                            }
-                            setState(() {
-                              speechRecognitionActive = value;
-                            });
-                          },
+      child: Stack(
+        children: [
+          // Main content
+          PopScope(
+            canPop: false,
+            onPopInvoked: (bool didPop) async {
+              if (didPop) return;
+              final NavigatorState navigator = Navigator.of(context);
+              if (!widget.generating) {
+                if (!isStopped && isPlaying) await _pause();
+                navigator.pop('reload');
+              } else {
+                if (!isStopped && isPlaying) await _pause();
+                navigator.popUntil((route) => route.isFirst);
+                navigator.pushReplacementNamed('/');
+              }
+            },
+            child: FutureBuilder<int>(
+              future: _getSavedPosition(),
+              builder: (context, snapshot) {
+                int savedPosition = snapshot.data ?? 0;
+                return Scaffold(
+                  appBar: AppBar(title: Text(widget.title)),
+                  body: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Text('Check Pronunciation:'),
+                            Switch(
+                              value: speechRecognitionActive,
+                              onChanged: (bool value) {
+                                if (value & kIsWeb) {
+                                  _initAndStartRecording();
+                                } else if (value & !kIsWeb) {
+                                  displayPopupSTTSupport(context);
+                                } else {
+                                  speech.stop();
+                                  speech.cancel();
+                                  _timer?.cancel();
+                                }
+                                setState(() {
+                                  speechRecognitionActive = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        DialogueList(
+                          dialogue: widget.dialogue,
+                          currentTrack: currentTrack,
+                          wordsToRepeat: widget.wordsToRepeat,
+                        ),
+                        PositionSlider(
+                          positionDataStream: _positionDataStream,
+                          totalDuration: totalDuration,
+                          finalTotalDuration: finalTotalDuration,
+                          isPlaying: isPlaying,
+                          savedPosition: savedPosition,
+                          findTrackIndexForPosition: findTrackIndexForPosition,
+                          player: player,
+                          cumulativeDurationUpTo: cumulativeDurationUpTo,
+                          pause: _pause,
+                        ),
+                        ControlButtons(
+                          player: player,
+                          isPlaying: isPlaying,
+                          onPlay: _play,
+                          onPause: _pause,
+                          onStop: _stop,
                         ),
                       ],
                     ),
-                    DialogueList(
-                      dialogue: widget.dialogue,
-                      currentTrack: currentTrack,
-                      wordsToRepeat: widget.wordsToRepeat,
-                    ),
-                    PositionSlider(
-                      positionDataStream: _positionDataStream,
-                      totalDuration: totalDuration,
-                      finalTotalDuration: finalTotalDuration,
-                      isPlaying: isPlaying,
-                      savedPosition: savedPosition,
-                      findTrackIndexForPosition: findTrackIndexForPosition,
-                      player: player,
-                      cumulativeDurationUpTo: cumulativeDurationUpTo,
-                      pause: _pause,
-                    ),
-                    ControlButtons(
-                      player: player,
-                      isPlaying: isPlaying,
-                      onPlay: _play,
-                      onPause: _pause,
-                      onStop: _stop,
-                    ),
-                  ],
-                ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Spinner overlay
+          if (isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              child: const Center(
+                child: CircularProgressIndicator(),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
     );
   }
