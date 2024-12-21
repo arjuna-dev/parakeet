@@ -48,66 +48,220 @@ class _LibraryState extends State<Library> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+    final padding = isSmallScreen ? 8.0 : 16.0;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Library'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Library',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: <Widget>[
           buildProfilePopupMenu(context),
         ],
       ),
-      body: Consumer<HomeScreenModel>(
-        builder: (context, model, child) {
-          return StreamBuilder<QuerySnapshot>(
-            stream: _firestore.collectionGroup('script-$userId').snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
-              }
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              }
-              final documents = snapshot.data!.docs;
-              documents.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+      body: Container(
+        child: Consumer<HomeScreenModel>(
+          builder: (context, model, child) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: _firestore.collectionGroup('script-$userId').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: TextStyle(color: colorScheme.error),
+                    ),
+                  );
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  );
+                }
+                final documents = snapshot.data!.docs;
+                documents.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
 
-              return Padding(
-                padding: AppConstants.horizontalPadding,
-                child: documents.isEmpty
-                    ? SizedBox(
-                        height: 150,
-                        child: Center(
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(color: colorScheme.onPrimaryContainer), // Default text style
-                              children: <TextSpan>[
-                                const TextSpan(text: 'Your library is empty. '),
-                                TextSpan(
-                                  text: 'Create your first lesson 🎵',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ), // Make text blue to indicate it's clickable
-                                  recognizer: TapGestureRecognizer()
-                                    ..onTap = () {
-                                      // Navigator code to navigate to LibraryScreen
-                                      Navigator.pushReplacementNamed(context, '/create_lesson');
-                                    },
-                                ),
-                                const TextSpan(text: ' to fill it with your audio lessons!'),
-                              ],
+                return Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppConstants.horizontalPadding.left,
+                    vertical: padding,
+                  ),
+                  child: documents.isEmpty
+                      ? Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                              width: 1,
                             ),
                           ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: documents.length,
-                        itemBuilder: (context, index) {
-                          return Card(
+                          margin: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
+                          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.library_music_outlined,
+                                size: isSmallScreen ? 32 : 48,
+                                color: colorScheme.primary.withOpacity(0.7),
+                              ),
+                              const SizedBox(height: 12),
+                              RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                  ),
+                                  children: <TextSpan>[
+                                    const TextSpan(text: 'Your library is empty. '),
+                                    TextSpan(
+                                      text: 'Create your first lesson 🎵',
+                                      style: TextStyle(
+                                        decoration: TextDecoration.underline,
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          Navigator.pushReplacementNamed(context, '/create_lesson');
+                                        },
+                                    ),
+                                    const TextSpan(text: ' to fill it with your audio lessons!'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
+                          itemCount: documents.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              elevation: 2,
+                              margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
                               child: ListTile(
-                                  title: Text(documents[index].get('title')),
-                                  subtitle: Text("Learning language: ${documents[index].get('target_language')} \n"
-                                      "Difficulty: ${documents[index].get('language_level')} level \n"),
-                                  trailing: IconButton(
-                                      icon: const Icon(Icons.delete),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                  vertical: isSmallScreen ? 8 : 12,
+                                ),
+                                title: Text(
+                                  documents[index].get('title'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isSmallScreen ? 15 : 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.translate, size: 16, color: colorScheme.primary),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            "${(documents[index].data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? documents[index].get('native_language') : 'English (US)'} → ${documents[index].get('target_language')}",
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 13,
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.stairs, size: 16, color: colorScheme.primary),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            "${documents[index].get('language_level')} level",
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 13,
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                leading: Container(
+                                  width: isSmallScreen ? 40 : 48,
+                                  height: isSmallScreen ? 40 : 48,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: Icon(
+                                      model.favoriteAudioFileIds.any((file) => file['docId'] == documents[index].reference.id && file['parentId'] == documents[index].reference.parent.parent!.id)
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      color: colorScheme.primary,
+                                      size: isSmallScreen ? 24 : 28,
+                                    ),
+                                    onPressed: () async {
+                                      final user = FirebaseAuth.instance.currentUser;
+                                      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
+                                      String parentId = documents[index].reference.parent.parent!.id;
+                                      String docId = documents[index].reference.id;
+                                      if (model.favoriteAudioFileIds.any((file) => file['docId'] == documents[index].reference.id && file['parentId'] == documents[index].reference.parent.parent!.id)) {
+                                        model.removeAudioFile(documents[index]);
+                                        await userDocRef.update({
+                                          'favoriteAudioFiles': FieldValue.arrayRemove([
+                                            {'parentId': parentId, 'docId': docId}
+                                          ])
+                                        });
+                                      } else {
+                                        model.addAudioFile(documents[index]);
+                                        await userDocRef.set({
+                                          'favoriteAudioFiles': FieldValue.arrayUnion([
+                                            {'parentId': parentId, 'docId': docId}
+                                          ])
+                                        }, SetOptions(merge: true));
+                                      }
+                                    },
+                                  ),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete,
+                                        color: colorScheme.error,
+                                        size: isSmallScreen ? 22 : 24,
+                                      ),
                                       onPressed: () async {
                                         showDialog(
                                           context: context,
@@ -123,7 +277,10 @@ class _LibraryState extends State<Library> {
                                                   },
                                                 ),
                                                 TextButton(
-                                                  child: const Text('Delete'),
+                                                  child: Text(
+                                                    'Delete',
+                                                    style: TextStyle(color: colorScheme.error),
+                                                  ),
                                                   onPressed: () async {
                                                     await _firestore.runTransaction(
                                                       (Transaction myTransaction) async {
@@ -170,62 +327,42 @@ class _LibraryState extends State<Library> {
                                             );
                                           },
                                         );
-                                      }),
-                                  leading: IconButton(
-                                    icon: model.favoriteAudioFileIds.any((file) => file['docId'] == documents[index].reference.id && file['parentId'] == documents[index].reference.parent.parent!.id)
-                                        ? Icon(Icons.favorite, color: colorScheme.primary)
-                                        : const Icon(Icons.favorite_border),
-                                    onPressed: () async {
-                                      final user = FirebaseAuth.instance.currentUser;
-                                      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-                                      String parentId = documents[index].reference.parent.parent!.id;
-                                      String docId = documents[index].reference.id;
-                                      if (model.favoriteAudioFileIds.any((file) => file['docId'] == documents[index].reference.id && file['parentId'] == documents[index].reference.parent.parent!.id)) {
-                                        // Remove the audio file from the home screen
-                                        model.removeAudioFile(documents[index]);
-
-                                        // Remove the audio file from Firestore
-                                        await userDocRef.update({
-                                          'favoriteAudioFiles': FieldValue.arrayRemove([
-                                            {'parentId': parentId, 'docId': docId}
-                                          ])
-                                        });
-                                      } else {
-                                        // Add the audio file to the home screen
-                                        model.addAudioFile(documents[index]);
-
-                                        // Add the audio file to Firestore
-                                        await userDocRef.set({
-                                          'favoriteAudioFiles': FieldValue.arrayUnion([
-                                            {'parentId': parentId, 'docId': docId}
-                                          ])
-                                        }, SetOptions(merge: true));
-                                      }
-                                    },
-                                  ),
-                                  onTap: () async {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => AudioPlayerScreen(
-                                          documentID: documents[index].reference.parent.parent!.id,
-                                          dialogue: documents[index].get('dialogue'),
-                                          targetLanguage: documents[index].get('target_language'),
-                                          userID: FirebaseAuth.instance.currentUser!.uid,
-                                          title: documents[index].get('title'),
-                                          generating: false,
-                                          wordsToRepeat: documents[index].get('words_to_repeat'),
-                                          scriptDocumentId: documents[index].id,
-                                        ),
+                                      },
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: colorScheme.primary,
+                                      size: isSmallScreen ? 24 : 28,
+                                    ),
+                                  ],
+                                ),
+                                onTap: () async {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AudioPlayerScreen(
+                                        documentID: documents[index].reference.parent.parent!.id,
+                                        dialogue: documents[index].get('dialogue'),
+                                        targetLanguage: documents[index].get('target_language'),
+                                        nativeLanguage: (documents[index].data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? documents[index].get('native_language') : 'English (US)',
+                                        userID: FirebaseAuth.instance.currentUser!.uid,
+                                        title: documents[index].get('title'),
+                                        generating: false,
+                                        wordsToRepeat: documents[index].get('words_to_repeat'),
+                                        scriptDocumentId: documents[index].id,
                                       ),
-                                    );
-                                  }));
-                        },
-                      ),
-              );
-            },
-          );
-        },
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                );
+              },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: const BottomMenuBar(
         currentRoute: '/library',
