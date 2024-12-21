@@ -72,7 +72,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         else:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
-                if user_doc_snapshot.get('call_count') >= 10:
+                if user_doc_snapshot.get('call_count') >= 5:
                     # If the call count for today is 5 or more, return False
                     return False
                 else:
@@ -315,7 +315,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
             json.dumps({"error": str(e)}),
             status=400,
         )
-    
+
     db = firestore.client()
     # Reference to the user's document in the 'users' collection
     user_doc_ref = db.collection('users').document(user_id).collection('api_call_count').document('generate_nickname')
@@ -331,7 +331,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
                 if user_doc_snapshot.get('call_count') >= 15:
-                    # If the call count for today is 5 or more, return False
+                    # If the call count for today is 15 or more, return False
                     return False
                 else:
                     # If the call count is less than 5, increment it
@@ -340,7 +340,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
                 # If the last call was not made today, reset the count and date
                 transaction.set(user_doc_ref, {'last_call_date': today, 'call_count': 1})
         return True
-    
+
     # Start the transaction
     transaction = db.transaction()
     if not check_and_update_call_count(transaction, user_doc_ref):

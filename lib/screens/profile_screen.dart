@@ -3,6 +3,8 @@ import 'package:parakeet/screens/store_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/auth_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -81,131 +83,166 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Widget _buildPremiumStatus() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _premium ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _premium ? Colors.green : Colors.grey,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _premium ? Icons.star : Icons.star_border,
-            color: _premium ? Colors.green : Colors.grey,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _premium ? 'Premium Member' : 'Free Account',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _premium ? Colors.green : Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
-      body: Center(
+  Widget _buildProfileHeader() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Column(
-              children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: _name.isNotEmpty ? 'Name: ' : '',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                      TextSpan(
-                        text: _name.isNotEmpty ? _name : '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: _email.isNotEmpty ? 'Email: ' : '',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                      TextSpan(
-                        text: _email.isNotEmpty ? _email : '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildPremiumStatus(),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const StoreView(),
-                      ),
-                    );
-                  },
-                  child: const Text('🏬 Store'),
-                ),
-              ],
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Text(
+                _name.isNotEmpty ? _name[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              onPressed: _deleteAccount,
-              child: const Text('Delete Account'),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _name,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              _email,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: (iconColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
+          child: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary),
+        ),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _handleStoreNavigation() {
+    if (kIsWeb) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.phone_android, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text('Mobile App Required'),
+              ],
+            ),
+            content: const Text(
+              'Please use the Parakeet mobile app to view and purchase premium features.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const StoreView()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildProfileHeader(),
+            const SizedBox(height: 8),
+            _buildMenuItem(
+              icon: _premium ? Icons.star : Icons.star_border,
+              iconColor: _premium ? Colors.amber : null,
+              title: _premium ? 'Premium Member' : 'Free Account',
+              subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
+              onTap: _handleStoreNavigation,
+            ),
+            _buildMenuItem(
+              icon: Icons.shopping_bag,
+              title: 'Store',
+              subtitle: 'View available packages and offers',
+              onTap: _handleStoreNavigation,
+            ),
+            _buildMenuItem(
+              icon: Icons.help_outline,
+              title: 'Help & Support',
+              subtitle: 'FAQs and contact information',
+              onTap: () {
+                _launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"));
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              subtitle: 'View our privacy policy',
+              onTap: () {
+                _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
+              },
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.error,
+                  foregroundColor: colorScheme.onError,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Delete Account'),
+                onPressed: _deleteAccount,
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _launchURL(Uri url) async {
+  await canLaunchUrl(url) ? await launchUrl(url) : throw 'Could not launch $url';
 }
