@@ -145,7 +145,7 @@ class _CreateLessonState extends State<CreateLesson> {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(isSmallScreen ? 48.0 : 56.0),
+        preferredSize: Size.fromHeight(isSmallScreen || kIsWeb ? 48.0 : 56.0),
         child: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -153,7 +153,7 @@ class _CreateLessonState extends State<CreateLesson> {
             widget.title!,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: isSmallScreen ? 18 : 20,
+              fontSize: isSmallScreen || kIsWeb ? 18 : 20,
             ),
           ),
           actions: <Widget>[
@@ -166,7 +166,7 @@ class _CreateLessonState extends State<CreateLesson> {
           return ScrollConfiguration(
             behavior: kIsWeb ? const ScrollBehavior().copyWith(overscroll: false) : const ScrollBehavior(),
             child: SingleChildScrollView(
-              physics: kIsWeb ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
@@ -204,8 +204,8 @@ class _CreateLessonState extends State<CreateLesson> {
   Widget _buildSectionHeader(String title, IconData icon, bool isSmallScreen, ColorScheme colorScheme) {
     return Container(
       padding: EdgeInsets.symmetric(
-        vertical: isSmallScreen ? 6 : 12,
-        horizontal: isSmallScreen ? 10 : 16,
+        vertical: isSmallScreen ? 6 : 10,
+        horizontal: isSmallScreen ? 10 : 14,
       ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -216,7 +216,7 @@ class _CreateLessonState extends State<CreateLesson> {
         children: [
           Icon(
             icon,
-            size: isSmallScreen ? 18 : 24,
+            size: isSmallScreen ? 18 : 22,
             color: colorScheme.primary,
           ),
           SizedBox(width: isSmallScreen ? 6 : 12),
@@ -292,9 +292,9 @@ class _CreateLessonState extends State<CreateLesson> {
               Positioned(
                 right: 4,
                 top: 0,
-                bottom: 24,
+                bottom: 16,
                 child: Center(
-                  child: TextButton.icon(
+                  child: TextButton(
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.symmetric(
                         horizontal: isSmallScreen ? 4 : 8,
@@ -304,17 +304,23 @@ class _CreateLessonState extends State<CreateLesson> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: regenerateTopic,
-                    icon: Icon(
-                      Icons.refresh,
-                      color: colorScheme.primary,
-                      size: isSmallScreen ? 14 : 16,
-                    ),
-                    label: Text(
-                      'Suggest',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: isSmallScreen ? 11 : 12,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh,
+                          color: colorScheme.primary,
+                          size: isSmallScreen ? 16 : 18,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Suggest',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontSize: isSmallScreen || kIsWeb ? 11 : 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -357,7 +363,7 @@ class _CreateLessonState extends State<CreateLesson> {
           width: 1,
         ),
       ),
-      padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
+      padding: EdgeInsets.all(isSmallScreen || kIsWeb ? 8 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -373,7 +379,7 @@ class _CreateLessonState extends State<CreateLesson> {
             isSmallScreen: isSmallScreen,
             colorScheme: colorScheme,
           ),
-          SizedBox(height: isSmallScreen ? 8 : 16),
+          SizedBox(height: isSmallScreen || kIsWeb ? 8 : 16),
           _buildDropdown(
             value: targetLanguage,
             items: languageCodes.keys.toList(),
@@ -388,7 +394,7 @@ class _CreateLessonState extends State<CreateLesson> {
             isSmallScreen: isSmallScreen,
             colorScheme: colorScheme,
           ),
-          SizedBox(height: isSmallScreen ? 8 : 16),
+          SizedBox(height: isSmallScreen || kIsWeb ? 8 : 16),
           _buildDropdown(
             value: languageLevel,
             items: ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'],
