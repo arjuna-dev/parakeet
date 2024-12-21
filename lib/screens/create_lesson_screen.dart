@@ -12,6 +12,7 @@ import 'package:parakeet/utils/native_language_list.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 // import 'package:responsive_framework/responsive_framework.dart';
 
 class CreateLesson extends StatefulWidget {
@@ -160,34 +161,41 @@ class _CreateLessonState extends State<CreateLesson> {
           ],
         ),
       ),
-      body: Container(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppConstants.horizontalPadding.left,
-                vertical: padding,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader('Topic', Icons.edit_note, isSmallScreen, colorScheme),
-                  SizedBox(height: padding / 2),
-                  _buildTopicSection(colorScheme, isSmallScreen),
-                  SizedBox(height: padding),
-                  _buildSectionHeader('Language Settings', Icons.language, isSmallScreen, colorScheme),
-                  SizedBox(height: padding / 2),
-                  _buildLanguageSection(colorScheme, isSmallScreen),
-                  SizedBox(height: padding),
-                  _buildCreateButton(colorScheme),
-                ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return ScrollConfiguration(
+            behavior: kIsWeb ? const ScrollBehavior().copyWith(overscroll: false) : const ScrollBehavior(),
+            child: SingleChildScrollView(
+              physics: kIsWeb ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppConstants.horizontalPadding.left,
+                      vertical: padding,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionHeader('Topic', Icons.edit_note, isSmallScreen, colorScheme),
+                        SizedBox(height: padding / 2),
+                        _buildTopicSection(colorScheme, isSmallScreen),
+                        SizedBox(height: padding),
+                        _buildSectionHeader('Language Settings', Icons.language, isSmallScreen, colorScheme),
+                        SizedBox(height: padding / 2),
+                        _buildLanguageSection(colorScheme, isSmallScreen),
+                        SizedBox(height: padding),
+                        _buildCreateButton(colorScheme),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
       bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
     );
