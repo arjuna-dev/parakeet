@@ -320,7 +320,7 @@ class _CreateLessonState extends State<CreateLesson> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              labelText: 'Optional Keywords',
+              labelText: 'Words to include (optional)',
               labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
               hintText: 'Enter specific words you want to learn',
               hintStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
@@ -423,13 +423,13 @@ class _CreateLessonState extends State<CreateLesson> {
           vertical: isSmallScreen ? 6 : 12,
         ),
       ),
-      style: TextStyle(fontSize: isSmallScreen ? 13 : 16),
+      style: TextStyle(fontSize: isSmallScreen ? 13 : 16, color: Colors.white),
       items: items.map((String item) {
         return DropdownMenuItem<String>(
           value: item,
           child: Text(
             item == 'Filipino' ? 'Tagalog' : item,
-            style: TextStyle(fontSize: isSmallScreen ? 13 : 16),
+            style: TextStyle(fontSize: isSmallScreen ? 13 : 16, color: Colors.white),
           ),
         );
       }).toList(),
