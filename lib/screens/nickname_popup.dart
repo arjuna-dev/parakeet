@@ -200,41 +200,119 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
     return AlertDialog(
-      title: Text(_currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!"),
+      backgroundColor: colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      title: Text(
+        _currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!",
+        style: TextStyle(
+          fontSize: isSmallScreen ? 20 : 24,
+          fontWeight: FontWeight.bold,
+          color: colorScheme.onSurface,
+        ),
+      ),
       content: Stack(
         alignment: Alignment.center,
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: _nicknameController,
-                maxLength: 25,
-                decoration: InputDecoration(
-                  labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
-                ),
-              ),
-              Row(
-                children: [
-                  Switch(
-                    value: _useName,
-                    onChanged: (value) {
-                      setState(() {
-                        _useName = value;
-                      });
-                      _saveUseNamePreference(value);
-                    },
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                    width: 1,
                   ),
-                  const SizedBox(width: 8),
-                  const Text('Address me by name'),
-                ],
+                ),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _nicknameController,
+                      maxLength: 25,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 16,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
+                        labelStyle: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: isSmallScreen ? 8 : 12,
+                        ),
+                        counterStyle: TextStyle(
+                          fontSize: isSmallScreen ? 10 : 12,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 8 : 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 8 : 12,
+                        vertical: isSmallScreen ? 4 : 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: _useName,
+                            onChanged: (value) {
+                              setState(() {
+                                _useName = value;
+                              });
+                              _saveUseNamePreference(value);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Address me by name',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 13 : 14,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           if (_isLoading)
-            const Positioned(
-              child: CircularProgressIndicator(),
+            Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: CircularProgressIndicator(
+                color: colorScheme.primary,
+              ),
             ),
         ],
       ),
@@ -245,13 +323,36 @@ class _NicknamePopupState extends State<NicknamePopup> {
             player.dispose();
             Navigator.of(context).pop();
           },
-          child: const Text('Close'),
+          style: TextButton.styleFrom(
+            foregroundColor: colorScheme.onSurfaceVariant,
+          ),
+          child: Text(
+            'Close',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 13 : 14,
+            ),
+          ),
         ),
-        TextButton(
+        FilledButton(
           onPressed: _isSubmitEnabled ? _handleGenerate : null,
-          child: const Text('Create & Save'),
+          style: FilledButton.styleFrom(
+            backgroundColor: colorScheme.primary,
+            foregroundColor: colorScheme.onPrimary,
+            disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            'Create & Save',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 13 : 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ],
+      actionsPadding: EdgeInsets.all(isSmallScreen ? 12 : 16),
     );
   }
 }
