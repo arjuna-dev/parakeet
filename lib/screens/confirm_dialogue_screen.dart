@@ -419,6 +419,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       "script": script,
                                       "title": smallJsonDocument["title"],
                                       "dialogue": smallJsonDocument["dialogue"],
+                                      "native_language": widget.nativeLanguage,
                                       "target_language": widget.targetLanguage,
                                       "language_level": widget.languageLevel,
                                       "words_to_repeat": selectedWords.entries
@@ -471,6 +472,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                   scriptDocumentId: scriptDocumentID,
                                                   generating: true,
                                                   targetLanguage: widget.targetLanguage,
+                                                  nativeLanguage: widget.nativeLanguage,
                                                   wordsToRepeat: selectedWords.entries
                                                       .expand((entry) => entry.value.entries)
                                                       .where((innerEntry) => innerEntry.value.value == true)
