@@ -21,7 +21,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
-import 'package:flutter/services.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -358,8 +357,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/narrator_greetings_$randomNumber.mp3";
       }
     } else {
-      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/wrongName.mp3";
-      // return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
+      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
   }
 
