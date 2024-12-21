@@ -58,8 +58,8 @@ class SpeechToTextUltra {
     return _speech;
   }
 
-  void stopListening() {
-    _speech.stop();
+  void stopListening() async {
+    await _speech.stop();
     isListening = false;
     entireResponse = '$entireResponse $chunkResponse';
     ultraCallback(liveResponse, entireResponse, isListening);
@@ -82,5 +82,9 @@ class SpeechToTextUltra {
       isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
       return isLanguageSupported;
     }
+  }
+
+  void dispose() {
+    _speech.cancel();
   }
 }

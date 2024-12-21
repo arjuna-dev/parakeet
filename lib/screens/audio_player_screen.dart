@@ -124,9 +124,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         print('Live Text: $liveText');
         print('Final Text: $finalText');
         print('Is Listening: $isListening');
-        setState(() {
-          liveTextSpeechToText = liveText;
-        });
+        print('speechRecognitionActive: $speechRecognitionActive');
+        if (mounted) {
+          setState(() {
+            liveTextSpeechToText = liveText;
+          });
+        } else {
+          print('State not mounted for liveTextSpeechToText');
+        }
       },
     );
   }
@@ -137,18 +142,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     hasNicknameAudio = await urlExists(
       url,
     );
-    setState(() {
-      hasNicknameAudio = hasNicknameAudio;
-    });
+    if (mounted) {
+      setState(() {
+        hasNicknameAudio = hasNicknameAudio;
+      });
+    } else {
+      print('State not mounted for hasNicknameAudio');
+    }
     _checkPremiumStatus();
   }
 
   Future<void> _checkPremiumStatus() async {
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userID).get();
 
-    setState(() {
-      _hasPremium = userDoc.data()?['premium'] ?? false;
-    });
+    if (mounted) {
+      setState(() {
+        _hasPremium = userDoc.data()?['premium'] ?? false;
+      });
+    } else {
+      print('State not mounted for _hasPremium');
+    }
 
     if (!_hasPremium) {
       await AdService.loadInterstitialAd();
@@ -166,30 +179,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _initAndStartRecording() async {
-    await _initFeedbackAudioSources();
-    await _checkIfLanguageSupported();
-    _startRecording();
-  }
-
-  // Initialize feedback audio sources
-  Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
-    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
-  }
-
   Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
     for (int i = 1; i <= retries; i++) {
       bool exists = await urlExists(url);
       if (exists) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        } else {
+          print('State not mounted for isLoading');
+        }
         return true;
       }
-      setState(() {
-        isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+      } else {
+        print('State not mounted for isLoading');
+      }
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -612,9 +621,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
-                setState(() {
-                  speechRecognitionActive = false;
-                });
+                if (mounted) {
+                  setState(() {
+                    speechRecognitionActive = false;
+                    speechToTextUltra.stopListening();
+                  });
+                } else {
+                  print('State not mounted for speechRecognitionActive');
+                }
               },
             ),
           ],
@@ -652,7 +666,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print("Brooooke!");
       print("Brooooke!");
       print("Brooooke!");
-      return;
+      // return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       print("liveTextSpeechToText: $liveTextSpeechToText");
@@ -782,7 +796,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            const Text('Check Pronunciation:'),
+                            const Text('check pronunciation:'),
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
@@ -790,6 +804,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                   initializeSpeechRecognition();
                                 } else if (value & !kIsWeb) {
                                   displayPopupSTTSupport(context);
+                                } else if (!value) {
+                                  speechToTextUltra.stopListening();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
@@ -983,6 +999,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
+    print("speechToTextUltra.isListening: ${speechToTextUltra.isListening}");
+    if (speechToTextUltra.isListening) {
+      print("speechToTextUltra.stopListening();");
+      speechToTextUltra.dispose();
+    }
     super.dispose();
   }
 }
