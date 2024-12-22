@@ -56,8 +56,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> positiveFeedbackAudio;
-  late List<AudioSource> negativeFeedbackAudio;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -149,15 +147,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _initAndStartRecording() async {
-    await _initFeedbackAudioSources();
     await _checkIfLanguageSupported();
     _startRecording();
-  }
-
-  // Initialize feedback audio sources
-  Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
-    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
   Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
@@ -714,12 +705,33 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.pause();
     }
 
-    // Create a separate AudioPlayer for feedback to avoid conflicts
+    // Create a separate AudioPlayer for the answer sound
+    AudioPlayer answerPlayer = AudioPlayer();
+
+    // Play the correct/incorrect answer sound first
+    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+
+    await answerPlayer.setAudioSource(
+      AudioSource.uri(Uri.parse(answerUrl)),
+    );
+    await answerPlayer.play();
+
+    // Wait for the answer sound to finish
+    await answerPlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
+    await answerPlayer.dispose();
+
+    // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
 
-    // Set the appropriate audio source
+    // Get the feedback audio URL
+    String feedbackUrl = _getFeedbackAudioUrl(isPositive);
+    print('Playing feedback audio from: $feedbackUrl'); // Add debug print
+
+    // Set the audio source using the cloud URL
     await feedbackPlayer.setAudioSource(
-      isPositive ? getRandomAudioSource(positiveFeedbackAudio) : getRandomAudioSource(negativeFeedbackAudio),
+      AudioSource.uri(Uri.parse(feedbackUrl)),
     );
 
     // Play the feedback
@@ -737,6 +749,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!isStopped && isPlaying) {
       await player.play();
     }
+  }
+
+  // Add a new method to get random feedback audio URL
+  String _getFeedbackAudioUrl(bool isPositive) {
+    final random = Random();
+    final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
+    return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
   }
 
   @override
