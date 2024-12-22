@@ -353,16 +353,16 @@ google_tts_voices =  [
     },
     {
       "language": "German",
-      "gender": "m",
-      "voice_id": "de-DE-Studio-B",
+      "gender": "f",
+      "voice_id": "de-DE-Studio-C",
       "voice_category": "Premium",
       "voice_type": "Studio",
       "language_code": "de-DE"
     },
     {
       "language": "German",
-      "gender": "f",
-      "voice_id": "de-DE-Studio-C",
+      "gender": "m",
+      "voice_id": "de-DE-Studio-B",
       "voice_category": "Premium",
       "voice_type": "Studio",
       "language_code": "de-DE"

@@ -45,8 +45,6 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None):
     return speaker_voice, speaker_voice_id
 
 def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", make_public=True):
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
@@ -63,14 +61,15 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
     with open(f"{output_path}", "wb") as out:
         out.write(response.audio_content)
 
-    # Load audio file
-    audio = MP3(output_path)
-    # Get duration of audio file
-    duration = audio.info.length
-    filename = output_path.split("/")[-1].replace('.mp3', '')
-    filename_duration = {filename: duration}
+    if local_run:
+        return {output_path:0}
+    else:
+        # Load audio file
+        audio = MP3(output_path)
 
-    if not local_run:
+        # Get duration of audio file
+        duration = audio.info.length
+
         # Upload the audio file to the bucket
         blob_name = f"{output_path}"
         storage_client = storage.Client()
@@ -82,16 +81,8 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
             print(f'Error uploading file: {e}')
 
         blob.patch()
-        if make_public:
-            blob.make_public()
+        blob.make_public()
 
         if doc_ref:
+            filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
             push_to_firestore(filename_duration, doc_ref)
-
-    return filename_duration  # Return the dictionary in all cases
-
-# narrator_voice = create_google_voice("en-US", "en-US-Journey-F")
-# Arabic
-# narrator_voice = create_google_voice("ar-XA", "ar-XA-Wavenet-D")
-
-# google_synthesize_text("That was... meh...", narrator_voice, "meh.mp3")
