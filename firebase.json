@@ -4,11 +4,6 @@
       "source": "functions",
       "codebase": "default",
       "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log", "other", "_local_*", "local_scripts", ".gitignore", "requests.http"]
-    },
-    {
-      "source": "payment_verification_backend",
-      "codebase": "payment_verification_backend",
-      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "*.local"]
     }
   ],
   "flutter": {

@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CloudFunctionService {
-  static Future<void> generateNicknameAudio(String text, String userId, String useridN) async {
+  static Future<void> generateNicknameAudio(String text, String userId, String useridN, String language) async {
     const url = 'https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_nickname_audio';
     final response = await http.post(
       Uri.parse(url),
@@ -13,6 +13,7 @@ class CloudFunctionService {
         'text': text,
         'user_id': userId,
         'user_id_N': useridN,
+        'language': language,
       }),
     );
 

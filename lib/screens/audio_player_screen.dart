@@ -56,8 +56,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> positiveFeedbackAudio;
-  late List<AudioSource> negativeFeedbackAudio;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -149,15 +147,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _initAndStartRecording() async {
-    await _initFeedbackAudioSources();
     await _checkIfLanguageSupported();
     _startRecording();
-  }
-
-  // Initialize feedback audio sources
-  Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
-    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
   }
 
   Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
@@ -175,7 +166,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('We\'re having trouble finding an audio file 🧐'),
+            content: const Text('We\'re having trouble finding an audio file 🧐'),
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {
@@ -196,14 +187,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          title: Text('Error'),
-          content: Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
+          title: const Text('Error'),
+          content: const Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -214,7 +205,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _handleFetchingUrlError(int? index) async {
     if (index != null) {
       final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
-      bool available = await retryUrlExists(currentUrl, retries: 10, delay: Duration(seconds: 1));
+      bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
       if (!available) {
         setState(() => isLoading = false);
         await _showAudioErrorDialog(context);
@@ -350,9 +341,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
+      print(hasNicknameAudio);
+      print(addressByNickname);
       if (hasNicknameAudio && addressByNickname) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        if (widget.nativeLanguage == "English (US)") {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        } else {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        }
       } else {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/narrator_greetings_$randomNumber.mp3";
       }
@@ -708,12 +705,33 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.pause();
     }
 
-    // Create a separate AudioPlayer for feedback to avoid conflicts
+    // Create a separate AudioPlayer for the answer sound
+    AudioPlayer answerPlayer = AudioPlayer();
+
+    // Play the correct/incorrect answer sound first
+    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+
+    await answerPlayer.setAudioSource(
+      AudioSource.uri(Uri.parse(answerUrl)),
+    );
+    await answerPlayer.play();
+
+    // Wait for the answer sound to finish
+    await answerPlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
+    await answerPlayer.dispose();
+
+    // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
 
-    // Set the appropriate audio source
+    // Get the feedback audio URL
+    String feedbackUrl = _getFeedbackAudioUrl(isPositive);
+    print('Playing feedback audio from: $feedbackUrl'); // Add debug print
+
+    // Set the audio source using the cloud URL
     await feedbackPlayer.setAudioSource(
-      isPositive ? getRandomAudioSource(positiveFeedbackAudio) : getRandomAudioSource(negativeFeedbackAudio),
+      AudioSource.uri(Uri.parse(feedbackUrl)),
     );
 
     // Play the feedback
@@ -731,6 +749,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!isStopped && isPlaying) {
       await player.play();
     }
+  }
+
+  // Add a new method to get random feedback audio URL
+  String _getFeedbackAudioUrl(bool isPositive) {
+    final random = Random();
+    final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
+    return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
   }
 
   @override
