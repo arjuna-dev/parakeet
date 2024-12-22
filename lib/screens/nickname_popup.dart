@@ -205,7 +205,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
       // Then generate all other languages
       for (var language in greetingsList.keys) {
         if (language == "English (US)") continue; // Skip English (US) as it's already done
-
+        audioIndex = 1;
         final greetingsForLanguage = greetingsList[language]!;
         for (var greeting in greetingsForLanguage) {
           final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${language}_$audioIndex";

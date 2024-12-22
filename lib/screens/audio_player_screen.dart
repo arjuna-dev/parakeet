@@ -175,7 +175,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('We\'re having trouble finding an audio file 🧐'),
+            content: const Text('We\'re having trouble finding an audio file 🧐'),
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {
@@ -196,14 +196,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          title: Text('Error'),
-          content: Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
+          title: const Text('Error'),
+          content: const Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -214,7 +214,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _handleFetchingUrlError(int? index) async {
     if (index != null) {
       final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
-      bool available = await retryUrlExists(currentUrl, retries: 10, delay: Duration(seconds: 1));
+      bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
       if (!available) {
         setState(() => isLoading = false);
         await _showAudioErrorDialog(context);
@@ -352,7 +352,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       int randomNumber = Random().nextInt(5) + 1;
       if (hasNicknameAudio && addressByNickname) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        if (widget.nativeLanguage == "English (US)") {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        } else {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        }
       } else {
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/narrator_greetings_$randomNumber.mp3";
       }
