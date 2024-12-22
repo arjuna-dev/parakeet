@@ -1,0 +1,205 @@
+{
+    "English (US)": [
+        "Amazing!",
+        "Awesome!",
+        "You did great!",
+        "You can improve on that!",
+        "You can do better!"
+    ],
+    "Arabic": [
+        "رائع!",
+        "ممتاز!",
+        "أحسنت!",
+        "يمكنك التحسن!",
+        "يمكنك أن تفعل أفضل!"
+    ],
+    "Bengali": [
+        "অসাধারণ!",
+        "দারুণ!",
+        "তুমি খুব ভালো করেছ!",
+        "তুমি আরও উন্নতি করতে পারো!",
+        "তুমি আরও ভালো করতে পারো!"
+    ],
+    "Danish": [
+        "Fantastisk!",
+        "Fremragende!",
+        "Du gjorde det godt!",
+        "Du kan forbedre det!",
+        "Du kan gøre det bedre!"
+    ],
+    "English (UK)": [
+        "Brilliant!",
+        "Splendid!",
+        "You did great!",
+        "You can improve on that!",
+        "You can do better!"
+    ],
+    "English (Australia)": [
+        "Ripper!",
+        "Beauty!",
+        "You did great!",
+        "You can improve on that!",
+        "You can do better!"
+    ],
+    "Filipino": [
+        "Napakagaling!",
+        "Ang galing!",
+        "Magaling ka!",
+        "Pwede pang pagbutihin!",
+        "Kaya mo pang gumaling!"
+    ],
+    "French (Canada)": [
+        "Incroyable!",
+        "Fantastique!",
+        "Tu as très bien fait!",
+        "Tu peux t'améliorer!",
+        "Tu peux faire mieux!"
+    ],
+    "French (France)": [
+        "Formidable!",
+        "Génial!",
+        "Tu as très bien fait!",
+        "Tu peux t'améliorer!",
+        "Tu peux faire mieux!"
+    ],
+    "Gujarati": [
+        "અદ્ભુત!",
+        "શાનદાર!",
+        "તમે ખૂબ સરસ કર્યું!",
+        "તમે સુધારો કરી શકો છો!",
+        "તમે વધુ સારું કરી શકો છો!"
+    ],
+    "Hindi": [
+        "शानदार!",
+        "बहुत बढ़िया!",
+        "बहुत अच्छा किया!",
+        "आप इसमें सुधार कर सकते हैं!",
+        "आप बेहतर कर सकते हैं!"
+    ],
+    "German": [
+        "Fantastisch!",
+        "Großartig!",
+        "Das hast du super gemacht!",
+        "Das kannst du noch verbessern!",
+        "Das kannst du besser!"
+    ],
+    "Indonesian": [
+        "Luar biasa!",
+        "Keren!",
+        "Kamu hebat!",
+        "Kamu bisa lebih baik lagi!",
+        "Kamu bisa melakukannya lebih baik!"
+    ],
+    "Italian": [
+        "Fantastico!",
+        "Eccezionale!",
+        "Hai fatto benissimo!",
+        "Puoi migliorare!",
+        "Puoi fare meglio!"
+    ],
+    "Japanese": [
+        "すごい！",
+        "素晴らしい！",
+        "よくできました！",
+        "もっと改善できます！",
+        "もっと頑張れます！"
+    ],
+    "Korean": [
+        "대단해!",
+        "멋져!",
+        "잘했어요!",
+        "더 개선할 수 있어요!",
+        "더 잘할 수 있어요!"
+    ],
+    "Malay": [
+        "Mengagumkan!",
+        "Hebat!",
+        "Anda melakukannya dengan baik!",
+        "Anda boleh tambah baik!",
+        "Anda boleh buat lebih baik!"
+    ],
+    "Mandarin Chinese": [
+        "太棒了！",
+        "真厲害！",
+        "你做得很好！",
+        "你可以改進！",
+        "你可以做得更好！"
+    ],
+    "Norwegian": [
+        "Fantastisk!",
+        "Utrolig!",
+        "Du gjorde det bra!",
+        "Du kan forbedre det!",
+        "Du kan gjøre det bedre!"
+    ],
+    "Polish": [
+        "Niesamowite!",
+        "Świetnie!",
+        "Świetnie ci poszło!",
+        "Możesz to poprawić!",
+        "Możesz lepiej!"
+    ],
+    "Portuguese (Brazil)": [
+        "Incrível!",
+        "Fantástico!",
+        "Você foi ótimo!",
+        "Você pode melhorar!",
+        "Você pode fazer melhor!"
+    ],
+    "Portuguese (Portugal)": [
+        "Fantástico!",
+        "Espetacular!",
+        "Fizeste muito bem!",
+        "Podes melhorar!",
+        "Podes fazer melhor!"
+    ],
+    "Russian": [
+        "Потрясающе!",
+        "Великолепно!",
+        "Ты отлично справился!",
+        "Ты можешь улучшить это!",
+        "Ты можешь сделать лучше!"
+    ],
+    "Spanish (Spain)": [
+        "¡Increíble!",
+        "¡Fantástico!",
+        "¡Lo has hecho genial!",
+        "¡Puedes mejorarlo!",
+        "¡Puedes hacerlo mejor!"
+    ],
+    "Spanish (Mexico)": [
+        "¡Increíble!",
+        "¡Asombroso!",
+        "¡Lo hiciste muy bien!",
+        "¡Puedes mejorar!",
+        "¡Puedes hacerlo mejor!"
+    ],
+    "Swedish": [
+        "Fantastiskt!",
+        "Underbart!",
+        "Du gjorde det bra!",
+        "Du kan förbättra det!",
+        "Du kan göra bättre!"
+    ],
+    "Tamil": [
+        "அற்புதம்!",
+        "அருமை!",
+        "நீங்கள் சிறப்பாக செய்தீர்கள்!",
+        "நீங்கள் மேம்படுத்தலாம்!",
+        "நீங்கள் சிறப்பாக செய்யலாம்!"
+    ],
+    "Turkish": [
+        "Harika!",
+        "Muhteşem!",
+        "Çok iyi yaptın!",
+        "Bunu geliştirebilirsin!",
+        "Daha iyisini yapabilirsin!"
+    ],
+    "Vietnamese": [
+        "Tuyệt vời!",
+        "Xuất sắc!",
+        "Bạn đã làm rất tốt!",
+        "Bạn có thể cải thiện!",
+        "Bạn có thể làm tốt hơn!"
+    ]
+}
