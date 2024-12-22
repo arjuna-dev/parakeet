@@ -81,7 +81,6 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
             print(f'Error uploading file: {e}')
 
         blob.patch()
-        if make_public:
         blob.make_public()
 
         if doc_ref:

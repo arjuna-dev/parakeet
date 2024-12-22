@@ -72,6 +72,44 @@ class _NicknamePopupState extends State<NicknamePopup> {
     await prefs.setBool('addressByNickname', value);
   }
 
+  Future<bool> _checkAndUpdateCallCount() async {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final today = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
+
+    try {
+      return await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('api_call_count').doc('generate_nickname');
+
+        final userDocSnapshot = await transaction.get(userDocRef);
+
+        if (!userDocSnapshot.exists) {
+          // If document doesn't exist, create it with count 1
+          transaction.set(userDocRef, {'last_call_date': today, 'call_count': 1});
+          return true;
+        } else {
+          // Document exists, check count and date
+          if (userDocSnapshot.get('last_call_date') == today) {
+            if (userDocSnapshot.get('call_count') >= 1) {
+              // Limit reached
+              return false;
+            } else {
+              // Increment count
+              transaction.update(userDocRef, {'call_count': FieldValue.increment(1)});
+              return true;
+            }
+          } else {
+            // New day, reset count
+            transaction.set(userDocRef, {'last_call_date': today, 'call_count': 1});
+            return true;
+          }
+        }
+      });
+    } catch (e) {
+      print('Error in transaction: $e');
+      return false;
+    }
+  }
+
   Future<void> _handleGenerate() async {
     String nicknameText = _nicknameController.text.trim();
     if (nicknameText.isEmpty) {
@@ -86,9 +124,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
       _isLoading = true;
     });
 
-    // Check the call count before generating
-    final callCount = await _getCallCount();
-    if (callCount >= 11) {
+    // Add the transaction check here
+    final canProceed = await _checkAndUpdateCallCount();
+    if (!canProceed) {
       setState(() {
         _isLoading = false;
       });
@@ -135,16 +173,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<int> _getCallCount() async {
-    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('api_call_count').doc('generate_nickname');
-    final docSnapshot = await userDocRef.get();
-    if (docSnapshot.exists) {
-      final data = docSnapshot.data() as Map<String, dynamic>;
-      return data['call_count'] ?? 0;
-    }
-    return 0;
   }
 
   Future<String?> fetchCurrentNickname() async {

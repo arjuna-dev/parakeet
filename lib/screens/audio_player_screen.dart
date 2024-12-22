@@ -350,6 +350,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
+      print(hasNicknameAudio);
+      print(addressByNickname);
       if (hasNicknameAudio && addressByNickname) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         if (widget.nativeLanguage == "English (US)") {

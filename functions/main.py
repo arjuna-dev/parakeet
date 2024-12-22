@@ -318,7 +318,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
         text = request_data.get("text")
         user_id = request_data.get("user_id")
         user_id_N = request_data.get("user_id_N")
-        language = request_data.get("language")
+        language = request_data.get("language", "English (US)")
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),

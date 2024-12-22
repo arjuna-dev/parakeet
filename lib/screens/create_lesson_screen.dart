@@ -161,41 +161,44 @@ class _CreateLessonState extends State<CreateLesson> {
           ],
         ),
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return ScrollConfiguration(
-            behavior: kIsWeb ? const ScrollBehavior().copyWith(overscroll: false) : const ScrollBehavior(),
-            child: SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppConstants.horizontalPadding.left,
-                      vertical: padding,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionHeader('Topic', Icons.edit_note, isSmallScreen, colorScheme),
-                        SizedBox(height: padding / 2),
-                        _buildTopicSection(colorScheme, isSmallScreen),
-                        SizedBox(height: padding),
-                        _buildSectionHeader('Language Settings', Icons.language, isSmallScreen, colorScheme),
-                        SizedBox(height: padding / 2),
-                        _buildLanguageSection(colorScheme, isSmallScreen),
-                        SizedBox(height: padding),
-                        _buildCreateButton(colorScheme),
-                      ],
+      body: Form(
+        key: _formKey,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return ScrollConfiguration(
+              behavior: kIsWeb ? const ScrollBehavior().copyWith(overscroll: false) : const ScrollBehavior(),
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppConstants.horizontalPadding.left,
+                        vertical: padding,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Topic', Icons.edit_note, isSmallScreen, colorScheme),
+                          SizedBox(height: padding / 2),
+                          _buildTopicSection(colorScheme, isSmallScreen),
+                          SizedBox(height: padding),
+                          _buildSectionHeader('Language Settings', Icons.language, isSmallScreen, colorScheme),
+                          SizedBox(height: padding / 2),
+                          _buildLanguageSection(colorScheme, isSmallScreen),
+                          SizedBox(height: padding),
+                          _buildCreateButton(colorScheme),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
     );
@@ -273,9 +276,18 @@ class _CreateLessonState extends State<CreateLesson> {
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                       counterText: '', // Hide default counter
+                      errorStyle: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 12,
+                        color: colorScheme.error,
+                      ),
                     ),
                     onChanged: (value) => setState(() => topic = value),
-                    validator: (value) => value?.isEmpty ?? true ? 'Please enter a topic' : null,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a topic';
+                      }
+                      return null;
+                    },
                   ),
                   Padding(
                     padding: EdgeInsets.only(left: 12, top: isSmallScreen ? 2 : 4),
