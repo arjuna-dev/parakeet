@@ -30,12 +30,12 @@ Widget buildProfilePopupMenu(BuildContext context) {
         child: Text('Profile'),
       ),
       const PopupMenuItem<String>(
-        value: 'Logout',
-        child: Text('Logout'),
-      ),
-      const PopupMenuItem<String>(
         value: 'Edit Name',
         child: Text('Edit Name'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'Logout',
+        child: Text('Logout'),
       ),
     ],
   );
