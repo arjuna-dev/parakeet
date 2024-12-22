@@ -4,8 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parakeet/utils/greetings_list_all_languages.dart';
+import 'dart:async';
 
 class NicknamePopup extends StatefulWidget {
   const NicknamePopup({super.key});
@@ -20,8 +21,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
   bool _isSubmitEnabled = false;
   bool _useName = true;
   final player = AudioPlayer();
-  List<String> greetings = ["hello", "How's it going", "Hi", "Hi, there", "Good day"];
-  late int firstIndexUsed;
   String userId = FirebaseAuth.instance.currentUser!.uid;
   String? _currentNickname;
 
@@ -95,33 +94,43 @@ class _NicknamePopupState extends State<NicknamePopup> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Your name is officially trending! But it’s time to pause and let it cool down. You can try again some other time!"),
+          content: Text("Your name is officially trending! But it's time to pause and let it cool down. You can try again some other time!"),
         ),
       );
       return;
     }
 
-    firstIndexUsed = Random().nextInt(greetings.length);
-    String greeting = greetings[firstIndexUsed];
-
     try {
-      String userIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
-      String text = "$greeting $nicknameText!";
+      // First generate and play English (US) first greeting
+      final englishGreetings = greetingsList["English (US)"]!;
+      final firstGreeting = englishGreetings[0];
+      final mainUserIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
 
-      await CloudFunctionService.generateNicknameAudio(text, userId, userIdN);
-      await _fetchAndPlayAudio(userIdN);
-      await _saveNicknameToFirestore(nicknameText); // Save nickname to Firestore
+      // Generate and play the first English (US) greeting
+      await CloudFunctionService.generateNicknameAudio("$firstGreeting $nicknameText!", userId, mainUserIdN, "English (US)");
+      await _fetchAndPlayAudio(mainUserIdN);
+      await _saveNicknameToFirestore(nicknameText);
       setState(() {
         _currentNickname = nicknameText;
+        _isLoading = false;
       });
+
+      // Show initial success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Your nickname has been saved! 🎉"),
+          content: Text("Your nickname has been saved!"),
         ),
       );
+
+      // Generate all other greetings in the background without awaiting
+      unawaited(_generateRemainingGreetings(nicknameText));
     } catch (e) {
-      // Handle error
-    } finally {
+      print("Error generating nicknames: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("There was an error generating your nickname. Please try again."),
+        ),
+      );
       setState(() {
         _isLoading = false;
       });
@@ -172,29 +181,47 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
   }
 
-  Future<void> _generateRemainingAudios(String userId) async {
-    String nicknameText = _nicknameController.text.trim();
-    if (nicknameText.isEmpty) {
-      return;
-    }
-    int firstIndexPassed = 0;
-    for (int i = 0; i < greetings.length; i++) {
-      if (i == firstIndexUsed) {
-        firstIndexPassed = 1;
-        continue;
-      }
-      String newUserIdN = "${userId}_${i + 2 - firstIndexPassed}";
-      String text = "${greetings[i]} ${_nicknameController.text}!";
-      print("text: $text");
-      await CloudFunctionService.generateNicknameAudio(text, userId, newUserIdN);
-    }
-  }
-
   Future<void> _saveNicknameToFirestore(String nickname) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       await userDocRef.update({'nickname': nickname});
+    }
+  }
+
+  Future<void> _generateRemainingGreetings(String nicknameText) async {
+    try {
+      int audioIndex = 2; // Start from 2 since 1 is used for main English greeting
+
+      // First generate remaining English (US) greetings
+      final englishGreetings = greetingsList["English (US)"]!;
+      for (var i = 1; i < englishGreetings.length; i++) {
+        final greeting = englishGreetings[i];
+        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_$audioIndex";
+        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, "English (US)"));
+        audioIndex++;
+      }
+
+      // Then generate all other languages
+      for (var language in greetingsList.keys) {
+        if (language == "English (US)") continue; // Skip English (US) as it's already done
+
+        final greetingsForLanguage = greetingsList[language]!;
+        for (var greeting in greetingsForLanguage) {
+          final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${language}_$audioIndex";
+          unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, language));
+          audioIndex++;
+        }
+      }
+    } catch (e) {
+      print("Error queuing remaining greetings: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Some additional greetings could not be queued. The main greeting is still available."),
+          ),
+        );
+      }
     }
   }
 
@@ -319,7 +346,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
       actions: [
         TextButton(
           onPressed: () async {
-            _generateRemainingAudios(userId);
             player.dispose();
             Navigator.of(context).pop();
           },
