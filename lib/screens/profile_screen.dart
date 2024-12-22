@@ -84,39 +84,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
+    String getInitial() {
+      if (_name.isNotEmpty) {
+        return _name[0].toUpperCase();
+      }
+      if (_email.isNotEmpty) {
+        return _email[0].toUpperCase();
+      }
+      return '?';
+    }
+
     return Card(
-      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 8 : 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
         child: Column(
           children: [
             CircleAvatar(
-              radius: 50,
+              radius: isSmallScreen ? 40 : 50,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Text(
-                _name.isNotEmpty ? _name[0].toUpperCase() : '?',
+                getInitial(),
                 style: TextStyle(
-                  fontSize: 40,
+                  fontSize: isSmallScreen ? 32 : 40,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
-              _name,
-              style: const TextStyle(
-                fontSize: 24,
+              _name.isNotEmpty ? _name : _email,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 20 : 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              _email,
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            if (_name.isNotEmpty)
+              Text(
+                _email,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -130,16 +151,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
     Color? iconColor,
   }) {
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: (iconColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
-          child: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary),
+      elevation: 2,
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: 1,
         ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 8 : 12,
+        ),
+        leading: Container(
+          width: isSmallScreen ? 40 : 48,
+          height: isSmallScreen ? 40 : 48,
+          decoration: BoxDecoration(
+            color: (iconColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor ?? Theme.of(context).colorScheme.primary,
+            size: isSmallScreen ? 20 : 24,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: isSmallScreen ? 15 : 16,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 12 : 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: Theme.of(context).colorScheme.primary,
+          size: isSmallScreen ? 24 : 28,
+        ),
         onTap: onTap,
       ),
     );
@@ -182,16 +241,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
             _buildProfileHeader(),
-            const SizedBox(height: 8),
             _buildMenuItem(
               icon: _premium ? Icons.star : Icons.star_border,
               iconColor: _premium ? Colors.amber : null,
@@ -221,21 +287,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.error,
-                  foregroundColor: colorScheme.onError,
-                  minimumSize: const Size(double.infinity, 50),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: colorScheme.error.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('Delete Account'),
-                onPressed: _deleteAccount,
+                child: InkWell(
+                  onTap: _deleteAccount,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 12 : 16,
+                      vertical: isSmallScreen ? 12 : 16,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.delete_forever,
+                          color: colorScheme.error,
+                          size: isSmallScreen ? 20 : 24,
+                        ),
+                        SizedBox(width: isSmallScreen ? 8 : 12),
+                        Text(
+                          'Delete Account',
+                          style: TextStyle(
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 15 : 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isSmallScreen ? 16 : 24),
           ],
         ),
       ),
