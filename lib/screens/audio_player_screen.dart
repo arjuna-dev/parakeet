@@ -55,7 +55,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
   String currentTrack = '';
@@ -666,7 +665,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
       String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
 
-      AudioSource feedbackAudio;
       print("newSpeech: $newSpeech");
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
@@ -676,8 +674,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       if (newSpeech == '') {
-        feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
-        await _playLocalAudio(audioSource: feedbackAudio);
+        print("NO audio was detected!!!");
         return;
       }
       // Normalize both strings: remove punctuation and convert to lowercase
