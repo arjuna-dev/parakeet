@@ -1045,18 +1045,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   @override
-  void dispose() {
+  void dispose() async {
+    print("now disposing");
     if (isPlaying) {
-      _pause();
+      await _stop();
+      // await _pause();
     }
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
-    print("speechToTextUltra.isListening: ${speechToTextUltra.isListening}");
-    if (speechToTextUltra.isListening) {
-      print("speechToTextUltra.stopListening();");
-      speechToTextUltra.dispose();
-    }
+    speechToTextUltra.dispose();
     super.dispose();
   }
 }

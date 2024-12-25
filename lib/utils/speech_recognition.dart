@@ -85,6 +85,6 @@ class SpeechToTextUltra {
   }
 
   void dispose() {
-    _speech.cancel();
+    stopListening();
   }
 }
