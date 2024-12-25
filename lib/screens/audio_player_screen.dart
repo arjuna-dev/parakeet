@@ -498,6 +498,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
     if (_isSkipping) return;
 
+    print("isLanguageSupported: $isLanguageSupported");
+
     if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
@@ -655,11 +657,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     if (isPlaying == false || isStopped == true) {
-      print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
-      // return;
+      return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       print("liveTextSpeechToText: $liveTextSpeechToText");
@@ -853,11 +851,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
-                                if (value & kIsWeb) {
-                                  initializeSpeechRecognition();
-                                } else if (value & !kIsWeb) {
-                                  displayPopupSTTSupport(context);
-                                } else if (!value) {
+                                if (value) {
+                                  if (kIsWeb || Platform.isIOS) {
+                                    initializeSpeechRecognition();
+                                  } else {
+                                    displayPopupSTTSupport(context);
+                                  }
+                                } else {
                                   speechToTextUltra.stopListening();
                                 }
                                 setState(() {
