@@ -55,8 +55,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> positiveFeedbackAudio;
-  late List<AudioSource> negativeFeedbackAudio;
   late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
@@ -202,7 +200,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('We\'re having trouble finding an audio file 🧐'),
+            content: const Text('We\'re having trouble finding an audio file 🧐'),
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {
@@ -223,14 +221,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          title: Text('Error'),
-          content: Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
+          title: const Text('Error'),
+          content: const Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -241,7 +239,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _handleFetchingUrlError(int? index) async {
     if (index != null) {
       final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
-      bool available = await retryUrlExists(currentUrl, retries: 10, delay: Duration(seconds: 1));
+      bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
       if (!available) {
         setState(() => isLoading = false);
         await _showAudioErrorDialog(context);
@@ -375,11 +373,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       int randomNumber = Random().nextInt(5) + 1;
       if (hasNicknameAudio && addressByNickname) {
-        // Personalized greeting
-        return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        if (widget.nativeLanguage == "English (US)") {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        } else {
+          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        }
       } else {
         // Generic greeting
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
@@ -498,13 +499,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     print("_handleTrackChangeToCompareSpeech called 000, time:${DateTime.now().toIso8601String()}");
     if (_isSkipping) return;
 
-    bool willCompare = currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving;
-    bool is5secbreak = currentTrack == "five_second_break";
-    bool isLangSupported = isLanguageSupported;
-    bool isIndexGreater = currentIndex > previousIndex;
-    bool isSliderNotMoving = !isSliderMoving;
-
-    print("willCompare: $willCompare, is5secbreak: $is5secbreak, isLangSupported: $isLangSupported, isIndexGreater: $isIndexGreater, isSliderNotMoving: $isSliderNotMoving");
+    print("isLanguageSupported: $isLanguageSupported");
 
     if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
@@ -556,14 +551,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  // Initialize feedback audio sources
-  Future<void> _initFeedbackAudioSources() async {
-    positiveFeedbackAudio = [AudioSource.asset('assets/amazing.mp3'), AudioSource.asset('assets/awesome.mp3'), AudioSource.asset('assets/you_did_great.mp3')];
-    negativeFeedbackAudio = [AudioSource.asset('assets/meh.mp3'), AudioSource.asset('assets/you_can_do_better.mp3'), AudioSource.asset('assets/you_can_improve.mp3')];
-    couldNotListenFeedbackAudio = [AudioSource.asset('assets/I_couldnt_hear_what_you_said!.mp3'), AudioSource.asset('assets/I_didnt_quite_get_that!.mp3')];
-    audioCue = AudioSource.asset('assets/audio_cue.mp3');
-  }
-
   void initializeSpeechRecognition() async {
     // TODO: Error handling
     // Initialize the speech recognition
@@ -577,7 +564,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('The specified language is not supported.');
       return;
     }
-    _initFeedbackAudioSources();
+    //_initFeedbackAudioSources();
   }
 
   void _showLanguageNotSupportedDialog() {
@@ -671,11 +658,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     if (isPlaying == false || isStopped == true) {
-      print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
-      // return;
+      return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       print("liveTextSpeechToText: $liveTextSpeechToText");
@@ -725,12 +708,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('Similarity: $similarity');
 
       if (similarity >= 0.7) {
-        feedbackAudio = getRandomAudioSource(positiveFeedbackAudio);
+        print('Good job! You repeated the phrase correctly.');
+        await _provideFeedback(isPositive: true);
       } else {
-        feedbackAudio = getRandomAudioSource(negativeFeedbackAudio);
+        print('Try again. The phrase didn\'t match.');
+        await _provideFeedback(isPositive: false);
       }
-
-      await _playLocalAudio(audioSource: feedbackAudio);
     }
   }
 
@@ -741,6 +724,59 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
 // Method to provide audio feedback
+  Future<void> _provideFeedback({required bool isPositive}) async {
+    // Pause the main player if it's playing
+    if (player.playing) {
+      await player.pause();
+    }
+
+    // Create a separate AudioPlayer for the answer sound
+    AudioPlayer answerPlayer = AudioPlayer();
+
+    // Play the correct/incorrect answer sound first
+    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+
+    await answerPlayer.setAudioSource(
+      AudioSource.uri(Uri.parse(answerUrl)),
+    );
+    await answerPlayer.play();
+
+    // Wait for the answer sound to finish
+    await answerPlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
+    await answerPlayer.dispose();
+
+    // Create a separate AudioPlayer for feedback
+    AudioPlayer feedbackPlayer = AudioPlayer();
+
+    // Get the feedback audio URL
+    String feedbackUrl = _getFeedbackAudioUrl(isPositive);
+    print('Playing feedback audio from: $feedbackUrl'); // Add debug print
+
+    // Set the audio source using the cloud URL
+    await feedbackPlayer.setAudioSource(
+      AudioSource.uri(Uri.parse(feedbackUrl)),
+    );
+
+    // Play the feedback
+    await feedbackPlayer.play();
+
+    // Wait for the feedback to finish
+    await feedbackPlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
+
+    // Release the feedback player resources
+    await feedbackPlayer.dispose();
+
+    // Resume the main player if it was playing before
+    if (!isStopped && isPlaying) {
+      await player.play();
+    }
+  }
+
+  // Method to provide audio feedback
   Future<void> _playLocalAudio({required AudioSource audioSource}) async {
     // Pause the main player if it's playing
     if (player.playing) {
@@ -768,6 +804,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!isStopped && isPlaying) {
       await player.play();
     }
+  }
+
+  // Add a new method to get random feedback audio URL
+  String _getFeedbackAudioUrl(bool isPositive) {
+    final random = Random();
+    final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
+    return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
   }
 
   @override
@@ -812,11 +855,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                 if (value) {
                                   if (kIsWeb || Platform.isIOS) {
                                     initializeSpeechRecognition();
-                                  } else if (Platform.isAndroid) {
+                                  } else {
                                     displayPopupSTTSupport(context);
                                   }
                                 } else {
-                                  // Stop listening
                                   speechToTextUltra.stopListening();
                                 }
                                 setState(() {
@@ -1004,18 +1046,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   @override
-  void dispose() {
+  void dispose() async {
+    print("now disposing");
     if (isPlaying) {
-      _pause();
+      await _stop();
+      // await _pause();
     }
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
-    print("speechToTextUltra.isListening: ${speechToTextUltra.isListening}");
-    if (speechToTextUltra.isListening) {
-      print("speechToTextUltra.stopListening();");
-      speechToTextUltra.dispose();
-    }
+    speechToTextUltra.dispose();
     super.dispose();
   }
 }

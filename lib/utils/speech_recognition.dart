@@ -76,9 +76,9 @@ class SpeechToTextUltra {
       // Get system locales from the device
       systemLocales = await speechInstance.locales();
 
+      // Convert target language code to match system locale format
+      // String? targetLanguageCode = languageCodes[languageName]?.replaceAll('-', '_');
       String? targetLanguageCode = languageCodes[languageName];
-
-      // Maybe useful for android: String? targetLanguageCode = languageCodes[languageName]?.replaceAll('-', '_');
 
       isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
       return isLanguageSupported;
@@ -86,6 +86,6 @@ class SpeechToTextUltra {
   }
 
   void dispose() {
-    _speech.cancel();
+    stopListening();
   }
 }
