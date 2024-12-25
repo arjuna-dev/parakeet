@@ -7,20 +7,19 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/utils/speech_recognition.dart';
 import 'package:parakeet/widgets/position_data.dart';
-import 'package:parakeet/widgets/control_buttons.dart';
 import 'package:parakeet/widgets/dialogue_list.dart';
 import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:string_similarity/string_similarity.dart';
-import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -56,6 +55,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
+  late List<AudioSource> couldNotListenFeedbackAudio;
+  late AudioSource audioCue;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -68,7 +69,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int updateNumber = 0;
   bool speechRecognitionActive = false;
   bool? speechRecognitionSupported;
-  Timer? _timer;
   Map<String, dynamic>? latestSnapshot;
   Map<int, String> filesToCompare = {};
   Map<String, dynamic>? existingBigJson;
@@ -81,15 +81,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   List<Duration> trackDurations = [];
   List<dynamic> script = [];
 
+  SpeechToText speechInstance = SpeechToText();
+  String liveTextSpeechToText = '';
+
   Map<String, dynamic>? audioDurations = {};
   Future<Map<String, dynamic>>? cachedAudioDurations;
-
-  stt.SpeechToText speech = stt.SpeechToText();
-  String recordedText = '';
 
   int previousIndex = -1;
   bool _hasPremium = false;
   bool _hasShownInitialAd = false;
+
+  late SpeechToTextUltra speechToTextUltra;
+
+  bool isSliderMoving = false; // Pc4af
+
+  bool _isSkipping = false; // P926e
 
   @override
   void initState() {
@@ -109,6 +115,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _initPlaylist();
     });
     _loadAddressByNicknamePreference();
+    speechToTextUltra = SpeechToTextUltra(
+      languageName: widget.targetLanguage,
+      ultraCallback: (String liveText, String finalText, bool isListening) {
+        // Handle the callback
+        print('Live Text: $liveText');
+        print('Final Text: $finalText');
+        print('Is Listening: $isListening');
+        print('speechRecognitionActive: $speechRecognitionActive');
+        if (mounted) {
+          setState(() {
+            liveTextSpeechToText = liveText;
+          });
+        } else {
+          print('State not mounted for liveTextSpeechToText');
+        }
+      },
+    );
   }
 
   updateHasNicknameAudio() async {
@@ -117,18 +140,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     hasNicknameAudio = await urlExists(
       url,
     );
-    setState(() {
-      hasNicknameAudio = hasNicknameAudio;
-    });
+    if (mounted) {
+      setState(() {
+        hasNicknameAudio = hasNicknameAudio;
+      });
+    } else {
+      print('State not mounted for hasNicknameAudio');
+    }
     _checkPremiumStatus();
   }
 
   Future<void> _checkPremiumStatus() async {
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userID).get();
 
-    setState(() {
-      _hasPremium = userDoc.data()?['premium'] ?? false;
-    });
+    if (mounted) {
+      setState(() {
+        _hasPremium = userDoc.data()?['premium'] ?? false;
+      });
+    } else {
+      print('State not mounted for _hasPremium');
+    }
 
     if (!_hasPremium) {
       await AdService.loadInterstitialAd();
@@ -146,23 +177,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _initAndStartRecording() async {
-    await _checkIfLanguageSupported();
-    _startRecording();
-  }
-
   Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
     for (int i = 1; i <= retries; i++) {
       bool exists = await urlExists(url);
       if (exists) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        } else {
+          print('State not mounted for isLoading');
+        }
         return true;
       }
-      setState(() {
-        isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+      } else {
+        print('State not mounted for isLoading');
+      }
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -230,13 +264,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         setState(() {
           currentTrack = script[index];
         });
+        print('currentTrack: $currentTrack');
         if (speechRecognitionActive) {
-          _handleTrackChangeToCheckVoice(index);
+          _handleTrackChangeToCompareSpeech(index);
         }
         setState(() {
           previousIndex = index;
         });
-        print('currentTrack: $currentTrack');
       }
     });
   }
@@ -260,7 +294,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      // _showAd();
       await _play();
     } else {
       print("No valid URLs available to initialize the playlist.");
@@ -341,8 +374,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
       int randomNumber = Random().nextInt(5) + 1;
-      print(hasNicknameAudio);
-      print(addressByNickname);
       if (hasNicknameAudio && addressByNickname) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         if (widget.nativeLanguage == "English (US)") {
@@ -351,8 +382,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
         }
       } else {
-        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/narrator_greetings_$randomNumber.mp3";
+        // Generic greeting
+        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
       }
+    } else if (fileName == "audio_cue") {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      return "https://storage.googleapis.com/narrator_audio_files/general/audio_cue.mp3?timestamp=$timestamp";
     } else {
       return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
     }
@@ -460,25 +495,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return currentMap;
   }
 
-  void _handleTrackChangeToCheckVoice(int currentIndex) async {
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex) {
-      if (widget.generating) {
+  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+    if (_isSkipping) return;
+
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
+      print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
+
+      final jsonFile = filesToCompare[currentIndex];
+      if (jsonFile == null) {
+        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+        return;
+      }
+
+      if (widget.generating && latestSnapshot != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, filesToCompare[currentIndex]!);
+          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, jsonFile);
+        });
+      } else if (existingBigJson != null) {
+        setState(() {
+          targetPhraseToCompareWith = accessBigJson(existingBigJson!, jsonFile);
         });
       } else {
-        setState(() {
-          targetPhraseToCompareWith = accessBigJson(existingBigJson!, filesToCompare[currentIndex]!);
-        });
+        print("Error: Required JSON data is null.");
+        return;
       }
-      if (speech.isListening) {
-        await speech.stop(); // Wait for the speech recognition to stop
-      }
-      setState(() {
-        recordedText = "";
-      });
-      _startRecording();
-      Future.delayed(const Duration(seconds: 5), _compareTranscriptionWithPhrase);
+
+      // await _playLocalAudio(audioSource: audioCue);
+
+      final String stringWhenStarting = liveTextSpeechToText;
+
+      Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
     }
   }
 
@@ -502,39 +548,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<void> _checkIfLanguageSupported() async {
-    bool isAvailable = await speech.initialize();
-    if (isAvailable) {
-      List<stt.LocaleName> systemLocales;
+  void initializeSpeechRecognition() async {
+    // TODO: Error handling
+    // Initialize the speech recognition
+    SpeechToText speechRecognition = await speechToTextUltra.startListening();
 
-      if (kIsWeb) {
-        // Get system locales from the browser
-        voiceLanguageCode = languageCodes[widget.targetLanguage];
-        isLanguageSupported = true;
-      } else {
-        // Get system locales from the device
-        systemLocales = await speech.locales();
+    // TODO: Error handling
+    // Check if the specified language is supported
+    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
 
-        // Convert target language code to match system locale format
-        String? targetLanguageCode = languageCodes[widget.targetLanguage]?.replaceAll('-', '_');
-
-        isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
-
-        if (!isLanguageSupported) {
-          print('Language not supported.');
-          _timer?.cancel();
-          speech.cancel();
-          _showLanguageNotSupportedDialog();
-          setState(() {
-            speechRecognitionActive = false;
-          });
-        } else {
-          voiceLanguageCode = languageCodes[widget.targetLanguage];
-        }
-      }
-    } else {
-      print("Speech recognition is not available on this device.");
+    if (!isLanguageSupported) {
+      print('The specified language is not supported.');
+      return;
     }
+    //_initFeedbackAudioSources();
   }
 
   void _showLanguageNotSupportedDialog() {
@@ -587,9 +614,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
-                setState(() {
-                  speechRecognitionActive = false;
-                });
+                if (mounted) {
+                  setState(() {
+                    speechRecognitionActive = false;
+                    speechToTextUltra.stopListening();
+                  });
+                } else {
+                  print('State not mounted for speechRecognitionActive');
+                }
               },
             ),
           ],
@@ -598,75 +630,75 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
-  Future<void> _startRecording() async {
-    setState(() {
-      recordedText = "";
-    });
-    if (speech.isListening) {
-      print("Returning early: speech recognition is already active.");
-      return;
-    }
-    try {
-      // Check if speech recognition is already listening
-      if (!speech.isListening) {
-        bool available = await speech.initialize();
-        if (available) {
-          // Start listening if initialization is successful
-          try {
-            speech.listen(
-              onResult: (result) {
-                setState(() {
-                  recordedText = result.recognizedWords;
-                });
-              },
-              localeId: languageCodes[widget.targetLanguage],
-            );
-          } catch (e) {
-            print("Error: probably already listening");
-          }
+  String getAddedCharacters(String newString, String previousString) {
+    // Split the strings into word lists
+    List<String> newWords = newString.split(RegExp(r'\s+'));
+    List<String> previousWords = previousString.split(RegExp(r'\s+'));
 
-          // Set up a periodic timer to check if listening is still active
-          _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
-            if (!speech.isListening) {
-              // Restart speech recognition if it stops
-              print("Speech recognition stopped. Restarting...");
-              _startRecording();
-              timer.cancel();
-            }
-          });
-        } else {
-          print("Speech recognition is not available on this platform.");
-        }
-      } else {
-        print("Speech recognition is already active.");
+    // Compare word-by-word and find differences
+    int minLength = previousWords.length;
+    for (int i = 0; i < minLength; i++) {
+      if (newWords[i] != previousWords[i]) {
+        // Word has been replaced; return from this point onward
+        return newWords.skip(i).join(' ');
       }
-    } catch (e) {
-      print("Speech recognition was already active.");
     }
+
+    // If all previous words match, return the new additions
+    if (newWords.length > previousWords.length) {
+      return newWords.skip(previousWords.length).join(' ');
+    }
+
+    // If no new words are detected, return an empty string
+    return "";
   }
 
-  void _compareTranscriptionWithPhrase() async {
-    print('starting comparison...');
-    // print a timestamp
-    print(DateTime.now().toIso8601String());
-    if (targetPhraseToCompareWith != null) {
+  void _compareSpeechWithPhrase(stringWhenStarting) async {
+    if (isPlaying == false || isStopped == true) {
+      print("Brooooke!");
+      print("Brooooke!");
+      print("Brooooke!");
+      print("Brooooke!");
+      // return;
+    }
+    if (targetPhraseToCompareWith != null && !isSliderMoving) {
+      print("liveTextSpeechToText: $liveTextSpeechToText");
+      print("stringWhenStarting: $stringWhenStarting");
+      String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
+      String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
+      String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
+
+      AudioSource feedbackAudio;
+      print("newSpeech: $newSpeech");
+
+      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
+        final random = Random();
+        int index = random.nextInt(audioList.length);
+        return audioList[index];
+      }
+
+      if (newSpeech == '') {
+        feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
+        await _playLocalAudio(audioSource: feedbackAudio);
+        return;
+      }
       // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedRecordedText = _normalizeString(recordedText);
-      // Duplicate normalizedRecordedText for web doubled text bug
-      String doubledNormalizedRecordedText = '$normalizedRecordedText $normalizedRecordedText';
+      String normalizedResponse = _normalizeString(newSpeech);
+      // Duplicate normalizedResponse for web doubled text bug
+      String doubledNormalizedResponse = '$normalizedResponse $normalizedResponse';
       String normalizedTargetPhrase = _normalizeString(targetPhraseToCompareWith!);
 
-      print('you said: $normalizedRecordedText');
-      print('target phrase: $normalizedTargetPhrase');
+      print('you said: $normalizedResponse, timestamp: ${DateTime.now().toIso8601String()}');
+      print('target phrase: $normalizedTargetPhrase, timestamp: ${DateTime.now().toIso8601String()}');
 
       // Calculate similarity
       double similarity = StringSimilarity.compareTwoStrings(
-        normalizedRecordedText,
+        normalizedResponse,
         normalizedTargetPhrase,
       );
 
       double similarityForDoubled = StringSimilarity.compareTwoStrings(
-        doubledNormalizedRecordedText,
+        doubledNormalizedResponse,
         normalizedTargetPhrase,
       );
 
@@ -690,12 +722,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String _normalizeString(String input) {
     // Remove punctuation using a regular expression and convert to lowercase
     return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
-  }
-
-  AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-    final random = Random();
-    int index = random.nextInt(audioList.length);
-    return audioList[index];
   }
 
 // Method to provide audio feedback
@@ -751,6 +777,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  // Method to provide audio feedback
+  Future<void> _playLocalAudio({required AudioSource audioSource}) async {
+    // Pause the main player if it's playing
+    if (player.playing) {
+      await player.pause();
+    }
+
+    // Create a separate AudioPlayer for feedback to avoid conflicts
+    AudioPlayer localFilePlayer = AudioPlayer();
+
+    // Set the appropriate audio source
+    await localFilePlayer.setAudioSource(audioSource);
+
+    // Play the feedback
+    await localFilePlayer.play();
+
+    // Wait for the feedback to finish
+    await localFilePlayer.processingStateStream.firstWhere(
+      (state) => state == ProcessingState.completed,
+    );
+
+    // Release the feedback player resources
+    await localFilePlayer.dispose();
+
+    // Resume the main player if it was playing before
+    if (!isStopped && isPlaying) {
+      await player.play();
+    }
+  }
+
   // Add a new method to get random feedback audio URL
   String _getFeedbackAudioUrl(bool isPositive) {
     final random = Random();
@@ -793,18 +849,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            const Text('Check Pronunciation:'),
+                            const Text('check pronunciation:'),
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
                                 if (value & kIsWeb) {
-                                  _initAndStartRecording();
+                                  initializeSpeechRecognition();
                                 } else if (value & !kIsWeb) {
                                   displayPopupSTTSupport(context);
-                                } else {
-                                  speech.stop();
-                                  speech.cancel();
-                                  _timer?.cancel();
+                                } else if (!value) {
+                                  speechToTextUltra.stopListening();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
@@ -828,13 +882,49 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           player: player,
                           cumulativeDurationUpTo: cumulativeDurationUpTo,
                           pause: _pause,
+                          onSliderChangeStart: () {
+                            setState(() {
+                              isSliderMoving = true;
+                            });
+                          },
+                          onSliderChangeEnd: () {
+                            setState(() {
+                              isSliderMoving = false;
+                            });
+                          },
                         ),
-                        ControlButtons(
-                          player: player,
-                          isPlaying: isPlaying,
-                          onPlay: _play,
-                          onPause: _pause,
-                          onStop: _stop,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            IconButton(
+                              icon: const Icon(Icons.skip_previous),
+                              onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                            ),
+                            IconButton(
+                              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                              onPressed: isPlaying ? () => _pause() : _play,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.stop),
+                              onPressed: _stop,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.skip_next),
+                              onPressed: player.hasNext
+                                  ? () {
+                                      setState(() {
+                                        _isSkipping = true; // P945a
+                                      });
+                                      player.seekToNext();
+                                      Future.delayed(const Duration(seconds: 1), () {
+                                        setState(() {
+                                          _isSkipping = false; // P47bd
+                                        });
+                                      });
+                                    }
+                                  : null,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -955,13 +1045,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   @override
-  void dispose() {
+  void dispose() async {
+    print("now disposing");
     if (isPlaying) {
-      _pause();
+      await _stop();
+      // await _pause();
     }
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
+    speechToTextUltra.dispose();
     super.dispose();
   }
 }
