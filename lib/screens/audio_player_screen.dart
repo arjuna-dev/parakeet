@@ -656,9 +656,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _compareSpeechWithPhrase(stringWhenStarting) async {
     if (isPlaying == false || isStopped == true) {
       print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
-      print("Brooooke!");
       // return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
