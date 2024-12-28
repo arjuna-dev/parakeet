@@ -727,22 +727,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.pause();
     }
 
-    // Create a separate AudioPlayer for the answer sound
-    AudioPlayer answerPlayer = AudioPlayer();
+    // // Create a separate AudioPlayer for the answer sound
+    // AudioPlayer answerPlayer = AudioPlayer();
 
-    // Play the correct/incorrect answer sound first
-    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+    // // Play the correct/incorrect answer sound first
+    // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
 
-    await answerPlayer.setAudioSource(
-      AudioSource.uri(Uri.parse(answerUrl)),
-    );
-    await answerPlayer.play();
+    // await answerPlayer.setAudioSource(
+    //   AudioSource.uri(Uri.parse(answerUrl)),
+    // );
+    // await answerPlayer.play();
 
-    // Wait for the answer sound to finish
-    await answerPlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-    await answerPlayer.dispose();
+    // // Wait for the answer sound to finish
+    // await answerPlayer.processingStateStream.firstWhere(
+    //   (state) => state == ProcessingState.completed,
+    // );
+    // await answerPlayer.dispose();
 
     // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
