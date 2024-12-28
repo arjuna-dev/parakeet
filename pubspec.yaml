@@ -58,7 +58,10 @@ dependencies:
   in_app_purchase_storekit: ^0.3.20+2
   google_mobile_ads: ^5.2.0
   speech_to_text: ^6.6.2
-  vosk_flutter_2: ^1.0.5
+  vosk_flutter: ^0.3.48
+
+dependency_overrides:
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:
