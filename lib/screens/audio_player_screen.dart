@@ -21,7 +21,6 @@ import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
-// import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
