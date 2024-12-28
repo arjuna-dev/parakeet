@@ -20,6 +20,7 @@ import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -93,9 +94,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   late SpeechToTextUltra speechToTextUltra;
 
-  bool isSliderMoving = false; // Pc4af
+  bool isSliderMoving = false;
 
-  bool _isSkipping = false; // P926e
+  bool _isSkipping = false;
+
+  late SpeechService voskSpeechService;
 
   @override
   void initState() {
@@ -132,6 +135,61 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
       },
     );
+  }
+
+  _initVosk() async {
+    VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
+    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip");
+    // Future<String> enSmallModelPath = ModelLoader().loadFromNetwork("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip");
+    Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
+
+    final recognizer = await vosk.createRecognizer(
+      model: await voskModel,
+      sampleRate: 16000,
+    );
+
+    // final recognizerWithGrammar = await vosk.createRecognizer(
+    //   model: await voskModel,
+    //   sampleRate: sampleRate,
+    //   grammar: ['one', 'two', 'three'],
+    // );
+
+    voskSpeechService = await vosk.initSpeechService(recognizer);
+    // voskSpeechService.onPartial().forEach((partial) {
+    //   setState(() {
+    //     liveTextSpeechToText = partial;
+    //   });
+    // });
+    print("initSpeechService called");
+
+    voskSpeechService.onResult().forEach((result) {
+      print("result: $result");
+      setState(() {
+        liveTextSpeechToText = result;
+      });
+    });
+    await voskSpeechService.start();
+  }
+
+  void initializeSpeechRecognition() async {
+    // If device is andoird initialize vosk
+    if (Platform.isAndroid) {
+      _initVosk();
+      return;
+    }
+    // TODO: Error handling
+    // Initialize the speech recognition
+    SpeechToText speechRecognition = await speechToTextUltra.startListening();
+
+    // TODO: Error handling
+    // Check if the specified language is supported
+    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
+
+    if (!isLanguageSupported) {
+      print('The specified language is not supported.');
+      return;
+    }
+    //_initFeedbackAudioSources();
   }
 
   updateHasNicknameAudio() async {
@@ -498,7 +556,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
     if (_isSkipping) return;
 
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
+    if (currentTrack == "five_second_break" && currentIndex > previousIndex && !isSliderMoving) {
+      // if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
       final jsonFile = filesToCompare[currentIndex];
@@ -522,9 +581,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // await _playLocalAudio(audioSource: audioCue);
 
-      final String stringWhenStarting = liveTextSpeechToText;
-
-      Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
+      if (!Platform.isAndroid) {
+        final String stringWhenStarting = liveTextSpeechToText;
+        Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
+      } else {
+        voskSpeechService.reset();
+        Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase());
+      }
     }
   }
 
@@ -546,22 +609,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print('Error fetching previous target phrase: $e');
       return null;
     }
-  }
-
-  void initializeSpeechRecognition() async {
-    // TODO: Error handling
-    // Initialize the speech recognition
-    SpeechToText speechRecognition = await speechToTextUltra.startListening();
-
-    // TODO: Error handling
-    // Check if the specified language is supported
-    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
-
-    if (!isLanguageSupported) {
-      print('The specified language is not supported.');
-      return;
-    }
-    //_initFeedbackAudioSources();
   }
 
   void _showLanguageNotSupportedDialog() {
@@ -653,20 +700,27 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return "";
   }
 
-  void _compareSpeechWithPhrase(stringWhenStarting) async {
+  void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
     if (isPlaying == false || isStopped == true) {
       print("Brooooke!");
       // return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
-      print("liveTextSpeechToText: $liveTextSpeechToText");
-      print("stringWhenStarting: $stringWhenStarting");
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
-      String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
-      String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
+
+      String newSpeech;
+      if (!Platform.isAndroid && stringWhenStarting != null) {
+        print("liveTextSpeechToText: $liveTextSpeechToText");
+        print("stringWhenStarting: $stringWhenStarting");
+        String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
+        newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
+      } else {
+        newSpeech = normalizedLiveTextSpeechToText;
+      }
+
+      print("newSpeech: $newSpeech");
 
       AudioSource feedbackAudio;
-      print("newSpeech: $newSpeech");
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
         final random = Random();
@@ -850,12 +904,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
-                                if (value & kIsWeb) {
+                                if (value && (kIsWeb || Platform.isAndroid)) {
                                   initializeSpeechRecognition();
                                 } else if (value & !kIsWeb) {
                                   displayPopupSTTSupport(context);
-                                } else if (!value) {
+                                } else if (!value && !Platform.isAndroid) {
                                   speechToTextUltra.stopListening();
+                                } else if (!value && Platform.isAndroid) {
+                                  voskSpeechService.stop();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
@@ -945,6 +1001,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _pause({bool analyticsOn = true}) async {
+    final models = await ModelLoader().loadModelsList();
+    for (final model in models) {
+      if (model.type == 'small' && !model.obsolete) {
+        print("Model: ${model.url}, name: ${model.name}, size: ${model.sizeText}, type: ${model.type}, version: ${model.version}, md5: ${model.md5}, obsolete: ${model.obsolete}");
+      }
+    }
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
@@ -1042,16 +1104,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   @override
-  void dispose() async {
-    print("now disposing");
-    if (isPlaying) {
-      await _stop();
-      // await _pause();
-    }
-    firestoreService?.dispose();
-    fileDurationUpdate?.dispose();
-    player.dispose();
-    speechToTextUltra.dispose();
+  void dispose() {
     super.dispose();
+
+    try {
+      if (isPlaying) {
+        _stop();
+      }
+      firestoreService?.dispose();
+      fileDurationUpdate?.dispose();
+      player.dispose();
+
+      if (Platform.isAndroid) {
+        voskSpeechService.stop();
+        voskSpeechService.dispose();
+      } else {
+        speechToTextUltra.dispose();
+      }
+    } catch (e) {
+      print('Error during dispose: $e');
+    }
   }
 }
