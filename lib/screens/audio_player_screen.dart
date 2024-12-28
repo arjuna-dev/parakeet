@@ -716,8 +716,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
 // Helper method to normalize strings
   String _normalizeString(String input) {
-    // Remove punctuation using a regular expression and convert to lowercase
-    return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
+    // Remove punctuation but preserve Unicode letters including Devanagari
+    return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
   }
 
 // Method to provide audio feedback
