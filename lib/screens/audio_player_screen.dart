@@ -57,7 +57,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
   String currentTrack = '';
@@ -576,7 +575,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+    print("_handleTrackChangeToCompareSpeech called 000, time:${DateTime.now().toIso8601String()}");
     if (_isSkipping) return;
+
+    print("isLanguageSupported: $isLanguageSupported");
 
     if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
@@ -687,8 +689,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
     if (isPlaying == false || isStopped == true) {
+<<<<<<< HEAD
       print("Brooooke!");
       // return;
+=======
+      return;
+>>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
@@ -705,7 +711,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       print("newSpeech: $newSpeech");
 
+<<<<<<< HEAD
       AudioSource feedbackAudio;
+=======
+      print("newSpeech: $newSpeech");
+>>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
         final random = Random();
@@ -714,8 +724,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       if (newSpeech == '') {
-        feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
-        await _playLocalAudio(audioSource: feedbackAudio);
+        print("NO audio was detected!!!");
         return;
       }
       // Normalize both strings: remove punctuation and convert to lowercase
@@ -756,8 +765,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
 // Helper method to normalize strings
   String _normalizeString(String input) {
-    // Remove punctuation using a regular expression and convert to lowercase
-    return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
+    // Remove punctuation but preserve Unicode letters including Devanagari
+    return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
   }
 
 // Method to provide audio feedback
@@ -767,22 +776,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await player.pause();
     }
 
-    // Create a separate AudioPlayer for the answer sound
-    AudioPlayer answerPlayer = AudioPlayer();
+    // // Create a separate AudioPlayer for the answer sound
+    // AudioPlayer answerPlayer = AudioPlayer();
 
-    // Play the correct/incorrect answer sound first
-    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+    // // Play the correct/incorrect answer sound first
+    // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
 
-    await answerPlayer.setAudioSource(
-      AudioSource.uri(Uri.parse(answerUrl)),
-    );
-    await answerPlayer.play();
+    // await answerPlayer.setAudioSource(
+    //   AudioSource.uri(Uri.parse(answerUrl)),
+    // );
+    // await answerPlayer.play();
 
-    // Wait for the answer sound to finish
-    await answerPlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-    await answerPlayer.dispose();
+    // // Wait for the answer sound to finish
+    // await answerPlayer.processingStateStream.firstWhere(
+    //   (state) => state == ProcessingState.completed,
+    // );
+    // await answerPlayer.dispose();
 
     // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
@@ -889,9 +898,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
+<<<<<<< HEAD
                                 if (value && (kIsWeb || Platform.isAndroid)) {
                                   initializeSpeechRecognition();
                                 } else if (!value && !Platform.isAndroid) {
+=======
+                                if (value) {
+                                  if (kIsWeb || Platform.isIOS) {
+                                    initializeSpeechRecognition();
+                                  } else {
+                                    displayPopupSTTSupport(context);
+                                  }
+                                } else {
+>>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
                                   speechToTextUltra.stopListening();
                                 } else if (!value && Platform.isAndroid) {
                                   voskSpeechService?.stop();
