@@ -21,6 +21,7 @@ import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
+import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -98,7 +99,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   bool _isSkipping = false;
 
-  late SpeechService voskSpeechService;
+  SpeechService? voskSpeechService;
 
   @override
   void initState() {
@@ -137,44 +138,65 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
-  _initVosk() async {
+  String? getVoskModelUrl(String languageName) {
+    // Get full language code (e.g., "en-US")
+    final fullCode = languageCodes[languageName];
+    if (fullCode == null) {
+      return null;
+    }
+    isLanguageSupported = true;
+
+    // Extract base language code (e.g., "en" from "en-US")
+    final baseCode = fullCode.split('-')[0].toLowerCase();
+
+    // Return URL if exists, null otherwise
+    return voskModelUrls[baseCode];
+  }
+
+  Future<void> _initVosk() async {
     VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
-    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip");
-    // Future<String> enSmallModelPath = ModelLoader().loadFromNetwork("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip");
+    String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
+    if (voskModelUrl == null) {
+      _showLanguageNotSupportedDialog();
+      return;
+    }
+    // String voskModelUrl = getVoskModelUrl(widget.targetLanguage)!;
+    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
     Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
 
     final recognizer = await vosk.createRecognizer(
       model: await voskModel,
       sampleRate: 16000,
     );
-
+    // For recognizing specific words
     // final recognizerWithGrammar = await vosk.createRecognizer(
     //   model: await voskModel,
     //   sampleRate: sampleRate,
     //   grammar: ['one', 'two', 'three'],
     // );
-
-    voskSpeechService = await vosk.initSpeechService(recognizer);
+    // For ultra fast recognition
     // voskSpeechService.onPartial().forEach((partial) {
     //   setState(() {
     //     liveTextSpeechToText = partial;
     //   });
     // });
+
+    voskSpeechService = await vosk.initSpeechService(recognizer);
     print("initSpeechService called");
 
-    voskSpeechService.onResult().forEach((result) {
+    voskSpeechService!.onResult().forEach((result) {
       print("result: $result");
       setState(() {
         liveTextSpeechToText = result;
       });
     });
-    await voskSpeechService.start();
+    await voskSpeechService!.start();
   }
 
   void initializeSpeechRecognition() async {
     // If device is andoird initialize vosk
     if (Platform.isAndroid) {
-      _initVosk();
+      await _initVosk();
       return;
     }
     // TODO: Error handling
@@ -186,7 +208,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
 
     if (!isLanguageSupported) {
-      print('The specified language is not supported.');
+      _showLanguageNotSupportedDialog();
       return;
     }
     //_initFeedbackAudioSources();
@@ -556,8 +578,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _handleTrackChangeToCompareSpeech(int currentIndex) async {
     if (_isSkipping) return;
 
-    if (currentTrack == "five_second_break" && currentIndex > previousIndex && !isSliderMoving) {
-      // if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
       final jsonFile = filesToCompare[currentIndex];
@@ -585,7 +606,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         final String stringWhenStarting = liveTextSpeechToText;
         Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
       } else {
-        voskSpeechService.reset();
+        voskSpeechService!.reset();
         Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase());
       }
     }
@@ -613,62 +634,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _showLanguageNotSupportedDialog() {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Voice Feature Not Supported'),
-          content:
-              Text('The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void displayPopupSTTSupport(BuildContext context) {
-    showDialog(
       context: navigatorKey.currentContext!,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Feature Not Supported on Mobile Yet...'),
+          title: const Text('Speech Recognition Not Supported'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Platform.isIOS
-                  ? const Text(
-                      'We are working to bring speech recognition to mobile devices! For now, you can try it in the web app 🦜',
-                    )
-                  : const Text("We are working to bring speech recognition to mobile devices! For now, you can try it in the web app at app.parakeet.world 🦜"),
-              const SizedBox(height: 8),
+              Text("${widget.targetLanguage} is not supported for speech recognition on your device, but we're working on it!"),
+              SizedBox(height: 8),
             ],
           ),
           actions: [
-            Platform.isIOS
-                ? TextButton(
-                    onPressed: () {
-                      launchURL(urlWebApp);
-                    },
-                    child: const Text('Try the Web App'))
-                : Container(),
             TextButton(
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
-                if (mounted) {
-                  setState(() {
-                    speechRecognitionActive = false;
-                    speechToTextUltra.stopListening();
-                  });
-                } else {
-                  print('State not mounted for speechRecognitionActive');
-                }
+                setState(() {
+                  speechRecognitionActive = false;
+                  isLanguageSupported = false;
+                });
               },
             ),
           ],
@@ -906,12 +891,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               onChanged: (bool value) {
                                 if (value && (kIsWeb || Platform.isAndroid)) {
                                   initializeSpeechRecognition();
-                                } else if (value & !kIsWeb) {
-                                  displayPopupSTTSupport(context);
                                 } else if (!value && !Platform.isAndroid) {
                                   speechToTextUltra.stopListening();
                                 } else if (!value && Platform.isAndroid) {
-                                  voskSpeechService.stop();
+                                  voskSpeechService?.stop();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
@@ -966,12 +949,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               onPressed: player.hasNext
                                   ? () {
                                       setState(() {
-                                        _isSkipping = true; // P945a
+                                        _isSkipping = true;
                                       });
                                       player.seekToNext();
                                       Future.delayed(const Duration(seconds: 1), () {
                                         setState(() {
-                                          _isSkipping = false; // P47bd
+                                          _isSkipping = false;
                                         });
                                       });
                                     }
@@ -1001,12 +984,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _pause({bool analyticsOn = true}) async {
-    final models = await ModelLoader().loadModelsList();
-    for (final model in models) {
-      if (model.type == 'small' && !model.obsolete) {
-        print("Model: ${model.url}, name: ${model.name}, size: ${model.sizeText}, type: ${model.type}, version: ${model.version}, md5: ${model.md5}, obsolete: ${model.obsolete}");
-      }
-    }
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
@@ -1116,8 +1093,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       player.dispose();
 
       if (Platform.isAndroid) {
-        voskSpeechService.stop();
-        voskSpeechService.dispose();
+        voskSpeechService!.stop();
+        voskSpeechService!.dispose();
       } else {
         speechToTextUltra.dispose();
       }
