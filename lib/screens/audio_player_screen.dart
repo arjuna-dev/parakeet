@@ -74,6 +74,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
   bool isLoading = false;
+  double _playbackSpeed = 1.0;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -100,6 +101,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void initState() {
     super.initState();
     player = AudioPlayer();
+    player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -530,26 +532,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<String?> _fetchPreviousTargetPhrase(String documentId, String? previousTargetTrack) async {
-    try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
-
-      if (documentSnapshot.exists) {
-        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
-        return data[previousTargetTrack] as String?;
-      } else {
-        print('Document does not exist');
-        setState(() {
-          speechRecognitionSupported = false;
-        });
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching previous target phrase: $e');
-      return null;
-    }
-  }
-
   void initializeSpeechRecognition() async {
     // TODO: Error handling
     // Initialize the speech recognition
@@ -773,41 +755,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  // Method to provide audio feedback
-  Future<void> _playLocalAudio({required AudioSource audioSource}) async {
-    // Pause the main player if it's playing
-    if (player.playing) {
-      await player.pause();
-    }
-
-    // Create a separate AudioPlayer for feedback to avoid conflicts
-    AudioPlayer localFilePlayer = AudioPlayer();
-
-    // Set the appropriate audio source
-    await localFilePlayer.setAudioSource(audioSource);
-
-    // Play the feedback
-    await localFilePlayer.play();
-
-    // Wait for the feedback to finish
-    await localFilePlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-
-    // Release the feedback player resources
-    await localFilePlayer.dispose();
-
-    // Resume the main player if it was playing before
-    if (!isStopped && isPlaying) {
-      await player.play();
-    }
-  }
-
   // Add a new method to get random feedback audio URL
   String _getFeedbackAudioUrl(bool isPositive) {
     final random = Random();
     final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
     return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
+  }
+
+  Future<void> _changePlaybackSpeed(double speed) async {
+    await player.setSpeed(speed);
+    setState(() {
+      _playbackSpeed = speed;
+    });
   }
 
   @override
@@ -845,23 +804,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            const Text('check pronunciation:'),
-                            Switch(
-                              value: speechRecognitionActive,
-                              onChanged: (bool value) {
-                                if (value) {
-                                  if (kIsWeb || Platform.isIOS) {
-                                    initializeSpeechRecognition();
-                                  } else {
-                                    displayPopupSTTSupport(context);
-                                  }
-                                } else {
-                                  speechToTextUltra.stopListening();
-                                }
-                                setState(() {
-                                  speechRecognitionActive = value;
-                                });
-                              },
+                            // Pronunciation check switch
+                            Row(
+                              children: [
+                                const Text('check pronunciation:'),
+                                Switch(
+                                  value: speechRecognitionActive,
+                                  onChanged: (bool value) {
+                                    if (value) {
+                                      if (kIsWeb || Platform.isIOS) {
+                                        initializeSpeechRecognition();
+                                      } else {
+                                        displayPopupSTTSupport(context);
+                                      }
+                                    } else {
+                                      speechToTextUltra.stopListening();
+                                    }
+                                    setState(() {
+                                      speechRecognitionActive = value;
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -891,38 +855,87 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             });
                           },
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous),
-                              onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                            ),
-                            IconButton(
-                              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                              onPressed: isPlaying ? () => _pause() : _play,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.stop),
-                              onPressed: _stop,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.skip_next),
-                              onPressed: player.hasNext
-                                  ? () {
-                                      setState(() {
-                                        _isSkipping = true; // P945a
-                                      });
-                                      player.seekToNext();
-                                      Future.delayed(const Duration(seconds: 1), () {
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              IconButton(
+                                icon: const Icon(Icons.skip_previous),
+                                onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                              ),
+                              IconButton(
+                                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                                onPressed: isPlaying ? () => _pause() : _play,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.stop),
+                                onPressed: _stop,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.skip_next),
+                                onPressed: player.hasNext
+                                    ? () {
                                         setState(() {
-                                          _isSkipping = false; // P47bd
+                                          _isSkipping = true;
                                         });
-                                      });
-                                    }
-                                  : null,
-                            ),
-                          ],
+                                        player.seekToNext();
+                                        Future.delayed(const Duration(seconds: 1), () {
+                                          setState(() {
+                                            _isSkipping = false;
+                                          });
+                                        });
+                                      }
+                                    : null,
+                              ),
+                              // Speed control with icon
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.speed,
+                                      size: 18,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    DropdownButton<double>(
+                                      value: _playbackSpeed,
+                                      isDense: true,
+                                      underline: Container(), // Remove the default underline
+                                      icon: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Theme.of(context).colorScheme.primary,
+                                        size: 20,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 0.5, child: Text('0.5x')),
+                                        DropdownMenuItem(value: 0.75, child: Text('0.75x')),
+                                        DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                        DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                        DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                        DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                      ],
+                                      onChanged: (double? newValue) {
+                                        if (newValue != null) {
+                                          _changePlaybackSpeed(newValue);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
