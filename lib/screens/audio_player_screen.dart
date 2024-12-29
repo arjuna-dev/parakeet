@@ -57,6 +57,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
+  // late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
   String currentTrack = '';
@@ -689,12 +690,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
     if (isPlaying == false || isStopped == true) {
-<<<<<<< HEAD
       print("Brooooke!");
       // return;
-=======
-      return;
->>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
@@ -711,11 +708,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       print("newSpeech: $newSpeech");
 
-<<<<<<< HEAD
       AudioSource feedbackAudio;
-=======
-      print("newSpeech: $newSpeech");
->>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
 
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
         final random = Random();
@@ -724,7 +717,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       if (newSpeech == '') {
+        // TODO: Add feedback for no audio detected
         print("NO audio was detected!!!");
+        // feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
+        // await _playLocalAudio(audioSource: feedbackAudio);
         return;
       }
       // Normalize both strings: remove punctuation and convert to lowercase
@@ -765,7 +761,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
 // Helper method to normalize strings
   String _normalizeString(String input) {
-    // Remove punctuation but preserve Unicode letters including Devanagari
+    // Remove punctuation using a regular expression and convert to lowercase
     return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
   }
 
@@ -898,19 +894,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
-<<<<<<< HEAD
-                                if (value && (kIsWeb || Platform.isAndroid)) {
+                                if (value) {
                                   initializeSpeechRecognition();
                                 } else if (!value && !Platform.isAndroid) {
-=======
-                                if (value) {
-                                  if (kIsWeb || Platform.isIOS) {
-                                    initializeSpeechRecognition();
-                                  } else {
-                                    displayPopupSTTSupport(context);
-                                  }
-                                } else {
->>>>>>> 43a79e4934168d0bb4f74082dd2047b6e929febd
                                   speechToTextUltra.stopListening();
                                 } else if (!value && Platform.isAndroid) {
                                   voskSpeechService?.stop();
