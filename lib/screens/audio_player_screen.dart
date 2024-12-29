@@ -708,8 +708,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       print("newSpeech: $newSpeech");
 
-      AudioSource feedbackAudio;
-
       AudioSource getRandomAudioSource(List<AudioSource> audioList) {
         final random = Random();
         int index = random.nextInt(audioList.length);
@@ -719,8 +717,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (newSpeech == '') {
         // TODO: Add feedback for no audio detected
         print("NO audio was detected!!!");
-        // feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
-        // await _playLocalAudio(audioSource: feedbackAudio);
         return;
       }
       // Normalize both strings: remove punctuation and convert to lowercase
@@ -761,7 +757,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
 // Helper method to normalize strings
   String _normalizeString(String input) {
-    // Remove punctuation using a regular expression and convert to lowercase
+    // Remove punctuation but preserve Unicode letters including Devanagari
     return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
   }
 
@@ -1087,24 +1083,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
-    super.dispose();
-
-    try {
-      if (isPlaying) {
-        _stop();
-      }
-      firestoreService?.dispose();
-      fileDurationUpdate?.dispose();
-      player.dispose();
-
-      if (Platform.isAndroid) {
-        voskSpeechService!.stop();
-        voskSpeechService!.dispose();
-      } else {
-        speechToTextUltra.dispose();
-      }
-    } catch (e) {
-      print('Error during dispose: $e');
+    if (isPlaying) {
+      _stop();
     }
+    firestoreService?.dispose();
+    fileDurationUpdate?.dispose();
+    player.dispose();
+    if (Platform.isAndroid) {
+      voskSpeechService!.stop();
+      voskSpeechService!.dispose();
+    } else {
+      speechToTextUltra.dispose();
+    }
+    super.dispose();
   }
 }
