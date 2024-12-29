@@ -22,6 +22,7 @@ import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'dart:convert';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -185,9 +186,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     print("initSpeechService called");
 
     voskSpeechService!.onResult().forEach((result) {
-      print("result: $result");
+      final String resultText = jsonDecode(result)['text'];
+      print("result: $resultText");
       setState(() {
-        liveTextSpeechToText = result;
+        liveTextSpeechToText = resultText;
       });
     });
     await voskSpeechService!.start();
@@ -340,7 +342,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.currentIndexStream.listen((index) async {
       await _handleFetchingUrlError(index);
 
-      if (index != null && index < script.length) {
+      // Guard against null index
+      if (index == null) {
+        print('Warning: Received null index in stream');
+        return;
+      }
+
+      if (index < script.length) {
         setState(() {
           currentTrack = script[index];
         });
@@ -575,18 +583,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return currentMap;
   }
 
-  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-    print("_handleTrackChangeToCompareSpeech called 000, time:${DateTime.now().toIso8601String()}");
+  void _handleTrackChangeToCompareSpeech(int localCurrentIndex) async {
     if (_isSkipping) return;
 
-    print("isLanguageSupported: $isLanguageSupported");
-
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && localCurrentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
-      final jsonFile = filesToCompare[currentIndex];
+      final jsonFile = filesToCompare[localCurrentIndex];
       if (jsonFile == null) {
-        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+        print("Error: filesToCompare[localCurrentIndex] is null for index $localCurrentIndex");
         return;
       }
 
@@ -603,12 +608,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      // await _playLocalAudio(audioSource: audioCue);
+      if (player.playing) {
+        print("will pause player, timestamp: ${DateTime.now().toIso8601String()}");
+        await player.pause();
+        print("paused player, timestamp: ${DateTime.now().toIso8601String()}");
+      }
 
       if (!Platform.isAndroid) {
         final String stringWhenStarting = liveTextSpeechToText;
         Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
       } else {
+        if (voskSpeechService == null) {
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          return;
+        }
         voskSpeechService!.reset();
         Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase());
       }
@@ -759,31 +774,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String _normalizeString(String input) {
     // Remove punctuation but preserve Unicode letters including Devanagari
     return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
+    // return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
   }
 
 // Method to provide audio feedback
   Future<void> _provideFeedback({required bool isPositive}) async {
-    // Pause the main player if it's playing
-    if (player.playing) {
-      await player.pause();
-    }
-
-    // // Create a separate AudioPlayer for the answer sound
-    // AudioPlayer answerPlayer = AudioPlayer();
-
-    // // Play the correct/incorrect answer sound first
     // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
-
-    // await answerPlayer.setAudioSource(
-    //   AudioSource.uri(Uri.parse(answerUrl)),
-    // );
-    // await answerPlayer.play();
-
-    // // Wait for the answer sound to finish
-    // await answerPlayer.processingStateStream.firstWhere(
-    //   (state) => state == ProcessingState.completed,
-    // );
-    // await answerPlayer.dispose();
 
     // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
@@ -806,41 +802,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
 
     // Release the feedback player resources
+    print("will dispose feedbackPlayer, timestamp: ${DateTime.now().toIso8601String()}");
     await feedbackPlayer.dispose();
+    print("disposed feedbackPlayer, timestamp: ${DateTime.now().toIso8601String()}");
 
     // Resume the main player if it was playing before
     if (!isStopped && isPlaying) {
+      print("will resume player, timestamp: ${DateTime.now().toIso8601String()}");
       await player.play();
-    }
-  }
-
-  // Method to provide audio feedback
-  Future<void> _playLocalAudio({required AudioSource audioSource}) async {
-    // Pause the main player if it's playing
-    if (player.playing) {
-      await player.pause();
-    }
-
-    // Create a separate AudioPlayer for feedback to avoid conflicts
-    AudioPlayer localFilePlayer = AudioPlayer();
-
-    // Set the appropriate audio source
-    await localFilePlayer.setAudioSource(audioSource);
-
-    // Play the feedback
-    await localFilePlayer.play();
-
-    // Wait for the feedback to finish
-    await localFilePlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-
-    // Release the feedback player resources
-    await localFilePlayer.dispose();
-
-    // Resume the main player if it was playing before
-    if (!isStopped && isPlaying) {
-      await player.play();
+      print("resumed player, timestamp: ${DateTime.now().toIso8601String()}");
     }
   }
 
