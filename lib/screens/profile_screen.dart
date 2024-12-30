@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/services/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,12 +21,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _name = '';
   String _email = '';
   bool _premium = false;
+  final NotificationService _notificationService = NotificationService();
+  TimeOfDay? _reminderTime;
 
   @override
   void initState() {
     super.initState();
     _user = FirebaseAuth.instance.currentUser;
     _fetchUserData();
+    _loadReminderTime();
   }
 
   Future<void> _fetchUserData() async {
@@ -40,6 +44,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _premium = userData['premium'] ?? false;
         });
       }
+    }
+  }
+
+  Future<void> _loadReminderTime() async {
+    final time = await _notificationService.getScheduledReminderTime();
+    setState(() {
+      _reminderTime = time;
+    });
+  }
+
+  Future<void> _showTimePickerDialog() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime ?? NotificationService.defaultReminderTime,
+    );
+
+    if (picked != null) {
+      await _notificationService.scheduleDailyReminder(picked);
+      setState(() {
+        _reminderTime = picked;
+      });
     }
   }
 
@@ -286,6 +311,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: () {
                 _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
               },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.notifications),
+              title: const Text('Daily Practice Reminder'),
+              subtitle: Text(_reminderTime != null ? 'Reminder set for ${_reminderTime!.format(context)}' : 'No reminder set'),
+              trailing: _reminderTime != null
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () async {
+                        await _notificationService.cancelDailyReminder();
+                        setState(() {
+                          _reminderTime = null;
+                        });
+                      },
+                    )
+                  : null,
+              onTap: _showTimePickerDialog,
             ),
             SizedBox(height: isSmallScreen ? 12 : 16),
             Padding(
