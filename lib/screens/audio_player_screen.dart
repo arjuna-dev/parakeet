@@ -342,6 +342,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.currentIndexStream.listen((index) async {
       await _handleFetchingUrlError(index);
 
+      print("index: $index");
+
       // Guard against null index
       if (index == null) {
         print('Warning: Received null index in stream');
@@ -608,12 +610,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      if (player.playing) {
-        print("will pause player, timestamp: ${DateTime.now().toIso8601String()}");
-        await player.pause();
-        print("paused player, timestamp: ${DateTime.now().toIso8601String()}");
-      }
-
       if (!Platform.isAndroid) {
         final String stringWhenStarting = liveTextSpeechToText;
         Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
@@ -781,6 +777,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _provideFeedback({required bool isPositive}) async {
     // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
 
+    if (player.playing) {
+      await player.pause();
+    }
+
     // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
 
@@ -796,22 +796,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Play the feedback
     await feedbackPlayer.play();
 
-    // Wait for the feedback to finish
-    await feedbackPlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-
     // Release the feedback player resources
-    print("will dispose feedbackPlayer, timestamp: ${DateTime.now().toIso8601String()}");
     await feedbackPlayer.dispose();
-    print("disposed feedbackPlayer, timestamp: ${DateTime.now().toIso8601String()}");
 
-    // Resume the main player if it was playing before
-    if (!isStopped && isPlaying) {
-      print("will resume player, timestamp: ${DateTime.now().toIso8601String()}");
-      await player.play();
-      print("resumed player, timestamp: ${DateTime.now().toIso8601String()}");
-    }
+    await player.play();
   }
 
   // Add a new method to get random feedback audio URL
