@@ -20,7 +20,7 @@ import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:vosk_flutter/vosk_flutter.dart';
+import '../utils/vosk_recognizer.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:convert';
 
@@ -197,7 +197,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void initializeSpeechRecognition() async {
     // If device is andoird initialize vosk
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       await _initVosk();
       return;
     }
@@ -611,7 +611,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      if (!Platform.isAndroid) {
+      if (kIsWeb || Platform.isIOS) {
         final String stringWhenStarting = liveTextSpeechToText;
         Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase(stringWhenStarting));
       } else {
@@ -709,7 +709,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
 
       String newSpeech;
-      if (!Platform.isAndroid && stringWhenStarting != null) {
+      if ((kIsWeb || Platform.isIOS) && stringWhenStarting != null) {
         print("liveTextSpeechToText: $liveTextSpeechToText");
         print("stringWhenStarting: $stringWhenStarting");
         String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
@@ -851,9 +851,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               onChanged: (bool value) {
                                 if (value) {
                                   initializeSpeechRecognition();
-                                } else if (!value && !Platform.isAndroid) {
+                                } else if (!value && !kIsWeb && !Platform.isAndroid) {
                                   speechToTextUltra.stopListening();
-                                } else if (!value && Platform.isAndroid) {
+                                } else if (!value && (kIsWeb || Platform.isAndroid)) {
                                   voskSpeechService?.stop();
                                   voskSpeechService?.dispose();
                                 }
@@ -1049,7 +1049,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       voskSpeechService!.stop();
       voskSpeechService!.dispose();
     } else {
