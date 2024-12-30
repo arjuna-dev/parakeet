@@ -589,19 +589,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (currentTrack == "five_second_break" && isLanguageSupported && localCurrentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
-      final jsonFile = filesToCompare[localCurrentIndex];
-      if (jsonFile == null) {
+      final audioFileName = filesToCompare[localCurrentIndex];
+      if (audioFileName == null) {
         print("Error: filesToCompare[localCurrentIndex] is null for index $localCurrentIndex");
         return;
       }
 
       if (widget.generating && latestSnapshot != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, jsonFile);
+          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, audioFileName);
         });
       } else if (existingBigJson != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(existingBigJson!, jsonFile);
+          targetPhraseToCompareWith = accessBigJson(existingBigJson!, audioFileName);
         });
       } else {
         print("Error: Required JSON data is null.");
