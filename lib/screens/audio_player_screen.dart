@@ -418,6 +418,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     try {
       script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
     } catch (e) {
+      print("Error parsing and creating script: $e");
       return;
     }
 
