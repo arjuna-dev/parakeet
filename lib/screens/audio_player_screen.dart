@@ -612,7 +612,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       if (!Platform.isAndroid) {
         final String stringWhenStarting = liveTextSpeechToText;
-        Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
+        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase(stringWhenStarting));
       } else {
         if (voskSpeechService == null) {
           print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
@@ -621,7 +621,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           return;
         }
         voskSpeechService!.reset();
-        Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase());
+        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase());
       }
     }
   }
