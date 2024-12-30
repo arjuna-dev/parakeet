@@ -854,6 +854,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                   speechToTextUltra.stopListening();
                                 } else if (!value && Platform.isAndroid) {
                                   voskSpeechService?.stop();
+                                  voskSpeechService?.dispose();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
