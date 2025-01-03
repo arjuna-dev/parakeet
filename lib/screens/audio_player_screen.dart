@@ -20,6 +20,9 @@ import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:parakeet/services/streak_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -96,6 +99,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool isSliderMoving = false; // Pc4af
 
   bool _isSkipping = false; // P926e
+
+  final StreakService _streakService = StreakService();
+  bool _showStreak = false;
 
   @override
   void initState() {
@@ -253,6 +259,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
+          _handleLessonCompletion();
         }
         _stop();
       }
@@ -770,6 +777,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
+  Future<void> _handleLessonCompletion() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await _streakService.recordDailyActivity(userId);
+      setState(() {
+        _showStreak = true;
+      });
+
+      // Hide streak after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _showStreak = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
@@ -946,10 +972,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             ),
           ),
 
-          // Spinner overlay
+          // Streak overlay
+          if (_showStreak)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: StreakDisplay(),
+              ),
+            ),
+
+          // Loading spinner overlay
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),

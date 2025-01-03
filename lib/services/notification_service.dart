@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart';
-import 'dart:io';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -22,59 +24,66 @@ class NotificationService {
   NotificationService._internal();
 
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized || kIsWeb) return;
 
-    // Initialize timezone
-    tz.initializeTimeZones();
+    try {
+      // Initialize timezone
+      tz.initializeTimeZones();
 
-    // Request permission for iOS
-    await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+      // Request permission for iOS
+      if (!kIsWeb && Platform.isIOS) {
+        await _fcm.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
 
-    // Request permission for Android 13+
-    if (Platform.isAndroid) {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      // Request permission for Android 13+
+      if (!kIsWeb && Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidImplementation = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-      await androidImplementation?.requestNotificationsPermission();
-    }
+        await androidImplementation?.requestNotificationsPermission();
+      }
 
-    // Initialize local notifications
-    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-
-    await _localNotifications.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse details) {
-        // Handle notification tap
-        print('Notification tapped: ${details.payload}');
-      },
-    );
-
-    // Handle FCM messages when app is in background
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Message opened app: ${message.data}');
-    });
-
-    // Handle FCM messages when app is in foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showLocalNotification(
-        title: message.notification?.title ?? 'Parakeet',
-        body: message.notification?.body ?? '',
+      // Initialize local notifications
+      const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettingsIOS = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
-    });
+      const initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
-    _initialized = true;
+      await _localNotifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse details) {
+          // Handle notification tap
+          print('Notification tapped: ${details.payload}');
+        },
+      );
+
+      // Handle FCM messages when app is in background
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        print('Message opened app: ${message.data}');
+      });
+
+      // Handle FCM messages when app is in foreground
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _showLocalNotification(
+          title: message.notification?.title ?? 'Parakeet',
+          body: message.notification?.body ?? '',
+        );
+      });
+
+      _initialized = true;
+    } catch (e) {
+      print('Notification initialization skipped: $e');
+      // Silently fail on web or if notifications are not supported
+    }
   }
 
   Future<void> _showLocalNotification({

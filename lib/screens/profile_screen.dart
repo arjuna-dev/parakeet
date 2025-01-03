@@ -6,6 +6,7 @@ import 'package:parakeet/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/services/notification_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -289,6 +290,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: _premium ? 'Premium Member' : 'Free Account',
               subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
               onTap: _handleStoreNavigation,
+            ),
+            Card(
+              elevation: 2,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 8 : 12,
+                ),
+                child: StreakDisplay(),
+              ),
             ),
             _buildMenuItem(
               icon: Icons.shopping_bag,
