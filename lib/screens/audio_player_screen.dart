@@ -555,26 +555,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     //_initFeedbackAudioSources();
   }
 
-  void _showLanguageNotSupportedDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Voice Feature Not Supported'),
-          content:
-              Text('The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // void _showLanguageNotSupportedDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Text('Voice Feature Not Supported'),
+  //         content:
+  //             Text('The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
+  //         actions: [
+  //           TextButton(
+  //             child: const Text('OK'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   void displayPopupSTTSupport(BuildContext context) {
     showDialog(
@@ -657,12 +657,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
 
       print("newSpeech: $newSpeech");
-
-      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-        final random = Random();
-        int index = random.nextInt(audioList.length);
-        return audioList[index];
-      }
 
       if (newSpeech == '') {
         print("NO audio was detected!!!");
