@@ -284,13 +284,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             _buildProfileHeader(),
-            _buildMenuItem(
-              icon: _premium ? Icons.star : Icons.star_border,
-              iconColor: _premium ? Colors.amber : null,
-              title: _premium ? 'Premium Member' : 'Free Account',
-              subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
-              onTap: _handleStoreNavigation,
-            ),
             Card(
               elevation: 2,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
@@ -308,6 +301,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: StreakDisplay(),
               ),
+            ),
+            _buildMenuItem(
+              icon: _premium ? Icons.star : Icons.star_border,
+              iconColor: _premium ? Colors.amber : null,
+              title: _premium ? 'Premium Member' : 'Free Account',
+              subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
+              onTap: _handleStoreNavigation,
             ),
             _buildMenuItem(
               icon: Icons.shopping_bag,
