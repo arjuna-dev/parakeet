@@ -62,11 +62,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (picked != null) {
-      await _notificationService.scheduleDailyReminder(picked);
       setState(() {
         _reminderTime = picked;
       });
+      await _notificationService.scheduleDailyReminder(picked);
     }
+  }
+
+  Future<void> _cancelReminder() async {
+    await _notificationService.cancelDailyReminder();
+    setState(() {
+      _reminderTime = null;
+    });
   }
 
   void _deleteAccount() async {
@@ -339,12 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               trailing: _reminderTime != null
                   ? IconButton(
                       icon: const Icon(Icons.clear),
-                      onPressed: () async {
-                        await _notificationService.cancelDailyReminder();
-                        setState(() {
-                          _reminderTime = null;
-                        });
-                      },
+                      onPressed: _cancelReminder,
                     )
                   : null,
               onTap: _showTimePickerDialog,
