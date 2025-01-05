@@ -50,9 +50,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadReminderTime() async {
     final time = await _notificationService.getScheduledReminderTime();
-    setState(() {
-      _reminderTime = time;
-    });
+    if (time == null) {
+      // If no time is set, schedule the default time (6 PM)
+      await _notificationService.scheduleDailyReminder(NotificationService.defaultReminderTime);
+      setState(() {
+        _reminderTime = NotificationService.defaultReminderTime;
+      });
+    } else {
+      setState(() {
+        _reminderTime = time;
+      });
+    }
   }
 
   Future<void> _showTimePickerDialog() async {
