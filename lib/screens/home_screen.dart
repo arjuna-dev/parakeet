@@ -46,7 +46,7 @@ class _HomeState extends State<Home> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Your Library',
+          'Favorites',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),

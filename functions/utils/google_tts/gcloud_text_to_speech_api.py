@@ -48,7 +48,9 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+        audio_encoding=texttospeech.AudioEncoding.MP3,
+        # reduce the speed of the audio
+        speaking_rate=0.9
     )
 
     try:
