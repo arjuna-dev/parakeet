@@ -13,7 +13,7 @@ firebase deploy --only functions
 ##### Deploy specific functions in codebase:
 
 ```bash
-firebase deploy --only functions:fist_API_calls,functions:second_API_calls
+firebase deploy --only functions:first_API_calls,functions:second_API_calls
 ```
 
 
