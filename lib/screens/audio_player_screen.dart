@@ -23,6 +23,9 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../utils/vosk_recognizer.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:convert';
+import 'package:parakeet/services/streak_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -78,6 +81,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
   bool isLoading = false;
+  double _playbackSpeed = 1.0;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -102,10 +106,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   SpeechService? voskSpeechService;
 
+  final StreakService _streakService = StreakService();
+  bool _showStreak = false;
+
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
+    player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -334,6 +342,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
+          _handleLessonCompletion();
         }
         _stop();
       }
@@ -720,12 +729,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       print("newSpeech: $newSpeech");
 
-      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-        final random = Random();
-        int index = random.nextInt(audioList.length);
-        return audioList[index];
-      }
-
       if (newSpeech == '') {
         // TODO: Add feedback for no audio detected
         print("NO audio was detected!!!");
@@ -810,6 +813,32 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
   }
 
+  Future<void> _changePlaybackSpeed(double speed) async {
+    await player.setSpeed(speed);
+    setState(() {
+      _playbackSpeed = speed;
+    });
+  }
+
+  Future<void> _handleLessonCompletion() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await _streakService.recordDailyActivity(userId);
+      setState(() {
+        _showStreak = true;
+      });
+
+      // Hide streak after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _showStreak = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
@@ -890,38 +919,115 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             });
                           },
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous),
-                              onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                            ),
-                            IconButton(
-                              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                              onPressed: isPlaying ? () => _pause() : _play,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.stop),
-                              onPressed: _stop,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.skip_next),
-                              onPressed: player.hasNext
-                                  ? () {
-                                      setState(() {
-                                        _isSkipping = true;
-                                      });
-                                      player.seekToNext();
-                                      Future.delayed(const Duration(seconds: 1), () {
+// <<<<<<< HEAD
+//                         Row(
+//                           mainAxisAlignment: MainAxisAlignment.center,
+//                           children: <Widget>[
+//                             IconButton(
+//                               icon: const Icon(Icons.skip_previous),
+//                               onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+//                             ),
+//                             IconButton(
+//                               icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+//                               onPressed: isPlaying ? () => _pause() : _play,
+//                             ),
+//                             IconButton(
+//                               icon: const Icon(Icons.stop),
+//                               onPressed: _stop,
+//                             ),
+//                             IconButton(
+//                               icon: const Icon(Icons.skip_next),
+//                               onPressed: player.hasNext
+//                                   ? () {
+//                                       setState(() {
+//                                         _isSkipping = true;
+//                                       });
+//                                       player.seekToNext();
+//                                       Future.delayed(const Duration(seconds: 1), () {
+//                                         setState(() {
+//                                           _isSkipping = false;
+// =======
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              IconButton(
+                                icon: const Icon(Icons.skip_previous),
+                                onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                              ),
+                              IconButton(
+                                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                                onPressed: isPlaying ? () => _pause() : _play,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.stop),
+                                onPressed: _stop,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.skip_next),
+                                onPressed: player.hasNext
+                                    ? () {
                                         setState(() {
-                                          _isSkipping = false;
+                                          _isSkipping = true;
                                         });
-                                      });
-                                    }
-                                  : null,
-                            ),
-                          ],
+                                        player.seekToNext();
+                                        Future.delayed(const Duration(seconds: 1), () {
+                                          setState(() {
+                                            _isSkipping = false;
+                                          });
+                                        });
+                                      }
+                                    : null,
+                              ),
+                              // Speed control with icon
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.speed,
+                                      size: 18,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    DropdownButton<double>(
+                                      value: _playbackSpeed,
+                                      isDense: true,
+                                      underline: Container(), // Remove the default underline
+                                      icon: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Theme.of(context).colorScheme.primary,
+                                        size: 20,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 0.5, child: Text('0.5x')),
+                                        DropdownMenuItem(value: 0.75, child: Text('0.75x')),
+                                        DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                        DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                        DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                        DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                      ],
+                                      onChanged: (double? newValue) {
+                                        if (newValue != null) {
+                                          _changePlaybackSpeed(newValue);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -931,10 +1037,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             ),
           ),
 
-          // Spinner overlay
+          // Streak overlay
+          if (_showStreak)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: StreakDisplay(),
+              ),
+            ),
+
+          // Loading spinner overlay
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),

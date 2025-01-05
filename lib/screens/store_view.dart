@@ -93,7 +93,6 @@ class _StoreViewState extends State<StoreView> {
     setState(() {
       _loading = false;
       _products = productDetailsResponse.productDetails;
-      print(_products);
     });
 
     if (productDetailsResponse.error != null) {
@@ -101,7 +100,6 @@ class _StoreViewState extends State<StoreView> {
         _notice = "There was a problem connecting to the store";
       });
     } else if (productDetailsResponse.productDetails.isEmpty) {
-      print("No products founds");
       setState(() {
         _notice = "There are no upgrades at this time";
       });
@@ -123,13 +121,6 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Future<void> _makePurchase(ProductDetails productDetails) async {
-    print('Attempting purchase of ${productDetails.id}');
-    print('Product status: ${productDetails.price}');
-    if (Platform.isAndroid) {
-      final googleProduct = productDetails as GooglePlayProductDetails;
-      print('Subscription offer details: ${googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.first.priceAmountMicros}');
-    }
-    print(_hasIntroductoryOffer(productDetails));
     late PurchaseParam purchaseParam;
 
     if (Platform.isAndroid) {
@@ -148,101 +139,6 @@ class _StoreViewState extends State<StoreView> {
         }
       }
     }
-  }
-
-  Widget _getIAPIcon(productId) {
-    if (productId == "1m" || productId == "1year") {
-      return const Icon(Icons.subscriptions_rounded, size: 25);
-    } else {
-      return const Icon(Icons.post_add_outlined, size: 50);
-    }
-  }
-
-  Widget _buyText(ProductDetails productDetails) {
-    bool hasIntro = _hasIntroductoryOffer(productDetails);
-
-    if (hasIntro && !_hasUsedTrial) {
-      return const Text("Free trial for 30 days");
-    }
-
-    if (productDetails.id == "1m") {
-      if (productDetails.price == "Free") {
-        return const Text("Free for 30 days");
-      }
-      return Text("${productDetails.price} / month");
-    } else if (productDetails.id == "1year") {
-      if (productDetails.price == "Free") {
-        return const Text("Free for 30 days");
-      }
-      return Text("${productDetails.price} / year");
-    } else {
-      return Text("Buy for ${productDetails.price}");
-    }
-  }
-
-  Widget _buildRestoreButton() {
-    if (_loading) {
-      return Container();
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-          onPressed: () => _inAppPurchase.restorePurchases(),
-          child: const Text('Restore Purchases'),
-        )
-      ],
-    );
-  }
-
-  Widget _buildFooterButtons() {
-    if (_loading) {
-      return Container();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () => _launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26")),
-            child: const Text(
-              'Terms and Conditions',
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-          const Text(' • '), // Separator dot
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
-            child: const Text(
-              'Privacy Policy',
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _launchURL(Uri url) async {
