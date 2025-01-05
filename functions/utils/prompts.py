@@ -7,22 +7,25 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they make sense for the conversation. If the keywords are not used in the conversation then add them to the json key unused_keywords. If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language} (target_language), the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+The keywords should be used in the dialogue if they make sense for the conversation. If there are spelling mistakes in the content request, fix them. The title should be in {target_language} (target_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
-With the following data as an example enclosed in double vertical lines (||):
+This is an example of a request you could get and its expected output.
 
-||
+
+Request:
+###
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
 "keywords": "discrimination, patience, salmon, armpit"
 "native_language": "English",
 "target_language": "Spanish",
 "language_level": "C2",
-||
+"length": 2
+###
 
-You would generate the following JSON enclosed in triple equals symbols (===):
 
-JSON:
-===
+
+Expected output in JSON format:
+###
 {{
     "title": "Understanding Viveka Chudamani",
     "speakers": {{
@@ -46,21 +49,22 @@ JSON:
         }}
     ]
 }}
-===
+###
 
-Como puedes habalar y traducir en cualquier idioma, este es un ejemplo de alemán a inglés entre los (||):
+Puedes habalar y traducir en cualquier idioma, este es un ejemplo de alemán e inglés.
 
-||
+Request:
+
+###
 "requested_scenario": "Reasons to become vegetarian",
 "keywords": "health, compassion, peanut butter"
 "native_language": "German",
 "target_language": "English",
 "language_level": "A1"
-||
+###
 
-Y este es el JSON que deberías generar entre los (===):
-
-===
+Expected output in JSON format:
+###
 {{
     "title": "Reasons to Become Vegetarian",
     "speakers": {{
@@ -98,22 +102,30 @@ Y este es el JSON que deberías generar entre los (===):
         }}
     ]
 }}
-===
+###
 '''
 
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
    return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}. 
    
    - You will write turns from 1 to {length}. 
-   - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in the native_language: {native_language}, when quoting in the target_language: {target_language}, the text should be enclosed in double vertical bars (||).
+   - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in the native_language: {native_language}, when quoting from the target_language, {target_language}, the text should be enclosed in double vertical bars (||).
    - If the target_language ({target_language}) sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
     - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation. 
   - For the narrator_translation json key avoid grammatical explanations, avoid explaining gender and number of articles for example.
   - For the narrator_fun_fact json key focus on things like etymology, explaining compound words, explaining idiomatic phrases, etc.
   
-  Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
+  Example request:
+  ###
+  target_language: "Spanish"
+  native_language: "English"
+  length: 2
+  speakers: "speaker_1: Carlos, speaker_2: Elena"
+  language_level: "B2"
+  dialogue: [similar to the one given above]
+  ###
 
-JSON: ===
+JSON: ###
 {{
 "dialogue": [
     {{
@@ -251,11 +263,21 @@ JSON: ===
     }}
   ]
 }}
-===
+###
 Continue adding turns until you reach {length} turns.
 
-Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés:
-===
+Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés.
+
+Request:
+###
+target_language: "English"
+native_language: "German"
+length: 2
+[continues...]
+###
+
+JSON response by you: 
+###
 {{
  "dialogue": [
     {{
@@ -277,7 +299,7 @@ Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés:
             }},
             {{
               "target_language": "do you think",
-              "narrator_translation": "||Denkst du|| bedeutet 'do you think'."
+              "narrator_translation": "||do you think|| bedeutet 'denkst du'."
             }}
           ]
         }},
@@ -292,7 +314,7 @@ Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés:
             }},
             {{
               "target_language": "the best player",
-              "narrator_translation": "||Der beste Spieler|| heißt 'the best player'."
+              "narrator_translation": "||the best player|| heißt 'Der beste Spieler'."
             }}
           ]
         }},
@@ -311,7 +333,7 @@ Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés:
             }},
             {{
               "target_language": "upcoming",
-              "narrator_translation": "||Kommenden|| bedeutet 'upcoming'."
+              "narrator_translation": "||upcoming|| bedeutet 'Kommenden'."
             }},
             {{
               "target_language": "EURO",
@@ -386,7 +408,7 @@ Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés:
     }}
   ]
 }}
-===
+###
 
 Continue adding turns until you reach {length} turns.
 '''
