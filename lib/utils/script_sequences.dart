@@ -75,12 +75,10 @@ List<String> sentenceSequence1(String native, String target, String narratorExpl
     firstPhrase, //For now just listen
     "one_second_break",
     target,
-    "one_second_break",
     narratorExplanation,
     "narrator_navigation_phrases_22", // Just listen
     "one_second_break",
     target,
-    "one_second_break",
     ...narratorFunFact,
     "one_second_break",
   ];
