@@ -919,99 +919,65 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             });
                           },
                         ),
-// <<<<<<< HEAD
-//                         Row(
-//                           mainAxisAlignment: MainAxisAlignment.center,
-//                           children: <Widget>[
-//                             IconButton(
-//                               icon: const Icon(Icons.skip_previous),
-//                               onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-//                             ),
-//                             IconButton(
-//                               icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-//                               onPressed: isPlaying ? () => _pause() : _play,
-//                             ),
-//                             IconButton(
-//                               icon: const Icon(Icons.stop),
-//                               onPressed: _stop,
-//                             ),
-//                             IconButton(
-//                               icon: const Icon(Icons.skip_next),
-//                               onPressed: player.hasNext
-//                                   ? () {
-//                                       setState(() {
-//                                         _isSkipping = true;
-//                                       });
-//                                       player.seekToNext();
-//                                       Future.delayed(const Duration(seconds: 1), () {
-//                                         setState(() {
-//                                           _isSkipping = false;
-// =======
                         Container(
                           margin: const EdgeInsets.only(bottom: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              IconButton(
-                                icon: const Icon(Icons.skip_previous),
-                                onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                              ),
-                              IconButton(
-                                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                                onPressed: isPlaying ? () => _pause() : _play,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.stop),
-                                onPressed: _stop,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.skip_next),
-                                onPressed: player.hasNext
-                                    ? () {
-                                        setState(() {
-                                          _isSkipping = true;
-                                        });
-                                        player.seekToNext();
-                                        Future.delayed(const Duration(seconds: 1), () {
-                                          setState(() {
-                                            _isSkipping = false;
-                                          });
-                                        });
-                                      }
-                                    : null,
-                              ),
-                              // Speed control with icon
-                              Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
-                                    width: 1,
-                                  ),
-                                ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_previous),
+                                      onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                                      onPressed: isPlaying ? () => _pause() : _play,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_next),
+                                      onPressed: player.hasNext
+                                          ? () {
+                                              setState(() {
+                                                _isSkipping = true;
+                                              });
+                                              player.seekToNext();
+                                              Future.delayed(const Duration(seconds: 1), () {
+                                                setState(() {
+                                                  _isSkipping = false;
+                                                });
+                                              });
+                                            }
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     Icon(
                                       Icons.speed,
                                       size: 18,
                                       color: Theme.of(context).colorScheme.primary,
                                     ),
-                                    const SizedBox(width: 2),
                                     DropdownButton<double>(
                                       value: _playbackSpeed,
                                       isDense: true,
-                                      underline: Container(), // Remove the default underline
+                                      underline: Container(), // Remove the default underline,
                                       icon: Icon(
                                         Icons.arrow_drop_down,
                                         color: Theme.of(context).colorScheme.primary,
                                         size: 20,
                                       ),
                                       items: const [
-                                        DropdownMenuItem(value: 0.5, child: Text('0.5x')),
-                                        DropdownMenuItem(value: 0.75, child: Text('0.75x')),
+                                        DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                        DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                        DropdownMenuItem(value: 0.9, child: Text('0.9x')),
                                         DropdownMenuItem(value: 1.0, child: Text('1.0x')),
                                         DropdownMenuItem(value: 1.25, child: Text('1.25x')),
                                         DropdownMenuItem(value: 1.5, child: Text('1.5x')),
