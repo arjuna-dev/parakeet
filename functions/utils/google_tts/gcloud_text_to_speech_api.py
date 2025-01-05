@@ -44,13 +44,12 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None):
 
     return speaker_voice, speaker_voice_id
 
-def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", make_public=True):
+def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", speaking_rate=0.9):
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        # reduce the speed of the audio
-        speaking_rate=0.9
+        speaking_rate=speaking_rate
     )
 
     try:
@@ -88,3 +87,4 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
         if doc_ref:
             filename_duration = {output_path.split("/")[-1].replace('.mp3', ''): duration}
             push_to_firestore(filename_duration, doc_ref)
+ 
