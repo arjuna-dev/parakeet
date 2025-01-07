@@ -109,6 +109,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   final StreakService _streakService = StreakService();
   bool _showStreak = false;
 
+  final ValueNotifier<RepetitionMode> _repetitionMode = ValueNotifier(RepetitionMode.normal);
+
   @override
   void initState() {
     super.initState();
@@ -145,6 +147,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
       },
     );
+    _repetitionMode.addListener(() {
+      updatePlaylistOnTheFly();
+    });
   }
 
   String? getVoskModelUrl(String languageName) {
@@ -425,7 +430,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
+      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -999,36 +1004,74 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 32),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Icon(
-                                      Icons.speed,
-                                      size: 18,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                    DropdownButton<double>(
-                                      value: _playbackSpeed,
-                                      isDense: true,
-                                      underline: Container(), // Remove the default underline,
-                                      icon: Icon(
-                                        Icons.arrow_drop_down,
-                                        color: Theme.of(context).colorScheme.primary,
-                                        size: 20,
+                                    PopupMenuButton<RepetitionMode>(
+                                      offset: const Offset(0, 40),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Repetitions',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Theme.of(context).colorScheme.primary,
+                                            size: 20,
+                                          ),
+                                        ],
                                       ),
-                                      items: const [
-                                        DropdownMenuItem(value: 0.7, child: Text('0.7x')),
-                                        DropdownMenuItem(value: 0.8, child: Text('0.8x')),
-                                        DropdownMenuItem(value: 0.9, child: Text('0.9x')),
-                                        DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                                        DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                                        DropdownMenuItem(value: 1.5, child: Text('1.5x')),
-                                        DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                      itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
+                                        const PopupMenuItem<RepetitionMode>(
+                                          value: RepetitionMode.normal,
+                                          child: Text('Normal Repetitions'),
+                                        ),
+                                        const PopupMenuItem<RepetitionMode>(
+                                          value: RepetitionMode.less,
+                                          child: Text('Less Repetitions'),
+                                        ),
                                       ],
-                                      onChanged: (double? newValue) {
-                                        if (newValue != null) {
-                                          _changePlaybackSpeed(newValue);
-                                        }
+                                      onSelected: (RepetitionMode value) {
+                                        setState(() {
+                                          _repetitionMode.value = value;
+                                        });
                                       },
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.speed,
+                                          size: 18,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        ),
+                                        DropdownButton<double>(
+                                          value: _playbackSpeed,
+                                          isDense: true,
+                                          underline: Container(), // Remove the default underline,
+                                          icon: Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Theme.of(context).colorScheme.primary,
+                                            size: 20,
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                            DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                            DropdownMenuItem(value: 0.9, child: Text('0.9x')),
+                                            DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                            DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                            DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                            DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                          ],
+                                          onChanged: (double? newValue) {
+                                            if (newValue != null) {
+                                              _changePlaybackSpeed(newValue);
+                                            }
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -1165,6 +1208,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
+    _repetitionMode.dispose();
     if (isPlaying) {
       _stop();
     }
