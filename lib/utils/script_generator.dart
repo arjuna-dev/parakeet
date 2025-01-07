@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'script_sequences.dart' as sequences;
+import 'constants.dart';
+import 'package:flutter/foundation.dart';
 
 List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
   List<String> parts = inputString.split('||');
@@ -32,7 +34,7 @@ List<String> createFirstScript(List<dynamic> data) {
   return script;
 }
 
-List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue) {
+List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue, ValueNotifier<RepetitionMode> repetitionMode) {
   List<String> script = [];
 
   script = createFirstScript(dialogue);
@@ -99,8 +101,13 @@ List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepea
               }
             }
 
-            List<String> chunkSequence = sequences.chunkSequence1(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
-            script.addAll(chunkSequence);
+            if (repetitionMode.value == RepetitionMode.normal) {
+              List<String> chunkSequence = sequences.chunkSequence1(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
+              script.addAll(chunkSequence);
+            } else if (repetitionMode.value == RepetitionMode.less) {
+              List<String> chunkSequence = sequences.chunkSequence1Less(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
+              script.addAll(chunkSequence);
+            }
           } else {
             chunkNumberExcludeList.add(j);
           }
