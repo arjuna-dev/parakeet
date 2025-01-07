@@ -105,6 +105,20 @@ List<String> activeRecallSequence1(String native, String target) {
   return scriptPart;
 }
 
+List<String> activeRecallSequence1Less(String native, String target) {
+  List<String> scriptPart = [
+    "narrator_navigation_phrases_8_0", // do you remember how to say...
+    "one_second_break",
+    native,
+    '\$$target',
+    "five_second_break",
+    target,
+    '\$$target',
+    "five_second_break",
+  ];
+  return scriptPart;
+}
+
 List<Function> chunkSequences = [chunkSequence1];
 List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordObjects, int chunkNumber) {
   List<String> allWordsRepetitions = words2Reps(wordObjects);
@@ -144,6 +158,41 @@ List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativ
   return scriptPart;
 }
 
+List<String> chunkSequence1Less(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordObjects, int chunkNumber) {
+  List<String> allWordsRepetitions = words2RepsLess(wordObjects);
+  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
+  String firstPhrase = chunkNumber == 0 ? "narrator_navigation_phrases_17" : "narrator_navigation_phrases_23";
+  List<String> scriptPart = [
+    firstPhrase,
+    "narrator_navigation_phrases_22", // Just listen
+    "one_second_break",
+    targetLanguage,
+    "one_second_break",
+    ...allWordsRepetitions,
+    "narrator_navigation_phrases_15", // Now try to say..
+    "one_second_break",
+    nativeLanguage,
+    '\$$targetLanguage',
+    "five_second_break",
+    //...chunkSpaced,
+    targetLanguage,
+    '\$$targetLanguage',
+    "five_second_break",
+    "narrator_repetition_phrases_25", // Pay attention to the pronunciation and try saying it just like that.
+    "one_second_break",
+    targetLanguage,
+    '\$$targetLanguage',
+    "five_second_break",
+    ...narratorTranslationsChunk,
+    "narrator_repetition_phrases_4", //Listen and repeat
+    "one_second_break",
+    targetLanguage,
+    '\$$targetLanguage',
+    "five_second_break",
+  ];
+  return scriptPart;
+}
+
 List<String> words2Reps(List<Map<String, dynamic>> wordObjects) {
   List<String> scriptPart = [];
   for (int i = 0; i < wordObjects.length; i++) {
@@ -157,6 +206,23 @@ List<String> words2Reps(List<Map<String, dynamic>> wordObjects) {
     scriptPart.add(word);
     scriptPart.add('\$$word');
     scriptPart.add("five_second_break");
+    scriptPart.add(word);
+    scriptPart.add('\$$word');
+    scriptPart.add("five_second_break");
+  }
+  return scriptPart;
+}
+
+List<String> words2RepsLess(List<Map<String, dynamic>> wordObjects) {
+  List<String> scriptPart = [];
+  for (int i = 0; i < wordObjects.length; i++) {
+    scriptPart.addAll(wordObjects[i]["translation"]);
+    if (i == 0) {
+      scriptPart.add("one_second_break");
+      scriptPart.add("narrator_repetition_phrases_4"); // Listen and repeat
+      scriptPart.add("one_second_break");
+    }
+    String word = wordObjects[i]["word"];
     scriptPart.add(word);
     scriptPart.add('\$$word');
     scriptPart.add("five_second_break");
