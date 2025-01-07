@@ -455,6 +455,47 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     updateNumber++;
   }
 
+  void updatePlaylistOnTheFly() async {
+    print("updatePlaylistOnTheFly() called");
+    if (widget.generating) {
+      //TODO: Show dialogue or toast that the audio is being generated
+      return;
+    }
+
+    if (existingBigJson == null) {
+      print("Error: Required JSON data is null.");
+      return;
+    }
+
+    try {
+      script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionMode);
+    } catch (e) {
+      print("Error parsing and creating script: $e");
+      return;
+    }
+
+    buildFilesToCompare(script);
+
+    script = script.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    var newScript = List.from(script);
+
+    // Filter out files that start with a '$'
+    newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    List<String> fileUrls = [];
+    for (var fileName in newScript) {
+      fileUrls.add(await _constructUrl(fileName));
+    }
+
+    final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
+    await playlist.clear();
+    await playlist.addAll(newTracks);
+    if (!widget.generating) {
+      await _play();
+    }
+  }
+
   void saveSnapshot(QuerySnapshot snapshot) {
     if (snapshot.docs.isNotEmpty) {
       latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
