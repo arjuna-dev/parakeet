@@ -1026,19 +1026,51 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                                         ],
                                       ),
                                       itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
-                                        const PopupMenuItem<RepetitionMode>(
+                                        PopupMenuItem<RepetitionMode>(
                                           value: RepetitionMode.normal,
-                                          child: Text('Normal Repetitions'),
+                                          child: Row(
+                                            children: [
+                                              const Text('Normal Repetitions'),
+                                              if (_repetitionMode.value == RepetitionMode.normal)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(left: 8.0),
+                                                  child: Icon(Icons.check, size: 18),
+                                                ),
+                                            ],
+                                          ),
                                         ),
-                                        const PopupMenuItem<RepetitionMode>(
+                                        PopupMenuItem<RepetitionMode>(
                                           value: RepetitionMode.less,
-                                          child: Text('Less Repetitions'),
+                                          child: Row(
+                                            children: [
+                                              const Text('Less Repetitions'),
+                                              if (_repetitionMode.value == RepetitionMode.less)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(left: 8.0),
+                                                  child: Icon(Icons.check, size: 18),
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       ],
                                       onSelected: (RepetitionMode value) {
-                                        setState(() {
-                                          _repetitionMode.value = value;
-                                        });
+                                        if (widget.generating) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('Please wait until we finish generating your audio to change this setting!'),
+                                              action: SnackBarAction(
+                                                label: 'OK',
+                                                onPressed: () {
+                                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          setState(() {
+                                            _repetitionMode.value = value;
+                                          });
+                                        }
                                       },
                                     ),
                                     Row(
