@@ -499,6 +499,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (!widget.generating) {
       await _play();
     }
+    updateTrack();
   }
 
   void saveSnapshot(QuerySnapshot snapshot) {
