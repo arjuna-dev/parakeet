@@ -461,9 +461,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylistOnTheFly() async {
-    print("updatePlaylistOnTheFly() called");
     if (widget.generating) {
-      //TODO: Show dialogue or toast that the audio is being generated
+      print("Error: updatePlaylistOnTheFly() called while generating.");
       return;
     }
 
