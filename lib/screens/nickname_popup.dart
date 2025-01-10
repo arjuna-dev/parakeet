@@ -93,7 +93,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         } else {
           // Document exists, check count and date
           if (userDocSnapshot.get('last_call_date') == today) {
-            if (userDocSnapshot.get('call_count') >= 1) {
+            if (userDocSnapshot.get('call_count') >= 10) {
               // Limit reached
               return false;
             } else {
@@ -146,10 +146,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
       final selectedGreetings = greetingsList[_selectedLanguage]!;
       _usedGreetingIndex = Random().nextInt(selectedGreetings.length);
       final randomGreeting = selectedGreetings[_usedGreetingIndex!];
-      final mainUserIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
+      final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_0";
 
-      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, mainUserIdN, _selectedLanguage);
-      await _fetchAndPlayAudio(mainUserIdN);
+      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _selectedLanguage);
+      await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText);
 
       setState(() {
@@ -222,8 +222,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _generateRemainingGreetings(String nicknameText) async {
     try {
-      int audioIndex = 2; // Start from 2 since 1 is used for main English greeting
-
       // First generate remaining English (US) greetings
       final selectedGreetings = greetingsList[_selectedLanguage]!;
 
@@ -231,9 +229,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
       for (var i = 0; i < selectedGreetings.length; i++) {
         if (i == _usedGreetingIndex) continue; // Skip the greeting we already generated
         final greeting = selectedGreetings[i];
-        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_$audioIndex";
+        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${i + 1}";
         unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _selectedLanguage));
-        audioIndex++;
       }
     } catch (e) {
       print("Error queuing remaining greetings: $e");
