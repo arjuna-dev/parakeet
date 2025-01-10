@@ -13,7 +13,8 @@ import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// import 'package:responsive_framework/responsive_framework.dart';
+import 'package:parakeet/utils/nickname_generator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -34,6 +35,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
+  bool isGeneratingNickname = false;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -384,9 +386,25 @@ class _CreateLessonState extends State<CreateLesson> {
             items: nativeLanguageCodes.keys.toList(),
             label: 'Your Language',
             icon: Icons.person,
-            onChanged: (value) {
+            onChanged: (value) async {
               setState(() => nativeLanguage = value.toString());
-              _saveUserPreferences('native_language', value.toString());
+              await _saveUserPreferences('native_language', value.toString());
+              if (value != null) {
+                final prefs = await SharedPreferences.getInstance();
+                if (prefs.getBool('addressByNickname') ?? false) {
+                  try {
+                    isGeneratingNickname = true;
+                    await generateNicknameAudioFiles(
+                      language: value.toString(),
+                      shouldPlayAudio: true,
+                    );
+                    isGeneratingNickname = false;
+                    print("Nickname audio generated successfully.");
+                  } catch (e) {
+                    print("Error: $e");
+                  }
+                }
+              }
             },
             isSmallScreen: isSmallScreen,
             colorScheme: colorScheme,
@@ -487,6 +505,26 @@ class _CreateLessonState extends State<CreateLesson> {
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         onPressed: () async {
+          if (isGeneratingNickname) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+            );
+
+            // Wait until isGeneratingNickname becomes false
+            await Future.doWhile(() async {
+              await Future.delayed(Duration(milliseconds: 100)); // Small delay to prevent CPU hogging
+              return isGeneratingNickname;
+            });
+
+            // Close the loading dialog
+            Navigator.of(context).pop();
+          }
           if (_formKey.currentState!.validate()) {
             // Check premium status first
             final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
