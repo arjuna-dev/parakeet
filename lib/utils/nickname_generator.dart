@@ -61,18 +61,6 @@ Future<bool> _checkAndUpdateCallCount() async {
   }
 }
 
-/// Saves the given [nickname] to the current user's Firestore document.
-Future<void> _saveNicknameToFirestore(String nickname) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-  await userDocRef.set(
-    {'nickname': nickname},
-    SetOptions(merge: true),
-  );
-}
-
 /// (Optional) Fetches and plays the generated audio file for the given [userIdN].
 ///
 /// You can remove this entire function if you do not want to automatically
