@@ -161,7 +161,7 @@ Future<String?> fetchCurrentNickname() async {
 ///
 /// Throws an exception if the nickname is empty, the language is invalid,
 /// or the daily call limit is reached.
-Future<void> generateNicknameAudioFiles({
+Future<String> generateNicknameAudioFiles({
   required String language,
   bool shouldPlayAudio = false,
 }) async {
@@ -169,18 +169,18 @@ Future<void> generateNicknameAudioFiles({
   // Basic validations
   if (nickname != null && nickname.trim().isEmpty) {
     print("No nickname stored");
-    return;
+    return "No nickname stored";
   }
   if (!greetingsList.containsKey(language)) {
     print('Invalid language: $language');
-    return;
+    return "Invalid language: $language";
   }
 
   // Check daily call limit
   final canProceed = await _checkAndUpdateCallCount();
   if (!canProceed) {
-    print("Daily call limit for nickname generation reached.");
-    return;
+    print("Daily call limit reached");
+    return "Daily call limit reached";
   }
 
   final user = FirebaseAuth.instance.currentUser;
@@ -222,6 +222,7 @@ Future<void> generateNicknameAudioFiles({
   // If you want a return value to confirm success, you could return a status
   // or simply let this function complete.
   print("Nickname audio generation complete for '$nickname' in $language.");
+  return "Nickname audio generation complete for '$nickname' in $language.";
 }
 
 /// A tiny helper to silence the "unawaited" linter warning if you want to
