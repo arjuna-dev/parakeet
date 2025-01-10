@@ -7,6 +7,8 @@ import 'package:parakeet/services/cloud_function_service.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'constants.dart';
 
+int maxCalls = 10;
+
 /// A helper function to check and update the user's daily call count for
 /// generating a nickname, enforcing a limit (e.g., 10/day).
 ///
@@ -35,7 +37,7 @@ Future<bool> _checkAndUpdateCallCount() async {
         // Document exists, check count and date
         if (userDocSnapshot.get('last_call_date') == today) {
           final callCount = userDocSnapshot.get('call_count') as int;
-          if (callCount >= 10) {
+          if (callCount >= maxCalls) {
             // Limit reached
             return false;
           } else {
@@ -58,6 +60,32 @@ Future<bool> _checkAndUpdateCallCount() async {
   } catch (e) {
     print('Error in transaction: $e');
     return false;
+  }
+}
+
+Future<int> getCurrentCallCount() async {
+  final userId = FirebaseAuth.instance.currentUser!.uid;
+  final today = "${DateTime.now().year}"
+      "-${DateTime.now().month.toString().padLeft(2, '0')}"
+      "-${DateTime.now().day.toString().padLeft(2, '0')}";
+
+  try {
+    final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('api_call_count').doc('generate_nickname');
+
+    final userDocSnapshot = await userDocRef.get();
+
+    if (!userDocSnapshot.exists) {
+      return 0;
+    }
+
+    if (userDocSnapshot.get('last_call_date') == today) {
+      return userDocSnapshot.get('call_count') as int;
+    }
+
+    return 0;
+  } catch (e) {
+    print('Error getting call count: $e');
+    return 0;
   }
 }
 
