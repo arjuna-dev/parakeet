@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/services/notification_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,12 +22,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _name = '';
   String _email = '';
   bool _premium = false;
+  final NotificationService _notificationService = NotificationService();
+  TimeOfDay? _reminderTime;
 
   @override
   void initState() {
     super.initState();
     _user = FirebaseAuth.instance.currentUser;
     _fetchUserData();
+    _loadReminderTime();
   }
 
   Future<void> _fetchUserData() async {
@@ -41,6 +46,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loadReminderTime() async {
+    final time = await _notificationService.getScheduledReminderTime();
+    if (time == null) {
+      // If no time is set, schedule the default time (6 PM)
+      await _notificationService.scheduleDailyReminder(NotificationService.defaultReminderTime);
+      setState(() {
+        _reminderTime = NotificationService.defaultReminderTime;
+      });
+    } else {
+      setState(() {
+        _reminderTime = time;
+      });
+    }
+  }
+
+  Future<void> _showTimePickerDialog() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime ?? NotificationService.defaultReminderTime,
+    );
+
+    if (picked != null) {
+      setState(() {
+        _reminderTime = picked;
+      });
+      await _notificationService.scheduleDailyReminder(picked);
+    }
+  }
+
+  Future<void> _cancelReminder() async {
+    await _notificationService.cancelDailyReminder();
+    setState(() {
+      _reminderTime = null;
+    });
   }
 
   void _deleteAccount() async {
@@ -258,6 +299,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             _buildProfileHeader(),
+            Card(
+              elevation: 2,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 8 : 12,
+                ),
+                child: StreakDisplay(),
+              ),
+            ),
             _buildMenuItem(
               icon: _premium ? Icons.star : Icons.star_border,
               iconColor: _premium ? Colors.amber : null,
@@ -286,6 +345,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: () {
                 _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
               },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.notifications),
+              title: const Text('Daily Practice Reminder'),
+              subtitle: Text(_reminderTime != null ? 'Reminder set for ${_reminderTime!.format(context)}' : 'No reminder set'),
+              trailing: _reminderTime != null
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _cancelReminder,
+                    )
+                  : null,
+              onTap: _showTimePickerDialog,
             ),
             SizedBox(height: isSmallScreen ? 12 : 16),
             Padding(

@@ -8,26 +8,6 @@ import 'package:flutter/foundation.dart';
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
 
-  // Extract common sign-in logic
-  Future<void> _handleSignIn(BuildContext context, Future<User?> Function() signInMethod) async {
-    final user = await signInMethod();
-    if (user != null) {
-      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-
-      final userDocSnapshot = await userDocRef.get();
-      if (!userDocSnapshot.exists) {
-        await userDocRef.set({
-          'name': user.displayName,
-          'email': user.email,
-        });
-      }
-
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/create_lesson');
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
