@@ -554,7 +554,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       } else {
         // Generic greeting
         int randomNumber = Random().nextInt(5) + 1;
-        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${Uri.encodeComponent(widget.nativeLanguage)}/narrator_greetings_$randomNumber.mp3";
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${Uri.encodeComponent(widget.nativeLanguage)}/narrator_greetings_$randomNumber.mp3?timestamp=$timestamp";
       }
     } else if (fileName == "audio_cue") {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
