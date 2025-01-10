@@ -1,5 +1,5 @@
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'package:flutter/foundation.dart';
 
 class SpeechToTextUltra {
@@ -17,7 +17,7 @@ class SpeechToTextUltra {
   SpeechToTextUltra({required this.ultraCallback, required this.languageName}) {
     _speech = SpeechToText();
     // TODO: Add error handling
-    languageCode = languageCodes[languageName] ?? '';
+    languageCode = supportedLanguageCodes[languageName] ?? '';
   }
 
   Future<SpeechToText> startListening() async {
@@ -78,7 +78,7 @@ class SpeechToTextUltra {
 
       // Convert target language code to match system locale format
       // String? targetLanguageCode = languageCodes[languageName]?.replaceAll('-', '_');
-      String? targetLanguageCode = languageCodes[languageName];
+      String? targetLanguageCode = supportedLanguageCodes[languageName];
 
       isLanguageSupported = systemLocales.any((locale) => locale.localeId == targetLanguageCode);
       return isLanguageSupported;

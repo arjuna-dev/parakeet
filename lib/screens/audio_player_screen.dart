@@ -21,7 +21,7 @@ import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../utils/vosk_recognizer.dart';
-import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'dart:convert';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
@@ -159,7 +159,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   String? getVoskModelUrl(String languageName) {
     // Get full language code (e.g., "en-US")
-    final fullCode = languageCodes[languageName];
+    final fullCode = supportedLanguageCodes[languageName];
     if (fullCode == null) {
       return null;
     }
