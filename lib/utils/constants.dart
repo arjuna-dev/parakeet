@@ -43,14 +43,14 @@ Future<bool> urlExists(String url) async {
 
 final Map<String, String> voskModelUrls = {
   'ar': 'https://alphacephei.com/vosk/models/vosk-model-small-ar-0.3.zip',
-  'ar-tn': 'https://alphacephei.com/vosk/models/vosk-model-small-ar-tn-0.1-linto.zip',
+  'ar-TN': 'https://alphacephei.com/vosk/models/vosk-model-small-ar-tn-0.1-linto.zip',
   'ca': 'https://alphacephei.com/vosk/models/vosk-model-small-ca-0.4.zip',
   'cn': 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip',
   'cs': 'https://alphacephei.com/vosk/models/vosk-model-small-cs-0.4-rhasspy.zip',
   'de': 'https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip',
-  'en-gb': 'https://alphacephei.com/vosk/models/vosk-model-small-en-gb-0.15.zip',
-  'en-in': 'https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip',
-  'en-us': 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip',
+  'en-GB': 'https://alphacephei.com/vosk/models/vosk-model-small-en-gb-0.15.zip',
+  'en-IN': 'https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip',
+  'en-US': 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip',
   'eo': 'https://alphacephei.com/vosk/models/vosk-model-small-eo-0.42.zip',
   'es': 'https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip',
   'fa': 'https://alphacephei.com/vosk/models/vosk-model-small-fa-0.42.zip',
