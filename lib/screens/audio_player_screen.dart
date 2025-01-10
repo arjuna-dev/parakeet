@@ -535,14 +535,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
       return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
     } else if (fileName == "nickname") {
-      int randomNumber = Random().nextInt(5) + 1;
-      if (hasNicknameAudio && addressByNickname) {
+      final List<int> numbers = List.generate(6, (i) => i)..shuffle();
+      bool urlFound = false;
+      String? validUrl;
+
+      for (final randomNumber in numbers) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        if (widget.nativeLanguage == "English (US)") {
-          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
-        } else {
-          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+        final url = "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+
+        if (await urlExists(url)) {
+          urlFound = true;
+          validUrl = url;
+          break;
         }
+      }
+      if (hasNicknameAudio && addressByNickname && urlFound) {
+        return validUrl!;
       } else {
         // Generic greeting
         return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
