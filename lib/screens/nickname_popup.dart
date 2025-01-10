@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'dart:async';
 import '../utils/native_language_list.dart';
+import 'dart:math';
 
 class NicknamePopup extends StatefulWidget {
   const NicknamePopup({super.key});
@@ -25,6 +26,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
   String userId = FirebaseAuth.instance.currentUser!.uid;
   String? _currentNickname;
   String _selectedLanguage = "English (US)"; // Add this line near other state variables
+  int? _usedGreetingIndex; // Add this near other state variables
 
   @override
   void initState() {
@@ -140,12 +142,13 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
 
     try {
-      // Generate and play greeting in selected language
+      // Generate and play greeting in selected language with random greeting
       final selectedGreetings = greetingsList[_selectedLanguage]!;
-      final firstGreeting = selectedGreetings[0];
+      _usedGreetingIndex = Random().nextInt(selectedGreetings.length);
+      final randomGreeting = selectedGreetings[_usedGreetingIndex!];
       final mainUserIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
 
-      await CloudFunctionService.generateNicknameAudio("$firstGreeting $nicknameText!", userId, mainUserIdN, _selectedLanguage);
+      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, mainUserIdN, _selectedLanguage);
       await _fetchAndPlayAudio(mainUserIdN);
       await _saveNicknameToFirestore(nicknameText);
 
@@ -222,11 +225,14 @@ class _NicknamePopupState extends State<NicknamePopup> {
       int audioIndex = 2; // Start from 2 since 1 is used for main English greeting
 
       // First generate remaining English (US) greetings
-      final englishGreetings = greetingsList["English (US)"]!;
-      for (var i = 1; i < englishGreetings.length; i++) {
-        final greeting = englishGreetings[i];
+      final selectedGreetings = greetingsList[_selectedLanguage]!;
+
+      // Generate remaining greetings for selected language, skipping the used one
+      for (var i = 0; i < selectedGreetings.length; i++) {
+        if (i == _usedGreetingIndex) continue; // Skip the greeting we already generated
+        final greeting = selectedGreetings[i];
         final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_$audioIndex";
-        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, "English (US)"));
+        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _selectedLanguage));
         audioIndex++;
       }
     } catch (e) {
