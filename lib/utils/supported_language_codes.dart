@@ -1,4 +1,4 @@
-const languageCodes = {
+const supportedLanguageCodes = {
   "Arabic": "ar-XA",
   "Azerbaijani": "az-AZ",
   "Bengali": "bn-IN",

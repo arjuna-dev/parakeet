@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
-import 'package:parakeet/utils/google_tts_language_codes.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'package:parakeet/utils/native_language_list.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
@@ -394,7 +394,7 @@ class _CreateLessonState extends State<CreateLesson> {
           SizedBox(height: isSmallScreen || kIsWeb ? 8 : 16),
           _buildDropdown(
             value: targetLanguage,
-            items: languageCodes.keys.toList(),
+            items: supportedLanguageCodes.keys.toList(),
             label: 'Learning Language',
             icon: Icons.school,
             onChanged: (value) {
