@@ -22,7 +22,7 @@ def chatGPT_API_call(prompt, use_stream):
         stream=use_stream,
         max_tokens=4096,
         messages=[
-            {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in creating engaging conversations in any language to be used as content for learning. You are also able to create conversations in different tones and for different audiences."},
+            {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in writing engaging dialogues in any language and their translations to any language to be used as content for learning a language. You are also able to create conversations in different tones and for different audiences."},
             {"role": "user", "content": prompt}
         ],
         response_format={'type': 'json_object'}

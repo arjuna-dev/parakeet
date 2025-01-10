@@ -7,22 +7,25 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they make sense for the conversation. If the keywords are not used in the conversation then add them to the json key unused_keywords. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+The keywords should be used in the dialogue if they make sense for the conversation. If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
-With the following data as an example enclosed in double vertical lines (||):
+This is an example of a request you could get and its expected output.
 
-||
+
+Request:
+###
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
 "keywords": "discrimination, patience, salmon, armpit"
 "native_language": "English",
 "target_language": "Spanish",
 "language_level": "C2",
-||
+"length": 2
+###
 
-You would generate the following JSON enclosed in triple equals symbols (===):
 
-JSON:
-===
+
+Expected output in JSON format:
+###
 {{
     "title": "Understanding Viveka Chudamani",
     "speakers": {{
@@ -43,40 +46,86 @@ JSON:
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "m"
+        }}
+    ]
+}}
+###
+
+Puedes habalar y traducir en cualquier idioma, este es un ejemplo de alemán e inglés.
+
+Request:
+
+###
+"requested_scenario": "Reasons to become vegetarian",
+"keywords": "health, compassion, peanut butter"
+"native_language": "German",
+"target_language": "English",
+"language_level": "A1"
+###
+
+Expected output in JSON format:
+###
+{{
+    "title": "Reasons to Become Vegetarian",
+    "speakers": {{
+        "speaker_1":{{ "name": "Jonas", "gender": "m" }},
+        "speaker_2": {{ "name": "Sophie", "gender": "f" }}
+        }},
+    "dialogue": [
+        {{
+            "target_language": "Why should someone become a vegetarian?",
+            "native_language": "Warum sollte jemand Vegetarier werden?",
+            "turn_nr": "1",
+            "speaker": "speaker_1",
+            "gender": "m"
         }},
         {{
-            "target_language": "\u00bfY c\u00f3mo se desarrolla esta discriminaci\u00f3n?",
-            "native_language": "And how does one develop this discrimination?",
+            "target_language": "It is good for health and shows compassion for animals.",
+            "native_language": "Es ist gut für die Gesundheit und zeigt Mitgefühl für Tiere.",
+            "turn_nr": "2",
+            "speaker": "speaker_2",
+            "gender": "f"
+        }},
+        {{
+            "target_language": "But can I still eat peanut butter?",
+            "native_language": "Aber kann ich trotzdem Erdnussbutter essen?",
             "turn_nr": "3",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "Se desarrolla a trav\u00e9s de la pr\u00e1ctica constante y la paciencia.",
-            "native_language": "It develops through constant practice and patience.",
+            "target_language": "Yes, peanut butter is vegetarian!",
+            "native_language": "Ja, Erdnussbutter ist vegetarisch, und sogar Astronauten essen sie!",
             "turn_nr": "4",
             "speaker": "speaker_2",
-            "gender": "m"
+            "gender": "f"
         }}
     ]
-    "unused_keywords": ["salmon", "armpit"]
 }}
-===
+###
 '''
 
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
    return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}. 
    
    - You will write turns from 1 to {length}. 
-   - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in {native_language}, when quoting in {target_language} the text should be enclosed in double vertical bars (||).
-   - If the {target_language} sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
-    - Then these sub-sentences should be translated as literally as possible to {native_language} taking as context the sub-sentence and NOT the full sentence or conversation. 
+   - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in the native_language: {native_language}, when quoting from the target_language, {target_language}, the text should be enclosed in double vertical bars (||).
+   - If the target_language ({target_language}) sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
+    - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation. 
   - For the narrator_translation json key avoid grammatical explanations, avoid explaining gender and number of articles for example.
   - For the narrator_fun_fact json key focus on things like etymology, explaining compound words, explaining idiomatic phrases, etc.
   
-  Here is an example of the JSON file you should generate enclosed in triple equals symbols (===):
+  Example request:
+  ###
+  target_language: "Spanish"
+  native_language: "English"
+  length: 2
+  speakers: "speaker_1: Carlos, speaker_2: Elena"
+  language_level: "B2"
+  dialogue: [similar to the one given above]
+  ###
 
-JSON: ===
+JSON: ###
 {{
 "dialogue": [
     {{
@@ -84,7 +133,7 @@ JSON: ===
       "turn_nr": "1",
       "native_language": "Hello, I would like a bag of popcorn, please.",
       "narrator_explanation": "Carlos is ordering popcorn at the cinema.",
-      "narrator_fun_fact": ""Popcorn" is a compound word formed from "pop" and "corn." "Pop" refers to the noise made by the corn as it explodes when heated, and "corn" in this context is derived from the old English grain that encompasses all types of grains, including wheat and barley. However, in modern American English, "corn" typically refers specifically to maize.",
+      "narrator_fun_fact": "The word ||palomitas|| in Spanish means 'popcorn,' but it literally translates to 'little doves,' referring to the way popcorn kernels puff up like small birds.",
       "target_language": "Hola, me gustaría una bolsa de palomitas, por favor.",
       "split_sentence": [
         {{
@@ -165,7 +214,7 @@ JSON: ===
       "turn_nr": 2,
       "native_language": "What size? Small, medium, or large?",
       "narrator_explanation": "Elena is asking Carlos about the size of the popcorn bag he wants.",
-      "narrator_fun_fact": "The term "popcorn" first appeared in John Russell Bartlett’s 1848 "Dictionary of Americanisms," which reflects its usage in early America. The word has remained relatively unchanged in meaning since that time.",
+      "narrator_fun_fact": "The phrase ||¿De qué tamaño?|| means 'What size?' in English. ||Tamaño|| specifically refers to physical size or dimensions. The words ||pequeño||, ||mediano||, and ||grande|| mean 'small,' 'medium,' and 'large' respectively, making this sentence a common way to ask about size options in Spanish."
       "target_language": "¿De qué tamaño? ¿Pequeño, mediano o grande?",
       "split_sentence": [
         {{
@@ -214,75 +263,81 @@ JSON: ===
     }}
   ]
 }}
-===
+###
 Continue adding turns until you reach {length} turns.
 
-Here is another example:
-===
+Aquí tienes otro ejemplo de un diálogo en alemán para aprender inglés.
+
+Request:
+###
+target_language: "English"
+native_language: "German"
+length: 2
+[continues...]
+###
+
+JSON response by you: 
+###
 {{
  "dialogue": [
     {{
       "speaker": "speaker_1",
       "turn_nr": "1",
-      "native_language": "Who do you think is the best player in the upcoming EURO?",
-      "narrator_explanation": "Jürgen is asking Maria who she thinks will be the best player in the upcoming EURO soccer tournament.",
-      "narrator_fun_fact": "The word ||Spieler|| means 'player' in German. It comes from the verb ||spielen||, which means 'to play'. ||Beste|| is the superlative form of 'good' (||gut||), meaning 'the best'.",
-      "target_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
+      "target_language": "Who do you think is the best player in the upcoming EURO?",
+      "native_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
+      "narrator_explanation": "Jürgen fragt Maria, wen sie für den besten Spieler bei der kommenden EURO-Fußballmeisterschaft hält.",
+      "narrator_fun_fact": "Das englische Wort ||player|| bedeutet 'Spieler' auf Deutsch. Es kommt vom Verb ||play||, das 'spielen' bedeutet. ||Player|| kann für Menschen verwendet werden, die Spiele spielen, Musik machen oder schauspielern. Es wird auch oft für Ausdrücke wie ||team player|| genutzt, was jemanden beschreibt, der gut im Team arbeitet."
       "split_sentence": [
         {{
-          "target_language": "Wer denkst du",
-          "native_language": "Who do you think",
-          "narrator_translation": "||Wer|| means 'Who'. ||Denkst|| translates to 'think'. ||Du|| means 'you'.",
+          "target_language": "Who do you think",
+          "native_language": "Wer denkst du",
+          "narrator_translation": "||Who do you think|| bedeutet 'Wer denkst du'.",
           "words": [
             {{
-              "target_language": "Wer",
-              "narrator_translation": "||Wer|| means 'Who'."
+              "target_language": "Who",
+              "narrator_translation": "||Who|| bedeutet 'Wer'."
             }},
             {{
-              "target_language": "denkst",
-              "narrator_translation": "||Denkst|| translates to 'think'."
-            }},
-            {{
-              "target_language": "du",
-              "narrator_translation": "||Du|| means 'you'."
+              "target_language": "do you think",
+              "narrator_translation": "||do you think|| bedeutet 'denkst du'."
             }}
           ]
         }},
         {{
-          "target_language": "ist der beste Spieler",
-          "native_language": "is the best player",
-          "narrator_translation": "||Ist|| means 'is'. ||Der beste|| translates to 'the best'. ||Spieler|| means 'player'.",
+          "target_language": "is the best player",
+          "native_language": "ist der beste Spieler",
+          "narrator_translation": "||Is|| bedeutet 'ist'. ||The best player|| heißt 'der beste Spieler'.",
           "words": [
             {{
-              "target_language": "ist",
-              "narrator_translation": "||Ist|| means 'is'."
+              "target_language": "is",
+              "narrator_translation": "||Is|| bedeutet 'ist'."
             }},
             {{
-              "target_language": "der beste",
-              "narrator_translation": "||Der beste|| translates to 'the best'."
-            }},
-            {{
-              "target_language": "Spieler",
-              "narrator_translation": "||Spieler|| means 'player'."
+              "target_language": "the best player",
+              "narrator_translation": "||the best player|| heißt 'Der beste Spieler'."
             }}
           ]
         }},
         {{
-          "target_language": "bei der kommenden EURO?",
-          "native_language": "in the upcoming EURO?",
-          "narrator_translation": "||Bei|| means 'in' or 'at'. ||Der kommenden|| translates to 'the upcoming'. ||EURO|| is short for the European Football Championship.",
+          "target_language": "in the upcoming EURO?",
+          "native_language": "bei der kommenden EURO?",
+          "narrator_translation": "||In the upcoming|| bedeutet 'bei der kommenden'. ||EURO|| ist die Fußball-Europameisterschaft.",
           "words": [
             {{
-              "target_language": "bei",
-              "narrator_translation": "||Bei|| means 'in' or 'at'."
+              "target_language": "in",
+              "narrator_translation": "||In|| bedeutet 'bei' oder 'in'."
             }},
             {{
-              "target_language": "der kommenden",
-              "narrator_translation": "||Der kommenden|| translates to 'the upcoming'."
+              "target_language": "the",
+              "narrator_translation": "||The|| bedeutet 'der', 'die' oder 'das', abhängig vom Kontext."
+            }},
+            {{
+              "target_language": "upcoming",
+              "narrator_translation": "||upcoming|| bedeutet 'Kommenden'."
             }},
             {{
               "target_language": "EURO",
-              "narrator_translation": "||EURO|| is short for the European Football Championship."
+              "narrator_translation": "||EURO|| ist die Fußball-Europameisterschaft."
             }}
           ]
         }}
@@ -290,70 +345,62 @@ Here is another example:
     }},
     {{
       "speaker": "speaker_2",
-      "turn_nr": "2",
-      "native_language": "I believe that Mbappé is one of the best players alive at the moment.",
-      "narrator_explanation": "Maria expresses her opinion that Mbappé is currently one of the best players in the world.",
-      "narrator_fun_fact": "The German word ||glaube|| means 'believe'. It comes from the Old High German ||gilouben||, which means 'to trust'. ||Momentan|| is derived from the Latin ||momentum||, meaning 'moment'.",
-      "target_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
+      "turn_nr": "2",It 
+      "target_language": "I believe that Mbappé is one of the best players alive at the moment.",
+      "native_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
+      "narrator_explanation": "Maria sagt, dass sie Mbappé für einen der besten Spieler hält. Hier verwendet sie den Satzanfang ||I believe||, um ihre Meinung auszudrücken.",
+      "narrator_fun_fact": "Das englische Wort ||believe|| bedeutet 'glauben' auf Deutsch. Es wird oft mit ||I|| (Ich) verwendet, um Meinungen oder Gedanken auszudrücken.",
       "split_sentence": [
         {{
-          "target_language": "Ich glaube",
-          "native_language": "I believe",
-          "narrator_translation": "||Ich|| means 'I'. ||Glaube|| means 'believe'.",
+          "target_language": "I believe",
+          "native_language": "Ich glaube",
+          "narrator_translation": "||I|| bedeutet 'Ich'. ||Believe|| heißt 'glaube'.",
           "words": [
             {{
-              "target_language": "Ich",
-              "narrator_translation": "||Ich|| means 'I'."
+              "target_language": "I",
+              "narrator_translation": "||I|| bedeutet 'Ich'."
             }},
             {{
-              "target_language": "glaube",
-              "narrator_translation": "||Glaube|| means 'believe'."
+              "target_language": "believe",
+              "narrator_translation": "||Believe|| heißt 'glaube'."
             }}
           ]
         }},
         {{
-          "target_language": "dass Mbappé einer der besten Spieler ist",
-          "native_language": "that Mbappé is one of the best players",
-          "narrator_translation": "||Dass|| means 'that'. ||Einer der besten|| means 'one of the best'. ||Spieler|| means 'players'. ||Ist|| means 'is'.",
+          "target_language": "that Mbappé is one of the best players",
+          "native_language": "dass Mbappé einer der besten Spieler ist",
+          "narrator_translation": "||That|| bedeutet 'dass'. ||One of the best players|| heißt 'einer der besten Spieler'.",
           "words": [
             {{
-              "target_language": "dass",
-              "narrator_translation": "||Dass|| means 'that'."
+              "target_language": "that",
+              "narrator_translation": "||That|| bedeutet 'dass'."
             }},
             {{
               "target_language": "Mbappé",
-              "narrator_translation": "||Mbappé|| is a proper noun and refers to the famous football player, Kylian Mbappé."
+              "narrator_translation": "||Mbappé|| ist der Name eines berühmten Fußballspielers."
             }},
             {{
-              "target_language": "einer der besten",
-              "narrator_translation": "||Einer der besten|| means 'one of the best'."
+              "target_language": "one of the best",
+              "narrator_translation": "||One of the best|| bedeutet 'einer der besten' auf Deutsch. Es beschreibt etwas oder jemanden, der zu den Besten einer Gruppe gehört."
             }},
             {{
-              "target_language": "Spieler",
-              "narrator_translation": "||Spieler|| means 'players'."
-            }},
-            {{
-              "target_language": "ist",
-              "narrator_translation": "||Ist|| means 'is'."
+              "target_language": "players",
+              "narrator_translation": "||Players|| bedeutet 'Spieler' auf Deutsch und bezieht sich auf Personen, die ein Spiel spielen, wie z. B. Fußballspieler."
             }}
           ]
         }},
         {{
-          "target_language": "die momentan leben.",
-          "native_language": "alive at the moment.",
-          "narrator_translation": "||Die|| means 'who'. ||Momentan|| means 'at the moment'. ||Leben|| means 'live' or 'are alive'.",
+          "target_language": "alive at the moment.",
+          "native_language": "die momentan leben.",
+          "narrator_translation": "||Alive|| bedeutet 'leben'. ||At the moment|| heißt 'momentan'.",
           "words": [
             {{
-              "target_language": "die",
-              "narrator_translation": "||Die|| means 'who'."
+              "target_language": "alive",
+              "narrator_translation": "||Leben|| bedeutet 'alive'."
             }},
             {{
-              "target_language": "momentan",
-              "narrator_translation": "||Momentan|| means 'at the moment'."
-            }},
-            {{
-              "target_language": "leben.",
-              "narrator_translation": "||Leben|| means 'live' or 'are alive'."
+              "target_language": "at the moment",
+              "narrator_translation": "||Momentan|| heißt 'at the moment'."
             }}
           ]
         }}
@@ -361,7 +408,7 @@ Here is another example:
     }}
   ]
 }}
-===
+###
 
 Continue adding turns until you reach {length} turns.
 '''
@@ -370,7 +417,7 @@ Continue adding turns until you reach {length} turns.
 def prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length):
   chinese_korean_addition = ""
   if target_language == "Mandarin Chinese" or target_language == "Japanese":
-    chinese_korean_addition = 'Please add a space between the words or concepts.'
+    chinese_korean_addition = 'Please add a space between words even though it is not the traditional way of writing'
 
   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
 
@@ -380,7 +427,7 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in {target_language}, the translations to {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition} The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
+The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
 Here is an example of data you could get and its expected output.
 

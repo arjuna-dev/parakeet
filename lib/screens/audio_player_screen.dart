@@ -163,13 +163,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (fullCode == null) {
       return null;
     }
-    isLanguageSupported = true;
 
     // Extract base language code (e.g., "en" from "en-US")
-    final baseCode = fullCode.split('-')[0].toLowerCase();
+    if (fullCode == 'en-US' || fullCode == 'en-GB') {
+      return voskModelUrls[fullCode];
+    }
+
+    final partialCode = fullCode.split('-')[0].toLowerCase();
 
     // Return URL if exists, null otherwise
-    return voskModelUrls[baseCode];
+    return voskModelUrls[partialCode];
   }
 
   Future<void> _initVosk() async {
@@ -178,6 +181,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (voskModelUrl == null) {
       _showLanguageNotSupportedDialog();
       return;
+    } else {
+      isLanguageSupported = true;
     }
     // String voskModelUrl = getVoskModelUrl(widget.targetLanguage)!;
     Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
@@ -931,9 +936,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               onChanged: (bool value) {
                                 if (value) {
                                   initializeSpeechRecognition();
-                                } else if (!value && !kIsWeb && !Platform.isAndroid) {
+                                } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
                                   speechToTextUltra.stopListening();
-                                } else if (!value && (kIsWeb || Platform.isAndroid)) {
+                                } else if (!value && !kIsWeb && Platform.isAndroid) {
                                   voskSpeechService?.stop();
                                   voskSpeechService?.dispose();
                                 }
