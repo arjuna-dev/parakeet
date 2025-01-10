@@ -41,7 +41,7 @@ def voice_finder_openai(gender, target_language, exclude_voice_id=None):
     return voice_id
 
 
-def openai_synthesize_text(text, voice_id, output_path, doc_ref=None, local_run=False, bucket_name="conversations_audio_files"):
+def openai_synthesize_text(text, voice_id, output_path, doc_ref=None, local_run=False, bucket_name="conversations_audio_files", speaking_rate=0.85):
     speech_file_path = Path(output_path)
     print(f"Synthesizing text: {text} with voice: {voice_id} to file: {speech_file_path}")
     response = client.audio.speech.create(

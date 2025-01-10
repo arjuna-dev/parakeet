@@ -20,6 +20,12 @@ import 'dart:io' show Platform;
 import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import '../utils/vosk_recognizer.dart';
+import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'dart:convert';
+import 'package:parakeet/services/streak_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -55,7 +61,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
   late AnalyticsManager analyticsManager;
-  late List<AudioSource> couldNotListenFeedbackAudio;
+  // late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
   String currentTrack = '';
@@ -75,6 +81,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
   bool isLoading = false;
+  double _playbackSpeed = 1.0;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -93,14 +100,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   late SpeechToTextUltra speechToTextUltra;
 
-  bool isSliderMoving = false; // Pc4af
+  bool isSliderMoving = false;
 
-  bool _isSkipping = false; // P926e
+  bool _isSkipping = false;
+
+  SpeechService? voskSpeechService;
+
+  final StreakService _streakService = StreakService();
+  bool _showStreak = false;
 
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
+    player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -132,6 +145,83 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
       },
     );
+  }
+
+  String? getVoskModelUrl(String languageName) {
+    // Get full language code (e.g., "en-US")
+    final fullCode = languageCodes[languageName];
+    if (fullCode == null) {
+      return null;
+    }
+    isLanguageSupported = true;
+
+    // Extract base language code (e.g., "en" from "en-US")
+    final baseCode = fullCode.split('-')[0].toLowerCase();
+
+    // Return URL if exists, null otherwise
+    return voskModelUrls[baseCode];
+  }
+
+  Future<void> _initVosk() async {
+    VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
+    String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
+    if (voskModelUrl == null) {
+      _showLanguageNotSupportedDialog();
+      return;
+    }
+    // String voskModelUrl = getVoskModelUrl(widget.targetLanguage)!;
+    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
+    Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
+
+    final recognizer = await vosk.createRecognizer(
+      model: await voskModel,
+      sampleRate: 16000,
+    );
+    // For recognizing specific words
+    // final recognizerWithGrammar = await vosk.createRecognizer(
+    //   model: await voskModel,
+    //   sampleRate: sampleRate,
+    //   grammar: ['one', 'two', 'three'],
+    // );
+    // For ultra fast recognition
+    // voskSpeechService.onPartial().forEach((partial) {
+    //   setState(() {
+    //     liveTextSpeechToText = partial;
+    //   });
+    // });
+
+    voskSpeechService = await vosk.initSpeechService(recognizer);
+    print("initSpeechService called");
+
+    voskSpeechService!.onResult().forEach((result) {
+      final String resultText = jsonDecode(result)['text'];
+      print("result: $resultText");
+      setState(() {
+        liveTextSpeechToText = resultText;
+      });
+    });
+    await voskSpeechService!.start();
+  }
+
+  void initializeSpeechRecognition() async {
+    // If device is andoird initialize vosk
+    if (!kIsWeb && Platform.isAndroid) {
+      await _initVosk();
+      return;
+    }
+    // TODO: Error handling
+    // Initialize the speech recognition
+    SpeechToText speechRecognition = await speechToTextUltra.startListening();
+
+    // TODO: Error handling
+    // Check if the specified language is supported
+    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
+
+    if (!isLanguageSupported) {
+      _showLanguageNotSupportedDialog();
+      return;
+    }
+    //_initFeedbackAudioSources();
   }
 
   updateHasNicknameAudio() async {
@@ -252,6 +342,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
+          _handleLessonCompletion();
         }
         _stop();
       }
@@ -260,7 +351,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player.currentIndexStream.listen((index) async {
       await _handleFetchingUrlError(index);
 
-      if (index != null && index < script.length) {
+      print("index: $index");
+
+      // Guard against null index
+      if (index == null) {
+        print('Warning: Received null index in stream');
+        return;
+      }
+
+      if (index < script.length) {
         setState(() {
           currentTrack = script[index];
         });
@@ -328,6 +427,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     try {
       script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
     } catch (e) {
+      print("Error parsing and creating script: $e");
       return;
     }
 
@@ -495,36 +595,44 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return currentMap;
   }
 
-  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+  void _handleTrackChangeToCompareSpeech(int localCurrentIndex) async {
     if (_isSkipping) return;
 
-    if (currentTrack == "five_second_break" && isLanguageSupported && currentIndex > previousIndex && !isSliderMoving) {
+    if (currentTrack == "five_second_break" && isLanguageSupported && localCurrentIndex > previousIndex && !isSliderMoving) {
       print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
 
-      final jsonFile = filesToCompare[currentIndex];
-      if (jsonFile == null) {
-        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+      final audioFileName = filesToCompare[localCurrentIndex];
+      if (audioFileName == null) {
+        print("Error: filesToCompare[localCurrentIndex] is null for index $localCurrentIndex");
         return;
       }
 
       if (widget.generating && latestSnapshot != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, jsonFile);
+          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, audioFileName);
         });
       } else if (existingBigJson != null) {
         setState(() {
-          targetPhraseToCompareWith = accessBigJson(existingBigJson!, jsonFile);
+          targetPhraseToCompareWith = accessBigJson(existingBigJson!, audioFileName);
         });
       } else {
         print("Error: Required JSON data is null.");
         return;
       }
 
-      // await _playLocalAudio(audioSource: audioCue);
-
-      final String stringWhenStarting = liveTextSpeechToText;
-
-      Future.delayed(const Duration(seconds: 5), () => _compareSpeechWithPhrase(stringWhenStarting));
+      if (kIsWeb || Platform.isIOS) {
+        final String stringWhenStarting = liveTextSpeechToText;
+        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase(stringWhenStarting));
+      } else {
+        if (voskSpeechService == null) {
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
+          return;
+        }
+        voskSpeechService!.reset();
+        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase());
+      }
     }
   }
 
@@ -548,80 +656,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void initializeSpeechRecognition() async {
-    // TODO: Error handling
-    // Initialize the speech recognition
-    SpeechToText speechRecognition = await speechToTextUltra.startListening();
-
-    // TODO: Error handling
-    // Check if the specified language is supported
-    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
-
-    if (!isLanguageSupported) {
-      print('The specified language is not supported.');
-      return;
-    }
-    //_initFeedbackAudioSources();
-  }
-
   void _showLanguageNotSupportedDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Voice Feature Not Supported'),
-          content:
-              Text('The language you selected (${widget.targetLanguage}) is not supported on your device for speech recognition. You can continue with the exercise but the speech recognition feature will not work.'),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void displayPopupSTTSupport(BuildContext context) {
     showDialog(
       context: navigatorKey.currentContext!,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Feature Not Supported on Mobile Yet...'),
+          title: const Text('Speech Recognition Not Supported'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Platform.isIOS
-                  ? const Text(
-                      'We are working to bring speech recognition to mobile devices! For now, you can try it in the web app 🦜',
-                    )
-                  : const Text("We are working to bring speech recognition to mobile devices! For now, you can try it in the web app at app.parakeet.world 🦜"),
-              const SizedBox(height: 8),
+              Text("${widget.targetLanguage} is not supported for speech recognition on your device, but we're working on it!"),
+              SizedBox(height: 8),
             ],
           ),
           actions: [
-            Platform.isIOS
-                ? TextButton(
-                    onPressed: () {
-                      launchURL(urlWebApp);
-                    },
-                    child: const Text('Try the Web App'))
-                : Container(),
             TextButton(
               child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
-                if (mounted) {
-                  setState(() {
-                    speechRecognitionActive = false;
-                    speechToTextUltra.stopListening();
-                  });
-                } else {
-                  print('State not mounted for speechRecognitionActive');
-                }
+                setState(() {
+                  speechRecognitionActive = false;
+                  isLanguageSupported = false;
+                });
               },
             ),
           ],
@@ -653,30 +709,29 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return "";
   }
 
-  void _compareSpeechWithPhrase(stringWhenStarting) async {
+  void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
     if (isPlaying == false || isStopped == true) {
       print("Brooooke!");
       // return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
-      print("liveTextSpeechToText: $liveTextSpeechToText");
-      print("stringWhenStarting: $stringWhenStarting");
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
-      String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
-      String newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
 
-      AudioSource feedbackAudio;
-      print("newSpeech: $newSpeech");
-
-      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-        final random = Random();
-        int index = random.nextInt(audioList.length);
-        return audioList[index];
+      String newSpeech;
+      if ((kIsWeb || Platform.isIOS) && stringWhenStarting != null) {
+        print("liveTextSpeechToText: $liveTextSpeechToText");
+        print("stringWhenStarting: $stringWhenStarting");
+        String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
+        newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
+      } else {
+        newSpeech = normalizedLiveTextSpeechToText;
       }
 
+      print("newSpeech: $newSpeech");
+
       if (newSpeech == '') {
-        feedbackAudio = getRandomAudioSource(couldNotListenFeedbackAudio);
-        await _playLocalAudio(audioSource: feedbackAudio);
+        // TODO: Add feedback for no audio detected
+        print("NO audio was detected!!!");
         return;
       }
       // Normalize both strings: remove punctuation and convert to lowercase
@@ -717,33 +772,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
 // Helper method to normalize strings
   String _normalizeString(String input) {
-    // Remove punctuation using a regular expression and convert to lowercase
-    return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
+    // Remove punctuation but preserve Unicode letters including Devanagari
+    return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
+    // return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
   }
 
 // Method to provide audio feedback
   Future<void> _provideFeedback({required bool isPositive}) async {
-    // Pause the main player if it's playing
+    // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
+
     if (player.playing) {
       await player.pause();
     }
-
-    // Create a separate AudioPlayer for the answer sound
-    AudioPlayer answerPlayer = AudioPlayer();
-
-    // Play the correct/incorrect answer sound first
-    String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
-
-    await answerPlayer.setAudioSource(
-      AudioSource.uri(Uri.parse(answerUrl)),
-    );
-    await answerPlayer.play();
-
-    // Wait for the answer sound to finish
-    await answerPlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-    await answerPlayer.dispose();
 
     // Create a separate AudioPlayer for feedback
     AudioPlayer feedbackPlayer = AudioPlayer();
@@ -760,48 +800,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Play the feedback
     await feedbackPlayer.play();
 
-    // Wait for the feedback to finish
-    await feedbackPlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-
     // Release the feedback player resources
     await feedbackPlayer.dispose();
 
-    // Resume the main player if it was playing before
-    if (!isStopped && isPlaying) {
-      await player.play();
-    }
-  }
-
-  // Method to provide audio feedback
-  Future<void> _playLocalAudio({required AudioSource audioSource}) async {
-    // Pause the main player if it's playing
-    if (player.playing) {
-      await player.pause();
-    }
-
-    // Create a separate AudioPlayer for feedback to avoid conflicts
-    AudioPlayer localFilePlayer = AudioPlayer();
-
-    // Set the appropriate audio source
-    await localFilePlayer.setAudioSource(audioSource);
-
-    // Play the feedback
-    await localFilePlayer.play();
-
-    // Wait for the feedback to finish
-    await localFilePlayer.processingStateStream.firstWhere(
-      (state) => state == ProcessingState.completed,
-    );
-
-    // Release the feedback player resources
-    await localFilePlayer.dispose();
-
-    // Resume the main player if it was playing before
-    if (!isStopped && isPlaying) {
-      await player.play();
-    }
+    await player.play();
   }
 
   // Add a new method to get random feedback audio URL
@@ -809,6 +811,32 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final random = Random();
     final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
     return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
+  }
+
+  Future<void> _changePlaybackSpeed(double speed) async {
+    await player.setSpeed(speed);
+    setState(() {
+      _playbackSpeed = speed;
+    });
+  }
+
+  Future<void> _handleLessonCompletion() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await _streakService.recordDailyActivity(userId);
+      setState(() {
+        _showStreak = true;
+      });
+
+      // Hide streak after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _showStreak = false;
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -850,12 +878,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             Switch(
                               value: speechRecognitionActive,
                               onChanged: (bool value) {
-                                if (value & kIsWeb) {
+                                if (value) {
                                   initializeSpeechRecognition();
-                                } else if (value & !kIsWeb) {
-                                  displayPopupSTTSupport(context);
-                                } else if (!value) {
+                                } else if (!value && !kIsWeb && !Platform.isAndroid) {
                                   speechToTextUltra.stopListening();
+                                } else if (!value && (kIsWeb || Platform.isAndroid)) {
+                                  voskSpeechService?.stop();
+                                  voskSpeechService?.dispose();
                                 }
                                 setState(() {
                                   speechRecognitionActive = value;
@@ -890,38 +919,81 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             });
                           },
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous),
-                              onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                            ),
-                            IconButton(
-                              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                              onPressed: isPlaying ? () => _pause() : _play,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.stop),
-                              onPressed: _stop,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.skip_next),
-                              onPressed: player.hasNext
-                                  ? () {
-                                      setState(() {
-                                        _isSkipping = true; // P945a
-                                      });
-                                      player.seekToNext();
-                                      Future.delayed(const Duration(seconds: 1), () {
-                                        setState(() {
-                                          _isSkipping = false; // P47bd
-                                        });
-                                      });
-                                    }
-                                  : null,
-                            ),
-                          ],
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_previous),
+                                      onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                                      onPressed: isPlaying ? () => _pause() : _play,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_next),
+                                      onPressed: player.hasNext
+                                          ? () {
+                                              setState(() {
+                                                _isSkipping = true;
+                                              });
+                                              player.seekToNext();
+                                              Future.delayed(const Duration(seconds: 1), () {
+                                                setState(() {
+                                                  _isSkipping = false;
+                                                });
+                                              });
+                                            }
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(
+                                      Icons.speed,
+                                      size: 18,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    DropdownButton<double>(
+                                      value: _playbackSpeed,
+                                      isDense: true,
+                                      underline: Container(), // Remove the default underline,
+                                      icon: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Theme.of(context).colorScheme.primary,
+                                        size: 20,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                        DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                        DropdownMenuItem(value: 0.9, child: Text('0.9x')),
+                                        DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                        DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                        DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                        DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                      ],
+                                      onChanged: (double? newValue) {
+                                        if (newValue != null) {
+                                          _changePlaybackSpeed(newValue);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -931,10 +1003,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             ),
           ),
 
-          // Spinner overlay
+          // Streak overlay
+          if (_showStreak)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: StreakDisplay(),
+              ),
+            ),
+
+          // Loading spinner overlay
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -1042,16 +1123,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   @override
-  void dispose() async {
-    print("now disposing");
+  void dispose() {
     if (isPlaying) {
-      await _stop();
-      // await _pause();
+      _stop();
     }
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();
-    speechToTextUltra.dispose();
+    if (!kIsWeb && Platform.isAndroid) {
+      voskSpeechService!.stop();
+      voskSpeechService!.dispose();
+    } else {
+      speechToTextUltra.dispose();
+    }
     super.dispose();
   }
 }

@@ -51,7 +51,7 @@ def get_voices():
         print(f"{voice['name']}; {voice['voice_id']}")
 
 
-def elevenlabs_tts(text, voice_id, output_path, local_run=False, bucket_name="conversations_audio_files"):
+def elevenlabs_tts(text, voice_id, output_path, doc_ref=None, local_run=False, bucket_name="conversations_audio_files", speaking_rate=0.85):
 
     CHUNK_SIZE = 1024
 
