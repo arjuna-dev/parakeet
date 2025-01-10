@@ -393,6 +393,11 @@ class _CreateLessonState extends State<CreateLesson> {
                 final prefs = await SharedPreferences.getInstance();
                 if (prefs.getBool('addressByNickname') ?? false) {
                   try {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Generating a nice greeting for you... 🚏"),
+                      ),
+                    );
                     isGeneratingNickname = true;
                     String result = await generateNicknameAudioFiles(
                       language: value.toString(),
@@ -401,7 +406,7 @@ class _CreateLessonState extends State<CreateLesson> {
                     if (result == "Daily call limit reached") {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Hmmm, it seems like you haven't entered a nickname yet! 🧐"),
+                          content: Text("Your name is officially trending! Take a break, you've reached name generation daily limit! 🧘‍♂️"),
                         ),
                       );
                     }
