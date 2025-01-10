@@ -394,10 +394,17 @@ class _CreateLessonState extends State<CreateLesson> {
                 if (prefs.getBool('addressByNickname') ?? false) {
                   try {
                     isGeneratingNickname = true;
-                    await generateNicknameAudioFiles(
+                    String result = await generateNicknameAudioFiles(
                       language: value.toString(),
                       shouldPlayAudio: true,
                     );
+                    if (result == "Daily call limit reached") {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Hmmm, it seems like you haven't entered a nickname yet! 🧐"),
+                        ),
+                      );
+                    }
                     isGeneratingNickname = false;
                     print("Nickname audio generated successfully.");
                   } catch (e) {
