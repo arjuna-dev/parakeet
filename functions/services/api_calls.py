@@ -39,6 +39,8 @@ class APICalls:
         self.skip = False
         self.line_handler = None
         self.futures = []
+        self.slow_speaking_rate = 0.73
+        self.medium_speaking_rate = 0.85
         self.executor = concurrent.futures.ThreadPoolExecutor()
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
@@ -82,14 +84,19 @@ class APICalls:
         elif '"target_language":' in current_line:
             classified_text = self.extract_and_classify_enclosed_words(last_value)
             text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)["text"]
+            number_of_words = len(text_w_o_transliteration.split())
+            if number_of_words > 4:
+                speaking_rate = self.slow_speaking_rate
+            else:
+                speaking_rate = self.medium_speaking_rate
             if self.turn_nr % 2 == 0:
                 if self.voice_1:
-                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_1, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_1, filename, self.document_durations, speaking_rate=speaking_rate))
                 else:
                     self.pending_voice_1 = {"text": text_w_o_transliteration, "filename": filename}
             else:
                 if self.voice_2:
-                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_2, filename, self.document_durations))
+                    self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_2, filename, self.document_durations, speaking_rate=speaking_rate))
                 else:
                     self.pending_voice_2 = {"text": text_w_o_transliteration, "filename": filename}
         if '"title":' in current_line:
@@ -103,10 +110,13 @@ class APICalls:
                     elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
                         self.voice_1_id = voice_finder_openai(last_value, self.target_language)
                         self.voice_1 = self.voice_1_id
-
-                    print('self.voice_1: ', self.voice_1)
                     if self.pending_voice_1:
-                        self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_1['text'], self.voice_1, self.pending_voice_1['filename'], self.document_durations))
+                        number_of_words = len(self.pending_voice_1['text'].split())
+                        if number_of_words > 4:
+                            speaking_rate = self.slow_speaking_rate
+                        else:
+                            speaking_rate = self.medium_speaking_rate
+                        self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_1['text'], self.voice_1, self.pending_voice_1['filename'], self.document_durations, speaking_rate=speaking_rate))
                         self.pending_voice_1 = None
                 if self.turn_nr == 1:
                     if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
@@ -114,9 +124,13 @@ class APICalls:
                     elif self.tts_provider == TTS_PROVIDERS.OPENAI.value:
                         self.voice_2_id = voice_finder_openai(last_value, self.target_language, self.voice_1_id)
                         self.voice_2 = self.voice_2_id
-                    print('self.voice_2: ', self.voice_2)
                     if self.pending_voice_2:
-                        self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations))
+                        number_of_words = len(self.pending_voice_2['text'].split())
+                        if number_of_words > 4:
+                            speaking_rate = self.slow_speaking_rate
+                        else:
+                            speaking_rate = self.medium_speaking_rate
+                        self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations, speaking_rate=speaking_rate))
                         self.pending_voice_2 = None
 
     def handle_line_2nd_API(self, current_line, full_json):
@@ -172,7 +186,12 @@ class APICalls:
                 return
             voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
             self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value}, self.document_target_phrases, operation="add")
-            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations))
+            number_of_words = len(last_value.split())
+            if number_of_words > 4:
+                speaking_rate = self.slow_speaking_rate
+            else:
+                speaking_rate = self.medium_speaking_rate
+            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations, speaking_rate=speaking_rate))
             self.skip = False
         elif '"speaker":' in current_line:
             self.skip = False

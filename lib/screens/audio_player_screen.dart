@@ -23,6 +23,9 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../utils/vosk_recognizer.dart';
 import 'package:parakeet/utils/flutter_stt_language_codes.dart';
 import 'dart:convert';
+import 'package:parakeet/services/streak_service.dart';
+import 'package:parakeet/widgets/streak_display.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -66,9 +69,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   String? targetPhraseToCompareWith;
   String? voiceLanguageCode;
   bool isLanguageSupported = false;
-  bool isPlaying = false;
-  bool isStopped = false;
-  bool _isPaused = false;
+  final ValueNotifier<bool> isPlaying = ValueNotifier<bool>(false);
   int updateNumber = 0;
   bool speechRecognitionActive = false;
   bool? speechRecognitionSupported;
@@ -78,6 +79,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool hasNicknameAudio = false;
   bool addressByNickname = true;
   bool isLoading = false;
+  double _playbackSpeed = 1.0;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -102,10 +104,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   SpeechService? voskSpeechService;
 
+  final StreakService _streakService = StreakService();
+  bool _showStreak = false;
+
+  final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
+
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
+    player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
     script = script_generator.createFirstScript(widget.dialogue);
     currentTrack = script[0];
@@ -113,7 +121,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
     cachedAudioDurations = getAudioDurationsFromNarratorStorage();
-    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrack, saveSnapshot);
+    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrackLength, saveSnapshot);
     fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
     getExistingBigJson();
     updateHasNicknameAudio().then((_) {
@@ -137,6 +145,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
       },
     );
+    _repetitionsMode.addListener(() {
+      updatePlaylistOnTheFly();
+    });
+    isPlaying.addListener(() async {
+      if (isPlaying.value) {
+        await _play();
+      } else {
+        await _pause();
+      }
+    });
   }
 
   String? getVoskModelUrl(String languageName) {
@@ -263,22 +281,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     for (int i = 1; i <= retries; i++) {
       bool exists = await urlExists(url);
       if (exists) {
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
-        } else {
-          print('State not mounted for isLoading');
-        }
+        setState(() {
+          isLoading = false;
+        });
         return true;
       }
-      if (mounted) {
-        setState(() {
-          isLoading = true;
-        });
-      } else {
-        print('State not mounted for isLoading');
-      }
+      setState(() {
+        isLoading = true;
+      });
       if (i == 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -332,8 +342,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _listenToPlayerStreams() {
     player.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
-        if (isPlaying) {
+        if (isPlaying.value) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
+          _handleLessonCompletion();
         }
         _stop();
       }
@@ -384,7 +395,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      await _play();
+      await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
+      isPlaying.value = true;
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
@@ -416,7 +428,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue);
+      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -439,11 +451,65 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
     await playlist.addAll(newTracks);
-    if (!widget.generating) {
-      await _play();
-    }
+    // if (!widget.generating && !isPlaying.value) {
+    // isPlaying.value = true;
+    // }
 
     updateNumber++;
+  }
+
+  void updatePlaylistOnTheFly() async {
+    bool wasPlaying = isPlaying.value;
+    int lastIndexBeforeUpdate = player.currentIndex!;
+    if (!widget.generating) {
+      isPlaying.value = false;
+    }
+
+    if (widget.generating) {
+      print("Error: updatePlaylistOnTheFly() called while generating.");
+      return;
+    }
+
+    if (existingBigJson == null) {
+      print("Error: Required JSON data is null.");
+      return;
+    }
+
+    try {
+      script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+    } catch (e) {
+      print("Error parsing and creating script: $e");
+      return;
+    }
+
+    buildFilesToCompare(script);
+
+    script = script.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    var newScript = List.from(script);
+
+    // Check if lastIndexBeforeUpdate is within the range of newScript
+    if (lastIndexBeforeUpdate >= newScript.length) {
+      await player.seek(Duration.zero, index: newScript.length - 10);
+      _savePlayerPosition();
+    }
+
+    // Filter out files that start with a '$'
+    newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    List<String> fileUrls = [];
+    for (var fileName in newScript) {
+      fileUrls.add(await _constructUrl(fileName));
+    }
+
+    final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
+
+    await playlist.clear();
+    await playlist.addAll(newTracks);
+    await updateTrackLength();
+    if (!widget.generating && wasPlaying) {
+      isPlaying.value = true;
+    }
   }
 
   void saveSnapshot(QuerySnapshot snapshot) {
@@ -452,7 +518,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<void> updateTrack() async {
+  Future<void> updateTrackLength() async {
     CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
@@ -491,7 +557,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Stream<PositionData> get _positionDataStream {
     int lastIndex = -1;
     return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
-      player.positionStream.where((_) => !_isPaused),
+      player.positionStream.where((_) => isPlaying.value),
       player.durationStream.whereType<Duration>(),
       player.currentIndexStream.whereType<int>().startWith(0),
       (position, duration, index) {
@@ -536,13 +602,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     if (updateNumber == widget.dialogue.length || !widget.generating) {
-      calculateFinalTotalDuration();
+      finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
+      setState(() {});
     }
-  }
-
-  void calculateFinalTotalDuration() {
-    finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
-    setState(() {});
   }
 
   Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
@@ -616,8 +678,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase(stringWhenStarting));
       } else {
         if (voskSpeechService == null) {
-          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
-          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
           print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
           return;
         }
@@ -701,9 +761,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
-    if (isPlaying == false || isStopped == true) {
-      print("Brooooke!");
-      // return;
+    if (!isPlaying.value) {
+      print("Returning early because player was paused");
+      return;
     }
     if (targetPhraseToCompareWith != null && !isSliderMoving) {
       String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
@@ -719,12 +779,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       print("newSpeech: $newSpeech");
-
-      AudioSource getRandomAudioSource(List<AudioSource> audioList) {
-        final random = Random();
-        int index = random.nextInt(audioList.length);
-        return audioList[index];
-      }
 
       if (newSpeech == '') {
         // TODO: Add feedback for no audio detected
@@ -810,6 +864,32 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
   }
 
+  Future<void> _changePlaybackSpeed(double speed) async {
+    await player.setSpeed(speed);
+    setState(() {
+      _playbackSpeed = speed;
+    });
+  }
+
+  Future<void> _handleLessonCompletion() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await _streakService.recordDailyActivity(userId);
+      setState(() {
+        _showStreak = true;
+      });
+
+      // Hide streak after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _showStreak = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
@@ -822,10 +902,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               if (didPop) return;
               final NavigatorState navigator = Navigator.of(context);
               if (!widget.generating) {
-                if (!isStopped && isPlaying) await _pause();
+                if (isPlaying.value) await _pause();
                 navigator.pop('reload');
               } else {
-                if (!isStopped && isPlaying) await _pause();
+                if (isPlaying.value) await _pause();
                 navigator.popUntil((route) => route.isFirst);
                 navigator.pushReplacementNamed('/');
               }
@@ -873,7 +953,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           positionDataStream: _positionDataStream,
                           totalDuration: totalDuration,
                           finalTotalDuration: finalTotalDuration,
-                          isPlaying: isPlaying,
+                          isPlaying: isPlaying.value,
                           savedPosition: savedPosition,
                           findTrackIndexForPosition: findTrackIndexForPosition,
                           player: player,
@@ -890,38 +970,156 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             });
                           },
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous),
-                              onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                            ),
-                            IconButton(
-                              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                              onPressed: isPlaying ? () => _pause() : _play,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.stop),
-                              onPressed: _stop,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.skip_next),
-                              onPressed: player.hasNext
-                                  ? () {
-                                      setState(() {
-                                        _isSkipping = true;
-                                      });
-                                      player.seekToNext();
-                                      Future.delayed(const Duration(seconds: 1), () {
-                                        setState(() {
-                                          _isSkipping = false;
-                                        });
-                                      });
-                                    }
-                                  : null,
-                            ),
-                          ],
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_previous),
+                                      onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                                    ),
+                                    ValueListenableBuilder<bool>(
+                                      valueListenable: isPlaying,
+                                      builder: (context, playing, child) {
+                                        return IconButton(
+                                          icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                                          onPressed: () {
+                                            isPlaying.value = !isPlaying.value;
+                                          },
+                                        );
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.skip_next),
+                                      onPressed: player.hasNext
+                                          ? () {
+                                              setState(() {
+                                                _isSkipping = true;
+                                              });
+                                              player.seekToNext();
+                                              Future.delayed(const Duration(seconds: 1), () {
+                                                setState(() {
+                                                  _isSkipping = false;
+                                                });
+                                              });
+                                            }
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    PopupMenuButton<RepetitionMode>(
+                                      offset: const Offset(0, 40),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Repetitions',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Theme.of(context).colorScheme.primary,
+                                            size: 20,
+                                          ),
+                                        ],
+                                      ),
+                                      itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
+                                        PopupMenuItem<RepetitionMode>(
+                                          value: RepetitionMode.normal,
+                                          child: Row(
+                                            children: [
+                                              const Text('Normal Repetitions'),
+                                              if (_repetitionsMode.value == RepetitionMode.normal)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(left: 8.0),
+                                                  child: Icon(Icons.check, size: 18),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<RepetitionMode>(
+                                          value: RepetitionMode.less,
+                                          child: Row(
+                                            children: [
+                                              const Text('Less Repetitions'),
+                                              if (_repetitionsMode.value == RepetitionMode.less)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(left: 8.0),
+                                                  child: Icon(Icons.check, size: 18),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      onSelected: (RepetitionMode value) {
+                                        if (widget.generating) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('Please wait until we finish generating your audio to change this setting!'),
+                                              action: SnackBarAction(
+                                                label: 'OK',
+                                                onPressed: () {
+                                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          _repetitionsMode.value = value;
+                                        }
+                                      },
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.speed,
+                                          size: 18,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        ),
+                                        DropdownButton<double>(
+                                          value: _playbackSpeed,
+                                          isDense: true,
+                                          underline: Container(), // Remove the default underline,
+                                          icon: Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Theme.of(context).colorScheme.primary,
+                                            size: 20,
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                            DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                            DropdownMenuItem(value: 0.9, child: Text('0.9x')),
+                                            DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                            DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                            DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                            DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                          ],
+                                          onChanged: (double? newValue) {
+                                            if (newValue != null) {
+                                              _changePlaybackSpeed(newValue);
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -931,10 +1129,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             ),
           ),
 
-          // Spinner overlay
+          // Streak overlay
+          if (_showStreak)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: StreakDisplay(),
+              ),
+            ),
+
+          // Loading spinner overlay
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -944,12 +1151,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
-  Future<void> _pause({bool analyticsOn = true}) async {
+  Future<void> _savePlayerPosition() async {
     final prefs = await SharedPreferences.getInstance();
     final positionData = await player.positionStream.first;
     final currentPosition = positionData.inMilliseconds;
     int currentIndex = player.currentIndex ?? 0;
-
+    print("will now save position: $currentPosition, player.currentIndex: ${player.currentIndex}");
     await prefs.setInt('savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
     await prefs.setInt('savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
     await prefs.setBool("now_playing_${widget.documentID}_${widget.userID}", true);
@@ -960,43 +1167,41 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       nowPlayingList.add(widget.documentID);
     }
     await prefs.setStringList(nowPlayingKey, nowPlayingList);
+  }
 
+  Future<void> _pause({bool analyticsOn = true}) async {
+    _savePlayerPosition();
     player.pause();
-    if (mounted) {
-      setState(() {
-        isPlaying = false;
-        _isPaused = true;
-      });
-    }
+
     if (analyticsOn) {
       analyticsManager.storeAnalytics(widget.documentID, 'pause');
     }
   }
 
   Future<void> _play() async {
+    print("_play() called");
     final prefs = await SharedPreferences.getInstance();
     final savedPosition = prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
     final savedTrackIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
 
-    setState(() {
-      isPlaying = true;
-      _isPaused = false;
-    });
-
+    print("savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex");
     if (savedPosition != null && savedTrackIndex != null) {
+      print("will now seek to position: $savedPosition, index: $savedTrackIndex");
       await player.seek(Duration(milliseconds: savedPosition), index: savedTrackIndex);
+      print("player.currentIndex: ${player.currentIndex}");
     }
     player.play();
 
     // Show ad for non-premium users every time they start playing
     if (!_hasPremium && !_hasShownInitialAd) {
       _hasShownInitialAd = true; // Prevent showing ad multiple times in same session
+      print("Now showing add");
       await AdService.showInterstitialAd(
         onAdShown: () async {
-          await _pause();
+          isPlaying.value = false;
         },
         onAdDismissed: () async {
-          await _play();
+          isPlaying.value = true;
         },
       );
     }
@@ -1019,9 +1224,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     player.stop();
     player.seek(Duration.zero, index: 0);
+    isPlaying.value = false;
     setState(() {
-      isPlaying = false;
-      isStopped = true;
       currentTrack = script[0];
     });
   }
@@ -1043,9 +1247,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
-    if (isPlaying) {
-      _stop();
-    }
+    _repetitionsMode.dispose();
+    isPlaying.dispose();
     firestoreService?.dispose();
     fileDurationUpdate?.dispose();
     player.dispose();

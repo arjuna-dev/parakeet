@@ -73,3 +73,5 @@ final Map<String, String> voskModelUrls = {
   'uz': 'https://alphacephei.com/vosk/models/vosk-model-small-uz-0.22.zip',
   'vn': 'https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip',
 };
+
+enum RepetitionMode { normal, less }
