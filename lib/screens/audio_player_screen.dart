@@ -562,7 +562,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
   Future<String> _getNicknameUrl() async {
     final int callCount = await getCurrentCallCount();
-    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount < maxCalls;
+    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
 
     if (canUseNickname) {
       final List<int> numbers = List.generate(6, (i) => i)..shuffle();
