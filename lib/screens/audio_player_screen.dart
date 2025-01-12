@@ -21,11 +21,12 @@ import '../utils/constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../utils/vosk_recognizer.dart';
-import 'package:parakeet/utils/flutter_stt_language_codes.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'dart:convert';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -159,7 +160,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   String? getVoskModelUrl(String languageName) {
     // Get full language code (e.g., "en-US")
-    final fullCode = languageCodes[languageName];
+    final fullCode = supportedLanguageCodes[languageName];
     if (fullCode == null) {
       return null;
     }
@@ -532,27 +533,74 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<String> _constructUrl(String fileName) async {
-    if (fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break") {
-      return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
+    if (_isNarratorFile(fileName)) {
+      // narrator_, one_second_break, five_second_break
+      return _getNarratorUrl(fileName);
     } else if (fileName == "nickname") {
-      int randomNumber = Random().nextInt(5) + 1;
-      if (hasNicknameAudio && addressByNickname) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        if (widget.nativeLanguage == "English (US)") {
-          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
-        } else {
-          return "https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
-        }
-      } else {
-        // Generic greeting
-        return "https://storage.googleapis.com/narrator_audio_files/google_tts/narrator_english/narrator_greetings_$randomNumber.mp3";
-      }
+      // nickname logic
+      return await _getNicknameUrl();
     } else if (fileName == "audio_cue") {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      return "https://storage.googleapis.com/narrator_audio_files/general/audio_cue.mp3?timestamp=$timestamp";
+      // audio_cue
+      return _getAudioCueUrl();
     } else {
-      return "https://storage.googleapis.com/conversations_audio_files/${widget.documentID}/$fileName.mp3";
+      // default conversation audio
+      return _getConversationAudioUrl(fileName);
     }
+  }
+
+  /// Returns `true` if the filename indicates a "narrator" or a break file.
+  bool _isNarratorFile(String fileName) {
+    return fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break";
+  }
+
+  /// Builds the URL for narrator/break files.
+  String _getNarratorUrl(String fileName) {
+    return "https://storage.googleapis.com/narrator_audio_files/"
+        "google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
+  }
+
+  /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
+  Future<String> _getNicknameUrl() async {
+    final int callCount = await getCurrentCallCount();
+    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
+
+    if (canUseNickname) {
+      final List<int> numbers = List.generate(6, (i) => i)..shuffle();
+      for (final randomNumber in numbers) {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final url = "https://storage.googleapis.com/user_nicknames/"
+            "${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+
+        if (await urlExists(url)) {
+          return url; // Return first valid URL
+        }
+      }
+    }
+
+    // If we can’t (or didn’t) find a nickname file, return a generic greeting.
+    return _getGenericGreetingUrl();
+  }
+
+  /// Returns the URL to a generic greeting.
+  String _getGenericGreetingUrl() {
+    final randomNumber = Random().nextInt(5) + 1;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return "https://storage.googleapis.com/narrator_audio_files/"
+        "google_tts/narrator_${Uri.encodeComponent(widget.nativeLanguage)}/"
+        "narrator_greetings_$randomNumber.mp3?timestamp=$timestamp";
+  }
+
+  /// Builds the URL for the audio cue file.
+  String _getAudioCueUrl() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return "https://storage.googleapis.com/narrator_audio_files/"
+        "general/audio_cue.mp3?timestamp=$timestamp";
+  }
+
+  /// Builds the URL for the default (conversation) audio files.
+  String _getConversationAudioUrl(String fileName) {
+    return "https://storage.googleapis.com/conversations_audio_files/"
+        "${widget.documentID}/$fileName.mp3";
   }
 
   Duration cumulativeDurationUpTo(int currentIndex) {
