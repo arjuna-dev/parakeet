@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'dart:async';
+import '../utils/native_language_list.dart';
+import 'dart:math';
 
 class NicknamePopup extends StatefulWidget {
   const NicknamePopup({super.key});
@@ -23,6 +25,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
   final player = AudioPlayer();
   String userId = FirebaseAuth.instance.currentUser!.uid;
   String? _currentNickname;
+  String _selectedLanguage = "English (US)"; // Add this line near other state variables
+  int? _usedGreetingIndex; // Add this near other state variables
 
   @override
   void initState() {
@@ -89,7 +93,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
         } else {
           // Document exists, check count and date
           if (userDocSnapshot.get('last_call_date') == today) {
-            if (userDocSnapshot.get('call_count') >= 1) {
+            if (userDocSnapshot.get('call_count') >= 10) {
               // Limit reached
               return false;
             } else {
@@ -124,7 +128,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
       _isLoading = true;
     });
 
-    // Add the transaction check here
     final canProceed = await _checkAndUpdateCallCount();
     if (!canProceed) {
       setState(() {
@@ -139,28 +142,28 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
 
     try {
-      // First generate and play English (US) first greeting
-      final englishGreetings = greetingsList["English (US)"]!;
-      final firstGreeting = englishGreetings[0];
-      final mainUserIdN = "${FirebaseAuth.instance.currentUser!.uid}_1";
+      // Generate and play greeting in selected language with random greeting
+      final selectedGreetings = greetingsList[_selectedLanguage]!;
+      _usedGreetingIndex = Random().nextInt(selectedGreetings.length);
+      final randomGreeting = selectedGreetings[_usedGreetingIndex!];
+      final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_0";
 
-      // Generate and play the first English (US) greeting
-      await CloudFunctionService.generateNicknameAudio("$firstGreeting $nicknameText!", userId, mainUserIdN, "English (US)");
-      await _fetchAndPlayAudio(mainUserIdN);
+      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _selectedLanguage);
+      await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText);
+
       setState(() {
         _currentNickname = nicknameText;
         _isLoading = false;
       });
 
-      // Show initial success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Your nickname has been saved!"),
         ),
       );
 
-      // Generate all other greetings in the background without awaiting
+      // Generate remaining greetings in background
       unawaited(_generateRemainingGreetings(nicknameText));
     } catch (e) {
       print("Error generating nicknames: $e");
@@ -219,27 +222,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _generateRemainingGreetings(String nicknameText) async {
     try {
-      int audioIndex = 2; // Start from 2 since 1 is used for main English greeting
-
       // First generate remaining English (US) greetings
-      final englishGreetings = greetingsList["English (US)"]!;
-      for (var i = 1; i < englishGreetings.length; i++) {
-        final greeting = englishGreetings[i];
-        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_$audioIndex";
-        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, "English (US)"));
-        audioIndex++;
-      }
+      final selectedGreetings = greetingsList[_selectedLanguage]!;
 
-      // Then generate all other languages
-      for (var language in greetingsList.keys) {
-        if (language == "English (US)") continue; // Skip English (US) as it's already done
-        audioIndex = 1;
-        final greetingsForLanguage = greetingsList[language]!;
-        for (var greeting in greetingsForLanguage) {
-          final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${language}_$audioIndex";
-          unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, language));
-          audioIndex++;
-        }
+      // Generate remaining greetings for selected language, skipping the used one
+      for (var i = 0; i < selectedGreetings.length; i++) {
+        if (i == _usedGreetingIndex) continue; // Skip the greeting we already generated
+        final greeting = selectedGreetings[i];
+        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${i + 1}";
+        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _selectedLanguage));
       }
     } catch (e) {
       print("Error queuing remaining greetings: $e");
@@ -319,6 +310,46 @@ class _NicknamePopupState extends State<NicknamePopup> {
                           fontSize: isSmallScreen ? 10 : 12,
                           color: colorScheme.onSurfaceVariant,
                         ),
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 8 : 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 8 : 12,
+                        vertical: isSmallScreen ? 4 : 8,
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedLanguage,
+                        decoration: InputDecoration(
+                          labelText: 'Select Language',
+                          labelStyle: TextStyle(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          border: InputBorder.none,
+                        ),
+                        items: nativeLanguageCodes.keys.map((String language) {
+                          return DropdownMenuItem<String>(
+                            value: language,
+                            child: Text(
+                              language,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 13 : 14,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedLanguage = newValue;
+                            });
+                          }
+                        },
                       ),
                     ),
                     SizedBox(height: isSmallScreen ? 8 : 12),

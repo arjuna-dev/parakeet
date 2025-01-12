@@ -7,13 +7,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
-import 'package:parakeet/utils/google_tts_language_codes.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'package:parakeet/utils/native_language_list.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// import 'package:responsive_framework/responsive_framework.dart';
+import 'package:parakeet/utils/nickname_generator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -34,6 +35,7 @@ class _CreateLessonState extends State<CreateLesson> {
   var languageLevel = 'Absolute beginner (A1)';
   final TextEditingController _controller = TextEditingController();
   final activeCreationAllowed = 20; // change this to allow more users
+  bool isGeneratingNickname = false;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -384,9 +386,37 @@ class _CreateLessonState extends State<CreateLesson> {
             items: nativeLanguageCodes.keys.toList(),
             label: 'Your Language',
             icon: Icons.person,
-            onChanged: (value) {
+            onChanged: (value) async {
               setState(() => nativeLanguage = value.toString());
-              _saveUserPreferences('native_language', value.toString());
+              await _saveUserPreferences('native_language', value.toString());
+              if (value != null) {
+                final prefs = await SharedPreferences.getInstance();
+                if (prefs.getBool('addressByNickname') ?? false) {
+                  try {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Generating a nice greeting for you... 🚏"),
+                      ),
+                    );
+                    isGeneratingNickname = true;
+                    String result = await generateNicknameAudioFiles(
+                      language: value.toString(),
+                      shouldPlayAudio: true,
+                    );
+                    if (result == "Daily call limit reached") {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Your name is officially trending! Take a break, you've reached name generation daily limit! 🧘‍♂️"),
+                        ),
+                      );
+                    }
+                    isGeneratingNickname = false;
+                    print("Nickname audio generated successfully.");
+                  } catch (e) {
+                    print("Error: $e");
+                  }
+                }
+              }
             },
             isSmallScreen: isSmallScreen,
             colorScheme: colorScheme,
@@ -394,7 +424,7 @@ class _CreateLessonState extends State<CreateLesson> {
           SizedBox(height: isSmallScreen || kIsWeb ? 8 : 16),
           _buildDropdown(
             value: targetLanguage,
-            items: languageCodes.keys.toList(),
+            items: supportedLanguageCodes.keys.toList(),
             label: 'Learning Language',
             icon: Icons.school,
             onChanged: (value) {
@@ -487,6 +517,26 @@ class _CreateLessonState extends State<CreateLesson> {
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         onPressed: () async {
+          if (isGeneratingNickname) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+            );
+
+            // Wait until isGeneratingNickname becomes false
+            await Future.doWhile(() async {
+              await Future.delayed(Duration(milliseconds: 100)); // Small delay to prevent CPU hogging
+              return isGeneratingNickname;
+            });
+
+            // Close the loading dialog
+            Navigator.of(context).pop();
+          }
           if (_formKey.currentState!.validate()) {
             // Check premium status first
             final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
