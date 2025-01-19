@@ -452,7 +452,8 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
         one_month_ago = now - 2592000  # 30 days in seconds
 
         if user_doc.exists:
-            timestamps = user_doc.get('timestamps', [])
+            data = user_doc.to_dict()
+            timestamps = data.get('timestamps', [])
             # Remove timestamps older than 31 days
             timestamps = [ts for ts in timestamps if ts > one_month_ago]
             
@@ -467,7 +468,7 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
                 return https_fn.Response(
                     json.dumps({
                         "allowed": False,
-                        "error": "Please wait a minute before your next request"
+                        "error": "That was fast! Please wait at least one minute before your next story part!"
                     }),
                     status=200
                 )
@@ -475,7 +476,7 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
                 return https_fn.Response(
                     json.dumps({
                         "allowed": False,
-                        "error": "Hourly limit reached (20 requests)"
+                        "error": "Hourly limit reached (20 story parts)"
                     }),
                     status=200
                 )
@@ -483,15 +484,15 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
                 return https_fn.Response(
                     json.dumps({
                         "allowed": False,
-                        "error": "Daily limit reached (40 requests)"
+                        "error": "Daily limit reached (40 story parts)"
                     }),
                     status=200
                 )
-            if last_month >= 280:
+            if last_month >= 250:
                 return https_fn.Response(
                     json.dumps({
                         "allowed": False,
-                        "error": "Monthly limit reached (280 requests)"
+                        "error": "Monthly limit reached (250 story parts)"
                     }),
                     status=200
                 )
@@ -505,6 +506,7 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
         )
 
     except Exception as e:
+        print(f"Error in check_rate_limit: {str(e)}")
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=500
@@ -536,7 +538,8 @@ def record_api_call(req: https_fn.Request) -> https_fn.Response:
         one_month_ago = now - 2592000  # 30 days in seconds
 
         if user_doc.exists:
-            timestamps = user_doc.get('timestamps', [])
+            data = user_doc.to_dict()
+            timestamps = data.get('timestamps', [])
             # Remove timestamps older than 31 days
             timestamps = [ts for ts in timestamps if ts > one_month_ago]
             # Add new timestamp
@@ -552,7 +555,87 @@ def record_api_call(req: https_fn.Request) -> https_fn.Response:
         )
 
     except Exception as e:
+        print(f"Error in record_api_call: {str(e)}")
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=500
         )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
+def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
+    try:
+        # Handle different content types
+        content_type = req.headers.get('content-type', '')
+        
+        if 'application/json' in content_type:
+            data = req.get_json()
+        elif 'application/x-www-form-urlencoded' in content_type:
+            # Parse form data
+            form_data = req.form.to_dict()
+            # Ko-fi sends the data in a 'data' field as a JSON string
+            data = json.loads(form_data.get('data', '{}'))
+        else:
+            return https_fn.Response(
+                json.dumps({
+                    "error": f"Unsupported Content-Type: {content_type}. Expected application/json or application/x-www-form-urlencoded"
+                }),
+                status=415
+            )
+
+        # Rest of the function remains the same
+        verification_token = data.get('verification_token')
+        expected_token = "d4e98820-b5de-4a36-b447-e32b8c12cfe1"  # Store this securely
+        
+        if verification_token != expected_token:
+            return https_fn.Response(
+                json.dumps({"error": "Invalid verification token"}),
+                status=401
+            )
+
+        # Extract relevant information
+        amount = float(data.get('amount', '0'))
+        username = data.get('message', '').strip()  # Reddit username in message field
+        print(f"Received donation of ${amount} from {username}")
+        
+        if not username:
+            return https_fn.Response(
+                json.dumps({"error": "No username provided in message field"}),
+                status=400
+            )
+
+        # Only process donations of $5 or more
+        if amount >= 5.00:
+            db = firestore.client()
+            user_ref = db.collection('plotTwistUsers').document(username)
+            
+            # Clear timestamps array to reset rate limits
+            user_ref.update({'timestamps': []})
+            
+            return https_fn.Response(
+                json.dumps({
+                    "success": True,
+                    "message": f"Rate limits reset for user {username}"
+                }),
+                status=200
+            )
+        
+        return https_fn.Response(
+            json.dumps({
+                "success": True,
+                "message": "Donation received but amount is less than $5.00"
+            }),
+            status=200
+        )
+
+    except Exception as e:
+        print(f"Error processing Ko-fi donation: {str(e)}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
+
