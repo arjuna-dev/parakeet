@@ -3,7 +3,7 @@ from firebase_admin import initialize_app, firestore
 import firebase_functions.options as options
 import json
 import datetime
-import re
+import time
 from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
@@ -340,3 +340,219 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
         json.dumps({"message": "Audio content written to and uploaded to bucket."}),
         status=200,
     )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET", "POST"]
+    )
+)
+def plottwist_story(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        post_id = request_data.get("post_id")
+        data = request_data.get("data")
+        
+        if not post_id or not data:
+            return https_fn.Response(
+                json.dumps({"error": "Missing required fields: post_id or data"}),
+                status=400,
+            )
+
+        db = firestore.client()
+        doc_ref = db.collection('plotTwistStories').document(f'story_{post_id}')
+        doc_ref.set(data, merge=True)
+
+        return https_fn.Response(
+            json.dumps({
+                "message": "Document written successfully",
+                "document_id": f'story_{post_id}'
+            }),
+            status=200,
+        )
+
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500,
+        )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["GET"]
+    )
+)
+def get_openai_key(req: https_fn.Request) -> https_fn.Response:
+    try:
+
+        # Validate the API key
+        api_key = req.headers.get("Authorization")
+        expected_api_key = "amvhihffd&*(90-)asdjjla+_)8hflaksjn|_-_-_-amvhihffd&*(90-)asdjjla+_)8hflaksjn|_-_-_-amvhihffd&*(90-)asdjjla+_)8hflaksjn|_-_-_-"
+        if api_key != f"Bearer {expected_api_key}":
+            return https_fn.Response(
+                json.dumps({"error": "Unauthorized"}),
+                status=401
+            )
+
+        db = firestore.client()
+        doc_ref = db.collection('plotTwistStories').document('openai')
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return https_fn.Response(
+                json.dumps({"error": "OpenAI key document not found"}),
+                status=404
+            )
+
+        key = doc.get('key')
+        if not key:
+            return https_fn.Response(
+                json.dumps({"error": "OpenAI key not found in document"}),
+                status=404
+            )
+
+        return https_fn.Response(
+            json.dumps({"key": key}),
+            status=200
+        )
+
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
+def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
+    try:
+        # Get username from request body
+        request_data = req.get_json()
+        username = request_data.get('username')
+        
+        if not username:
+            return https_fn.Response(
+                json.dumps({"error": "Username is required"}),
+                status=400
+            )
+
+        db = firestore.client()
+        user_ref = db.collection('plotTwistUsers').document(username)
+        user_doc = user_ref.get()
+
+        now = time.time()
+        one_minute_ago = now - 60
+        one_hour_ago = now - 3600
+        one_day_ago = now - 86400
+        one_month_ago = now - 2592000  # 30 days in seconds
+
+        if user_doc.exists:
+            timestamps = user_doc.get('timestamps', [])
+            # Remove timestamps older than 31 days
+            timestamps = [ts for ts in timestamps if ts > one_month_ago]
+            
+            # Count API calls in different time windows
+            last_minute = sum(1 for ts in timestamps if ts > one_minute_ago)
+            last_hour = sum(1 for ts in timestamps if ts > one_hour_ago)
+            last_day = sum(1 for ts in timestamps if ts > one_day_ago)
+            last_month = len(timestamps)
+
+            # Check rate limits
+            if last_minute >= 1:
+                return https_fn.Response(
+                    json.dumps({
+                        "allowed": False,
+                        "error": "Please wait a minute before your next request"
+                    }),
+                    status=200
+                )
+            if last_hour >= 20:
+                return https_fn.Response(
+                    json.dumps({
+                        "allowed": False,
+                        "error": "Hourly limit reached (20 requests)"
+                    }),
+                    status=200
+                )
+            if last_day >= 40:
+                return https_fn.Response(
+                    json.dumps({
+                        "allowed": False,
+                        "error": "Daily limit reached (40 requests)"
+                    }),
+                    status=200
+                )
+            if last_month >= 280:
+                return https_fn.Response(
+                    json.dumps({
+                        "allowed": False,
+                        "error": "Monthly limit reached (280 requests)"
+                    }),
+                    status=200
+                )
+
+            # Update timestamps array (remove old ones)
+            user_ref.update({'timestamps': timestamps})
+
+        return https_fn.Response(
+            json.dumps({"allowed": True}),
+            status=200
+        )
+
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
+def record_api_call(req: https_fn.Request) -> https_fn.Response:
+    try:
+        # Get username from request body
+        request_data = req.get_json()
+        username = request_data.get('username')
+        
+        if not username:
+            return https_fn.Response(
+                json.dumps({"error": "Username is required"}),
+                status=400
+            )
+
+        db = firestore.client()
+        user_ref = db.collection('plotTwistUsers').document(username)
+        user_doc = user_ref.get()
+
+        now = time.time()
+        one_month_ago = now - 2592000  # 30 days in seconds
+
+        if user_doc.exists:
+            timestamps = user_doc.get('timestamps', [])
+            # Remove timestamps older than 31 days
+            timestamps = [ts for ts in timestamps if ts > one_month_ago]
+            # Add new timestamp
+            timestamps.append(now)
+            user_ref.update({'timestamps': timestamps})
+        else:
+            # Create new user document
+            user_ref.set({'timestamps': [now]})
+
+        return https_fn.Response(
+            json.dumps({"success": True}),
+            status=200
+        )
+
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
