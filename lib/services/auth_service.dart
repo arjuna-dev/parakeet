@@ -22,17 +22,41 @@ class AuthService {
         'name': user.displayName,
         'email': user.email,
         'premium': false,
+        'onboarding_completed': false,
       });
-    } else if (userData != null && (!userData.containsKey('premium'))) {
-      // Add premium field if it doesn't exist
-      await _firestore.collection('users').doc(user.uid).update({
-        'premium': false,
-      });
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+        return;
+      }
+    } else if (userData != null) {
+      bool needsOnboarding = !userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false;
+
+      // Update missing fields for existing users
+      Map<String, dynamic> updates = {};
+      if (!userData.containsKey('onboarding_completed')) {
+        updates['onboarding_completed'] = false;
+      }
+      if (!userData.containsKey('premium')) {
+        updates['premium'] = false;
+      }
+
+      if (updates.isNotEmpty) {
+        await _firestore.collection('users').doc(user.uid).update(updates);
+      }
+
+      if (needsOnboarding) {
+        if (context.mounted) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+          return;
+        }
+      }
     }
 
-    // Show trial modal if user is not premium, and hasUsedTrial field doesn't exist or is false
+    // Only show trial modal if onboarding is completed
     if (context.mounted &&
-        ((!userDoc.exists) || (userData != null && (!userData.containsKey('premium') || userData['premium'] == false) && (!userData.containsKey('hasUsedTrial') || userData['hasUsedTrial'] == false)))) {
+        userData != null &&
+        userData['onboarding_completed'] == true &&
+        ((!userDoc.exists) || (!userData.containsKey('premium') || userData['premium'] == false) && (!userData.containsKey('hasUsedTrial') || userData['hasUsedTrial'] == false))) {
       await showDialog(
         context: context,
         barrierDismissible: false,
