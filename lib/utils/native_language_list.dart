@@ -32,3 +32,6 @@ const nativeLanguageCodes = {
   "Turkish": "tr-TR",
   "Vietnamese": "vi-VN",
 };
+
+// Get list of supported languages from the nativeLanguageCodes map
+List<String> get supportedLanguages => nativeLanguageCodes.keys.toList();

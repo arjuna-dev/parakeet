@@ -41,9 +41,23 @@ class AuthScreen extends StatelessWidget {
                       'name': user.displayName,
                       'email': user.email,
                       'nickname': '',
+                      'onboarding_completed': false,
                     });
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(context, '/onboarding');
+                    }
+                  } else {
+                    final userData = userDocSnapshot.data() as Map<String, dynamic>;
+                    if (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false) {
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/onboarding');
+                      }
+                    } else {
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/create_lesson');
+                      }
+                    }
                   }
-                  Navigator.pushReplacementNamed(context, '/create_lesson');
                 }
               },
               child: const Text('Sign In with Google'),
