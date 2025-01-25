@@ -1,22 +1,59 @@
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'script_sequences.dart' as sequences;
 import 'constants.dart';
-import 'package:flutter/foundation.dart';
+import 'script_generator_to_urls.dart' show constructUrl;
+import 'package:fsrs/fsrs.dart' as fsrs;
+import 'spaced_repetition_fsrs.dart' show WordCard;
+
+Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<String> words, String documentId) async {
+  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+
+  for (var word in words) {
+    final docRef = collectionRef.doc(word);
+    final docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      // Create a new document with default FSRS values.
+      WordCard newCard = WordCard(
+        word: word,
+        due: DateTime.now(), // Add the required 'due' parameter
+        lastReview: DateTime.now(), // Add the required 'lastReview' parameter
+        stability: 0,
+        difficulty: 0,
+        elapsedDays: 0,
+        scheduledDays: 0,
+        reps: 0,
+        lapses: 0,
+        state: fsrs.State.newState,
+      );
+      await docRef.set(newCard.toFirestore());
+    }
+  }
+}
+
+Future<List<String>> getOverdueWords(String userId, String targetLanguage) async {
+  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+
+  final nowString = DateTime.now().toIso8601String();
+  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).get();
+
+  // Return just the list of word IDs (the document IDs).
+  return querySnapshot.docs.map((doc) => doc.id).toList();
+}
 
 List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
   List<String> parts = inputString.split('||');
-
   List<Map<String, dynamic>> result = [];
 
   bool isEnclosed = false;
-
   for (var part in parts) {
     if (part.isNotEmpty) {
       result.add({'text': part, 'enclosed': isEnclosed});
     }
     isEnclosed = !isEnclosed;
   }
-
   return result;
 }
 
@@ -25,53 +62,107 @@ List<String> createFirstScript(List<dynamic> data) {
   int randomI = Random().nextInt(sequences.introSequences.length);
   List<String> introSequence = sequences.introSequences[randomI]();
   script.addAll(introSequence);
+
   for (int i = 0; i < data.length; i++) {
     script.add("dialogue_${i}_target_language");
   }
 
   script.addAll(sequences.introOutroSequence1());
-
   return script;
 }
 
-List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepeat, List<dynamic> dialogue, ValueNotifier<RepetitionMode> repetitionMode) {
-  List<String> script = [];
+String formConversationAudioUrl(String documentId, String fileName) {
+  return "https://storage.googleapis.com/conversations_audio_files/"
+      "$documentId/$fileName.mp3";
+}
 
-  script = createFirstScript(dialogue);
+Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage) async {
+  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
 
-  //List<int> sentenceNumberExcludeList = [];
-  // Process each turn in the dialogue
+  final nowString = DateTime.now().toIso8601String();
+  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).get();
+
+  return querySnapshot.docs.map((doc) => doc.reference).toList();
+}
+
+Future<Map<String, dynamic>?> getRepetitionDataForOverdueWord(DocumentReference docRef) async {
+  final docSnapshot = await docRef.get();
+
+  if (!docSnapshot.exists) {
+    return null;
+  }
+
+  final data = docSnapshot.data() as Map<String, dynamic>;
+
+  return {
+    'narratorTranslationsChunk': data['narratorTranslations'],
+    'splitNative': data['nativeText'],
+    'splitTarget': data['targetText'],
+    'wordObjects': data['wordData'],
+  };
+}
+
+Future<List<String>> parseAndCreateScript(
+  List<dynamic> data,
+  List<dynamic> wordsToRepeat,
+  List<dynamic> dialogue,
+  ValueNotifier<RepetitionMode> repetitionMode,
+  String userID,
+  String documentId,
+  String targetLanguage,
+  String nativeLanguage,
+) async {
+  await ensureFirestoreWords(userID, targetLanguage, wordsToRepeat.cast<String>(), documentId);
+
+  final overdueList = await getOverdueWords(userID, targetLanguage);
+
+  List<String> script = createFirstScript(dialogue);
+
   for (int i = 0; i < data.length; i++) {
     if ((data[i] as Map).isNotEmpty) {
       String nativeSentence = "dialogue_${i}_native_language";
       String targetSentence = "dialogue_${i}_target_language";
 
       String narratorExplanation = "dialogue_${i}_narrator_explanation";
-      String narratorFunFactText = data[i]["narrator_fun_fact"];
+      String narratorFunFactText = data[i]["narrator_fun_fact"] ?? "";
 
-      // Classify and process the text into parts enclosed by || (target_language text)
+      // Extract enclosed text
       List<Map<String, dynamic>> classifiedText = extractAndClassifyEnclosedWords(narratorFunFactText);
       List<String> narratorFunFact = [];
       for (int index = 0; index < classifiedText.length; index++) {
         String narratorFunFactChunks = "dialogue_${i}_narrator_fun_fact_$index";
         narratorFunFact.add(narratorFunFactChunks);
-        // narratorFunFact.add("one_second_break");
       }
 
-      List<String> sentenceSequence = sequences.sentenceSequence1(nativeSentence, targetSentence, narratorExplanation, narratorFunFact, isFirstSentence: i == 0);
+      // Construct sentence-level sequence
+      List<String> sentenceSequence = sequences.sentenceSequence1(
+        nativeSentence,
+        targetSentence,
+        narratorExplanation,
+        narratorFunFact,
+        isFirstSentence: i == 0,
+      );
       script.addAll(sentenceSequence);
 
-      List<int> chunkNumberExcludeList = [];
+      // Check if any words to repeat appear in this entire sentence
+      bool sentenceHasTargetWords = wordsToRepeat.any((element) => data[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
-      // Process words in the sentence
-      if (wordsToRepeat.any((element) => data[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
-        // Process split_sentence items
+      if (sentenceHasTargetWords) {
+        // Process each 'split_sentence' item
         for (int j = 0; j < data[i]["split_sentence"].length; j++) {
-          // Check if user wants to repeat the split sentence (only if at least one word they want is there)
-          if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
-            String text = data[i]["split_sentence"][j]["narrator_translation"];
+          bool splitHasTargetWords = wordsToRepeat.any((element) => data[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
-            // Classify and process the text into parts enclosed by || (target_language text)
+          if (splitHasTargetWords) {
+            // 8f. Check if any word in this chunk is overdue
+            bool chunkIsOverdue = overdueList.any((overdueWord) => data[i]["split_sentence"][j]["target_language"].toString().toLowerCase().contains(overdueWord.toLowerCase()));
+            // Insert narrator phrase if overdue
+            if (chunkIsOverdue) {
+              bool usePhraseEightZero = Random().nextBool();
+              script.add(usePhraseEightZero ? "narrator_navigation_phrases_8_0" : "narrator_navigation_phrases_5");
+            }
+
+            // Build chunk-level narration
+            String text = data[i]["split_sentence"][j]["narrator_translation"];
             List<Map<String, dynamic>> classifiedText1 = extractAndClassifyEnclosedWords(text);
             List<String> narratorTranslationsChunk = [];
             for (int index = 0; index < classifiedText1.length; index++) {
@@ -83,13 +174,15 @@ List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepea
             String splitNative = "dialogue_${i}_split_sentence_${j}_native_language";
             String splitTarget = "dialogue_${i}_split_sentence_${j}_target_language";
 
+            // Word objects for chunkSequence
             List<Map<String, dynamic>> wordObjects = [];
             for (int index = 0; index < data[i]["split_sentence"][j]['words'].length; index++) {
-              if (wordsToRepeat.any((element) => data[i]["split_sentence"][j]["words"][index]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element))) {
+              bool wordIsTarget =
+                  wordsToRepeat.any((element) => data[i]["split_sentence"][j]["words"][index]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
+              if (wordIsTarget) {
                 String wordFile = "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
-                String text = data[i]["split_sentence"][j]['words'][index]["narrator_translation"];
 
-                // Classify and process the text into parts enclosed by || (target_language text)
+                String text = data[i]["split_sentence"][j]['words'][index]["narrator_translation"];
                 List<Map<String, dynamic>> classifiedText2 = extractAndClassifyEnclosedWords(text);
                 List<String> narratorTranslations = [];
                 for (int index2 = 0; index2 < classifiedText2.length; index2++) {
@@ -97,56 +190,92 @@ List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepea
                   narratorTranslations.add(narratorTranslation);
                 }
 
-                wordObjects.add({"word": wordFile, "translation": narratorTranslations});
+                wordObjects.add({
+                  "word": wordFile,
+                  "translation": narratorTranslations,
+                });
               }
             }
 
+            // Insert the chunk sequence with normal or reduced repetition
             if (repetitionMode.value == RepetitionMode.normal) {
-              List<String> chunkSequence = sequences.chunkSequence1(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
+              List<String> chunkSequence = sequences.chunkSequence1(
+                narratorTranslationsChunk,
+                splitNative,
+                splitTarget,
+                wordObjects,
+                j,
+              );
               script.addAll(chunkSequence);
-            } else if (repetitionMode.value == RepetitionMode.less) {
-              List<String> chunkSequence = sequences.chunkSequence1Less(narratorTranslationsChunk, splitNative, splitTarget, wordObjects, j);
+            } else {
+              // repetitionMode.value == RepetitionMode.less
+              List<String> chunkSequence = sequences.chunkSequence1Less(
+                narratorTranslationsChunk,
+                splitNative,
+                splitTarget,
+                wordObjects,
+                j,
+              );
               script.addAll(chunkSequence);
             }
-          } else {
-            chunkNumberExcludeList.add(j);
+
+            List<Map<String, String>> wordObjectsWithUrls = [];
+            for (var wordObj in wordObjects) {
+              wordObjectsWithUrls.add({
+                "word": await constructUrl(wordObj["word"], documentId, nativeLanguage, userID),
+                "translation": await constructUrl(wordObj["translation"], documentId, nativeLanguage, userID),
+              });
+            }
+
+            List<String> narratorTranslationsChunkUrls = [];
+            for (String item in narratorTranslationsChunk) {
+              narratorTranslationsChunkUrls.add(await constructUrl(item, documentId, nativeLanguage, userID));
+            }
+
+            Map<String, dynamic> repetitionsMap = {
+              'narratorTranslation': narratorTranslationsChunkUrls,
+              'splitNative': constructUrl(splitNative, documentId, nativeLanguage, userID),
+              'splitTarget': constructUrl(splitTarget, documentId, nativeLanguage, userID),
+              'wordObjects': wordObjectsWithUrls,
+            };
+            _appendRepetitionUrlsToWordDoc(userID, targetLanguage, data[i]["split_sentence"][j]["target_language"], repetitionsMap);
           }
         }
-        // Active recall sequence
-        // if (i != 0) {
-        //   if (chunkNumberExcludeList.length != data[i]["split_sentence"].length) {
-        //     List<int> validSentences = List<int>.generate(i + 1, (index) => index)
-        //       ..removeWhere(
-        //           (element) => sentenceNumberExcludeList.contains(element));
-        //     if (validSentences.isEmpty) {
-        //       break;
-        //     }
-        //     int randomSentenceI =
-        //         validSentences[Random().nextInt(validSentences.length)];
-        //     int numberOfChunks =
-        //         data[randomSentenceI]["split_sentence"].length - 1;
-        //     List<int> validChunks = List<int>.generate(numberOfChunks, (i) => i)
-        //       ..removeWhere(
-        //           (element) => chunkNumberExcludeList.contains(element));
-        //     if (validChunks.isEmpty) {
-        //       break;
-        //     }
-        //     int randomChunkI = validChunks[Random().nextInt(validChunks.length)];
-        //     String target =
-        //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_target_language";
-        //     String native =
-        //         "dialogue_${randomSentenceI}_split_sentence_${randomChunkI}_native_language";
-        //     List<String> activeRecallSequence =
-        //         sequences.activeRecallSequence1(native, target);
-        //     script.addAll(activeRecallSequence);
-        //   } else {
-        //     sentenceNumberExcludeList.add(i);
-        //   }
-        // } else if (chunkNumberExcludeList.length ==
-        //     data[i]["split_sentence"].length) {
-        //   sentenceNumberExcludeList.add(i);
-        // }
       }
+
+      final overdueWordDocRefs = await getOverdueWordsRefs(userID, targetLanguage);
+
+      int overdueWordsToUseLength = overdueWordDocRefs.length > 5 ? 5 : overdueWordDocRefs.length;
+
+      int insertOverdueEvery = (script.length / overdueWordsToUseLength).round();
+
+      final overdueSequences = <List<String>>[];
+
+      // Create sequences for overdue words
+      for (var docRef in overdueWordDocRefs) {
+        final wordData = await getRepetitionDataForOverdueWord(docRef);
+        if (wordData != null) {
+          List<String> overdueChunkSequence = sequences.chunkSequence1Less(
+            wordData['narratorTranslationsChunk'],
+            wordData['splitNative'],
+            wordData['splitTarget'],
+            wordData['wordObjects'],
+            1,
+          );
+          overdueSequences.add(overdueChunkSequence.toList());
+        }
+      }
+
+      for (int i = insertOverdueEvery; i < script.length; i++) {
+        if (i % insertOverdueEvery == 0 && overdueSequences.isNotEmpty) {
+          script.insertAll(i, overdueSequences.removeAt(0));
+        }
+      }
+
+      while (overdueSequences.isNotEmpty) {
+        script.addAll(overdueSequences.removeAt(0));
+      }
+
       if (i == dialogue.length - 1) {
         Random random = Random();
         int randomNumber = random.nextInt(5);
@@ -154,9 +283,25 @@ List<String> parseAndCreateScript(List<dynamic> data, List<dynamic> wordsToRepea
       }
     }
   }
-  // Uncomment to print full script:
-  // for (int i = 0; i < script.length; i++) {
-  //   print(script[i]);
-  // }
+
   return script;
+}
+
+Future<void> _appendRepetitionUrlsToWordDoc(
+  String userId,
+  String targetLanguage,
+  String word,
+  Map<String, dynamic> repetitionsMap,
+) async {
+  final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(word);
+
+  await docRef.set(
+    {
+      'narratorTranslationsChunk': repetitionsMap['narratorTranslationsChunk'],
+      'splitNative': repetitionsMap['splitNative'],
+      'splitTarget': repetitionsMap['splitTarget'],
+      'wordObjects': repetitionsMap['wordObjects'],
+    },
+    SetOptions(merge: true),
+  );
 }
