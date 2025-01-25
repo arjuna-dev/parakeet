@@ -27,6 +27,8 @@ import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
+import '../utils/script_generator_to_urls.dart' show constructUrl;
+import '../utils/spaced_repetition_fsrs.dart' show WordCard;
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -65,6 +67,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
+  late final userId;
   String currentTrack = '';
   String? previousTargetTrack;
   String? targetPhraseToCompareWith;
@@ -113,6 +116,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    userId = FirebaseAuth.instance.currentUser?.uid;
     player = AudioPlayer();
     player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
@@ -385,7 +389,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initPlaylist() async {
     List<String> fileUrls = [];
     for (var fileName in script) {
-      String url = await _constructUrl(fileName);
+      String url = await constructUrl(fileName, widget.documentID, widget.nativeLanguage, userId);
       if (url != "") {
         fileUrls.add(url);
       } else {
@@ -432,9 +436,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  Future<bool> _handleNicknameUsage() async {
+    final int callCount = await getCurrentCallCount();
+    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
+    return canUseNickname;
+  }
+
   void updatePlaylist(snapshot) async {
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+      script = await script_generator.parseAndCreateScript(
+          snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage) as List;
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -452,9 +463,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     List<String> fileUrls = [];
     for (var fileName in newScript) {
-      fileUrls.add(await _constructUrl(fileName));
+      fileUrls.add(await constructUrl(fileName, widget.documentID, widget.nativeLanguage, userId));
     }
-
     final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
     await playlist.addAll(newTracks);
     // if (!widget.generating && !isPlaying.value) {
@@ -482,7 +492,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     try {
-      script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+      script = await script_generator.parseAndCreateScript(
+          existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage) as List;
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -505,9 +516,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     List<String> fileUrls = [];
     for (var fileName in newScript) {
-      fileUrls.add(await _constructUrl(fileName));
+      fileUrls.add(await constructUrl(fileName, widget.documentID, widget.nativeLanguage, userId));
     }
-
     final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
 
     await playlist.clear();
@@ -530,77 +540,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (querySnap.docs.isNotEmpty) {
       await calculateTotalDurationAndUpdateTrackDurations(querySnap);
     }
-  }
-
-  Future<String> _constructUrl(String fileName) async {
-    if (_isNarratorFile(fileName)) {
-      // narrator_, one_second_break, five_second_break
-      return _getNarratorUrl(fileName);
-    } else if (fileName == "nickname") {
-      // nickname logic
-      return await _getNicknameUrl();
-    } else if (fileName == "audio_cue") {
-      // audio_cue
-      return _getAudioCueUrl();
-    } else {
-      // default conversation audio
-      return _getConversationAudioUrl(fileName);
-    }
-  }
-
-  /// Returns `true` if the filename indicates a "narrator" or a break file.
-  bool _isNarratorFile(String fileName) {
-    return fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break";
-  }
-
-  /// Builds the URL for narrator/break files.
-  String _getNarratorUrl(String fileName) {
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
-  }
-
-  /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
-  Future<String> _getNicknameUrl() async {
-    final int callCount = await getCurrentCallCount();
-    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
-
-    if (canUseNickname) {
-      final List<int> numbers = List.generate(6, (i) => i)..shuffle();
-      for (final randomNumber in numbers) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final url = "https://storage.googleapis.com/user_nicknames/"
-            "${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
-
-        if (await urlExists(url)) {
-          return url; // Return first valid URL
-        }
-      }
-    }
-
-    // If we can’t (or didn’t) find a nickname file, return a generic greeting.
-    return _getGenericGreetingUrl();
-  }
-
-  /// Returns the URL to a generic greeting.
-  String _getGenericGreetingUrl() {
-    final randomNumber = Random().nextInt(5) + 1;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "google_tts/narrator_${Uri.encodeComponent(widget.nativeLanguage)}/"
-        "narrator_greetings_$randomNumber.mp3?timestamp=$timestamp";
-  }
-
-  /// Builds the URL for the audio cue file.
-  String _getAudioCueUrl() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "general/audio_cue.mp3?timestamp=$timestamp";
-  }
-
-  /// Builds the URL for the default (conversation) audio files.
-  String _getConversationAudioUrl(String fileName) {
-    return "https://storage.googleapis.com/conversations_audio_files/"
-        "${widget.documentID}/$fileName.mp3";
   }
 
   Duration cumulativeDurationUpTo(int currentIndex) {
@@ -866,6 +805,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       if (similarity >= 0.7) {
         print('Good job! You repeated the phrase correctly.');
+
         await _provideFeedback(isPositive: true);
       } else {
         print('Try again. The phrase didn\'t match.');
@@ -925,7 +865,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId != null) {
       await _streakService.recordDailyActivity(userId);
       setState(() {
