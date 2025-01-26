@@ -7,7 +7,7 @@ import 'script_generator_to_urls.dart' show constructUrl;
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 
-Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<String> words, String documentId) async {
+Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<String> words) async {
   final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
 
   for (var word in words) {
@@ -111,7 +111,7 @@ Future<List<String>> parseAndCreateScript(
   String targetLanguage,
   String nativeLanguage,
 ) async {
-  await ensureFirestoreWords(userID, targetLanguage, wordsToRepeat.cast<String>(), documentId);
+  await ensureFirestoreWords(userID, targetLanguage, wordsToRepeat.cast<String>());
 
   final overdueList = await getOverdueWords(userID, targetLanguage);
   final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
