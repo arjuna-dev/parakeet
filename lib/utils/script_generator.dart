@@ -268,9 +268,13 @@ Future<List<String>> parseAndCreateScript(
         }
       }
 
-      for (int i = insertOverdueEvery; i < script.length; i++) {
-        if (i % insertOverdueEvery == 0 && overdueSequences.isNotEmpty) {
-          script.insertAll(i, overdueSequences.removeAt(0));
+      for (int i = insertOverdueEvery; i < script.length && overdueSequences.isNotEmpty; i++) {
+        if (i % insertOverdueEvery == 0) {
+          if (i >= script.length) {
+            script.addAll(overdueSequences.removeAt(0));
+          } else {
+            script.insertAll(i, overdueSequences.removeAt(0));
+          }
         }
       }
 
