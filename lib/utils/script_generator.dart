@@ -15,11 +15,10 @@ Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<Str
     final docSnap = await docRef.get();
 
     if (!docSnap.exists) {
-      // Create a new document with default FSRS values.
       WordCard newCard = WordCard(
         word: word,
-        due: DateTime.now(), // Add the required 'due' parameter
-        lastReview: DateTime.now(), // Add the required 'lastReview' parameter
+        due: DateTime.now(),
+        lastReview: DateTime.now(),
         stability: 0,
         difficulty: 0,
         elapsedDays: 0,
@@ -252,8 +251,6 @@ Future<List<String>> parseAndCreateScript(
       int insertOverdueEvery = (script.length / overdueWordsToUseLength).round();
 
       final overdueSequences = <List<String>>[];
-
-      // Create sequences for overdue words
       for (var docRef in overdueWordDocRefs) {
         final wordData = await getRepetitionDataForOverdueWord(docRef);
         if (wordData != null) {
