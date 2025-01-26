@@ -7,7 +7,7 @@ import 'script_generator_to_urls.dart' show constructUrl;
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 
-Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<String> words) async {
+Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<dynamic> words) async {
   final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
 
   for (var word in words) {
@@ -106,14 +106,14 @@ Future<List<String>> parseAndCreateScript(
   List<dynamic> wordsToRepeat,
   List<dynamic> dialogue,
   ValueNotifier<RepetitionMode> repetitionMode,
-  String userID,
+  String userId,
   String documentId,
   String targetLanguage,
   String nativeLanguage,
 ) async {
-  await ensureFirestoreWords(userID, targetLanguage, wordsToRepeat.cast<String>());
+  await ensureFirestoreWords(userId, targetLanguage, wordsToRepeat);
 
-  final overdueList = await getOverdueWords(userID, targetLanguage);
+  final overdueList = await getOverdueWords(userId, targetLanguage);
   final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
   overdueList.removeWhere((word) => wordsToRepeatSet.contains(word));
 
@@ -223,28 +223,28 @@ Future<List<String>> parseAndCreateScript(
             List<Map<String, String>> wordObjectsWithUrls = [];
             for (var wordObj in wordObjects) {
               wordObjectsWithUrls.add({
-                "word": await constructUrl(wordObj["word"], documentId, nativeLanguage, userID),
-                "translation": await constructUrl(wordObj["translation"], documentId, nativeLanguage, userID),
+                "word": await constructUrl(wordObj["word"], documentId, nativeLanguage, userId),
+                "translation": await constructUrl(wordObj["translation"], documentId, nativeLanguage, userId),
               });
             }
 
             List<String> narratorTranslationsChunkUrls = [];
             for (String item in narratorTranslationsChunk) {
-              narratorTranslationsChunkUrls.add(await constructUrl(item, documentId, nativeLanguage, userID));
+              narratorTranslationsChunkUrls.add(await constructUrl(item, documentId, nativeLanguage, userId));
             }
 
             Map<String, dynamic> repetitionsMap = {
               'narratorTranslation': narratorTranslationsChunkUrls,
-              'splitNative': constructUrl(splitNative, documentId, nativeLanguage, userID),
-              'splitTarget': constructUrl(splitTarget, documentId, nativeLanguage, userID),
+              'splitNative': constructUrl(splitNative, documentId, nativeLanguage, userId),
+              'splitTarget': constructUrl(splitTarget, documentId, nativeLanguage, userId),
               'wordObjects': wordObjectsWithUrls,
             };
-            _appendRepetitionUrlsToWordDoc(userID, targetLanguage, data[i]["split_sentence"][j]["target_language"], repetitionsMap);
+            _appendRepetitionUrlsToWordDoc(userId, targetLanguage, data[i]["split_sentence"][j]["target_language"], repetitionsMap);
           }
         }
       }
 
-      final overdueWordDocRefs = await getOverdueWordsRefs(userID, targetLanguage);
+      final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage);
 
       int overdueWordsToUseLength = overdueWordDocRefs.length > 5 ? 5 : overdueWordDocRefs.length;
 
@@ -286,6 +286,38 @@ Future<List<String>> parseAndCreateScript(
       }
     }
   }
+
+  final Set<String> overdueSet = overdueList.toSet();
+  final List<String> combinedWordsList = overdueSet.union(wordsToRepeatSet).toList();
+  Future<List<fsrs.Card>> _getAllCards(List<String> words) async {
+    List<fsrs.Card> cards = [];
+    for (String word in words) {
+      final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(word);
+
+      // Get the document snapshot
+      final docSnapshot = await collectionRef.get();
+
+      // Check if document exists and has data
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null) {
+          fsrs.Card card = WordCard.fromFirestore(data);
+          cards.add(card);
+        }
+      }
+    }
+    return cards;
+  }
+
+  List<fsrs.Card> cardsCollection = await _getAllCards(combinedWordsList);
+  var f = fsrs.FSRS();
+  fsrs.Card firstCard = cardsCollection[0];
+  var now = DateTime(2022, 11, 29, 12, 30, 0, 0);
+  print("Now: $now");
+  var cardPossibleSchedulings = f.repeat(firstCard, now);
+  print("Due 1: ${firstCard.due}, State 1: ${firstCard.state}");
+  firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
+  print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
 
   return script;
 }
