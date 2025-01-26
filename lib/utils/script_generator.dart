@@ -115,6 +115,8 @@ Future<List<String>> parseAndCreateScript(
   await ensureFirestoreWords(userID, targetLanguage, wordsToRepeat.cast<String>(), documentId);
 
   final overdueList = await getOverdueWords(userID, targetLanguage);
+  final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
+  overdueList.removeWhere((word) => wordsToRepeatSet.contains(word));
 
   List<String> script = createFirstScript(dialogue);
 
