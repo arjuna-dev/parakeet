@@ -42,18 +42,18 @@ class WordCard {
     };
   }
 
-  static WordCard fromFirestore(Map<String, dynamic> data) {
-    return WordCard(
-      word: data['word'] as String,
-      due: DateTime.parse(data['due'] as String),
-      lastReview: DateTime.parse(data['lastReview'] as String),
-      stability: (data['stability'] ?? 0).toDouble(),
-      difficulty: (data['difficulty'] ?? 0).toDouble(),
-      elapsedDays: data['elapsedDays'] ?? 0,
-      scheduledDays: data['scheduledDays'] ?? 0,
-      reps: data['reps'] ?? 0,
-      lapses: data['lapses'] ?? 0,
-      state: fsrs.State.values[data['state'] ?? 0],
+  static fsrs.Card fromFirestore(Map<String, dynamic> data) {
+    final cardData = data['card'] as Map<String, dynamic>;
+    return fsrs.Card.def(
+      DateTime.parse(cardData['due'] as String),
+      DateTime.parse(cardData['lastReview'] as String),
+      (cardData['stability'] ?? 0).toDouble(),
+      (cardData['difficulty'] ?? 0).toDouble(),
+      cardData['elapsedDays'] ?? 0,
+      cardData['scheduledDays'] ?? 0,
+      cardData['reps'] ?? 0,
+      cardData['lapses'] ?? 0,
+      fsrs.State.values[cardData['state'] ?? 0],
     );
   }
 }
