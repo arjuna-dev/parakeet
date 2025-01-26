@@ -42,8 +42,8 @@ class WordCard {
     };
   }
 
-  static fsrs.Card fromFirestore(Map<String, dynamic> data) {
-    final cardData = data['card'] as Map<String, dynamic>;
+  static fsrs.Card fromFirestore(Map<String, dynamic> cardData) {
+    print("in fromFirestore, cardData: $cardData");
     return fsrs.Card.def(
       DateTime.parse(cardData['due'] as String),
       DateTime.parse(cardData['lastReview'] as String),

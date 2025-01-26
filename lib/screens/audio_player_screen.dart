@@ -30,6 +30,7 @@ import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
 import '../utils/script_generator_to_urls.dart' show constructUrl;
 import 'package:fsrs/fsrs.dart' as fsrs;
 import '../utils/spaced_repetition_fsrs.dart' show WordCard;
+import 'audio_player_s_utils.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -445,8 +446,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      script = await script_generator.parseAndCreateScript(
-          snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
+      script = await script_generator.parseAndCreateScript(snapshot.docs[0].data(), widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -493,8 +493,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     try {
-      script = await script_generator.parseAndCreateScript(
-          existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
+      script = await script_generator.parseAndCreateScript(existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -613,32 +612,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return firstDoc.data() as Map<String, dynamic>;
     }
     return {};
-  }
-
-  String accessBigJson(Map<String, dynamic> listWithBigJson, String path) {
-    final pattern = RegExp(r'(\D+)|(\d+)');
-    final matches = pattern.allMatches(path);
-
-    dynamic currentMap = listWithBigJson;
-    for (var match in matches) {
-      final key = match.group(0)!;
-      final cleanedKey = key.replaceAll(RegExp(r'^_|_$'), '');
-
-      if (int.tryParse(cleanedKey) != null) {
-        // If it's a number, parse it as an index
-        int index = int.parse(cleanedKey);
-        currentMap = currentMap[index];
-      } else {
-        // If it's not a number, use it as a string key
-        currentMap = currentMap[cleanedKey];
-      }
-
-      // If at any point currentMap is null, the key path is invalid
-      if (currentMap == null) {
-        throw Exception("Invalid path: $path");
-      }
-    }
-    return currentMap;
   }
 
   void _handleTrackChangeToCompareSpeech(int localCurrentIndex) async {
