@@ -28,6 +28,7 @@ import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
 import '../utils/script_generator_to_urls.dart' show constructUrl;
+import 'package:fsrs/fsrs.dart' as fsrs;
 import '../utils/spaced_repetition_fsrs.dart' show WordCard;
 
 class AudioPlayerScreen extends StatefulWidget {
@@ -445,7 +446,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void updatePlaylist(snapshot) async {
     try {
       script = await script_generator.parseAndCreateScript(
-          snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage) as List;
+          snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -493,7 +494,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     try {
       script = await script_generator.parseAndCreateScript(
-          existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage) as List;
+          existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, userId, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -805,7 +806,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       if (similarity >= 0.7) {
         print('Good job! You repeated the phrase correctly.');
-
         await _provideFeedback(isPositive: true);
       } else {
         print('Try again. The phrase didn\'t match.');
