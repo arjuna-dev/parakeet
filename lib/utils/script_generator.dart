@@ -86,7 +86,7 @@ Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String target
   return querySnapshot.docs.map((doc) => doc.reference).toList();
 }
 
-Future<Map<String, dynamic>?> getRepetitionDataForOverdueWord(DocumentReference docRef) async {
+Future<Map<String, dynamic>?> getAudioUrlsForWord(DocumentReference docRef) async {
   final docSnapshot = await docRef.get();
 
   if (!docSnapshot.exists) {
@@ -95,12 +95,7 @@ Future<Map<String, dynamic>?> getRepetitionDataForOverdueWord(DocumentReference 
 
   final data = docSnapshot.data() as Map<String, dynamic>;
 
-  return {
-    'narratorTranslationsChunk': data['narratorTranslations'],
-    'splitNative': data['nativeText'],
-    'splitTarget': data['targetText'],
-    'wordObjects': data['wordData'],
-  };
+  return data['audio_urls'];
 }
 
 Future<List<String>> parseAndCreateScript(
@@ -224,19 +219,18 @@ Future<List<String>> parseAndCreateScript(
               script.addAll(chunkSequence);
             }
 
+            // Save audio URLs for word to Firestore
             for (var wordObj in wordObjects) {
-              var wordUrl = await constructUrl(wordObj["word"], documentId, nativeLanguage, userId);
-              var translationUrls = await Future.wait(
-                (wordObj["translation"] as List<dynamic>).map((translation) async {
-                  return await constructUrl(translation as String, documentId, nativeLanguage, userId);
-                }).toList(),
-              );
+              final targetChunk = bigJsonList[i]["split_sentence"][j]["target_language"];
+              final nativeChunk = bigJsonList[i]["split_sentence"][j]["native_language"];
+              final nativeChunkUrl = await constructUrl(nativeChunk, documentId, nativeLanguage, userId);
+              final targetChunkUrl = await constructUrl(targetChunk, documentId, targetLanguage, userId);
 
               String word = accessBigJson(bigJsonMap, wordObj["word"]);
               word = word.toLowerCase().trim();
               _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, {
-                "word": wordUrl,
-                "translation": translationUrls,
+                "native_chunk": nativeChunkUrl,
+                "target_chunk": targetChunkUrl,
               });
             }
           }
@@ -258,18 +252,12 @@ Future<List<String>> parseAndCreateScript(
 
   final overdueSequences = <List<String>>[];
   for (var docRef in overdueWordDocRefs) {
-    final wordData = await getRepetitionDataForOverdueWord(docRef);
-    if (wordData != null && wordData['splitNative'] != null && wordData['splitTarget'] != null) {
-      print("wordData['narratorTranslationsChunk']: ${wordData['narratorTranslationsChunk']}");
-      print("spltNative: ${wordData['splitNative']}");
-      print("splitTarget: ${wordData['splitTarget']}");
-      print("wordObjects: ${wordData['wordObjects']}");
-      List<String> overdueChunkSequence = sequences.chunkSequence1Less(
-        wordData['narratorTranslationsChunk'],
-        wordData['splitNative'],
-        wordData['splitTarget'],
-        wordData['wordObjects'],
-        1,
+    final wordUrls = await getAudioUrlsForWord(docRef);
+    if (wordUrls != null && wordUrls['native_chunk'] != null && wordUrls['target_chunk'] != null) {
+      print("WordUrls: $wordUrls");
+      List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
+        wordUrls['native_chunk'],
+        wordUrls['target_chunk'],
       );
       overdueSequences.add(overdueChunkSequence.toList());
     }
