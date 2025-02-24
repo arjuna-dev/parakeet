@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import time
-from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -36,6 +36,7 @@ today = datetime.datetime.now().strftime("%Y-%m-%d")
 def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = FirstAPIRequest.parse_obj(req.get_json()).dict()
+        print(request_data)
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
@@ -58,6 +59,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         keywords = request_data.get("keywords")
     except:
         keywords = ""
+
+    print(keywords)
 
     db = firestore.client()
     # Reference to the user's document in the 'users' collection
@@ -352,7 +355,7 @@ def plottwist_story(req: https_fn.Request) -> https_fn.Response:
         request_data = req.get_json()
         post_id = request_data.get("post_id")
         data = request_data.get("data")
-        
+
         if not post_id or not data:
             return https_fn.Response(
                 json.dumps({"error": "Missing required fields: post_id or data"}),
@@ -434,7 +437,7 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
         # Get username from request body
         request_data = req.get_json()
         username = request_data.get('username')
-        
+
         if not username:
             return https_fn.Response(
                 json.dumps({"error": "Username is required"}),
@@ -456,7 +459,7 @@ def check_rate_limit(req: https_fn.Request) -> https_fn.Response:
             timestamps = data.get('timestamps', [])
             # Remove timestamps older than 31 days
             timestamps = [ts for ts in timestamps if ts > one_month_ago]
-            
+
             # Count API calls in different time windows
             last_minute = sum(1 for ts in timestamps if ts > one_minute_ago)
             last_hour = sum(1 for ts in timestamps if ts > one_hour_ago)
@@ -523,7 +526,7 @@ def record_api_call(req: https_fn.Request) -> https_fn.Response:
         # Get username from request body
         request_data = req.get_json()
         username = request_data.get('username')
-        
+
         if not username:
             return https_fn.Response(
                 json.dumps({"error": "Username is required"}),
@@ -571,7 +574,7 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
     try:
         # Handle different content types
         content_type = req.headers.get('content-type', '')
-        
+
         if 'application/json' in content_type:
             data = req.get_json()
         elif 'application/x-www-form-urlencoded' in content_type:
@@ -590,7 +593,7 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
         # Rest of the function remains the same
         verification_token = data.get('verification_token')
         expected_token = "d4e98820-b5de-4a36-b447-e32b8c12cfe1"  # Store this securely
-        
+
         if verification_token != expected_token:
             return https_fn.Response(
                 json.dumps({"error": "Invalid verification token"}),
@@ -601,7 +604,7 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
         amount = float(data.get('amount', '0'))
         username = data.get('message', '').strip()  # Reddit username in message field
         print(f"Received donation of ${amount} from {username}")
-        
+
         if not username:
             return https_fn.Response(
                 json.dumps({"error": "No username provided in message field"}),
@@ -612,10 +615,10 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
         if amount >= 5.00:
             db = firestore.client()
             user_ref = db.collection('plotTwistUsers').document(username)
-            
+
             # Clear timestamps array to reset rate limits
             user_ref.update({'timestamps': []})
-            
+
             return https_fn.Response(
                 json.dumps({
                     "success": True,
@@ -623,7 +626,7 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
                 }),
                 status=200
             )
-        
+
         return https_fn.Response(
             json.dumps({
                 "success": True,
@@ -634,6 +637,53 @@ def handle_kofi_donation(req: https_fn.Request) -> https_fn.Response:
 
     except Exception as e:
         print(f"Error processing Ko-fi donation: {str(e)}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
+def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        category = request_data.get("category")
+        all_words = request_data.get("allWords")
+        target_language = request_data.get("target_language")
+        native_language = request_data.get("native_language")
+
+        print(category, all_words, target_language, native_language)
+
+        if not all(param is not None for param in [category, all_words, target_language, native_language]):
+            return https_fn.Response(
+                json.dumps({"error": "Missing required parameters"}),
+                status=400
+            )
+
+        if not isinstance(all_words, list) or len(all_words) < 5:
+            return https_fn.Response(
+                json.dumps({"error": "allWords must be a list with at least 5 words"}),
+                status=400
+            )
+
+        prompt = prompt_generate_lesson_topic(category, all_words, target_language, native_language)
+
+        response = chatGPT_API_call(prompt, use_stream=False)
+
+        # Since we're not using streaming, we need to get the content directly
+        result = json.loads(response.choices[0].message.content)
+
+        return https_fn.Response(
+            json.dumps(result),
+            status=200
+        )
+
+    except Exception as e:
+        print(f"Error in generate_lesson_topic: {str(e)}")
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=500

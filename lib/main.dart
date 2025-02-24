@@ -392,7 +392,7 @@ class _MyAppState extends State<MyApp> {
                                             });
                                             return const Center(child: CircularProgressIndicator());
                                           }
-                                          return const CreateLesson(title: 'Create an audio lesson');
+                                          return const CreateLesson(title: 'Start A New Lesson');
                                         }
                                       }
                                       return const Center(child: CircularProgressIndicator());

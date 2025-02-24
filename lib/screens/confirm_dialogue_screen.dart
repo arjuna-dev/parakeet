@@ -18,6 +18,7 @@ class ConfirmDialogue extends StatefulWidget {
     required this.languageLevel,
     required this.length,
     required this.documentID,
+    required this.wordsToLearn,
   });
 
   final Map<String, dynamic> firstDialogue;
@@ -26,7 +27,7 @@ class ConfirmDialogue extends StatefulWidget {
   final String languageLevel;
   final String length;
   final String documentID;
-
+  final List<String> wordsToLearn;
   @override
   State<ConfirmDialogue> createState() => _ConfirmDialogueState();
 }
@@ -63,11 +64,8 @@ class TooltipContainerPainter extends CustomPainter {
 
 class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
-  Map<int, Map<String, ValueNotifier<bool>>> selectedWords = {};
   Map<String, dynamic> smallJsonDocument = {};
-  ValueNotifier<bool> selectAllNotifier = ValueNotifier<bool>(false);
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
-  bool hasSelectedWord = false;
   final GlobalKey _one = GlobalKey();
   bool isShowingShowcase = false;
   late bool isFirstLaunch;
@@ -89,34 +87,23 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
     await prefs.setBool('isFirstLaunch', false);
   }
 
-  void updateHasSelectedWords() {
-    hasSelectedWord = selectedWords.values.any((wordMap) => wordMap.values.any((notifier) => notifier.value));
-  }
-
   Future<void> addUserToActiveCreation() async {
     String userId = FirebaseAuth.instance.currentUser!.uid;
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
     DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
     await firestore.runTransaction((transaction) async {
-      // Attempt to get the document
       DocumentSnapshot snapshot = await transaction.get(docRef);
-
-      // Prepare the user data
       var userData = {"userId": userId, "documentId": widget.documentID, "timestamp": Timestamp.now()};
-
       if (snapshot.exists) {
-        // Document exists, add user ID to array
         transaction.update(docRef, {
           "users": FieldValue.arrayUnion([userData]),
         });
       } else {
-        // Document does not exist, create it with user ID in array
         transaction.set(docRef, {
           "users": FieldValue.arrayUnion([userData]),
         });
       }
     }).catchError((error) {
-      // Handle any errors that occur during the transaction
       print('Failed to add user to active creation: $error');
     });
   }
@@ -125,14 +112,14 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    TextStyle dialogueTextStyle(bool isSelected) {
+    TextStyle dialogueTextStyle(bool isHighlighted) {
       return TextStyle(
         fontSize: 17,
-        decoration: isSelected ? TextDecoration.underline : TextDecoration.none,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        decorationColor: isSelected ? colorScheme.tertiary : null,
-        color: isSelected ? colorScheme.tertiary : colorScheme.tertiaryFixed,
-        decorationThickness: isSelected ? 1.0 : null,
+        decoration: isHighlighted ? TextDecoration.underline : TextDecoration.none,
+        fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+        decorationColor: isHighlighted ? colorScheme.tertiary : null,
+        color: isHighlighted ? colorScheme.tertiary : colorScheme.tertiaryFixed,
+        decorationThickness: isHighlighted ? 1.0 : null,
       );
     }
 
@@ -192,42 +179,11 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
-                          'Select the words that you want to focus on learning.',
+                          'The highlighted words are the ones you will focus on learning.',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
                     ),
-                  ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: selectAllNotifier,
-                    builder: (context, selectAll, child) {
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Checkbox(
-                                  value: selectAll,
-                                  onChanged: (bool? value) {
-                                    selectAllNotifier.value = value ?? false;
-                                    for (var entry in selectedWords.entries) {
-                                      for (var wordEntry in entry.value.entries) {
-                                        wordEntry.value.value = selectAllNotifier.value;
-                                      }
-                                    }
-                                    updateHasSelectedWords();
-                                  },
-                                ),
-                                const Text("Select All Words"),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
                   ),
                   Expanded(
                     child: SingleChildScrollView(
@@ -255,25 +211,17 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                     final turn = turns[index];
                                     final targetLanguageSentence = turn['target_language'] ?? "";
                                     final words = targetLanguageSentence.split(' ');
-                                    if (selectedWords[index] == null) {
-                                      selectedWords[index] = {};
-                                    }
-                                    words.forEach((word) {
-                                      if (selectedWords[index]![word] == null) {
-                                        selectedWords[index]![word] = ValueNotifier<bool>(selectAllNotifier.value);
-                                      }
-                                    });
                                     bool isEven = index % 2 == 0;
 
                                     return Align(
                                       alignment: isEven ? Alignment.centerLeft : Alignment.centerRight,
                                       child: Container(
-                                        width: MediaQuery.of(context).size.width * 0.8, // Occupies 80% of the parent container width
-                                        margin: const EdgeInsets.symmetric(vertical: 8), // Adds vertical spacing between messages
-                                        padding: const EdgeInsets.all(12), // Adds padding inside the box
+                                        width: MediaQuery.of(context).size.width * 0.8,
+                                        margin: const EdgeInsets.symmetric(vertical: 8),
+                                        padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: isEven ? const Color.fromARGB(255, 85, 52, 115) : const Color.fromARGB(255, 62, 59, 124), // Different background colors for even/odd
-                                          borderRadius: BorderRadius.circular(15), // Rounded corners for the message box
+                                          color: isEven ? const Color.fromARGB(255, 85, 52, 115) : const Color.fromARGB(255, 62, 59, 124),
+                                          borderRadius: BorderRadius.circular(15),
                                           boxShadow: [
                                             BoxShadow(
                                               color: colorScheme.shadow.withOpacity(0.6),
@@ -290,73 +238,22 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                               Text(
                                                 turn['native_language'] ?? "No native language",
                                                 style: TextStyle(
-                                                  // Top text in cards
                                                   color: colorScheme.primary,
                                                 ),
                                               ),
                                               Wrap(
-                                                children: words.asMap().entries.map<Widget>((entry) {
-                                                  int wordIndex = entry.key;
-                                                  String word = entry.value;
-                                                  ValueNotifier<bool> isSelectedNotifier = selectedWords[index]![word]!;
-
-                                                  return ValueListenableBuilder(
-                                                    valueListenable: isSelectedNotifier,
-                                                    builder: (BuildContext context, bool isSelected, Widget? child) {
-                                                      bool isSpecialWord = index == 0 && wordIndex == 0;
-                                                      return GestureDetector(
-                                                        onTap: () {
-                                                          isSelectedNotifier.value = !isSelectedNotifier.value;
-                                                          updateHasSelectedWords();
-                                                        },
-                                                        child: Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
-                                                          margin: EdgeInsets.zero,
-                                                          child: isSpecialWord
-                                                              ? Showcase.withWidget(
-                                                                  key: _one,
-                                                                  container: SizedBox(
-                                                                    width: 280,
-                                                                    child: CustomPaint(
-                                                                      painter: TooltipContainerPainter(backgroundColor: colorScheme.primaryContainer),
-                                                                      child: Padding(
-                                                                        padding: const EdgeInsets.only(
-                                                                          top: 20,
-                                                                          bottom: 10,
-                                                                          left: 10,
-                                                                          right: 10,
-                                                                        ),
-                                                                        child: Text(
-                                                                          'Click on the words you want to focus on learning',
-                                                                          style: TextStyle(
-                                                                            color: colorScheme.onPrimaryContainer,
-                                                                            fontSize: 16,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  width: 280,
-                                                                  height: 100,
-                                                                  onTargetClick: (() {
-                                                                    isSelectedNotifier.value = !isSelectedNotifier.value;
-                                                                    updateHasSelectedWords();
-                                                                  }),
-                                                                  onBarrierClick: () => debugPrint('Barrier clicked'),
-                                                                  targetPadding: const EdgeInsets.all(8),
-                                                                  targetShapeBorder: const CircleBorder(),
-                                                                  child: Text(
-                                                                    word,
-                                                                    style: dialogueTextStyle(isSelected),
-                                                                  ),
-                                                                )
-                                                              : Text(
-                                                                  word,
-                                                                  style: dialogueTextStyle(isSelected),
-                                                                ),
-                                                        ),
-                                                      );
-                                                    },
+                                                children: words.map<Widget>((word) {
+                                                  final cleanWord = word.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '');
+                                                  print(cleanWord);
+                                                  final isHighlighted = widget.wordsToLearn.contains(cleanWord);
+                                                  print(isHighlighted);
+                                                  return Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
+                                                    margin: EdgeInsets.zero,
+                                                    child: Text(
+                                                      word,
+                                                      style: dialogueTextStyle(isHighlighted),
+                                                    ),
                                                   );
                                                 }).toList(),
                                               ),
@@ -390,19 +287,6 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                               foregroundColor: Colors.white,
                               onPressed: () async {
                                 if (isConfirmButtonActive.value) {
-                                  if (!hasSelectedWord) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text('Please select at least one word to proceed 🧐'),
-                                        ),
-                                        duration: Duration(seconds: 3),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
                                   showDialog(
                                     context: context,
                                     barrierDismissible: false,
@@ -422,11 +306,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                       "native_language": widget.nativeLanguage,
                                       "target_language": widget.targetLanguage,
                                       "language_level": widget.languageLevel,
-                                      "words_to_repeat": selectedWords.entries
-                                          .expand((entry) => entry.value.entries)
-                                          .where((innerEntry) => innerEntry.value.value == true)
-                                          .map((innerEntry) => innerEntry.key.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), ''))
-                                          .toList(),
+                                      "words_to_repeat": widget.wordsToLearn,
                                       "user_ID": FirebaseAuth.instance.currentUser!.uid,
                                       "timestamp": FieldValue.serverTimestamp(),
                                     });
@@ -451,11 +331,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                         "voice_1_id": smallJsonDocument["voice_1_id"],
                                         "voice_2_id": smallJsonDocument["voice_2_id"],
                                         "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
-                                        "words_to_repeat": selectedWords.entries
-                                            .expand((entry) => entry.value.entries)
-                                            .where((innerEntry) => innerEntry.value.value == true)
-                                            .map((innerEntry) => innerEntry.key.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), ''))
-                                            .toList(),
+                                        "words_to_repeat": widget.wordsToLearn,
                                       }),
                                     );
                                     if (script.isNotEmpty) {
@@ -473,11 +349,7 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
                                                   generating: true,
                                                   targetLanguage: widget.targetLanguage,
                                                   nativeLanguage: widget.nativeLanguage,
-                                                  wordsToRepeat: selectedWords.entries
-                                                      .expand((entry) => entry.value.entries)
-                                                      .where((innerEntry) => innerEntry.value.value == true)
-                                                      .map((innerEntry) => innerEntry.key.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), ''))
-                                                      .toList(),
+                                                  wordsToRepeat: widget.wordsToLearn,
                                                 )),
                                       );
                                     } else {
