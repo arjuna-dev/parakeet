@@ -2,12 +2,12 @@ def prompt_dialogue(requested_scenario, native_language, target_language, langua
    return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the the following content:
 
 requested_scenario: {requested_scenario}
-keywords: {keywords} 
+keywords: {keywords}
 target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they make sense for the conversation. If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+All the words in keywords list should always be used in the dialogue. If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
 This is an example of a request you could get and its expected output.
 
@@ -15,7 +15,7 @@ This is an example of a request you could get and its expected output.
 Request:
 ###
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
-"keywords": "discrimination, patience, salmon, armpit"
+"keywords": ["discrimination", "patience", "salmon", "armpit"]
 "native_language": "English",
 "target_language": "Spanish",
 "language_level": "C2",
@@ -57,7 +57,7 @@ Request:
 
 ###
 "requested_scenario": "Reasons to become vegetarian",
-"keywords": "health, compassion, peanut butter"
+"keywords": ["health", "compassion", "peanut butter"]
 "native_language": "German",
 "target_language": "English",
 "language_level": "A1"
@@ -106,15 +106,15 @@ Expected output in JSON format:
 '''
 
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
-   return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}. 
-   
-   - You will write turns from 1 to {length}. 
+   return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}.
+
+   - You will write turns from 1 to {length}.
    - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in the native_language: {native_language}, when quoting from the target_language, {target_language}, the text should be enclosed in double vertical bars (||).
    - If the target_language ({target_language}) sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
-    - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation. 
+    - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation.
   - For the narrator_translation json key avoid grammatical explanations, avoid explaining gender and number of articles for example.
   - For the narrator_fun_fact json key focus on things like etymology, explaining compound words, explaining idiomatic phrases, etc.
-  
+
   Example request:
   ###
   target_language: "Spanish"
@@ -276,7 +276,7 @@ length: 2
 [continues...]
 ###
 
-JSON response by you: 
+JSON response by you:
 ###
 {{
  "dialogue": [
@@ -345,7 +345,7 @@ JSON response by you:
     }},
     {{
       "speaker": "speaker_2",
-      "turn_nr": "2",It 
+      "turn_nr": "2",
       "target_language": "I believe that Mbappé is one of the best players alive at the moment.",
       "native_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
       "narrator_explanation": "Maria sagt, dass sie Mbappé für einen der besten Spieler hält. Hier verwendet sie den Satzanfang ||I believe||, um ihre Meinung auszudrücken.",
@@ -422,7 +422,7 @@ def prompt_dialogue_w_transliteration(requested_scenario, native_language, targe
   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
 
 requested_scenario: {requested_scenario}
-keywords: {keywords} 
+keywords: {keywords}
 target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
@@ -454,7 +454,7 @@ Expected JSON output:
             "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
-            "gender": "m" 
+            "gender": "m"
         }},
         {{
             "target_language": "维韦卡 是 分辨 真实 与 非真实 的 能力。 || wéiwéikǎ shì fēnbiàn zhēnshí yǔ fēi zhēnshí de nénglì.",
@@ -481,3 +481,15 @@ Expected JSON output:
 }}
 """
 '''
+
+def prompt_generate_lesson_topic(category, all_words, target_language, native_language):
+  return f'''Generate a language lesson topic that fits the category '{category}'.
+        The topic should be engaging and practical for language learning and includes exactly 5 relevant words from this list: {', '.join(all_words)}.
+        Return the response in this exact JSON format:
+        {{
+            "title": "The lesson title in {native_language}",
+            "topic": "The lesson topic in {native_language}",
+            "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
+        }}
+        The words should be in lower case.
+        '''

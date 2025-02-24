@@ -770,7 +770,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text("${widget.targetLanguage} is not supported for speech recognition on your device, but we're working on it!"),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
             ],
           ),
           actions: [
