@@ -5,8 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
-import 'package:showcaseview/showcaseview.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parakeet/main.dart';
 
 class ConfirmDialogue extends StatefulWidget {
@@ -66,25 +64,10 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
   List<String> script = [];
   Map<String, dynamic> smallJsonDocument = {};
   ValueNotifier<bool> isConfirmButtonActive = ValueNotifier<bool>(false);
-  final GlobalKey _one = GlobalKey();
-  bool isShowingShowcase = false;
-  late bool isFirstLaunch;
 
   @override
   void initState() {
     super.initState();
-    initPrefs();
-  }
-
-  Future<void> initPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
-    setState(() {});
-  }
-
-  Future<void> setIsFirstLaunchToFalse() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isFirstLaunch', false);
   }
 
   Future<void> addUserToActiveCreation() async {
@@ -128,251 +111,239 @@ class _ConfirmDialogueState extends State<ConfirmDialogue> {
         appBar: AppBar(
           title: const Text('Your Conversation'),
         ),
-        body: ShowCaseWidget(builder: (context) {
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').snapshots(),
-            builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (snapshot.hasError) {
-                return const Text('Something went wrong');
-              }
+        body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').snapshots(),
+          builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Something went wrong');
+            }
 
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary));
-              }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary));
+            }
 
-              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty && !isShowingShowcase && isFirstLaunch) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_one.currentContext != null) {
-                    setIsFirstLaunchToFalse();
-                    isShowingShowcase = true;
-                    ShowCaseWidget.of(context).startShowCase([_one]);
-                  }
-                });
-              }
+            if (snapshot.hasData) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!isConfirmButtonActive.value &&
+                    snapshot.data!.docs.isNotEmpty &&
+                    (snapshot.data!.docs[0].data() as Map<String, dynamic>).containsKey('dialogue') &&
+                    snapshot.data!.docs[0]['dialogue'] != null &&
+                    snapshot.data!.docs[0]['dialogue'].length == int.parse(widget.length) &&
+                    snapshot.data!.docs[0]['dialogue'][int.parse(widget.length) - 1].isNotEmpty) {
+                  isConfirmButtonActive.value = true;
+                }
+              });
+            }
 
-              if (snapshot.hasData) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!isConfirmButtonActive.value &&
-                      snapshot.data!.docs.isNotEmpty &&
-                      (snapshot.data!.docs[0].data() as Map<String, dynamic>).containsKey('dialogue') &&
-                      snapshot.data!.docs[0]['dialogue'] != null &&
-                      snapshot.data!.docs[0]['dialogue'].length == int.parse(widget.length) &&
-                      snapshot.data!.docs[0]['dialogue'][int.parse(widget.length) - 1].isNotEmpty) {
-                    isConfirmButtonActive.value = true;
-                  }
-                });
-              }
-
-              return Center(
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-                  ListTile(
-                    title: const Text('Topic'),
-                    subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Card(
-                      elevation: 3.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'The highlighted words are the ones you will focus on learning.',
-                          style: TextStyle(fontSize: 16),
-                        ),
+            return Center(
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                ListTile(
+                  title: const Text('Topic'),
+                  subtitle: Text(widget.firstDialogue['title'] ?? "No title"),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Card(
+                    elevation: 3.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(
+                        'The highlighted words are the ones you will focus on learning.',
+                        style: TextStyle(fontSize: 16),
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            Column(
-                              children: snapshot.data!.docs.map((DocumentSnapshot document) {
-                                smallJsonDocument = document.data() as Map<String, dynamic>;
-                                List<dynamic> turns = [];
-                                if (smallJsonDocument.containsKey("dialogue")) {
-                                  turns = smallJsonDocument["dialogue"] ?? [];
-                                  script = script_generator.createFirstScript(smallJsonDocument["dialogue"] ?? []);
-                                }
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          Column(
+                            children: snapshot.data!.docs.map((DocumentSnapshot document) {
+                              smallJsonDocument = document.data() as Map<String, dynamic>;
+                              List<dynamic> turns = [];
+                              if (smallJsonDocument.containsKey("dialogue")) {
+                                turns = smallJsonDocument["dialogue"] ?? [];
+                                script = script_generator.createFirstScript(smallJsonDocument["dialogue"] ?? []);
+                              }
 
-                                return ListView.builder(
-                                  itemCount: turns.length,
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemBuilder: (context, index) {
-                                    if (index >= turns.length) {
-                                      return Container();
-                                    }
-                                    final turn = turns[index];
-                                    final targetLanguageSentence = turn['target_language'] ?? "";
-                                    final words = targetLanguageSentence.split(' ');
-                                    bool isEven = index % 2 == 0;
+                              return ListView.builder(
+                                itemCount: turns.length,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemBuilder: (context, index) {
+                                  if (index >= turns.length) {
+                                    return Container();
+                                  }
+                                  final turn = turns[index];
+                                  final targetLanguageSentence = turn['target_language'] ?? "";
+                                  final words = targetLanguageSentence.split(' ');
+                                  bool isEven = index % 2 == 0;
 
-                                    return Align(
-                                      alignment: isEven ? Alignment.centerLeft : Alignment.centerRight,
-                                      child: Container(
-                                        width: MediaQuery.of(context).size.width * 0.8,
-                                        margin: const EdgeInsets.symmetric(vertical: 8),
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: isEven ? const Color.fromARGB(255, 85, 52, 115) : const Color.fromARGB(255, 62, 59, 124),
-                                          borderRadius: BorderRadius.circular(15),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: colorScheme.shadow.withOpacity(0.6),
-                                              spreadRadius: 1,
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 3),
+                                  return Align(
+                                    alignment: isEven ? Alignment.centerLeft : Alignment.centerRight,
+                                    child: Container(
+                                      width: MediaQuery.of(context).size.width * 0.8,
+                                      margin: const EdgeInsets.symmetric(vertical: 8),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isEven ? const Color.fromARGB(255, 85, 52, 115) : const Color.fromARGB(255, 62, 59, 124),
+                                        borderRadius: BorderRadius.circular(15),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: colorScheme.shadow.withOpacity(0.6),
+                                            spreadRadius: 1,
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ListTile(
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              turn['native_language'] ?? "No native language",
+                                              style: TextStyle(
+                                                color: colorScheme.primary,
+                                              ),
+                                            ),
+                                            Wrap(
+                                              children: words.map<Widget>((word) {
+                                                final cleanWord = word.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '');
+                                                print(cleanWord);
+                                                final isHighlighted = widget.wordsToLearn.contains(cleanWord);
+                                                print(isHighlighted);
+                                                return Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
+                                                  margin: EdgeInsets.zero,
+                                                  child: Text(
+                                                    word,
+                                                    style: dialogueTextStyle(isHighlighted),
+                                                  ),
+                                                );
+                                              }).toList(),
                                             ),
                                           ],
                                         ),
-                                        child: ListTile(
-                                          subtitle: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                turn['native_language'] ?? "No native language",
-                                                style: TextStyle(
-                                                  color: colorScheme.primary,
-                                                ),
-                                              ),
-                                              Wrap(
-                                                children: words.map<Widget>((word) {
-                                                  final cleanWord = word.toLowerCase().replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '');
-                                                  print(cleanWord);
-                                                  final isHighlighted = widget.wordsToLearn.contains(cleanWord);
-                                                  print(isHighlighted);
-                                                  return Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
-                                                    margin: EdgeInsets.zero,
-                                                    child: Text(
-                                                      word,
-                                                      style: dialogueTextStyle(isHighlighted),
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
                                       ),
-                                    );
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  ValueListenableBuilder<bool>(
-                      valueListenable: isConfirmButtonActive,
-                      builder: (context, value, child) {
-                        return Container(
-                          width: 200,
-                          height: 50,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          child: FloatingActionButton.extended(
-                              label: const Text('Generate Audio'),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              backgroundColor: isConfirmButtonActive.value ? Theme.of(context).colorScheme.primary : Colors.grey[400],
-                              foregroundColor: Colors.white,
-                              onPressed: () async {
-                                if (isConfirmButtonActive.value) {
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (BuildContext context) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    },
-                                  );
+                ),
+                ValueListenableBuilder<bool>(
+                    valueListenable: isConfirmButtonActive,
+                    builder: (context, value, child) {
+                      return Container(
+                        width: 200,
+                        height: 50,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        child: FloatingActionButton.extended(
+                            label: const Text('Generate Audio'),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            backgroundColor: isConfirmButtonActive.value ? Theme.of(context).colorScheme.primary : Colors.grey[400],
+                            foregroundColor: Colors.white,
+                            onPressed: () async {
+                              if (isConfirmButtonActive.value) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (BuildContext context) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  },
+                                );
 
-                                  try {
-                                    DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${FirebaseAuth.instance.currentUser!.uid}').doc();
-                                    await docRef.set({
-                                      "script": script,
-                                      "title": smallJsonDocument["title"],
+                                try {
+                                  DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${FirebaseAuth.instance.currentUser!.uid}').doc();
+                                  await docRef.set({
+                                    "script": script,
+                                    "title": smallJsonDocument["title"],
+                                    "dialogue": smallJsonDocument["dialogue"],
+                                    "native_language": widget.nativeLanguage,
+                                    "target_language": widget.targetLanguage,
+                                    "language_level": widget.languageLevel,
+                                    "words_to_repeat": widget.wordsToLearn,
+                                    "user_ID": FirebaseAuth.instance.currentUser!.uid,
+                                    "timestamp": FieldValue.serverTimestamp(),
+                                  });
+                                  String scriptDocumentID = docRef.id;
+
+                                  http.post(
+                                    Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+                                    headers: <String, String>{
+                                      'Content-Type': 'application/json; charset=UTF-8',
+                                      "Access-Control-Allow-Origin": "*",
+                                    },
+                                    body: jsonEncode(<String, dynamic>{
+                                      "document_id": widget.documentID,
                                       "dialogue": smallJsonDocument["dialogue"],
+                                      "title": smallJsonDocument["title"],
+                                      "speakers": smallJsonDocument["speakers"],
+                                      "user_ID": smallJsonDocument["user_ID"],
                                       "native_language": widget.nativeLanguage,
                                       "target_language": widget.targetLanguage,
+                                      "length": widget.length,
                                       "language_level": widget.languageLevel,
+                                      "voice_1_id": smallJsonDocument["voice_1_id"],
+                                      "voice_2_id": smallJsonDocument["voice_2_id"],
+                                      "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
                                       "words_to_repeat": widget.wordsToLearn,
-                                      "user_ID": FirebaseAuth.instance.currentUser!.uid,
-                                      "timestamp": FieldValue.serverTimestamp(),
-                                    });
-                                    String scriptDocumentID = docRef.id;
-
-                                    http.post(
-                                      Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
-                                      headers: <String, String>{
-                                        'Content-Type': 'application/json; charset=UTF-8',
-                                        "Access-Control-Allow-Origin": "*",
-                                      },
-                                      body: jsonEncode(<String, dynamic>{
-                                        "document_id": widget.documentID,
-                                        "dialogue": smallJsonDocument["dialogue"],
-                                        "title": smallJsonDocument["title"],
-                                        "speakers": smallJsonDocument["speakers"],
-                                        "user_ID": smallJsonDocument["user_ID"],
-                                        "native_language": widget.nativeLanguage,
-                                        "target_language": widget.targetLanguage,
-                                        "length": widget.length,
-                                        "language_level": widget.languageLevel,
-                                        "voice_1_id": smallJsonDocument["voice_1_id"],
-                                        "voice_2_id": smallJsonDocument["voice_2_id"],
-                                        "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
-                                        "words_to_repeat": widget.wordsToLearn,
-                                      }),
-                                    );
-                                    if (script.isNotEmpty) {
-                                      await addUserToActiveCreation();
-                                      Navigator.pop(context);
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => AudioPlayerScreen(
-                                                  dialogue: smallJsonDocument["dialogue"],
-                                                  title: smallJsonDocument["title"],
-                                                  documentID: widget.documentID,
-                                                  userID: FirebaseAuth.instance.currentUser!.uid,
-                                                  scriptDocumentId: scriptDocumentID,
-                                                  generating: true,
-                                                  targetLanguage: widget.targetLanguage,
-                                                  nativeLanguage: widget.nativeLanguage,
-                                                  wordsToRepeat: widget.wordsToLearn,
-                                                )),
-                                      );
-                                    } else {
-                                      throw Exception('Failed to create script!');
-                                    }
-                                  } catch (e) {
+                                    }),
+                                  );
+                                  if (script.isNotEmpty) {
+                                    await addUserToActiveCreation();
                                     Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Something went wrong! Please try again.'),
-                                        duration: Duration(seconds: 4),
-                                      ),
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => AudioPlayerScreen(
+                                                dialogue: smallJsonDocument["dialogue"],
+                                                title: smallJsonDocument["title"],
+                                                documentID: widget.documentID,
+                                                userID: FirebaseAuth.instance.currentUser!.uid,
+                                                scriptDocumentId: scriptDocumentID,
+                                                generating: true,
+                                                targetLanguage: widget.targetLanguage,
+                                                nativeLanguage: widget.nativeLanguage,
+                                                wordsToRepeat: widget.wordsToLearn,
+                                              )),
                                     );
+                                  } else {
+                                    throw Exception('Failed to create script!');
                                   }
+                                } catch (e) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Something went wrong! Please try again.'),
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
                                 }
-                              }),
-                        );
-                      })
-                ]),
-              );
-            },
-          );
-        }),
+                              }
+                            }),
+                      );
+                    })
+              ]),
+            );
+          },
+        ),
       ),
     );
   }
