@@ -27,6 +27,7 @@ import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
+import 'package:http/http.dart' as http;
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -35,6 +36,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String title;
   final String targetLanguage;
   final String nativeLanguage;
+  final String languageLevel;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
@@ -47,6 +49,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.title,
     required this.targetLanguage,
     required this.nativeLanguage,
+    required this.languageLevel,
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
@@ -116,8 +119,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     player = AudioPlayer();
     player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
-    script = script_generator.createFirstScript(widget.dialogue);
-    currentTrack = script[0];
+    if (!widget.generating) {
+      script = script_generator.createFirstScript(widget.dialogue);
+      currentTrack = script[0];
+    }
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
@@ -155,6 +160,179 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       } else {
         await _pause();
       }
+    });
+
+    // If generating is true, create script and make second API call
+    if (widget.generating) {
+      _createScriptAndMakeSecondApiCall();
+    }
+  }
+
+  /// Creates the script document and makes the second API call to generate audio
+  Future<void> _createScriptAndMakeSecondApiCall() async {
+    try {
+      // Wait for dialogue to be fully generated
+      await _waitForCompleteDialogue();
+
+      // If we don't have the latest snapshot, we can't proceed
+      if (latestSnapshot == null) {
+        print('Error: No dialogue data available for script creation');
+        return;
+      }
+
+      // Get the complete dialogue from the latest snapshot
+      List<dynamic> completeDialogue = latestSnapshot!['dialogue'] ?? [];
+      print('completeDialogue: $completeDialogue');
+
+      // Ensure script is created with the complete dialogue
+      if (script.isEmpty) {
+        script = script_generator.createFirstScript(completeDialogue);
+        currentTrack = script.isNotEmpty ? script[0] : '';
+      }
+
+      // Save script to Firestore
+      DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${widget.userID}').doc(widget.scriptDocumentId);
+
+      await docRef.set({
+        "script": script,
+        "title": widget.title,
+        "dialogue": completeDialogue,
+        "native_language": widget.nativeLanguage,
+        "target_language": widget.targetLanguage,
+        "language_level": widget.languageLevel,
+        "words_to_repeat": widget.wordsToRepeat,
+        "user_ID": widget.userID,
+        "timestamp": FieldValue.serverTimestamp(),
+      });
+
+      // Make the second API call using the data from latestSnapshot
+      http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "document_id": widget.documentID,
+          "dialogue": completeDialogue,
+          "title": latestSnapshot!['title'] ?? widget.title,
+          "speakers": latestSnapshot!["speakers"] ?? [],
+          "user_ID": widget.userID,
+          "native_language": widget.nativeLanguage,
+          "target_language": widget.targetLanguage,
+          "length": completeDialogue.length.toString(),
+          "language_level": widget.languageLevel,
+          "voice_1_id": latestSnapshot!["voice_1_id"] ?? "",
+          "voice_2_id": latestSnapshot!["voice_2_id"] ?? "",
+          "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
+          "words_to_repeat": widget.wordsToRepeat,
+        }),
+      );
+
+      // Add user to active creation
+      await _addUserToActiveCreation();
+      await Future.delayed(const Duration(seconds: 10));
+      await _initPlaylist();
+    } catch (e) {
+      print('Error creating script and making second API call: $e');
+    }
+  }
+
+  /// Waits for the dialogue to be fully generated
+  Future<void> _waitForCompleteDialogue() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    bool isDialogueComplete = false;
+    int attempts = 0;
+    const maxAttempts = 60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
+
+    while (!isDialogueComplete && attempts < maxAttempts) {
+      attempts++;
+
+      try {
+        // Get the latest dialogue from Firestore
+        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').limit(1).get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+
+          // Check if dialogue is complete (has the expected number of turns)
+          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
+            List<dynamic> dialogueData = data['dialogue'];
+
+            // Store the latest snapshot for later use
+            setState(() {
+              latestSnapshot = data;
+            });
+
+            // Get the expected length from the lesson_detail_screen
+            String expectedLengthStr = data['length'] ?? '0';
+            int expectedLength = int.tryParse(expectedLengthStr) ?? 0;
+
+            // If no expected length is found, try to use a default value
+            if (expectedLength <= 0) {
+              expectedLength = 4; // Default expected length
+            }
+
+            // Count only valid dialogue entries (non-empty)
+            int validEntriesCount = 0;
+            for (var entry in dialogueData) {
+              if (entry is Map && entry.containsKey('target_language') && entry.containsKey('native_language') && entry['target_language'] != null && entry['native_language'] != null) {
+                validEntriesCount++;
+              }
+            }
+
+            print('Expected dialogue length: $expectedLength');
+            print('Current dialogue length: ${dialogueData.length}');
+            print('Valid dialogue entries: $validEntriesCount');
+
+            // If we have the expected number of valid dialogue turns, we're done
+            if (validEntriesCount >= expectedLength && expectedLength > 0) {
+              isDialogueComplete = true;
+
+              // Create the script with the complete dialogue
+              setState(() {
+                script = script_generator.createFirstScript(dialogueData);
+                currentTrack = script.isNotEmpty ? script[0] : '';
+              });
+
+              break;
+            }
+          }
+        }
+
+        // Wait before checking again
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        print('Error checking dialogue completion: $e');
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    if (!isDialogueComplete) {
+      print('Warning: Dialogue generation timed out after $attempts attempts');
+    } else {
+      print('Dialogue generation completed successfully after $attempts attempts');
+    }
+  }
+
+  /// Adds the current user to the active creation collection
+  Future<void> _addUserToActiveCreation() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+    await firestore.runTransaction((transaction) async {
+      DocumentSnapshot snapshot = await transaction.get(docRef);
+      var userData = {"userId": widget.userID, "documentId": widget.documentID, "timestamp": Timestamp.now()};
+      if (snapshot.exists) {
+        transaction.update(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      } else {
+        transaction.set(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      }
+    }).catchError((error) {
+      print('Failed to add user to active creation: $error');
     });
   }
 
@@ -434,11 +612,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   void updatePlaylist(snapshot) async {
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
     }
+    print(script);
 
     buildFilesToCompare(script);
 
@@ -577,7 +756,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     }
 
-    // If we can’t (or didn’t) find a nickname file, return a generic greeting.
+    // If we can't (or didn't) find a nickname file, return a generic greeting.
     return _getGenericGreetingUrl();
   }
 
@@ -1001,6 +1180,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           dialogue: widget.dialogue,
                           currentTrack: currentTrack,
                           wordsToRepeat: widget.wordsToRepeat,
+                          documentID: widget.documentID,
+                          useStream: widget.generating,
                         ),
                         PositionSlider(
                           positionDataStream: _positionDataStream,

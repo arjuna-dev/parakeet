@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/main.dart';
-import 'package:parakeet/screens/confirm_dialogue_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/screens/audio_player_screen.dart';
 
 class LessonDetailScreen extends StatelessWidget {
   final String title;
@@ -214,8 +214,23 @@ class LessonDetailScreen extends StatelessWidget {
                   child: FilledButton(
                     onPressed: () async {
                       try {
+                        // Show loading dialog
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        );
+
                         final FirebaseFirestore firestore = FirebaseFirestore.instance;
                         final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+                        final String documentId = docRef.id;
+                        final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+
+                        // Make the first API call
                         http.post(
                           Uri.parse('http://192.168.2.105:8081'),
                           headers: <String, String>{
@@ -228,9 +243,9 @@ class LessonDetailScreen extends StatelessWidget {
                             "native_language": nativeLanguage,
                             "target_language": targetLanguage,
                             "length": length,
-                            "user_ID": FirebaseAuth.instance.currentUser!.uid.toString(),
+                            "user_ID": userId,
                             "language_level": languageLevel,
-                            "document_id": docRef.id,
+                            "document_id": documentId,
                             "tts_provider": ttsProvider.value.toString(),
                           }),
                         );
@@ -248,18 +263,26 @@ class LessonDetailScreen extends StatelessWidget {
 
                             if (firstDialogue.isNotEmpty) {
                               if (!context.mounted) return;
-                              Navigator.pop(context);
-                              Navigator.push(
+
+                              // Create an empty script document ID
+                              DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
+                              // Navigate directly to AudioPlayerScreen
+                              Navigator.pop(context); // Close loading dialog
+                              Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ConfirmDialogue(
-                                    firstDialogue: firstDialogue,
-                                    nativeLanguage: nativeLanguage,
+                                  builder: (context) => AudioPlayerScreen(
+                                    dialogue: firstDialogue["dialogue"] ?? [],
+                                    title: firstDialogue["title"] ?? title,
+                                    documentID: documentId,
+                                    userID: userId,
+                                    scriptDocumentId: scriptDocRef.id,
+                                    generating: true,
                                     targetLanguage: targetLanguage,
+                                    nativeLanguage: nativeLanguage,
                                     languageLevel: languageLevel,
-                                    length: length,
-                                    documentID: docRef.id,
-                                    wordsToLearn: wordsToLearn,
+                                    wordsToRepeat: wordsToLearn,
                                   ),
                                 ),
                               );
