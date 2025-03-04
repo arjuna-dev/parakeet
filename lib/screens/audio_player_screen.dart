@@ -833,7 +833,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {});
     }
 
-    if (updateNumber == widget.dialogue.length || !widget.generating) {
+    if (updateNumber == 4 || !widget.generating) {
       finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
       setState(() {});
     }
