@@ -9,7 +9,7 @@ import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:parakeet/utils/speech_recognition.dart';
 import 'package:parakeet/widgets/position_data.dart';
-import 'package:parakeet/widgets/dialogue_list.dart';
+import 'package:parakeet/widgets/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
@@ -1148,214 +1148,220 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 int savedPosition = snapshot.data ?? 0;
                 return Scaffold(
                   appBar: AppBar(title: Text(widget.title)),
-                  body: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            const Text('check pronunciation:'),
-                            Switch(
-                              value: speechRecognitionActive,
-                              onChanged: (bool value) {
-                                if (value) {
-                                  initializeSpeechRecognition();
-                                } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
-                                  speechToTextUltra.stopListening();
-                                } else if (!value && !kIsWeb && Platform.isAndroid) {
-                                  voskSpeechService?.stop();
-                                  voskSpeechService?.dispose();
-                                }
-                                setState(() {
-                                  speechRecognitionActive = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        DialogueList(
-                          dialogue: widget.dialogue,
-                          currentTrack: currentTrack,
-                          wordsToRepeat: widget.wordsToRepeat,
-                          documentID: widget.documentID,
-                          useStream: widget.generating,
-                        ),
-                        PositionSlider(
-                          positionDataStream: _positionDataStream,
-                          totalDuration: totalDuration,
-                          finalTotalDuration: finalTotalDuration,
-                          isPlaying: isPlaying.value,
-                          savedPosition: savedPosition,
-                          findTrackIndexForPosition: findTrackIndexForPosition,
-                          player: player,
-                          cumulativeDurationUpTo: cumulativeDurationUpTo,
-                          pause: _pause,
-                          onSliderChangeStart: () {
-                            setState(() {
-                              isSliderMoving = true;
-                            });
-                          },
-                          onSliderChangeEnd: () {
-                            setState(() {
-                              isSliderMoving = false;
-                            });
-                          },
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: Column(
+                  body: Container(
+                    decoration: const BoxDecoration(
+                      // Chat-like background with subtle pattern
+                      color: Color(0xFF1E1E2E),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    IconButton(
-                                      icon: const Icon(Icons.skip_previous),
-                                      onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                                    ),
-                                    ValueListenableBuilder<bool>(
-                                      valueListenable: isPlaying,
-                                      builder: (context, playing, child) {
-                                        return IconButton(
-                                          icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                                          onPressed: () {
-                                            isPlaying.value = !isPlaying.value;
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.skip_next),
-                                      onPressed: player.hasNext
-                                          ? () {
-                                              setState(() {
-                                                _isSkipping = true;
-                                              });
-                                              player.seekToNext();
-                                              Future.delayed(const Duration(seconds: 1), () {
-                                                setState(() {
-                                                  _isSkipping = false;
-                                                });
-                                              });
-                                            }
-                                          : null,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    PopupMenuButton<RepetitionMode>(
-                                      offset: const Offset(0, 40),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Repetitions',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Theme.of(context).colorScheme.primary,
-                                            size: 20,
-                                          ),
-                                        ],
-                                      ),
-                                      itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
-                                        PopupMenuItem<RepetitionMode>(
-                                          value: RepetitionMode.normal,
-                                          child: Row(
-                                            children: [
-                                              const Text('Normal Repetitions'),
-                                              if (_repetitionsMode.value == RepetitionMode.normal)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(left: 8.0),
-                                                  child: Icon(Icons.check, size: 18),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        PopupMenuItem<RepetitionMode>(
-                                          value: RepetitionMode.less,
-                                          child: Row(
-                                            children: [
-                                              const Text('Less Repetitions'),
-                                              if (_repetitionsMode.value == RepetitionMode.less)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(left: 8.0),
-                                                  child: Icon(Icons.check, size: 18),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      onSelected: (RepetitionMode value) {
-                                        if (widget.generating) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: const Text('Please wait until we finish generating your audio to change this setting!'),
-                                              action: SnackBarAction(
-                                                label: 'OK',
-                                                onPressed: () {
-                                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                },
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          _repetitionsMode.value = value;
-                                        }
-                                      },
-                                    ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.speed,
-                                          size: 18,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                        DropdownButton<double>(
-                                          value: _playbackSpeed,
-                                          isDense: true,
-                                          underline: Container(), // Remove the default underline,
-                                          icon: Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Theme.of(context).colorScheme.primary,
-                                            size: 20,
-                                          ),
-                                          items: const [
-                                            DropdownMenuItem(value: 0.7, child: Text('0.7x')),
-                                            DropdownMenuItem(value: 0.8, child: Text('0.8x')),
-                                            DropdownMenuItem(value: 0.9, child: Text('0.9x')),
-                                            DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                                            DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                                            DropdownMenuItem(value: 1.5, child: Text('1.5x')),
-                                            DropdownMenuItem(value: 2.0, child: Text('2.0x')),
-                                          ],
-                                          onChanged: (double? newValue) {
-                                            if (newValue != null) {
-                                              _changePlaybackSpeed(newValue);
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                              const Text('check pronunciation:'),
+                              Switch(
+                                value: speechRecognitionActive,
+                                onChanged: (bool value) {
+                                  if (value) {
+                                    initializeSpeechRecognition();
+                                  } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
+                                    speechToTextUltra.stopListening();
+                                  } else if (!value && !kIsWeb && Platform.isAndroid) {
+                                    voskSpeechService?.stop();
+                                    voskSpeechService?.dispose();
+                                  }
+                                  setState(() {
+                                    speechRecognitionActive = value;
+                                  });
+                                },
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          AnimatedDialogueList(
+                            dialogue: widget.dialogue,
+                            currentTrack: currentTrack,
+                            wordsToRepeat: widget.wordsToRepeat,
+                            documentID: widget.documentID,
+                            useStream: widget.generating,
+                          ),
+                          PositionSlider(
+                            positionDataStream: _positionDataStream,
+                            totalDuration: totalDuration,
+                            finalTotalDuration: finalTotalDuration,
+                            isPlaying: isPlaying.value,
+                            savedPosition: savedPosition,
+                            findTrackIndexForPosition: findTrackIndexForPosition,
+                            player: player,
+                            cumulativeDurationUpTo: cumulativeDurationUpTo,
+                            pause: _pause,
+                            onSliderChangeStart: () {
+                              setState(() {
+                                isSliderMoving = true;
+                              });
+                            },
+                            onSliderChangeEnd: () {
+                              setState(() {
+                                isSliderMoving = false;
+                              });
+                            },
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_previous),
+                                        onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                                      ),
+                                      ValueListenableBuilder<bool>(
+                                        valueListenable: isPlaying,
+                                        builder: (context, playing, child) {
+                                          return IconButton(
+                                            icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                                            onPressed: () {
+                                              isPlaying.value = !isPlaying.value;
+                                            },
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_next),
+                                        onPressed: player.hasNext
+                                            ? () {
+                                                setState(() {
+                                                  _isSkipping = true;
+                                                });
+                                                player.seekToNext();
+                                                Future.delayed(const Duration(seconds: 1), () {
+                                                  setState(() {
+                                                    _isSkipping = false;
+                                                  });
+                                                });
+                                              }
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      PopupMenuButton<RepetitionMode>(
+                                        offset: const Offset(0, 40),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Repetitions',
+                                              style: TextStyle(
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.arrow_drop_down,
+                                              color: Theme.of(context).colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                        itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
+                                          PopupMenuItem<RepetitionMode>(
+                                            value: RepetitionMode.normal,
+                                            child: Row(
+                                              children: [
+                                                const Text('Normal Repetitions'),
+                                                if (_repetitionsMode.value == RepetitionMode.normal)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(left: 8.0),
+                                                    child: Icon(Icons.check, size: 18),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<RepetitionMode>(
+                                            value: RepetitionMode.less,
+                                            child: Row(
+                                              children: [
+                                                const Text('Less Repetitions'),
+                                                if (_repetitionsMode.value == RepetitionMode.less)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(left: 8.0),
+                                                    child: Icon(Icons.check, size: 18),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        onSelected: (RepetitionMode value) {
+                                          if (widget.generating) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: const Text('Please wait until we finish generating your audio to change this setting!'),
+                                                action: SnackBarAction(
+                                                  label: 'OK',
+                                                  onPressed: () {
+                                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            _repetitionsMode.value = value;
+                                          }
+                                        },
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.speed,
+                                            size: 18,
+                                            color: Theme.of(context).colorScheme.primary,
+                                          ),
+                                          DropdownButton<double>(
+                                            value: _playbackSpeed,
+                                            isDense: true,
+                                            underline: Container(), // Remove the default underline,
+                                            icon: Icon(
+                                              Icons.arrow_drop_down,
+                                              color: Theme.of(context).colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                            items: const [
+                                              DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                              DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                              DropdownMenuItem(value: 0.9, child: Text('0.9x')),
+                                              DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                              DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                              DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                              DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                            ],
+                                            onChanged: (double? newValue) {
+                                              if (newValue != null) {
+                                                _changePlaybackSpeed(newValue);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
