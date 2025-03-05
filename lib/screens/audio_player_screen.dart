@@ -84,6 +84,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool addressByNickname = true;
   bool isLoading = false;
   double _playbackSpeed = 1.0;
+  bool _playlistInitialized = false;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -231,8 +232,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Add user to active creation
       await _addUserToActiveCreation();
-      await Future.delayed(const Duration(seconds: 10));
-      await _initPlaylist();
+
+      // Instead of waiting for a fixed 10 seconds, we'll initialize the playlist
+      // after all dialogue is displayed. The _allDialogueDisplayed callback will
+      // handle this for us.
+
+      // We'll still initialize the playlist here as a fallback, but with a longer timeout
+      // in case the callback doesn't trigger for some reason
+      Future.delayed(const Duration(seconds: 30), () {
+        if (!_playlistInitialized) {
+          print("Fallback: Initializing playlist after timeout");
+          _initPlaylist();
+        }
+      });
     } catch (e) {
       print('Error creating script and making second API call: $e');
     }
@@ -561,6 +573,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initPlaylist() async {
+    // If playlist is already initialized, don't do it again
+    if (_playlistInitialized) {
+      print("Playlist already initialized, skipping");
+      return;
+    }
+
     List<String> fileUrls = [];
     for (var fileName in script) {
       String url = await _constructUrl(fileName);
@@ -581,6 +599,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
       isPlaying.value = true;
+      _playlistInitialized = true;
+      print("Playlist initialized successfully");
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
@@ -1187,6 +1207,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             wordsToRepeat: widget.wordsToRepeat,
                             documentID: widget.documentID,
                             useStream: widget.generating,
+                            onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
                           ),
                           PositionSlider(
                             positionDataStream: _positionDataStream,
@@ -1499,5 +1520,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       speechToTextUltra.dispose();
     }
     super.dispose();
+  }
+
+  /// Called when all dialogue items have been displayed
+  void _onAllDialogueDisplayed() {
+    print("All dialogue items have been displayed, initializing playlist");
+    if (!_playlistInitialized) {
+      _initPlaylist();
+    }
   }
 }
