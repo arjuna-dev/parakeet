@@ -9,6 +9,7 @@ class AnimatedDialogueList extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String documentID;
   final bool useStream;
+  final Function? onAllDialogueDisplayed;
 
   const AnimatedDialogueList({
     Key? key,
@@ -17,6 +18,7 @@ class AnimatedDialogueList extends StatefulWidget {
     required this.wordsToRepeat,
     this.documentID = '',
     this.useStream = false,
+    this.onAllDialogueDisplayed,
   }) : super(key: key);
 
   @override
@@ -37,6 +39,9 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
   // Control the visibility of messages
   final List<int> _visibleMessages = [];
+
+  // Flag to track if we've already notified the parent
+  bool _hasNotifiedAllDisplayed = false;
 
   @override
   void initState() {
@@ -151,6 +156,37 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         }
       } else {
         print("No more messages to animate");
+
+        // Check if we have displayed all valid messages
+        if (currentDialogue.isNotEmpty && widget.onAllDialogueDisplayed != null && !_hasNotifiedAllDisplayed) {
+          // Count valid messages
+          int validMessageCount = 0;
+          int visibleValidMessageCount = 0;
+
+          for (int i = 0; i < currentDialogue.length; i++) {
+            try {
+              if (currentDialogue[i] == null) continue;
+              final String dialogueTarget = currentDialogue[i]["target_language"]?.toString() ?? "";
+              if (dialogueTarget.trim().isNotEmpty) {
+                validMessageCount++;
+                if (_visibleMessages.contains(i)) {
+                  visibleValidMessageCount++;
+                }
+              }
+            } catch (e) {
+              print("Error counting valid messages in _animateNextMessage: $e");
+            }
+          }
+
+          // If all valid messages are visible, notify
+          if (validMessageCount > 0 && visibleValidMessageCount >= validMessageCount) {
+            print("All dialogue messages have been displayed ($visibleValidMessageCount/$validMessageCount). Notifying parent from _animateNextMessage.");
+            _hasNotifiedAllDisplayed = true;
+            widget.onAllDialogueDisplayed?.call();
+          } else {
+            print("Not all dialogue messages are displayed yet: $visibleValidMessageCount/$validMessageCount in _animateNextMessage");
+          }
+        }
       }
     } catch (e) {
       print("Error in _animateNextMessage: $e");
@@ -173,6 +209,34 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         continue;
       }
     }
+
+    // If we reach here, all messages have been shown
+    // Check if we have any valid messages and notify if all are displayed
+    if (dialogueData.isNotEmpty && widget.onAllDialogueDisplayed != null && !_hasNotifiedAllDisplayed) {
+      // Count valid messages
+      int validMessageCount = 0;
+      for (int i = 0; i < dialogueData.length; i++) {
+        try {
+          if (dialogueData[i] == null) continue;
+          final String dialogueTarget = dialogueData[i]["target_language"]?.toString() ?? "";
+          if (dialogueTarget.trim().isNotEmpty) {
+            validMessageCount++;
+          }
+        } catch (e) {
+          print("Error counting valid messages: $e");
+        }
+      }
+
+      // If we have valid messages and all are visible, notify
+      if (validMessageCount > 0 && _visibleMessages.length >= validMessageCount) {
+        print("All dialogue messages have been displayed (${_visibleMessages.length}/$validMessageCount). Notifying parent.");
+        _hasNotifiedAllDisplayed = true;
+        widget.onAllDialogueDisplayed?.call();
+      } else {
+        print("Not all dialogue messages are displayed yet: ${_visibleMessages.length}/$validMessageCount");
+      }
+    }
+
     return -1;
   }
 
@@ -235,6 +299,11 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
     if (!_areDialoguesEqual(widget.dialogue, _dialogueNotifier.value)) {
       final oldLength = _dialogueNotifier.value.length;
       _dialogueNotifier.value = List.from(widget.dialogue);
+
+      // Reset the notification flag when new dialogue data is received
+      if (widget.dialogue.length != oldLength) {
+        _hasNotifiedAllDisplayed = false;
+      }
 
       // If this is the first update and we don't have any visible messages yet
       if (_visibleMessages.isEmpty && widget.dialogue.isNotEmpty) {
@@ -383,6 +452,11 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                         // Update the dialogue data
                         _dialogueNotifier.value = List.from(newDialogueData);
                         _logDialogueState(newDialogueData, "Stream update");
+
+                        // Reset the notification flag when new dialogue data is received
+                        if (newDialogueData.length != oldLength) {
+                          _hasNotifiedAllDisplayed = false;
+                        }
 
                         // If this is the first data we're receiving, initialize visible messages
                         if (_visibleMessages.isEmpty && newDialogueData.isNotEmpty) {
