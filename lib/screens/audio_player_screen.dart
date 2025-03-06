@@ -1207,8 +1207,31 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             wordsToRepeat: widget.wordsToRepeat,
                             documentID: widget.documentID,
                             useStream: widget.generating,
+                            generating: widget.generating,
                             onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
                           ),
+                          // Audio generation message
+                          if (widget.generating && !_playlistInitialized)
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Generating audio files...",
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           PositionSlider(
                             positionDataStream: _positionDataStream,
                             totalDuration: totalDuration,
