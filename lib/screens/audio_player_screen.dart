@@ -28,6 +28,7 @@ import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
 import 'package:http/http.dart' as http;
+import 'package:parakeet/screens/lesson_detail_screen.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -40,6 +41,15 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
+
+  // Static method to ensure proper cleanup of any shared resources
+  static void cleanupSharedResources() {
+    print("AudioPlayerScreen - cleanupSharedResources called");
+    // Force garbage collection of any shared services
+    UpdateFirestoreService.forceCleanup();
+    FileDurationUpdate.forceCleanup();
+    // Clear any cached resources that might persist between instances
+  }
 
   const AudioPlayerScreen({
     Key? key,
@@ -67,6 +77,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AnalyticsManager analyticsManager;
   // late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
+
+  // Flag to track if the widget is being disposed or navigated away from
+  bool _isDisposing = false;
 
   String currentTrack = '';
   String? previousTargetTrack;
@@ -113,6 +126,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _showStreak = false;
 
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
+
+  StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _currentIndexSubscription;
 
   @override
   void initState() {
@@ -175,6 +191,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Wait for dialogue to be fully generated
       await _waitForCompleteDialogue();
 
+      // If widget is no longer mounted, exit early
+      if (!mounted) return;
+
       // If we don't have the latest snapshot, we can't proceed
       if (latestSnapshot == null) {
         print('Error: No dialogue data available for script creation');
@@ -188,8 +207,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Ensure script is created with the complete dialogue
       if (script.isEmpty) {
         script = script_generator.createFirstScript(completeDialogue);
-        currentTrack = script.isNotEmpty ? script[0] : '';
+        if (mounted) {
+          setState(() {
+            currentTrack = script.isNotEmpty ? script[0] : '';
+          });
+        }
       }
+
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
 
       // Save script to Firestore
       DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${widget.userID}').doc(widget.scriptDocumentId);
@@ -205,6 +231,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         "user_ID": widget.userID,
         "timestamp": FieldValue.serverTimestamp(),
       });
+
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
 
       // Make the second API call using the data from latestSnapshot
       http.post(
@@ -233,6 +262,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Add user to active creation
       await _addUserToActiveCreation();
 
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
+
       // Instead of waiting for a fixed 10 seconds, we'll initialize the playlist
       // after all dialogue is displayed. The _allDialogueDisplayed callback will
       // handle this for us.
@@ -240,7 +272,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // We'll still initialize the playlist here as a fallback, but with a longer timeout
       // in case the callback doesn't trigger for some reason
       Future.delayed(const Duration(seconds: 30), () {
-        if (!_playlistInitialized) {
+        if (mounted && !_playlistInitialized) {
           print("Fallback: Initializing playlist after timeout");
           _initPlaylist();
         }
@@ -257,7 +289,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     int attempts = 0;
     const maxAttempts = 60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
 
-    while (!isDialogueComplete && attempts < maxAttempts) {
+    while (!isDialogueComplete && attempts < maxAttempts && mounted) {
       attempts++;
 
       try {
@@ -272,9 +304,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             List<dynamic> dialogueData = data['dialogue'];
 
             // Store the latest snapshot for later use
-            setState(() {
-              latestSnapshot = data;
-            });
+            if (mounted) {
+              setState(() {
+                latestSnapshot = data;
+              });
+            } else {
+              // If not mounted anymore, exit early
+              return;
+            }
 
             // Get the expected length from the lesson_detail_screen
             String expectedLengthStr = data['length'] ?? '0';
@@ -302,27 +339,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               isDialogueComplete = true;
 
               // Create the script with the complete dialogue
-              setState(() {
-                script = script_generator.createFirstScript(dialogueData);
-                currentTrack = script.isNotEmpty ? script[0] : '';
-              });
+              if (mounted) {
+                setState(() {
+                  script = script_generator.createFirstScript(dialogueData);
+                  currentTrack = script.isNotEmpty ? script[0] : '';
+                });
+              }
 
               break;
             }
           }
         }
 
+        // Check if widget is still mounted before waiting
+        if (!mounted) return;
+
         // Wait before checking again
         await Future.delayed(const Duration(seconds: 2));
       } catch (e) {
         print('Error checking dialogue completion: $e');
+
+        // Check if widget is still mounted before waiting
+        if (!mounted) return;
+
         await Future.delayed(const Duration(seconds: 2));
       }
     }
 
-    if (!isDialogueComplete) {
+    if (!isDialogueComplete && mounted) {
       print('Warning: Dialogue generation timed out after $attempts attempts');
-    } else {
+    } else if (isDialogueComplete && mounted) {
       print('Dialogue generation completed successfully after $attempts attempts');
     }
   }
@@ -367,46 +413,48 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initVosk() async {
-    VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
-    String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
-    if (voskModelUrl == null) {
-      _showLanguageNotSupportedDialog();
-      return;
-    } else {
-      isLanguageSupported = true;
+    try {
+      VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
+      String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
+      if (voskModelUrl == null) {
+        _showLanguageNotSupportedDialog();
+        return;
+      } else {
+        isLanguageSupported = true;
+      }
+
+      Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
+      Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
+
+      final recognizer = await vosk.createRecognizer(
+        model: await voskModel,
+        sampleRate: 16000,
+      );
+
+      voskSpeechService = await vosk.initSpeechService(recognizer);
+      print("initSpeechService called");
+
+      if (mounted && voskSpeechService != null) {
+        voskSpeechService!.onResult().forEach((result) {
+          if (mounted) {
+            final String resultText = jsonDecode(result)['text'];
+            print("result: $resultText");
+            setState(() {
+              liveTextSpeechToText = resultText;
+            });
+          }
+        });
+        await voskSpeechService!.start();
+      }
+    } catch (e) {
+      print('Error initializing Vosk: $e');
+      if (mounted) {
+        setState(() {
+          isLanguageSupported = false;
+          speechRecognitionActive = false;
+        });
+      }
     }
-    // String voskModelUrl = getVoskModelUrl(widget.targetLanguage)!;
-    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
-    Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
-
-    final recognizer = await vosk.createRecognizer(
-      model: await voskModel,
-      sampleRate: 16000,
-    );
-    // For recognizing specific words
-    // final recognizerWithGrammar = await vosk.createRecognizer(
-    //   model: await voskModel,
-    //   sampleRate: sampleRate,
-    //   grammar: ['one', 'two', 'three'],
-    // );
-    // For ultra fast recognition
-    // voskSpeechService.onPartial().forEach((partial) {
-    //   setState(() {
-    //     liveTextSpeechToText = partial;
-    //   });
-    // });
-
-    voskSpeechService = await vosk.initSpeechService(recognizer);
-    print("initSpeechService called");
-
-    voskSpeechService!.onResult().forEach((result) {
-      final String resultText = jsonDecode(result)['text'];
-      print("result: $resultText");
-      setState(() {
-        liveTextSpeechToText = resultText;
-      });
-    });
-    await voskSpeechService!.start();
   }
 
   void initializeSpeechRecognition() async {
@@ -477,26 +525,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     for (int i = 1; i <= retries; i++) {
       bool exists = await urlExists(url);
       if (exists) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         return true;
       }
-      setState(() {
-        isLoading = true;
-      });
-      if (i == 2) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('We\'re having trouble finding an audio file 🧐'),
-            action: SnackBarAction(
-              label: 'OK',
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
+
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+
+        if (i == 2 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('We\'re having trouble finding an audio file 🧐'),
+              action: SnackBarAction(
+                label: 'OK',
+                onPressed: () {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  }
+                },
+              ),
             ),
-          ),
-        );
+          );
+        }
+      } else {
+        return false; // Exit early if widget is no longer mounted
       }
 
       await Future.delayed(delay);
@@ -505,6 +563,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _showAudioErrorDialog(BuildContext context) async {
+    if (!mounted) return;
+
     await showDialog(
       context: context,
       builder: (BuildContext ctx) {
@@ -525,10 +585,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleFetchingUrlError(int? index) async {
-    if (index != null) {
+    if (index != null && !_isDisposing && mounted) {
       final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
       bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
-      if (!available) {
+      if (!available && mounted) {
         setState(() => isLoading = false);
         await _showAudioErrorDialog(context);
       }
@@ -536,7 +596,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _listenToPlayerStreams() {
-    player.playerStateStream.listen((playerState) {
+    _playerStateSubscription = player.playerStateStream.listen((playerState) {
+      if (_isDisposing) return;
+
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying.value) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
@@ -546,7 +608,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
-    player.currentIndexStream.listen((index) async {
+    _currentIndexSubscription = player.currentIndexStream.listen((index) async {
+      if (_isDisposing) return;
+
       await _handleFetchingUrlError(index);
 
       print("index: $index");
@@ -557,7 +621,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      if (index < script.length) {
+      if (index < script.length && mounted) {
         setState(() {
           currentTrack = script[index];
         });
@@ -565,17 +629,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         if (speechRecognitionActive) {
           _handleTrackChangeToCompareSpeech(index);
         }
-        setState(() {
-          previousIndex = index;
-        });
+        if (mounted) {
+          setState(() {
+            previousIndex = index;
+          });
+        }
       }
     });
   }
 
   Future<void> _initPlaylist() async {
     // If playlist is already initialized, don't do it again
-    if (_playlistInitialized) {
-      print("Playlist already initialized, skipping");
+    if (_playlistInitialized || _isDisposing) {
+      print("Skipping playlist initialization");
       return;
     }
 
@@ -589,7 +655,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     }
 
-    if (fileUrls.isNotEmpty) {
+    if (fileUrls.isNotEmpty && !_isDisposing) {
       List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
       playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: audioSources);
       await player.setAudioSource(playlist).catchError((error) {
@@ -597,16 +663,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
-      isPlaying.value = true;
-      _playlistInitialized = true;
-      print("Playlist initialized successfully");
+      if (!_isDisposing) {
+        await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
+        isPlaying.value = true;
+        _playlistInitialized = true;
+        print("Playlist initialized successfully");
+      }
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
   }
 
   void buildFilesToCompare(List<dynamic> script) {
+    if (_isDisposing || !mounted) return;
+
     filesToCompare = {};
     int occurrences = 0;
     for (int i = 0; i < script.length; i++) {
@@ -618,9 +688,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           if (i > 0 && script[i - 1].startsWith('\$')) {
             String fileNameWithDollar = script[i - 1];
             String fileName = fileNameWithDollar.replaceFirst('\$', '');
-            setState(() {
+            if (mounted) {
+              setState(() {
+                filesToCompare[i - occurrences - 1] = fileName;
+              });
+            } else {
               filesToCompare[i - occurrences - 1] = fileName;
-            });
+            }
             occurrences++;
           } else {
             print('Warning: Expected a \$-prefixed string before five_second_break at index $i');
@@ -631,6 +705,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylist(snapshot) async {
+    // Don't update if we're disposing or resources are already gone
+    if (_isDisposing || firestoreService == null) {
+      print("Skipping updatePlaylist because widget is disposing");
+      return;
+    }
+
     try {
       script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
     } catch (e) {
@@ -664,6 +744,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylistOnTheFly() async {
+    // Don't update if we're disposing
+    if (_isDisposing) {
+      print("Skipping updatePlaylistOnTheFly because widget is disposing");
+      return;
+    }
+
     bool wasPlaying = isPlaying.value;
     int lastIndexBeforeUpdate = player.currentIndex!;
     if (!widget.generating) {
@@ -718,12 +804,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void saveSnapshot(QuerySnapshot snapshot) {
+    if (_isDisposing) return;
+
     if (snapshot.docs.isNotEmpty) {
       latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
     }
   }
 
   Future<void> updateTrackLength() async {
+    if (_isDisposing) return;
+
     CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
@@ -837,12 +927,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
+    if (_isDisposing) return;
+
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
     audioDurations!.addAll(await getAudioDurationsFromNarratorStorage());
 
-    if (audioDurations!.isNotEmpty) {
+    if (audioDurations!.isNotEmpty && !_isDisposing) {
       for (int i = 0; i < script.length; i++) {
         String fileName = script[i];
         double durationInSeconds = audioDurations?[fileName] ?? 0.0;
@@ -850,12 +942,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         totalDuration += duration;
         trackDurations[i] = duration;
       }
-      setState(() {});
+      if (mounted && !_isDisposing) {
+        setState(() {});
+      }
     }
 
-    if (updateNumber == 4 || !widget.generating) {
+    if ((updateNumber == 4 || !widget.generating) && !_isDisposing) {
       finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -1152,14 +1248,48 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             canPop: false,
             onPopInvoked: (bool didPop) async {
               if (didPop) return;
+
+              print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
+
+              // Set disposing flag to prevent any async operations from using disposed resources
+              _isDisposing = true;
+
               final NavigatorState navigator = Navigator.of(context);
-              if (!widget.generating) {
-                if (isPlaying.value) await _pause();
-                navigator.pop('reload');
+
+              // Always pause audio regardless of generation state
+              if (isPlaying.value) await _pause();
+
+              // Cancel any ongoing operations if generating
+              if (widget.generating) {
+                print("AudioPlayerScreen - navigating to home screen");
+                // Cancel any ongoing API calls or listeners that might be active
+                firestoreService?.dispose();
+                firestoreService = null; // Set to null immediately to prevent further access
+
+                // Ensure we don't try to initialize the playlist after navigating away
+                setState(() {
+                  _playlistInitialized = true; // Prevent further initialization attempts
+                });
+
+                // Clean up any shared resources
+                AudioPlayerScreen.cleanupSharedResources();
+
+                // Reset any LessonDetailScreen state before navigating
+                LessonDetailScreen.resetStaticState();
+
+                // Navigate to home screen and clear stack
+                navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
               } else {
-                if (isPlaying.value) await _pause();
-                navigator.popUntil((route) => route.isFirst);
-                navigator.pushReplacementNamed('/');
+                print("AudioPlayerScreen - popping with 'reload'");
+
+                // Clean up any shared resources
+                AudioPlayerScreen.cleanupSharedResources();
+
+                // Reset any LessonDetailScreen state before navigating
+                LessonDetailScreen.resetStaticState();
+
+                // Normal navigation if not generating
+                navigator.pop('reload');
               }
             },
             child: FutureBuilder<int>(
@@ -1531,22 +1661,46 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
+    print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
+    _isDisposing = true;
+
+    // Cancel stream subscriptions first
+    _playerStateSubscription?.cancel();
+    _currentIndexSubscription?.cancel();
+
+    // Then cancel all listeners
     _repetitionsMode.dispose();
     isPlaying.dispose();
+
+    // Then dispose of services
     firestoreService?.dispose();
+    firestoreService = null; // Prevent further access
+
     fileDurationUpdate?.dispose();
+    fileDurationUpdate = null; // Prevent further access
+
+    // Then dispose of audio resources
     player.dispose();
+
+    // Finally dispose of speech services
     if (!kIsWeb && Platform.isAndroid) {
-      voskSpeechService!.stop();
-      voskSpeechService!.dispose();
+      // Safely dispose of voskSpeechService only if it's initialized
+      if (voskSpeechService != null) {
+        voskSpeechService!.stop();
+        voskSpeechService!.dispose();
+        voskSpeechService = null; // Prevent further access
+      }
     } else {
       speechToTextUltra.dispose();
     }
+
     super.dispose();
   }
 
   /// Called when all dialogue items have been displayed
   void _onAllDialogueDisplayed() {
+    if (_isDisposing) return;
+
     print("All dialogue items have been displayed, initializing playlist");
     if (!_playlistInitialized) {
       _initPlaylist();
