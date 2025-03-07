@@ -9,7 +9,7 @@ import 'dart:convert';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 
-class LessonDetailScreen extends StatelessWidget {
+class LessonDetailScreen extends StatefulWidget {
   final String title;
   final String topic;
   final List<String> wordsToLearn;
@@ -17,6 +17,15 @@ class LessonDetailScreen extends StatelessWidget {
   final String length;
   final String nativeLanguage;
   final String targetLanguage;
+
+  // Static tracking of active instances to help with cleanup
+  static final Set<String> _activeScreenIds = {};
+
+  // Method to clear any static or shared resources when navigating to a new screen
+  static void resetStaticState() {
+    print("LessonDetailScreen - resetStaticState called");
+    _activeScreenIds.clear();
+  }
 
   const LessonDetailScreen({
     Key? key,
@@ -29,6 +38,15 @@ class LessonDetailScreen extends StatelessWidget {
     required this.targetLanguage,
   }) : super(key: key);
 
+  @override
+  _LessonDetailScreenState createState() => _LessonDetailScreenState();
+}
+
+class _LessonDetailScreenState extends State<LessonDetailScreen> {
+  bool _isGeneratingLesson = false;
+  late Map<String, dynamic> firstDialogue;
+  late TTSProvider ttsProvider;
+
   void _handleBack(BuildContext context) {
     Navigator.pushReplacementNamed(context, '/create_lesson');
   }
@@ -38,11 +56,6 @@ class LessonDetailScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
-    var firstDialogue = <String, dynamic>{};
-    var ttsProvider = TTSProvider.googleTTS;
-    if (targetLanguage == 'Azerbaijani') {
-      ttsProvider = TTSProvider.openAI;
-    }
 
     return ResponsiveScreenWrapper(
         child: PopScope(
@@ -101,7 +114,7 @@ class LessonDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      title,
+                      widget.title,
                       style: TextStyle(
                         fontSize: isSmallScreen ? 20 : 24,
                         fontWeight: FontWeight.bold,
@@ -139,7 +152,7 @@ class LessonDetailScreen extends StatelessWidget {
                     Expanded(
                       child: SingleChildScrollView(
                         child: Text(
-                          topic,
+                          widget.topic,
                           style: TextStyle(
                             fontSize: isSmallScreen ? 16 : 18,
                             color: colorScheme.onSurface,
@@ -177,7 +190,7 @@ class LessonDetailScreen extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: wordsToLearn
+                      children: widget.wordsToLearn
                           .map((word) => Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -212,100 +225,119 @@ class LessonDetailScreen extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () async {
-                      try {
-                        // Show loading dialog
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext context) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          },
-                        );
+                    onPressed: _isGeneratingLesson
+                        ? null // Disable button while generating
+                        : () async {
+                            // Prevent multiple generations
+                            if (_isGeneratingLesson) return;
 
-                        final FirebaseFirestore firestore = FirebaseFirestore.instance;
-                        final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
-                        final String documentId = docRef.id;
-                        final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+                            setState(() {
+                              _isGeneratingLesson = true;
+                            });
 
-                        // Make the first API call
-                        http.post(
-                          Uri.parse('http://192.168.2.105:8081'),
-                          headers: <String, String>{
-                            'Content-Type': 'application/json; charset=UTF-8',
-                            "Access-Control-Allow-Origin": "*",
-                          },
-                          body: jsonEncode(<String, dynamic>{
-                            "requested_scenario": topic,
-                            "keywords": wordsToLearn,
-                            "native_language": nativeLanguage,
-                            "target_language": targetLanguage,
-                            "length": length,
-                            "user_ID": userId,
-                            "language_level": languageLevel,
-                            "document_id": documentId,
-                            "tts_provider": ttsProvider.value.toString(),
-                          }),
-                        );
+                            try {
+                              // Show loading dialog
+                              if (mounted) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (BuildContext context) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  },
+                                );
+                              }
 
-                        int counter = 0;
-                        bool docExists = false;
-                        while (!docExists && counter < 15) {
-                          counter++;
-                          await Future.delayed(const Duration(seconds: 1));
-                          final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
-                          if (snapshot.docs.isNotEmpty) {
-                            docExists = true;
-                            final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
-                            firstDialogue = data;
+                              final FirebaseFirestore firestore = FirebaseFirestore.instance;
+                              final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+                              final String documentId = docRef.id;
+                              final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
 
-                            if (firstDialogue.isNotEmpty) {
-                              if (!context.mounted) return;
-
-                              // Create an empty script document ID
-                              DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
-
-                              // Navigate directly to AudioPlayerScreen
-                              Navigator.pop(context); // Close loading dialog
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AudioPlayerScreen(
-                                    dialogue: firstDialogue["dialogue"] ?? [],
-                                    title: firstDialogue["title"] ?? title,
-                                    documentID: documentId,
-                                    userID: userId,
-                                    scriptDocumentId: scriptDocRef.id,
-                                    generating: true,
-                                    targetLanguage: targetLanguage,
-                                    nativeLanguage: nativeLanguage,
-                                    languageLevel: languageLevel,
-                                    wordsToRepeat: wordsToLearn,
-                                  ),
-                                ),
+                              // Make the first API call
+                              http.post(
+                                Uri.parse('http://192.168.2.105:8081'),
+                                headers: <String, String>{
+                                  'Content-Type': 'application/json; charset=UTF-8',
+                                  "Access-Control-Allow-Origin": "*",
+                                },
+                                body: jsonEncode(<String, dynamic>{
+                                  "requested_scenario": widget.topic,
+                                  "keywords": widget.wordsToLearn,
+                                  "native_language": widget.nativeLanguage,
+                                  "target_language": widget.targetLanguage,
+                                  "length": widget.length,
+                                  "user_ID": userId,
+                                  "language_level": widget.languageLevel,
+                                  "document_id": documentId,
+                                  "tts_provider": ttsProvider.value.toString(),
+                                }),
                               );
-                            } else {
-                              throw Exception('Proper data not received from API');
+
+                              int counter = 0;
+                              bool docExists = false;
+                              while (!docExists && counter < 15 && mounted) {
+                                counter++;
+                                await Future.delayed(const Duration(seconds: 1));
+                                final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
+                                if (snapshot.docs.isNotEmpty) {
+                                  docExists = true;
+                                  final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
+                                  firstDialogue = data;
+
+                                  if (firstDialogue.isNotEmpty && mounted) {
+                                    // Create an empty script document ID
+                                    DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
+                                    // Navigate directly to AudioPlayerScreen
+                                    if (mounted) Navigator.pop(context); // Close loading dialog
+                                    if (mounted) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AudioPlayerScreen(
+                                            dialogue: firstDialogue["dialogue"] ?? [],
+                                            title: firstDialogue["title"] ?? widget.title,
+                                            documentID: documentId,
+                                            userID: userId,
+                                            scriptDocumentId: scriptDocRef.id,
+                                            generating: true,
+                                            targetLanguage: widget.targetLanguage,
+                                            nativeLanguage: widget.nativeLanguage,
+                                            languageLevel: widget.languageLevel,
+                                            wordsToRepeat: widget.wordsToLearn,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    throw Exception('Proper data not received from API');
+                                  }
+                                }
+                              }
+                              if (!docExists && mounted) {
+                                throw Exception('Failed to find the response in firestore within 15 seconds');
+                              }
+                            } on Exception catch (e) {
+                              print(e);
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              // Reset generation state
+                              if (mounted) {
+                                setState(() {
+                                  _isGeneratingLesson = false;
+                                });
+                              }
                             }
-                          }
-                        }
-                        if (!docExists) {
-                          throw Exception('Failed to find the response in firestore within 15 seconds');
-                        }
-                      } on Exception catch (e) {
-                        print(e);
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
+                          },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -328,5 +360,48 @@ class LessonDetailScreen extends StatelessWidget {
         bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
       ),
     ));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    print("LessonDetailScreen - initState() called");
+
+    // Generate a unique ID for this instance
+    final String instanceId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Add this instance to active screens
+    LessonDetailScreen._activeScreenIds.add(instanceId);
+    print("LessonDetailScreen - Active screens: ${LessonDetailScreen._activeScreenIds.length}");
+
+    // Initialize fields
+    firstDialogue = <String, dynamic>{};
+    ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
+    _isGeneratingLesson = false;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    print("LessonDetailScreen - didChangeDependencies() called");
+    // Reset state when this screen becomes active again
+    setState(() {
+      _isGeneratingLesson = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    print("LessonDetailScreen - dispose() called");
+    // Make sure to clear any state or resources when disposed
+    firstDialogue.clear();
+    _isGeneratingLesson = false;
+
+    // Clear static resources for this widget
+    if (LessonDetailScreen._activeScreenIds.length > 1) {
+      print("LessonDetailScreen - Warning: Multiple instances detected during disposal");
+    }
+
+    super.dispose();
   }
 }

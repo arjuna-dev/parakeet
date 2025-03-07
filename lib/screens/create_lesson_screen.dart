@@ -200,6 +200,10 @@ class _CreateLessonState extends State<CreateLesson> {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body) as Map<String, dynamic>;
         Navigator.pop(context);
+
+        // Reset any static state in LessonDetailScreen before navigation
+        LessonDetailScreen.resetStaticState();
+
         Navigator.push(
           context,
           MaterialPageRoute(

@@ -60,4 +60,13 @@ class UpdateFirestoreService extends ChangeNotifier {
     queue.clear();
     super.dispose();
   }
+
+  /// Static method to force cleanup of any shared resources
+  static void forceCleanup() {
+    if (_instance != null) {
+      _instance!._streamSubscription?.cancel();
+      _instance!.queue.clear();
+      _instance = null;
+    }
+  }
 }
