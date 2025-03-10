@@ -3,6 +3,7 @@ import 'package:parakeet/screens/store_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/auth_service.dart';
+import 'package:parakeet/utils/supported_language_codes.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/services/notification_service.dart';
@@ -24,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _premium = false;
   final NotificationService _notificationService = NotificationService();
   TimeOfDay? _reminderTime;
+  String _nativeLanguage = 'English (US)';
+  String _targetLanguage = 'German';
 
   @override
   void initState() {
@@ -43,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _name = userData['name'] ?? '';
           _email = userData['email'] ?? '';
           _premium = userData['premium'] ?? false;
+          _nativeLanguage = userData['nativeLanguage'] ?? 'English (US)';
+          _targetLanguage = userData['targetLanguage'] ?? 'German';
         });
       }
     }
@@ -122,6 +127,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showLanguageSelectionDialog() async {
+    final List<String> languages = supportedLanguageCodes.keys.toList();
+    String tempNativeLanguage = _nativeLanguage;
+    String tempTargetLanguage = _targetLanguage;
+
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Language Settings'),
+            content: Container(
+              width: double.maxFinite,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Native language dropdown
+                  ListTile(
+                    title: const Text('Native Language'),
+                    subtitle: Text(tempNativeLanguage),
+                    trailing: const Icon(Icons.arrow_drop_down),
+                    onTap: () async {
+                      final String? selected = await _selectLanguageFromList(context, 'Select Native Language', languages, tempNativeLanguage);
+                      if (selected != null) {
+                        setState(() {
+                          tempNativeLanguage = selected;
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  // Target language dropdown
+                  ListTile(
+                    title: const Text('Target Language'),
+                    subtitle: Text(tempTargetLanguage),
+                    trailing: const Icon(Icons.arrow_drop_down),
+                    onTap: () async {
+                      final String? selected = await _selectLanguageFromList(context, 'Select Target Language', languages, tempTargetLanguage);
+                      if (selected != null) {
+                        setState(() {
+                          tempTargetLanguage = selected;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    if (confirmed == true && (_nativeLanguage != tempNativeLanguage || _targetLanguage != tempTargetLanguage)) {
+      setState(() {
+        _nativeLanguage = tempNativeLanguage;
+        _targetLanguage = tempTargetLanguage;
+      });
+
+      // Update user preferences in Firestore
+      if (_user != null) {
+        await _firestore.collection('users').doc(_user!.uid).update({
+          'nativeLanguage': tempNativeLanguage,
+          'targetLanguage': tempTargetLanguage,
+        });
+      }
+    }
+  }
+
+  // Helper method to show language selection list
+  Future<String?> _selectLanguageFromList(BuildContext context, String title, List<String> languages, String currentSelection) async {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: languages.length,
+              itemBuilder: (context, index) {
+                final language = languages[index];
+                return ListTile(
+                  title: Text(language),
+                  selected: language == currentSelection,
+                  onTap: () {
+                    Navigator.of(context).pop(language);
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildProfileHeader() {
@@ -323,6 +440,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: _premium ? 'Premium Member' : 'Free Account',
               subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
               onTap: _handleStoreNavigation,
+            ),
+            _buildMenuItem(
+              icon: Icons.translate,
+              title: 'Language Settings',
+              subtitle: 'Native: $_nativeLanguage • Target: $_targetLanguage',
+              onTap: _showLanguageSelectionDialog,
             ),
             _buildMenuItem(
               icon: Icons.shopping_bag,

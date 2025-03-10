@@ -22,6 +22,10 @@ Widget buildProfilePopupMenu(BuildContext context) {
               return const NicknamePopup();
             },
           );
+          break;
+        case 'Language Settings':
+          Navigator.pushNamed(context, '/profile'); // Navigate to profile screen where language settings are available
+          break;
       }
     },
     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -32,6 +36,10 @@ Widget buildProfilePopupMenu(BuildContext context) {
       const PopupMenuItem<String>(
         value: 'Edit Name',
         child: Text('Edit Name'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'Language Settings',
+        child: Text('Language Settings'),
       ),
       const PopupMenuItem<String>(
         value: 'Logout',
