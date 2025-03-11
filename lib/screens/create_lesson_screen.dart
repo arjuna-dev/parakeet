@@ -208,6 +208,8 @@ class _CreateLessonState extends State<CreateLesson> {
           context,
           MaterialPageRoute(
             builder: (context) => LessonDetailScreen(
+              category: category['name'] as String,
+              allWords: category['words'] as List<String>,
               title: result['title'] as String,
               topic: result['topic'] as String,
               wordsToLearn: (result['words_to_learn'] as List).cast<String>(),
