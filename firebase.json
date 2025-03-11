@@ -4,6 +4,10 @@
       "source": "functions",
       "codebase": "default",
       "ignore": ["venv", ".git", "firebase-debug.log", "firebase-debug.*.log", "other", "_local_*", "local_scripts", ".gitignore", "requests.http"]
+    },
+    {
+      "source": "functions_plot_twist",
+      "codebase": "plot_twist"
     }
   ],
   "flutter": {
