@@ -16,7 +16,6 @@ firebase deploy --only functions
 firebase deploy --only functions:first_API_calls,functions:second_API_calls
 ```
 
-
 ##### Delete a specified function:
 
 ```bash
@@ -25,6 +24,20 @@ firebase functions:delete myFunction
 
 ```bash
 firebase functions:delete myFunction --region us-east-1
+```
+
+##### Deploy plot-twist functions:
+
+```bash
+firebase deploy --only functions:plot_twist
+```
+
+```bash
+gcloud functions deploy handle_kofi_donation \
+  --region=europe-west1 \
+  --gen2 \
+  --set-env-vars KOFI_TOKEN=someToken123 \ [optional]
+  --source /Users/alejandrocamus/Documents/dev/parakeet/functions_plot_twist/
 ```
 
 ##### Deploy locally for testing
