@@ -418,6 +418,7 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
                                     dialogue: document.get('dialogue'),
                                     targetLanguage: document.get('target_language'),
                                     nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
+                                    languageLevel: document.get('language_level'),
                                     userID: FirebaseAuth.instance.currentUser!.uid,
                                     title: document.get('title'),
                                     generating: false,

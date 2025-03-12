@@ -9,7 +9,7 @@ import 'package:parakeet/utils/save_analytics.dart';
 import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:parakeet/utils/speech_recognition.dart';
 import 'package:parakeet/widgets/position_data.dart';
-import 'package:parakeet/widgets/dialogue_list.dart';
+import 'package:parakeet/widgets/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/position_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
@@ -27,6 +27,8 @@ import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
+import 'package:http/http.dart' as http;
+import 'package:parakeet/screens/lesson_detail_screen.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String documentID;
@@ -35,9 +37,19 @@ class AudioPlayerScreen extends StatefulWidget {
   final String title;
   final String targetLanguage;
   final String nativeLanguage;
+  final String languageLevel;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
+
+  // Static method to ensure proper cleanup of any shared resources
+  static void cleanupSharedResources() {
+    print("AudioPlayerScreen - cleanupSharedResources called");
+    // Force garbage collection of any shared services
+    UpdateFirestoreService.forceCleanup();
+    FileDurationUpdate.forceCleanup();
+    // Clear any cached resources that might persist between instances
+  }
 
   const AudioPlayerScreen({
     Key? key,
@@ -47,6 +59,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.title,
     required this.targetLanguage,
     required this.nativeLanguage,
+    required this.languageLevel,
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
@@ -65,6 +78,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // late List<AudioSource> couldNotListenFeedbackAudio;
   late AudioSource audioCue;
 
+  // Flag to track if the widget is being disposed or navigated away from
+  bool _isDisposing = false;
+
   String currentTrack = '';
   String? previousTargetTrack;
   String? targetPhraseToCompareWith;
@@ -81,6 +97,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool addressByNickname = true;
   bool isLoading = false;
   double _playbackSpeed = 1.0;
+  bool _playlistInitialized = false;
 
   Duration totalDuration = Duration.zero;
   Duration finalTotalDuration = Duration.zero;
@@ -110,14 +127,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
 
+  StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _currentIndexSubscription;
+
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
     player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
-    script = script_generator.createFirstScript(widget.dialogue);
-    currentTrack = script[0];
+    if (!widget.generating) {
+      script = script_generator.createFirstScript(widget.dialogue);
+      currentTrack = script[0];
+    }
     analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
     analyticsManager.loadAnalyticsFromFirebase();
     _listenToPlayerStreams();
@@ -156,6 +178,220 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         await _pause();
       }
     });
+
+    // If generating is true, create script and make second API call
+    if (widget.generating) {
+      _createScriptAndMakeSecondApiCall();
+    }
+  }
+
+  /// Creates the script document and makes the second API call to generate audio
+  Future<void> _createScriptAndMakeSecondApiCall() async {
+    try {
+      // Wait for dialogue to be fully generated
+      await _waitForCompleteDialogue();
+
+      // If widget is no longer mounted, exit early
+      if (!mounted) return;
+
+      // If we don't have the latest snapshot, we can't proceed
+      if (latestSnapshot == null) {
+        print('Error: No dialogue data available for script creation');
+        return;
+      }
+
+      // Get the complete dialogue from the latest snapshot
+      List<dynamic> completeDialogue = latestSnapshot!['dialogue'] ?? [];
+      print('completeDialogue: $completeDialogue');
+
+      // Ensure script is created with the complete dialogue
+      if (script.isEmpty) {
+        script = script_generator.createFirstScript(completeDialogue);
+        if (mounted) {
+          setState(() {
+            currentTrack = script.isNotEmpty ? script[0] : '';
+          });
+        }
+      }
+
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
+
+      // Save script to Firestore
+      DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${widget.userID}').doc(widget.scriptDocumentId);
+
+      await docRef.set({
+        "script": script,
+        "title": widget.title,
+        "dialogue": completeDialogue,
+        "native_language": widget.nativeLanguage,
+        "target_language": widget.targetLanguage,
+        "language_level": widget.languageLevel,
+        "words_to_repeat": widget.wordsToRepeat,
+        "user_ID": widget.userID,
+        "timestamp": FieldValue.serverTimestamp(),
+      });
+
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
+
+      // Make the second API call using the data from latestSnapshot
+      http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "document_id": widget.documentID,
+          "dialogue": completeDialogue,
+          "title": latestSnapshot!['title'] ?? widget.title,
+          "speakers": latestSnapshot!["speakers"] ?? [],
+          "user_ID": widget.userID,
+          "native_language": widget.nativeLanguage,
+          "target_language": widget.targetLanguage,
+          "length": completeDialogue.length.toString(),
+          "language_level": widget.languageLevel,
+          "voice_1_id": latestSnapshot!["voice_1_id"] ?? "",
+          "voice_2_id": latestSnapshot!["voice_2_id"] ?? "",
+          "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
+          "words_to_repeat": widget.wordsToRepeat,
+        }),
+      );
+
+      // Add user to active creation
+      await _addUserToActiveCreation();
+
+      // Exit if widget is no longer mounted
+      if (!mounted) return;
+
+      // Instead of waiting for a fixed 10 seconds, we'll initialize the playlist
+      // after all dialogue is displayed. The _allDialogueDisplayed callback will
+      // handle this for us.
+
+      // We'll still initialize the playlist here as a fallback, but with a longer timeout
+      // in case the callback doesn't trigger for some reason
+      Future.delayed(const Duration(seconds: 30), () {
+        if (mounted && !_playlistInitialized) {
+          print("Fallback: Initializing playlist after timeout");
+          _initPlaylist();
+        }
+      });
+    } catch (e) {
+      print('Error creating script and making second API call: $e');
+    }
+  }
+
+  /// Waits for the dialogue to be fully generated
+  Future<void> _waitForCompleteDialogue() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    bool isDialogueComplete = false;
+    int attempts = 0;
+    const maxAttempts = 60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
+
+    while (!isDialogueComplete && attempts < maxAttempts && mounted) {
+      attempts++;
+
+      try {
+        // Get the latest dialogue from Firestore
+        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').limit(1).get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+
+          // Check if dialogue is complete (has the expected number of turns)
+          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
+            List<dynamic> dialogueData = data['dialogue'];
+
+            // Store the latest snapshot for later use
+            if (mounted) {
+              setState(() {
+                latestSnapshot = data;
+              });
+            } else {
+              // If not mounted anymore, exit early
+              return;
+            }
+
+            // Get the expected length from the lesson_detail_screen
+            String expectedLengthStr = data['length'] ?? '0';
+            int expectedLength = int.tryParse(expectedLengthStr) ?? 0;
+
+            // If no expected length is found, try to use a default value
+            if (expectedLength <= 0) {
+              expectedLength = 4; // Default expected length
+            }
+
+            // Count only valid dialogue entries (non-empty)
+            int validEntriesCount = 0;
+            for (var entry in dialogueData) {
+              if (entry is Map && entry.containsKey('target_language') && entry.containsKey('native_language') && entry['target_language'] != null && entry['native_language'] != null) {
+                validEntriesCount++;
+              }
+            }
+
+            print('Expected dialogue length: $expectedLength');
+            print('Current dialogue length: ${dialogueData.length}');
+            print('Valid dialogue entries: $validEntriesCount');
+
+            // If we have the expected number of valid dialogue turns, we're done
+            if (validEntriesCount >= expectedLength && expectedLength > 0) {
+              isDialogueComplete = true;
+
+              // Create the script with the complete dialogue
+              if (mounted) {
+                setState(() {
+                  script = script_generator.createFirstScript(dialogueData);
+                  currentTrack = script.isNotEmpty ? script[0] : '';
+                });
+              }
+
+              break;
+            }
+          }
+        }
+
+        // Check if widget is still mounted before waiting
+        if (!mounted) return;
+
+        // Wait before checking again
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        print('Error checking dialogue completion: $e');
+
+        // Check if widget is still mounted before waiting
+        if (!mounted) return;
+
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    if (!isDialogueComplete && mounted) {
+      print('Warning: Dialogue generation timed out after $attempts attempts');
+    } else if (isDialogueComplete && mounted) {
+      print('Dialogue generation completed successfully after $attempts attempts');
+    }
+  }
+
+  /// Adds the current user to the active creation collection
+  Future<void> _addUserToActiveCreation() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+    await firestore.runTransaction((transaction) async {
+      DocumentSnapshot snapshot = await transaction.get(docRef);
+      var userData = {"userId": widget.userID, "documentId": widget.documentID, "timestamp": Timestamp.now()};
+      if (snapshot.exists) {
+        transaction.update(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      } else {
+        transaction.set(docRef, {
+          "users": FieldValue.arrayUnion([userData]),
+        });
+      }
+    }).catchError((error) {
+      print('Failed to add user to active creation: $error');
+    });
   }
 
   String? getVoskModelUrl(String languageName) {
@@ -177,46 +413,48 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _initVosk() async {
-    VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
-    String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
-    if (voskModelUrl == null) {
-      _showLanguageNotSupportedDialog();
-      return;
-    } else {
-      isLanguageSupported = true;
+    try {
+      VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
+      String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
+      if (voskModelUrl == null) {
+        _showLanguageNotSupportedDialog();
+        return;
+      } else {
+        isLanguageSupported = true;
+      }
+
+      Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
+      Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
+
+      final recognizer = await vosk.createRecognizer(
+        model: await voskModel,
+        sampleRate: 16000,
+      );
+
+      voskSpeechService = await vosk.initSpeechService(recognizer);
+      print("initSpeechService called");
+
+      if (mounted && voskSpeechService != null) {
+        voskSpeechService!.onResult().forEach((result) {
+          if (mounted) {
+            final String resultText = jsonDecode(result)['text'];
+            print("result: $resultText");
+            setState(() {
+              liveTextSpeechToText = resultText;
+            });
+          }
+        });
+        await voskSpeechService!.start();
+      }
+    } catch (e) {
+      print('Error initializing Vosk: $e');
+      if (mounted) {
+        setState(() {
+          isLanguageSupported = false;
+          speechRecognitionActive = false;
+        });
+      }
     }
-    // String voskModelUrl = getVoskModelUrl(widget.targetLanguage)!;
-    Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
-    Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
-
-    final recognizer = await vosk.createRecognizer(
-      model: await voskModel,
-      sampleRate: 16000,
-    );
-    // For recognizing specific words
-    // final recognizerWithGrammar = await vosk.createRecognizer(
-    //   model: await voskModel,
-    //   sampleRate: sampleRate,
-    //   grammar: ['one', 'two', 'three'],
-    // );
-    // For ultra fast recognition
-    // voskSpeechService.onPartial().forEach((partial) {
-    //   setState(() {
-    //     liveTextSpeechToText = partial;
-    //   });
-    // });
-
-    voskSpeechService = await vosk.initSpeechService(recognizer);
-    print("initSpeechService called");
-
-    voskSpeechService!.onResult().forEach((result) {
-      final String resultText = jsonDecode(result)['text'];
-      print("result: $resultText");
-      setState(() {
-        liveTextSpeechToText = resultText;
-      });
-    });
-    await voskSpeechService!.start();
   }
 
   void initializeSpeechRecognition() async {
@@ -287,26 +525,36 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     for (int i = 1; i <= retries; i++) {
       bool exists = await urlExists(url);
       if (exists) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         return true;
       }
-      setState(() {
-        isLoading = true;
-      });
-      if (i == 2) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('We\'re having trouble finding an audio file 🧐'),
-            action: SnackBarAction(
-              label: 'OK',
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
+
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+
+        if (i == 2 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('We\'re having trouble finding an audio file 🧐'),
+              action: SnackBarAction(
+                label: 'OK',
+                onPressed: () {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  }
+                },
+              ),
             ),
-          ),
-        );
+          );
+        }
+      } else {
+        return false; // Exit early if widget is no longer mounted
       }
 
       await Future.delayed(delay);
@@ -315,6 +563,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _showAudioErrorDialog(BuildContext context) async {
+    if (!mounted) return;
+
     await showDialog(
       context: context,
       builder: (BuildContext ctx) {
@@ -335,10 +585,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleFetchingUrlError(int? index) async {
-    if (index != null) {
+    if (index != null && !_isDisposing && mounted) {
       final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
       bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
-      if (!available) {
+      if (!available && mounted) {
         setState(() => isLoading = false);
         await _showAudioErrorDialog(context);
       }
@@ -346,7 +596,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void _listenToPlayerStreams() {
-    player.playerStateStream.listen((playerState) {
+    _playerStateSubscription = player.playerStateStream.listen((playerState) {
+      if (_isDisposing) return;
+
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying.value) {
           analyticsManager.storeAnalytics(widget.documentID, 'completed');
@@ -356,7 +608,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     });
 
-    player.currentIndexStream.listen((index) async {
+    _currentIndexSubscription = player.currentIndexStream.listen((index) async {
+      if (_isDisposing) return;
+
       await _handleFetchingUrlError(index);
 
       print("index: $index");
@@ -367,7 +621,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      if (index < script.length) {
+      if (index < script.length && mounted) {
         setState(() {
           currentTrack = script[index];
         });
@@ -375,14 +629,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         if (speechRecognitionActive) {
           _handleTrackChangeToCompareSpeech(index);
         }
-        setState(() {
-          previousIndex = index;
-        });
+        if (mounted) {
+          setState(() {
+            previousIndex = index;
+          });
+        }
       }
     });
   }
 
   Future<void> _initPlaylist() async {
+    // If playlist is already initialized, don't do it again
+    if (_playlistInitialized || _isDisposing) {
+      print("Skipping playlist initialization");
+      return;
+    }
+
     List<String> fileUrls = [];
     for (var fileName in script) {
       String url = await _constructUrl(fileName);
@@ -393,7 +655,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     }
 
-    if (fileUrls.isNotEmpty) {
+    if (fileUrls.isNotEmpty && !_isDisposing) {
       List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
       playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: audioSources);
       await player.setAudioSource(playlist).catchError((error) {
@@ -401,14 +663,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return null;
       });
 
-      await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
-      isPlaying.value = true;
+      if (!_isDisposing) {
+        await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
+        isPlaying.value = true;
+        _playlistInitialized = true;
+        print("Playlist initialized successfully");
+      }
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
   }
 
   void buildFilesToCompare(List<dynamic> script) {
+    if (_isDisposing || !mounted) return;
+
     filesToCompare = {};
     int occurrences = 0;
     for (int i = 0; i < script.length; i++) {
@@ -420,9 +688,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           if (i > 0 && script[i - 1].startsWith('\$')) {
             String fileNameWithDollar = script[i - 1];
             String fileName = fileNameWithDollar.replaceFirst('\$', '');
-            setState(() {
+            if (mounted) {
+              setState(() {
+                filesToCompare[i - occurrences - 1] = fileName;
+              });
+            } else {
               filesToCompare[i - occurrences - 1] = fileName;
-            });
+            }
             occurrences++;
           } else {
             print('Warning: Expected a \$-prefixed string before five_second_break at index $i');
@@ -433,12 +705,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylist(snapshot) async {
+    // Don't update if we're disposing or resources are already gone
+    if (_isDisposing || firestoreService == null) {
+      print("Skipping updatePlaylist because widget is disposing");
+      return;
+    }
+
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
     }
+    print(script);
 
     buildFilesToCompare(script);
 
@@ -465,6 +744,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void updatePlaylistOnTheFly() async {
+    // Don't update if we're disposing
+    if (_isDisposing) {
+      print("Skipping updatePlaylistOnTheFly because widget is disposing");
+      return;
+    }
+
     bool wasPlaying = isPlaying.value;
     int lastIndexBeforeUpdate = player.currentIndex!;
     if (!widget.generating) {
@@ -519,12 +804,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   void saveSnapshot(QuerySnapshot snapshot) {
+    if (_isDisposing) return;
+
     if (snapshot.docs.isNotEmpty) {
       latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
     }
   }
 
   Future<void> updateTrackLength() async {
+    if (_isDisposing) return;
+
     CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
@@ -577,7 +866,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
     }
 
-    // If we can’t (or didn’t) find a nickname file, return a generic greeting.
+    // If we can't (or didn't) find a nickname file, return a generic greeting.
     return _getGenericGreetingUrl();
   }
 
@@ -638,12 +927,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
+    if (_isDisposing) return;
+
     totalDuration = Duration.zero;
     trackDurations = List<Duration>.filled(script.length, Duration.zero);
     audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
     audioDurations!.addAll(await getAudioDurationsFromNarratorStorage());
 
-    if (audioDurations!.isNotEmpty) {
+    if (audioDurations!.isNotEmpty && !_isDisposing) {
       for (int i = 0; i < script.length; i++) {
         String fileName = script[i];
         double durationInSeconds = audioDurations?[fileName] ?? 0.0;
@@ -651,12 +942,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         totalDuration += duration;
         trackDurations[i] = duration;
       }
-      setState(() {});
+      if (mounted && !_isDisposing) {
+        setState(() {});
+      }
     }
 
-    if (updateNumber == widget.dialogue.length || !widget.generating) {
+    if ((updateNumber == 4 || !widget.generating) && !_isDisposing) {
       finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -770,7 +1065,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text("${widget.targetLanguage} is not supported for speech recognition on your device, but we're working on it!"),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
             ],
           ),
           actions: [
@@ -953,14 +1248,48 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             canPop: false,
             onPopInvoked: (bool didPop) async {
               if (didPop) return;
+
+              print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
+
+              // Set disposing flag to prevent any async operations from using disposed resources
+              _isDisposing = true;
+
               final NavigatorState navigator = Navigator.of(context);
-              if (!widget.generating) {
-                if (isPlaying.value) await _pause();
-                navigator.pop('reload');
+
+              // Always pause audio regardless of generation state
+              if (isPlaying.value) await _pause();
+
+              // Cancel any ongoing operations if generating
+              if (widget.generating) {
+                print("AudioPlayerScreen - navigating to home screen");
+                // Cancel any ongoing API calls or listeners that might be active
+                firestoreService?.dispose();
+                firestoreService = null; // Set to null immediately to prevent further access
+
+                // Ensure we don't try to initialize the playlist after navigating away
+                setState(() {
+                  _playlistInitialized = true; // Prevent further initialization attempts
+                });
+
+                // Clean up any shared resources
+                AudioPlayerScreen.cleanupSharedResources();
+
+                // Reset any LessonDetailScreen state before navigating
+                LessonDetailScreen.resetStaticState();
+
+                // Navigate to home screen and clear stack
+                navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
               } else {
-                if (isPlaying.value) await _pause();
-                navigator.popUntil((route) => route.isFirst);
-                navigator.pushReplacementNamed('/');
+                print("AudioPlayerScreen - popping with 'reload'");
+
+                // Clean up any shared resources
+                AudioPlayerScreen.cleanupSharedResources();
+
+                // Reset any LessonDetailScreen state before navigating
+                LessonDetailScreen.resetStaticState();
+
+                // Normal navigation if not generating
+                navigator.pop('reload');
               }
             },
             child: FutureBuilder<int>(
@@ -969,212 +1298,244 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 int savedPosition = snapshot.data ?? 0;
                 return Scaffold(
                   appBar: AppBar(title: Text(widget.title)),
-                  body: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            const Text('check pronunciation:'),
-                            Switch(
-                              value: speechRecognitionActive,
-                              onChanged: (bool value) {
-                                if (value) {
-                                  initializeSpeechRecognition();
-                                } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
-                                  speechToTextUltra.stopListening();
-                                } else if (!value && !kIsWeb && Platform.isAndroid) {
-                                  voskSpeechService?.stop();
-                                  voskSpeechService?.dispose();
-                                }
-                                setState(() {
-                                  speechRecognitionActive = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        DialogueList(
-                          dialogue: widget.dialogue,
-                          currentTrack: currentTrack,
-                          wordsToRepeat: widget.wordsToRepeat,
-                        ),
-                        PositionSlider(
-                          positionDataStream: _positionDataStream,
-                          totalDuration: totalDuration,
-                          finalTotalDuration: finalTotalDuration,
-                          isPlaying: isPlaying.value,
-                          savedPosition: savedPosition,
-                          findTrackIndexForPosition: findTrackIndexForPosition,
-                          player: player,
-                          cumulativeDurationUpTo: cumulativeDurationUpTo,
-                          pause: _pause,
-                          onSliderChangeStart: () {
-                            setState(() {
-                              isSliderMoving = true;
-                            });
-                          },
-                          onSliderChangeEnd: () {
-                            setState(() {
-                              isSliderMoving = false;
-                            });
-                          },
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: Column(
+                  body: Container(
+                    decoration: const BoxDecoration(
+                      // Chat-like background with subtle pattern
+                      color: Color(0xFF1E1E2E),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    IconButton(
-                                      icon: const Icon(Icons.skip_previous),
-                                      onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                                    ),
-                                    ValueListenableBuilder<bool>(
-                                      valueListenable: isPlaying,
-                                      builder: (context, playing, child) {
-                                        return IconButton(
-                                          icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                                          onPressed: () {
-                                            isPlaying.value = !isPlaying.value;
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.skip_next),
-                                      onPressed: player.hasNext
-                                          ? () {
-                                              setState(() {
-                                                _isSkipping = true;
-                                              });
-                                              player.seekToNext();
-                                              Future.delayed(const Duration(seconds: 1), () {
-                                                setState(() {
-                                                  _isSkipping = false;
-                                                });
-                                              });
-                                            }
-                                          : null,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    PopupMenuButton<RepetitionMode>(
-                                      offset: const Offset(0, 40),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Repetitions',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Theme.of(context).colorScheme.primary,
-                                            size: 20,
-                                          ),
-                                        ],
-                                      ),
-                                      itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
-                                        PopupMenuItem<RepetitionMode>(
-                                          value: RepetitionMode.normal,
-                                          child: Row(
-                                            children: [
-                                              const Text('Normal Repetitions'),
-                                              if (_repetitionsMode.value == RepetitionMode.normal)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(left: 8.0),
-                                                  child: Icon(Icons.check, size: 18),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        PopupMenuItem<RepetitionMode>(
-                                          value: RepetitionMode.less,
-                                          child: Row(
-                                            children: [
-                                              const Text('Less Repetitions'),
-                                              if (_repetitionsMode.value == RepetitionMode.less)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(left: 8.0),
-                                                  child: Icon(Icons.check, size: 18),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      onSelected: (RepetitionMode value) {
-                                        if (widget.generating) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: const Text('Please wait until we finish generating your audio to change this setting!'),
-                                              action: SnackBarAction(
-                                                label: 'OK',
-                                                onPressed: () {
-                                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                },
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          _repetitionsMode.value = value;
-                                        }
-                                      },
-                                    ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.speed,
-                                          size: 18,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                        DropdownButton<double>(
-                                          value: _playbackSpeed,
-                                          isDense: true,
-                                          underline: Container(), // Remove the default underline,
-                                          icon: Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Theme.of(context).colorScheme.primary,
-                                            size: 20,
-                                          ),
-                                          items: const [
-                                            DropdownMenuItem(value: 0.7, child: Text('0.7x')),
-                                            DropdownMenuItem(value: 0.8, child: Text('0.8x')),
-                                            DropdownMenuItem(value: 0.9, child: Text('0.9x')),
-                                            DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                                            DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                                            DropdownMenuItem(value: 1.5, child: Text('1.5x')),
-                                            DropdownMenuItem(value: 2.0, child: Text('2.0x')),
-                                          ],
-                                          onChanged: (double? newValue) {
-                                            if (newValue != null) {
-                                              _changePlaybackSpeed(newValue);
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                              const Text('check pronunciation:'),
+                              Switch(
+                                value: speechRecognitionActive,
+                                onChanged: (bool value) {
+                                  if (value) {
+                                    initializeSpeechRecognition();
+                                  } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
+                                    speechToTextUltra.stopListening();
+                                  } else if (!value && !kIsWeb && Platform.isAndroid) {
+                                    voskSpeechService?.stop();
+                                    voskSpeechService?.dispose();
+                                  }
+                                  setState(() {
+                                    speechRecognitionActive = value;
+                                  });
+                                },
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          AnimatedDialogueList(
+                            dialogue: widget.dialogue,
+                            currentTrack: currentTrack,
+                            wordsToRepeat: widget.wordsToRepeat,
+                            documentID: widget.documentID,
+                            useStream: widget.generating,
+                            generating: widget.generating,
+                            onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
+                          ),
+                          // Audio generation message
+                          if (widget.generating && !_playlistInitialized)
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Generating audio files...",
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          PositionSlider(
+                            positionDataStream: _positionDataStream,
+                            totalDuration: totalDuration,
+                            finalTotalDuration: finalTotalDuration,
+                            isPlaying: isPlaying.value,
+                            savedPosition: savedPosition,
+                            findTrackIndexForPosition: findTrackIndexForPosition,
+                            player: player,
+                            cumulativeDurationUpTo: cumulativeDurationUpTo,
+                            pause: _pause,
+                            onSliderChangeStart: () {
+                              setState(() {
+                                isSliderMoving = true;
+                              });
+                            },
+                            onSliderChangeEnd: () {
+                              setState(() {
+                                isSliderMoving = false;
+                              });
+                            },
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_previous),
+                                        onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
+                                      ),
+                                      ValueListenableBuilder<bool>(
+                                        valueListenable: isPlaying,
+                                        builder: (context, playing, child) {
+                                          return IconButton(
+                                            icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                                            onPressed: () {
+                                              isPlaying.value = !isPlaying.value;
+                                            },
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_next),
+                                        onPressed: player.hasNext
+                                            ? () {
+                                                setState(() {
+                                                  _isSkipping = true;
+                                                });
+                                                player.seekToNext();
+                                                Future.delayed(const Duration(seconds: 1), () {
+                                                  setState(() {
+                                                    _isSkipping = false;
+                                                  });
+                                                });
+                                              }
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      PopupMenuButton<RepetitionMode>(
+                                        offset: const Offset(0, 40),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Repetitions',
+                                              style: TextStyle(
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.arrow_drop_down,
+                                              color: Theme.of(context).colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                        itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
+                                          PopupMenuItem<RepetitionMode>(
+                                            value: RepetitionMode.normal,
+                                            child: Row(
+                                              children: [
+                                                const Text('Normal Repetitions'),
+                                                if (_repetitionsMode.value == RepetitionMode.normal)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(left: 8.0),
+                                                    child: Icon(Icons.check, size: 18),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<RepetitionMode>(
+                                            value: RepetitionMode.less,
+                                            child: Row(
+                                              children: [
+                                                const Text('Less Repetitions'),
+                                                if (_repetitionsMode.value == RepetitionMode.less)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(left: 8.0),
+                                                    child: Icon(Icons.check, size: 18),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        onSelected: (RepetitionMode value) {
+                                          if (widget.generating) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: const Text('Please wait until we finish generating your audio to change this setting!'),
+                                                action: SnackBarAction(
+                                                  label: 'OK',
+                                                  onPressed: () {
+                                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            _repetitionsMode.value = value;
+                                          }
+                                        },
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.speed,
+                                            size: 18,
+                                            color: Theme.of(context).colorScheme.primary,
+                                          ),
+                                          DropdownButton<double>(
+                                            value: _playbackSpeed,
+                                            isDense: true,
+                                            underline: Container(), // Remove the default underline,
+                                            icon: Icon(
+                                              Icons.arrow_drop_down,
+                                              color: Theme.of(context).colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                            items: const [
+                                              DropdownMenuItem(value: 0.7, child: Text('0.7x')),
+                                              DropdownMenuItem(value: 0.8, child: Text('0.8x')),
+                                              DropdownMenuItem(value: 0.9, child: Text('0.9x')),
+                                              DropdownMenuItem(value: 1.0, child: Text('1.0x')),
+                                              DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                                              DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                                              DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                                            ],
+                                            onChanged: (double? newValue) {
+                                              if (newValue != null) {
+                                                _changePlaybackSpeed(newValue);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -1300,17 +1661,49 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
+    print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
+    _isDisposing = true;
+
+    // Cancel stream subscriptions first
+    _playerStateSubscription?.cancel();
+    _currentIndexSubscription?.cancel();
+
+    // Then cancel all listeners
     _repetitionsMode.dispose();
     isPlaying.dispose();
+
+    // Then dispose of services
     firestoreService?.dispose();
+    firestoreService = null; // Prevent further access
+
     fileDurationUpdate?.dispose();
+    fileDurationUpdate = null; // Prevent further access
+
+    // Then dispose of audio resources
     player.dispose();
+
+    // Finally dispose of speech services
     if (!kIsWeb && Platform.isAndroid) {
-      voskSpeechService!.stop();
-      voskSpeechService!.dispose();
+      // Safely dispose of voskSpeechService only if it's initialized
+      if (voskSpeechService != null) {
+        voskSpeechService!.stop();
+        voskSpeechService!.dispose();
+        voskSpeechService = null; // Prevent further access
+      }
     } else {
       speechToTextUltra.dispose();
     }
+
     super.dispose();
+  }
+
+  /// Called when all dialogue items have been displayed
+  void _onAllDialogueDisplayed() {
+    if (_isDisposing) return;
+
+    print("All dialogue items have been displayed, initializing playlist");
+    if (!_playlistInitialized) {
+      _initPlaylist();
+    }
   }
 }

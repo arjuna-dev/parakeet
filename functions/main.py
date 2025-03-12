@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import time
-from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -36,6 +36,7 @@ today = datetime.datetime.now().strftime("%Y-%m-%d")
 def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = FirstAPIRequest.parse_obj(req.get_json()).dict()
+        print(request_data)
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
@@ -58,6 +59,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         keywords = request_data.get("keywords")
     except:
         keywords = ""
+
+    print(keywords)
 
     db = firestore.client()
     # Reference to the user's document in the 'users' collection

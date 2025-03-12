@@ -1,0 +1,353 @@
+const categories = [
+  {
+    "name": "At the Coffee Shop",
+    "words": ["kape", "tsaa", "gatas", "asukal", "tasa", "order", "menu", "mesa", "barista", "resibo", "sukli", "take-out", "yelo", "mainit", "kutsara", "serbilyeta", "krema", "espresso", "latte", "tip"]
+  },
+  {
+    "name": "Weather Talk",
+    "words": [
+      "maaraw",
+      "maulan",
+      "maulap",
+      "mahangin",
+      "bagyo",
+      "niyebe",
+      "mainit",
+      "malamig",
+      "maligamgam",
+      "malamig-lamig",
+      "hula ng panahon",
+      "payong",
+      "dyaket",
+      "temperatura",
+      "grado",
+      "panahon",
+      "mahalumigmig",
+      "tuyo"
+    ]
+  },
+  {
+    "name": "In the Supermarket",
+    "words": ["kariton", "basket", "pasilyo", "kasa", "kahera", "resibo", "supot", "prutas", "gulay", "tinapay", "gatas", "karne", "frozen", "de lata", "istante", "presyo", "sale", "barcode", "pera", "card"]
+  },
+  {
+    "name": "Asking for Directions",
+    "words": ["mapa", "kalye", "daan", "abenyu", "kaliwa", "kanan", "diretso", "kanto", "bloke", "traffic light", "krus", "lumiko", "malapit", "malayo", "likod", "harap", "tabi", "pagitan", "kaharap", "senyas"]
+  },
+  {
+    "name": "Making Small Talk",
+    "words": ["kumusta", "hi", "paano", "ayos", "salamat", "ikaw", "panahon", "mabuti", "masama", "abala", "pagod", "weekend", "plano", "mag-enjoy", "ngayon", "bukas", "kahapon", "maganda", "makilala", "muli"]
+  },
+  {
+    "name": "At the Airport",
+    "words": [
+      "boarding pass",
+      "pasaporte",
+      "baggage",
+      "check-in",
+      "seguridad",
+      "gate",
+      "flight",
+      "delay",
+      "departure",
+      "arrival",
+      "terminal",
+      "baggage claim",
+      "customs",
+      "ticket",
+      "upuan",
+      "boarding",
+      "carry-on",
+      "stroller",
+      "visa",
+      "duty-free"
+    ]
+  },
+  {
+    "name": "At the Restaurant",
+    "words": [
+      "menu",
+      "waiter",
+      "reservation",
+      "order",
+      "appetizer",
+      "main course",
+      "dessert",
+      "bill",
+      "tip",
+      "inumin",
+      "tubig",
+      "wine",
+      "beer",
+      "tinidor",
+      "kutsilyo",
+      "kutsara",
+      "plato",
+      "baso",
+      "serbilyeta",
+      "espesyal"
+    ]
+  },
+  {
+    "name": "At the Hotel",
+    "words": [
+      "reception",
+      "check-in",
+      "check-out",
+      "kwarto",
+      "susi",
+      "reservation",
+      "baggage",
+      "elevator",
+      "almusal",
+      "wi-fi",
+      "shower",
+      "tuwalya",
+      "kama",
+      "unan",
+      "kumot",
+      "air conditioning",
+      "laundry",
+      "serbisyo",
+      "safe",
+      "tanawin"
+    ]
+  },
+  {
+    "name": "At the Doctor's Office",
+    "words": [
+      "appointment",
+      "doktor",
+      "nars",
+      "sintomas",
+      "sakit",
+      "lagnat",
+      "ubo",
+      "sakit ng ulo",
+      "reseta",
+      "gamot",
+      "botika",
+      "allergy",
+      "blood pressure",
+      "temperature",
+      "stethoscope",
+      "bandage",
+      "injection",
+      "x-ray",
+      "diagnosis",
+      "treatment"
+    ]
+  },
+  {
+    "name": "Public Transportation",
+    "words": ["bus", "tren", "subway", "tiket", "istasyon", "hinto", "iskedyul", "mapa", "ruta", "platform", "pamasahe", "lipat", "pasahero", "drayber", "konduktor", "delay", "labasan", "pasukan", "upuan", "nakatayo"]
+  },
+  {
+    "name": "Shopping for Clothes",
+    "words": ["damit", "pantalon", "dress", "sapatos", "laki", "kulay", "presyo", "sale", "fitting room", "kahera", "resibo", "supot", "dyaket", "sweater", "palda", "sumbrero", "medyas", "maong", "sinturon", "diskwento"]
+  },
+  {
+    "name": "At the Gym",
+    "words": [
+      "treadmill",
+      "weights",
+      "yoga",
+      "stretching",
+      "trainer",
+      "membership",
+      "locker",
+      "shower",
+      "tuwalya",
+      "botelya ng tubig",
+      "ehersisyo",
+      "cardio",
+      "lakas",
+      "reps",
+      "sets",
+      "warm-up",
+      "cool-down",
+      "dumbbell",
+      "barbell",
+      "machine"
+    ]
+  },
+  {
+    "name": "At the Bank",
+    "words": [
+      "account",
+      "withdrawal",
+      "deposit",
+      "loan",
+      "interest",
+      "credit card",
+      "debit card",
+      "ATM",
+      "teller",
+      "balanse",
+      "currency",
+      "exchange",
+      "check",
+      "savings",
+      "investment",
+      "password",
+      "pin",
+      "statement",
+      "fee",
+      "transfer"
+    ]
+  },
+  {
+    "name": "At the Post Office",
+    "words": [
+      "package",
+      "letter",
+      "stamp",
+      "envelope",
+      "address",
+      "postcard",
+      "parcel",
+      "delivery",
+      "tracking",
+      "mailbox",
+      "sender",
+      "receiver",
+      "weight",
+      "size",
+      "priority",
+      "express",
+      "airmail",
+      "customs",
+      "fee",
+      "resibo"
+    ]
+  },
+  {
+    "name": "At the Pharmacy",
+    "words": [
+      "gamot",
+      "reseta",
+      "painkiller",
+      "bandage",
+      "vitamins",
+      "cough syrup",
+      "allergy",
+      "cream",
+      "ointment",
+      "pill",
+      "tablet",
+      "capsule",
+      "pharmacist",
+      "dosage",
+      "side effects",
+      "refill",
+      "antibiotic",
+      "thermometer",
+      "mask",
+      "sanitizer"
+    ]
+  },
+  {
+    "name": "At the Park",
+    "words": ["bangko", "puno", "damo", "landas", "palaruan", "batis", "aso", "piknik", "bisikleta", "jogging", "bulaklak", "pond", "pato", "lilim", "araw", "bata", "swing", "slide", "basurahan", "estatwa"]
+  },
+  {
+    "name": "At the Beach",
+    "words": [
+      "buhangin",
+      "alon",
+      "araw",
+      "payong",
+      "tuwalya",
+      "swimsuit",
+      "sunscreen",
+      "sunglasses",
+      "sumbrero",
+      "shell",
+      "seagull",
+      "karagatan",
+      "tide",
+      "surf",
+      "board",
+      "snorkel",
+      "mask",
+      "fins",
+      "beach ball",
+      "ice cream"
+    ]
+  },
+  {
+    "name": "At the Library",
+    "words": [
+      "libro",
+      "istante",
+      "katalogo",
+      "hiram",
+      "ibalik",
+      "due date",
+      "librarian",
+      "mag-aral",
+      "tahimik",
+      "desk",
+      "upuan",
+      "computer",
+      "internet",
+      "magazine",
+      "dyaryo",
+      "fiction",
+      "non-fiction",
+      "reference",
+      "loan",
+      "card"
+    ]
+  },
+  {
+    "name": "At the Cinema",
+    "words": [
+      "tiket",
+      "pelikula",
+      "popcorn",
+      "inumin",
+      "upuan",
+      "screen",
+      "trailer",
+      "genre",
+      "horror",
+      "komedya",
+      "aksyon",
+      "drama",
+      "romansa",
+      "director",
+      "aktor",
+      "aktres",
+      "subtitles",
+      "3D",
+      "showtime",
+      "concession"
+    ]
+  },
+  {
+    "name": "At the Hair Salon",
+    "words": [
+      "gupit",
+      "shampoo",
+      "conditioner",
+      "stylist",
+      "gunting",
+      "suklay",
+      "blow-dry",
+      "kulay",
+      "highlights",
+      "trim",
+      "bangs",
+      "kulot",
+      "straighten",
+      "appointment",
+      "salamin",
+      "upuan",
+      "cape",
+      "razor",
+      "gel",
+      "spray"
+    ]
+  }
+];
