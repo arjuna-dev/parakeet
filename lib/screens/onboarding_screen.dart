@@ -6,6 +6,9 @@ import '../utils/greetings_list_all_languages.dart';
 import '../services/cloud_function_service.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as notifications;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -24,6 +27,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
+  bool _notificationsEnabled = false;
+
+  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+  int get _totalPages => _isAndroid ? 5 : 4;
 
   @override
   void dispose() {
@@ -45,6 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'nickname': _nickname,
           'target_language': _selectedTargetLanguage,
           'language_level': _selectedLanguageLevel,
+          'notifications_enabled': _notificationsEnabled,
           'onboarding_completed': true,
         });
 
@@ -103,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildProgressIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(_totalPages, (index) {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: _currentPage == index ? 24 : 8,
@@ -289,6 +297,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Widget _buildNotificationsStep() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.notifications, size: 64),
+        const SizedBox(height: 24),
+        Text(
+          'Would you like to receive notifications?',
+          style: Theme.of(context).textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Get reminders to practice and stay on track',
+          style: Theme.of(context).textTheme.bodyLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              FilledButton(
+                onPressed: () async {
+                  await notifications.AndroidFlutterLocalNotificationsPlugin().requestExactAlarmsPermission();
+                  setState(() => _notificationsEnabled = true);
+                },
+                child: const Text('Yes, please'),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _notificationsEnabled = false);
+                },
+                child: const Text('No, thanks'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   bool _canProceed() {
     switch (_currentPage) {
       case 0:
@@ -299,6 +350,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return _selectedTargetLanguage != null;
       case 3:
         return _selectedLanguageLevel != null;
+      case 4:
+        return _isAndroid;
       default:
         return false;
     }
@@ -329,6 +382,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _buildNicknameStep(),
                       _buildTargetLanguageStep(),
                       _buildLanguageLevelStep(),
+                      if (_isAndroid) _buildNotificationsStep(),
                     ],
                   ),
                 ),
@@ -352,7 +406,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       FilledButton(
                         onPressed: _canProceed()
                             ? () {
-                                if (_currentPage < 3) {
+                                if (_currentPage < _totalPages - 1) {
                                   _pageController.nextPage(
                                     duration: const Duration(milliseconds: 300),
                                     curve: Curves.easeInOut,
@@ -362,7 +416,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 }
                               }
                             : null,
-                        child: Text(_currentPage < 3 ? 'Next' : 'Get Started'),
+                        child: Text(_currentPage < _totalPages - 1 ? 'Next' : 'Get Started'),
                       ),
                     ],
                   ),
