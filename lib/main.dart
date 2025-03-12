@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/ad_service.dart';
 import 'package:parakeet/services/notification_service.dart';
+import 'screens/onboarding_screen.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -192,6 +193,20 @@ Future<void> showCustomTrackingDialog() async {
   );
 }
 
+Future<String> _getInitialRoute() async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser != null) {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    if (userDoc.exists) {
+      final userData = userDoc.data();
+      if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
+        return '/onboarding';
+      }
+    }
+  }
+  return '/create_lesson';
+}
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -229,10 +244,17 @@ class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
   late StreamSubscription<User?> _authSubscription;
   bool _hasCheckedNicknameAudio = false;
+  String? _initialRoute;
 
   @override
   void initState() {
     super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    _initialRoute = await _getInitialRoute();
+    if (mounted) setState(() {});
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!kIsWeb) await checkForMandatoryUpdate();
@@ -260,6 +282,18 @@ class _MyAppState extends State<MyApp> {
     // Monitor authentication state changes
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
+        // Check onboarding completion for newly logged-in users
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/onboarding');
+            }
+            return;
+          }
+        }
+
         // Reset the flag for new logins and check nickname audio
         _hasCheckedNicknameAudio = false;
         _hasCheckedNicknameAudio = true;
@@ -302,6 +336,16 @@ class _MyAppState extends State<MyApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    if (_initialRoute == null) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
         builder: (context, child) => ResponsiveBreakpoints.builder(
               child: child!,
@@ -315,13 +359,16 @@ class _MyAppState extends State<MyApp> {
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Parakeet',
-        // theme: AppTheme.light,
         theme: AppTheme.dark,
-        //theme: AppTheme.customTheme(),
-        initialRoute: '/create_lesson',
+        initialRoute: _initialRoute,
         onGenerateRoute: (RouteSettings settings) {
           WidgetBuilder builder;
           switch (settings.name) {
+            case '/onboarding':
+              builder = (context) => const ResponsiveScreenWrapper(
+                    child: OnboardingScreen(),
+                  );
+              break;
             case '/create_lesson':
               builder = (context) => ResponsiveScreenWrapper(
                     child: LayoutBuilder(
@@ -332,7 +379,25 @@ class _MyAppState extends State<MyApp> {
                             builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
                               if (snapshot.connectionState == ConnectionState.active) {
                                 if (snapshot.hasData) {
-                                  return const CreateLesson(title: 'Create an audio lesson');
+                                  return FutureBuilder<DocumentSnapshot>(
+                                    future: FirebaseFirestore.instance.collection('users').doc(snapshot.data!.uid).get(),
+                                    builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                                      if (userSnapshot.connectionState == ConnectionState.done) {
+                                        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                                          if (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false) {
+                                            // Redirect to onboarding if not completed
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              Navigator.pushReplacementNamed(context, '/onboarding');
+                                            });
+                                            return const Center(child: CircularProgressIndicator());
+                                          }
+                                          return const CreateLesson(title: 'Start A New Lesson');
+                                        }
+                                      }
+                                      return const Center(child: CircularProgressIndicator());
+                                    },
+                                  );
                                 } else {
                                   return const AuthScreen();
                                 }
