@@ -60,12 +60,15 @@ dependencies:
   speech_to_text: ^6.6.2
   vosk_flutter: ^0.3.48
   flutter_animate: ^4.5.2
-
-dependency_overrides:
-  http: ^1.2.2
   firebase_messaging: ^14.7.10
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.2
+
+dependency_overrides:
+  http: ^1.2.2
+  # firebase_messaging: ^14.7.10
+  # flutter_local_notifications: ^18.0.1
+  # timezone: ^0.9.2
 
 dev_dependencies:
   flutter_test:
