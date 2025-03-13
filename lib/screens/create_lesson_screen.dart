@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'package:parakeet/utils/language_categories.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/utils/constants.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
@@ -19,18 +21,33 @@ class CreateLesson extends StatefulWidget {
   State<CreateLesson> createState() => _CreateLessonState();
 }
 
-class _CreateLessonState extends State<CreateLesson> {
+class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderStateMixin {
   final activeCreationAllowed = 20;
   String nativeLanguage = 'English (US)';
   String targetLanguage = 'German';
   String languageLevel = 'Absolute beginner (A1)';
+  late TabController _tabController;
+
+  // Custom lesson form controllers
+  final TextEditingController _topicController = TextEditingController();
+  final List<String> _selectedWords = [];
+  final int _maxWordsAllowed = 5;
+  bool _isCreatingCustomLesson = false;
 
   List<Map<String, dynamic>> get categories => getCategoriesForLanguage(targetLanguage);
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserPreferences();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _topicController.dispose();
+    super.dispose();
   }
 
   @override
@@ -104,7 +121,7 @@ class _CreateLessonState extends State<CreateLesson> {
     return isPremium ? 15 : 5;
   }
 
-  Future<void> _handleCategorySelection(Map<String, dynamic> category) async {
+  Future<bool> _checkPremiumAndAPILimits() async {
     // Check premium status
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
     final isPremium = userDoc.data()?['premium'] ?? false;
@@ -143,11 +160,37 @@ class _CreateLessonState extends State<CreateLesson> {
 
         if (shouldEnablePremium != true) {
           Navigator.pushReplacementNamed(context, '/create_lesson');
-          return;
+          return false;
         }
       }
     }
 
+    var usersInActiveCreation = await countUsersInActiveCreation();
+    if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return false;
+    }
+
+    var apiCallsByUser = await countAPIcallsByUser();
+    if (apiCallsByUser != -1 && apiCallsByUser >= getAPICallLimit(isPremium)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isPremium ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.' : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _handleCategorySelection(Map<String, dynamic> category) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -158,27 +201,9 @@ class _CreateLessonState extends State<CreateLesson> {
       },
     );
 
-    var usersInActiveCreation = await countUsersInActiveCreation();
-    if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
-          duration: Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
-
-    var apiCallsByUser = await countAPIcallsByUser();
-    if (apiCallsByUser != -1 && apiCallsByUser >= getAPICallLimit(isPremium)) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isPremium ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.' : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+    final canProceed = await _checkPremiumAndAPILimits();
+    if (!canProceed) {
+      Navigator.pop(context); // Close loading dialog
       return;
     }
 
@@ -234,6 +259,220 @@ class _CreateLessonState extends State<CreateLesson> {
     }
   }
 
+  void _addWord(String word) {
+    if (word.isEmpty) return;
+
+    setState(() {
+      if (_selectedWords.length < _maxWordsAllowed) {
+        final normalizedWord = word.trim().toLowerCase();
+        if (!_selectedWords.contains(normalizedWord)) {
+          _selectedWords.add(normalizedWord);
+        }
+      }
+    });
+  }
+
+  void _removeWord(String word) {
+    setState(() {
+      _selectedWords.remove(word);
+    });
+  }
+
+  Future<void> _showAddWordDialog() async {
+    final TextEditingController wordController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Add Word (${_selectedWords.length}/$_maxWordsAllowed)',
+            style: const TextStyle(fontSize: 18),
+          ),
+          content: TextField(
+            controller: wordController,
+            decoration: const InputDecoration(
+              hintText: 'Enter a word',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+            textCapitalization: TextCapitalization.none,
+            onSubmitted: (value) {
+              if (value.isNotEmpty) {
+                _addWord(value);
+                Navigator.pop(context);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (wordController.text.isNotEmpty) {
+                  _addWord(wordController.text);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+
+    wordController.dispose();
+  }
+
+  Future<void> _createCustomLesson() async {
+    // Validate inputs
+    if (_topicController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a topic for your lesson'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (_selectedWords.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one word to learn'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCreatingCustomLesson = true;
+    });
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
+    final canProceed = await _checkPremiumAndAPILimits();
+    if (!canProceed) {
+      Navigator.pop(context); // Close loading dialog
+      setState(() {
+        _isCreatingCustomLesson = false;
+      });
+      return;
+    }
+
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+      final String documentId = docRef.id;
+      final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+      final String topic = _topicController.text.trim();
+
+      // Make the API call
+      http.post(
+        Uri.parse('http://192.168.2.105:8081'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "requested_scenario": topic,
+          "keywords": _selectedWords,
+          "native_language": nativeLanguage,
+          "target_language": targetLanguage,
+          "length": '4',
+          "user_ID": userId,
+          "language_level": languageLevel,
+          "document_id": documentId,
+          "tts_provider": targetLanguage == 'Azerbaijani' ? TTSProvider.openAI.value.toString() : TTSProvider.googleTTS.value.toString(),
+        }),
+      );
+
+      int counter = 0;
+      bool docExists = false;
+      Map<String, dynamic> firstDialogue = {};
+
+      while (!docExists && counter < 15 && mounted) {
+        counter++;
+        await Future.delayed(const Duration(seconds: 1));
+        final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
+        if (snapshot.docs.isNotEmpty) {
+          docExists = true;
+          final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
+          firstDialogue = data;
+
+          if (firstDialogue.isNotEmpty && mounted) {
+            // Create an empty script document ID
+            DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
+            // Navigate directly to AudioPlayerScreen
+            if (mounted) Navigator.pop(context); // Close loading dialog
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AudioPlayerScreen(
+                    category: 'Custom Lesson',
+                    dialogue: firstDialogue["dialogue"] ?? [],
+                    title: firstDialogue["title"] ?? topic,
+                    documentID: documentId,
+                    userID: userId,
+                    scriptDocumentId: scriptDocRef.id,
+                    generating: true,
+                    targetLanguage: targetLanguage,
+                    nativeLanguage: nativeLanguage,
+                    languageLevel: languageLevel,
+                    wordsToRepeat: _selectedWords,
+                  ),
+                ),
+              );
+
+              // Reset form
+              _topicController.clear();
+              setState(() {
+                _selectedWords.clear();
+              });
+            }
+          } else {
+            throw Exception('Proper data not received from API');
+          }
+        }
+      }
+
+      if (!docExists && mounted) {
+        throw Exception('Failed to find the response in firestore within 15 seconds');
+      }
+    } catch (e) {
+      print(e);
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingCustomLesson = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -241,101 +480,310 @@ class _CreateLessonState extends State<CreateLesson> {
     final isSmallScreen = screenSize.height < 700;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(isSmallScreen || kIsWeb ? 48.0 : 56.0),
-        child: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            widget.title!,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: isSmallScreen || kIsWeb ? 18 : 20,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          widget.title!,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: <Widget>[
+          buildProfilePopupMenu(context),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Tab Bar
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: colorScheme.primary,
+              indicatorWeight: 3,
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: isSmallScreen ? 14 : 16,
+              ),
+              unselectedLabelStyle: TextStyle(
+                fontWeight: FontWeight.normal,
+                fontSize: isSmallScreen ? 14 : 16,
+              ),
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.category),
+                  text: 'Categories',
+                ),
+                Tab(
+                  icon: Icon(Icons.create),
+                  text: 'Custom Lesson',
+                ),
+              ],
             ),
           ),
-          actions: <Widget>[
-            buildProfilePopupMenu(context),
-          ],
-        ),
-      ),
-      body: ListView.builder(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: isSmallScreen ? 8 : 16,
-        ),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: InkWell(
-              onTap: () => _handleCategorySelection(category),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                    width: 1,
+          // Tab Content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Categories Tab
+                ListView.builder(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: isSmallScreen ? 8 : 16,
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              _getCategoryIcon(category['name'] as String),
-                              color: colorScheme.primary,
-                              size: 24,
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () => _handleCategorySelection(category),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                              width: 1,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Icon(
+                                        _getCategoryIcon(category['name'] as String),
+                                        color: colorScheme.primary,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            category['name'] as String,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 16 : 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${(category['words'] as List).length} words',
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 13 : 14,
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      color: colorScheme.onSurfaceVariant,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Custom Lesson Tab
+                SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: isSmallScreen ? 8 : 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Topic Input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Topic',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _topicController,
+                              decoration: InputDecoration(
+                                hintText: 'Enter a topic for your lesson',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: colorScheme.surface,
+                              ),
+                              maxLines: 2,
+                              textCapitalization: TextCapitalization.sentences,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Example: "Ordering food at a restaurant" or "Asking for directions"',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Words to Learn
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  category['name'] as String,
+                                  'Words to Learn (${_selectedWords.length}/$_maxWordsAllowed)',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.add_circle,
+                                    color: _selectedWords.length >= _maxWordsAllowed ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
+                                    size: 24,
+                                  ),
+                                  onPressed: _selectedWords.length >= _maxWordsAllowed ? null : _showAddWordDialog,
+                                  tooltip: 'Add word',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_selectedWords.isEmpty)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Text(
+                                    'Add up to 5 words you want to learn',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _selectedWords.map((word) {
+                                  return Chip(
+                                    label: Text(word),
+                                    deleteIcon: const Icon(Icons.close, size: 18),
+                                    onDeleted: () => _removeWord(word),
+                                    backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                    side: BorderSide(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: colorScheme.primary,
+                                    ),
+                                    deleteIconColor: colorScheme.primary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Create Lesson Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _isCreatingCustomLesson || _selectedWords.isEmpty || _topicController.text.trim().isEmpty ? null : _createCustomLesson,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isCreatingCustomLesson
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'Create Custom Lesson',
                                   style: TextStyle(
                                     fontSize: isSmallScreen ? 16 : 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${(category['words'] as List).length} words',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 13 : 14,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: colorScheme.onSurfaceVariant,
-                            size: 16,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          );
-        },
+          ),
+        ],
       ),
       bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
     );

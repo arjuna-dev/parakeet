@@ -178,6 +178,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
     // Get screen size for responsive dialog
     final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
     final dialogWidth = screenSize.width > 600 ? 500.0 : screenSize.width * 0.9;
     final dialogHeight = screenSize.height * 0.6;
 
@@ -190,6 +191,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               horizontal: (screenSize.width - dialogWidth) / 2,
               vertical: 24,
             ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Container(
               width: dialogWidth,
               constraints: BoxConstraints(maxHeight: dialogHeight),
@@ -200,8 +204,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Text(
                       'Select Words to Learn (${tempSelectedWords.length}/$_maxWordsAllowed)',
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 18 : 20,
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
@@ -231,7 +235,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                         return CheckboxListTile(
                           title: Text(
                             word,
-                            style: const TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
                           ),
                           value: isSelected,
                           onChanged: (tempSelectedWords.length >= _maxWordsAllowed && !isSelected)
@@ -583,6 +587,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => AudioPlayerScreen(
+                                            category: widget.category,
                                             dialogue: firstDialogue["dialogue"] ?? [],
                                             title: firstDialogue["title"] ?? _title,
                                             documentID: documentId,

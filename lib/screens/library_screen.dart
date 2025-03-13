@@ -26,6 +26,8 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
   Map<String, bool> localFavorites = {};
   List<DocumentSnapshot> documents = [];
   bool isLoading = true;
+  Map<String, List<DocumentSnapshot>> categorizedDocuments = {};
+  Map<String, bool> expandedCategories = {};
 
   @override
   void initState() {
@@ -79,17 +81,43 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
     final model = Provider.of<HomeScreenModel>(context, listen: false);
 
     Map<String, bool> newFavorites = {};
+    Map<String, List<DocumentSnapshot>> newCategorizedDocuments = {};
+
+    // Default category for lessons without a category
+    const String defaultCategory = "Custom Lessons";
+
     for (var doc in snapshot.docs) {
       String parentId = doc.reference.parent.parent!.id;
       String docId = doc.reference.id;
       String key = '$parentId-$docId';
       newFavorites[key] = model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
+
+      // Get category from document or use default
+      String category = (doc.data()).containsKey('category') ? doc.get('category') : defaultCategory;
+
+      if (!newCategorizedDocuments.containsKey(category)) {
+        newCategorizedDocuments[category] = [];
+      }
+      newCategorizedDocuments[category]!.add(doc);
+    }
+
+    // Sort documents within each category by timestamp
+    newCategorizedDocuments.forEach((category, docs) {
+      docs.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+    });
+
+    // Initialize expanded state for categories
+    Map<String, bool> newExpandedCategories = {};
+    for (var category in newCategorizedDocuments.keys) {
+      newExpandedCategories[category] = false; // Default to collapsed
     }
 
     setState(() {
       documents = snapshot.docs;
       documents.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
       localFavorites = newFavorites;
+      categorizedDocuments = newCategorizedDocuments;
+      expandedCategories = newExpandedCategories;
       isLoading = false;
     });
   }
@@ -125,8 +153,28 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
 
   Future<void> deleteDocument(DocumentSnapshot document, HomeScreenModel model) async {
     final index = documents.indexOf(document);
+
+    // Find and remove from categorized documents
+    String? categoryToUpdate;
+    for (var entry in categorizedDocuments.entries) {
+      final categoryDocs = entry.value;
+      final docIndex = categoryDocs.indexOf(document);
+      if (docIndex != -1) {
+        categoryToUpdate = entry.key;
+        break;
+      }
+    }
+
     setState(() {
       documents.removeAt(index);
+      if (categoryToUpdate != null) {
+        categorizedDocuments[categoryToUpdate]!.remove(document);
+        // Remove category if empty
+        if (categorizedDocuments[categoryToUpdate]!.isEmpty) {
+          categorizedDocuments.remove(categoryToUpdate);
+          expandedCategories.remove(categoryToUpdate);
+        }
+      }
     });
 
     await _firestore.runTransaction((Transaction myTransaction) async {
@@ -185,6 +233,73 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
     );
   }
 
+  void toggleCategoryExpansion(String category) {
+    setState(() {
+      expandedCategories[category] = !(expandedCategories[category] ?? false);
+    });
+  }
+
+  void toggleAllCategories() {
+    // Check if all categories are expanded
+    bool allExpanded = categorizedDocuments.keys.every((category) => expandedCategories[category] == true);
+
+    // Toggle all to the opposite state
+    setState(() {
+      for (var category in categorizedDocuments.keys) {
+        expandedCategories[category] = !allExpanded;
+      }
+    });
+  }
+
+  IconData getCategoryIcon(String category) {
+    switch (category) {
+      case 'At the Coffee Shop':
+        return Icons.coffee;
+      case 'Weather Talk':
+        return Icons.wb_sunny;
+      case 'In the Supermarket':
+        return Icons.shopping_cart;
+      case 'Asking for Directions':
+        return Icons.map;
+      case 'Making Small Talk':
+        return Icons.chat_bubble;
+      case 'At the Airport':
+        return Icons.flight;
+      case 'At the Restaurant':
+        return Icons.restaurant;
+      case 'At the Hotel':
+        return Icons.hotel;
+      case 'At the Doctor\'s Office':
+        return Icons.local_hospital;
+      case 'Public Transportation':
+        return Icons.directions_bus;
+      case 'Shopping for Clothes':
+        return Icons.shopping_bag;
+      case 'At the Gym':
+        return Icons.fitness_center;
+      case 'At the Bank':
+        return Icons.account_balance;
+      case 'At the Post Office':
+        return Icons.local_post_office;
+      case 'At the Pharmacy':
+        return Icons.local_pharmacy;
+      case 'At the Park':
+        return Icons.park;
+      case 'At the Beach':
+        return Icons.beach_access;
+      case 'At the Library':
+        return Icons.library_books;
+      case 'At the Cinema':
+        return Icons.movie;
+      case 'At the Hair Salon':
+        return Icons.content_cut;
+      case 'Custom Lessons':
+        return Icons.create;
+      default:
+        return Icons.category;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -196,6 +311,7 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         title: const Text(
           'Library',
           style: TextStyle(
@@ -203,6 +319,15 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
           ),
         ),
         actions: <Widget>[
+          if (documents.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                categorizedDocuments.keys.every((category) => expandedCategories[category] == true) ? Icons.unfold_less : Icons.unfold_more,
+                color: colorScheme.primary,
+              ),
+              tooltip: categorizedDocuments.keys.every((category) => expandedCategories[category] == true) ? 'Collapse all' : 'Expand all',
+              onPressed: toggleAllCategories,
+            ),
           buildProfilePopupMenu(context),
         ],
       ),
@@ -277,158 +402,223 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
                     )
                   : ListView.builder(
                       padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
-                      itemCount: documents.length,
+                      itemCount: categorizedDocuments.length,
                       itemBuilder: (context, index) {
-                        final document = documents[index];
-                        return Card(
-                          elevation: 2,
-                          margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: ListTile(
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 12 : 16,
-                              vertical: isSmallScreen ? 8 : 12,
-                            ),
-                            title: Text(
-                              document.get('title'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: isSmallScreen ? 15 : 16,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(height: 4),
-                                Row(
+                        final category = categorizedDocuments.keys.elementAt(index);
+                        final categoryDocs = categorizedDocuments[category]!;
+                        final isExpanded = expandedCategories[category] ?? true;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Category header
+                            InkWell(
+                              onTap: () => toggleCategoryExpansion(category),
+                              child: Container(
+                                margin: EdgeInsets.only(
+                                  bottom: isSmallScreen ? 8 : 12,
+                                  top: index > 0 ? (isSmallScreen ? 16 : 24) : 0,
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: isSmallScreen ? 8 : 12,
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
                                   children: [
-                                    Icon(Icons.translate, size: 16, color: colorScheme.primary),
-                                    const SizedBox(width: 4),
+                                    Icon(
+                                      getCategoryIcon(category),
+                                      color: colorScheme.primary,
+                                      size: isSmallScreen ? 20 : 24,
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 8 : 12),
                                     Expanded(
                                       child: Text(
-                                        "${(document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)'} → ${document.get('target_language')}",
+                                        category,
                                         style: TextStyle(
-                                          fontSize: isSmallScreen ? 12 : 13,
-                                          color: colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: isSmallScreen ? 16 : 18,
+                                          color: colorScheme.onPrimaryContainer,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
                                       ),
+                                    ),
+                                    Text(
+                                      '${categoryDocs.length} ${categoryDocs.length == 1 ? 'lesson' : 'lessons'}',
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 12 : 14,
+                                        color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                      ),
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 8 : 12),
+                                    Icon(
+                                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                                      color: colorScheme.primary,
+                                      size: isSmallScreen ? 20 : 24,
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.stairs, size: 16, color: colorScheme.primary),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        "${document.get('language_level')} level",
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 12 : 13,
-                                          color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+
+                            // Category lessons (collapsible)
+                            if (isExpanded)
+                              ...categoryDocs
+                                  .map((document) => Card(
+                                        elevation: 2,
+                                        margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          side: BorderSide(
+                                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                                            width: 1,
+                                          ),
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            leading: Container(
-                              width: isSmallScreen ? 40 : 48,
-                              height: isSmallScreen ? 40 : 48,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: Icon(
-                                  isFavorite(document, model) ? Icons.favorite : Icons.favorite_border,
-                                  color: colorScheme.primary,
-                                  size: isSmallScreen ? 24 : 28,
-                                ),
-                                onPressed: () => toggleFavorite(document, model),
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.delete,
-                                    color: colorScheme.error,
-                                    size: isSmallScreen ? 22 : 24,
-                                  ),
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return AlertDialog(
-                                          title: const Text('Confirmation'),
-                                          content: const Text('Are you sure you want to delete this audio?'),
-                                          actions: <Widget>[
-                                            TextButton(
-                                              child: const Text('Cancel'),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
+                                        child: ListTile(
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: isSmallScreen ? 12 : 16,
+                                            vertical: isSmallScreen ? 8 : 12,
+                                          ),
+                                          title: Text(
+                                            document.get('title'),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: isSmallScreen ? 15 : 16,
                                             ),
-                                            TextButton(
-                                              child: Text(
-                                                'Delete',
-                                                style: TextStyle(color: colorScheme.error),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.translate, size: 16, color: colorScheme.primary),
+                                                  const SizedBox(width: 4),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "${(document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)'} → ${document.get('target_language')}",
+                                                      style: TextStyle(
+                                                        fontSize: isSmallScreen ? 12 : 13,
+                                                        color: colorScheme.onSurfaceVariant,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                                deleteDocument(document, model);
-                                              },
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.stairs, size: 16, color: colorScheme.primary),
+                                                  const SizedBox(width: 4),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "${document.get('language_level')}",
+                                                      style: TextStyle(
+                                                        fontSize: isSmallScreen ? 12 : 13,
+                                                        color: colorScheme.onSurfaceVariant,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          leading: Container(
+                                            width: isSmallScreen ? 40 : 48,
+                                            height: isSmallScreen ? 40 : 48,
+                                            decoration: BoxDecoration(
+                                              color: colorScheme.primaryContainer,
+                                              borderRadius: BorderRadius.circular(12),
                                             ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: colorScheme.primary,
-                                  size: isSmallScreen ? 24 : 28,
-                                ),
-                              ],
-                            ),
-                            onTap: () async {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AudioPlayerScreen(
-                                    documentID: document.reference.parent.parent!.id,
-                                    dialogue: document.get('dialogue'),
-                                    targetLanguage: document.get('target_language'),
-                                    nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
-                                    languageLevel: document.get('language_level'),
-                                    userID: FirebaseAuth.instance.currentUser!.uid,
-                                    title: document.get('title'),
-                                    generating: false,
-                                    wordsToRepeat: document.get('words_to_repeat'),
-                                    scriptDocumentId: document.id,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: Icon(
+                                                isFavorite(document, model) ? Icons.favorite : Icons.favorite_border,
+                                                color: colorScheme.primary,
+                                                size: isSmallScreen ? 24 : 28,
+                                              ),
+                                              onPressed: () => toggleFavorite(document, model),
+                                            ),
+                                          ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: Icon(
+                                                  Icons.delete,
+                                                  color: colorScheme.error,
+                                                  size: isSmallScreen ? 22 : 24,
+                                                ),
+                                                onPressed: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (BuildContext context) {
+                                                      return AlertDialog(
+                                                        title: const Text('Confirmation'),
+                                                        content: const Text('Are you sure you want to delete this audio?'),
+                                                        actions: <Widget>[
+                                                          TextButton(
+                                                            child: const Text('Cancel'),
+                                                            onPressed: () {
+                                                              Navigator.of(context).pop();
+                                                            },
+                                                          ),
+                                                          TextButton(
+                                                            child: Text(
+                                                              'Delete',
+                                                              style: TextStyle(color: colorScheme.error),
+                                                            ),
+                                                            onPressed: () {
+                                                              Navigator.of(context).pop();
+                                                              deleteDocument(document, model);
+                                                            },
+                                                          ),
+                                                        ],
+                                                      );
+                                                    },
+                                                  );
+                                                },
+                                              ),
+                                              Icon(
+                                                Icons.chevron_right,
+                                                color: colorScheme.primary,
+                                                size: isSmallScreen ? 24 : 28,
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () async {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => AudioPlayerScreen(
+                                                  category: category != "Custom Lessons" ? category : null,
+                                                  documentID: document.reference.parent.parent!.id,
+                                                  dialogue: document.get('dialogue'),
+                                                  targetLanguage: document.get('target_language'),
+                                                  nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
+                                                  languageLevel: document.get('language_level'),
+                                                  userID: FirebaseAuth.instance.currentUser!.uid,
+                                                  title: document.get('title'),
+                                                  generating: false,
+                                                  wordsToRepeat: document.get('words_to_repeat'),
+                                                  scriptDocumentId: document.id,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ))
+                                  .toList(),
+                          ],
                         );
                       },
                     ),

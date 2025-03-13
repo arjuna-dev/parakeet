@@ -392,7 +392,7 @@ class _MyAppState extends State<MyApp> {
                                             });
                                             return const Center(child: CircularProgressIndicator());
                                           }
-                                          return const CreateLesson(title: 'Choose A Category');
+                                          return const CreateLesson(title: 'Create New Lesson');
                                         }
                                       }
                                       return const Center(child: CircularProgressIndicator());

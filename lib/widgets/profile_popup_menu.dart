@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/nickname_popup.dart';
+import '../screens/profile_screen.dart';
 
 Widget buildProfilePopupMenu(BuildContext context) {
   return PopupMenuButton<String>(
@@ -24,7 +25,7 @@ Widget buildProfilePopupMenu(BuildContext context) {
           );
           break;
         case 'Language Settings':
-          Navigator.pushNamed(context, '/profile'); // Navigate to profile screen where language settings are available
+          ProfileScreen.showLanguageSettingsDialog(context);
           break;
       }
     },
