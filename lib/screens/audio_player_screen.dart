@@ -31,6 +31,7 @@ import 'package:http/http.dart' as http;
 import 'package:parakeet/screens/lesson_detail_screen.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
+  final String? category;
   final String documentID;
   final List<dynamic> dialogue;
   final String userID;
@@ -53,6 +54,7 @@ class AudioPlayerScreen extends StatefulWidget {
 
   const AudioPlayerScreen({
     Key? key,
+    this.category,
     required this.documentID,
     required this.dialogue,
     required this.userID,
@@ -222,6 +224,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       await docRef.set({
         "script": script,
+        "category": widget.category,
         "title": widget.title,
         "dialogue": completeDialogue,
         "native_language": widget.nativeLanguage,

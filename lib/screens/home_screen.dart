@@ -343,7 +343,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 Icon(Icons.stairs, size: 16, color: colorScheme.primary),
                 const SizedBox(width: 4),
                 Text(
-                  "${audioFile.get('language_level')} level",
+                  "${audioFile.get('language_level')}",
                   style: TextStyle(
                     fontSize: isSmallScreen ? 12 : 13,
                     color: colorScheme.onSurfaceVariant,
