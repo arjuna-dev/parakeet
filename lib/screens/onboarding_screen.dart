@@ -6,9 +6,11 @@ import '../utils/greetings_list_all_languages.dart';
 import '../services/cloud_function_service.dart';
 import 'dart:math';
 import 'dart:async';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart' as notifications;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -28,6 +30,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
   bool _notificationsEnabled = false;
+  bool? _selectedPermission;
 
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
   int get _totalPages => _isAndroid ? 5 : 4;
@@ -36,6 +39,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> requestNotificationPermission() async {
+    print("Checking notification permission...");
+
+    var status = await Permission.notification.status;
+    print("Current permission status: $status");
+
+    if (status.isDenied || status.isPermanentlyDenied) {
+      print("Requesting notification permission...");
+      var result = await Permission.notification.request();
+      print("Permission request result: $result");
+    }
+  }
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  Future<void> requestExactAlarmPermission() async {
+    print("Checking exact alarm permission...");
+
+    try {
+      final androidPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin != null) {
+        print("Requesting exact alarm permission...");
+        bool? granted = await androidPlugin.requestExactAlarmsPermission();
+
+        if (granted == true) {
+          print("Exact alarm permission GRANTED!");
+        } else {
+          print("Exact alarm permission DENIED! User may need to enable it manually in system settings.");
+        }
+      } else {
+        print("⚠️ Android plugin not found.");
+      }
+    } on PlatformException catch (e) {
+      print("🚨 Error requesting exact alarm permission: $e");
+    }
   }
 
   Future<void> _saveUserData() async {
@@ -301,44 +342,98 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.notifications, size: 64),
-        const SizedBox(height: 24),
-        Text(
-          'Would you like to receive notifications?',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        const Text(
+          'Would you like to enable notifications and exact alarms?',
+          style: TextStyle(fontSize: 16),
         ),
         const SizedBox(height: 16),
-        Text(
-          'Get reminders to practice and stay on track',
-          style: Theme.of(context).textTheme.bodyLarge,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              FilledButton(
-                onPressed: () async {
-                  await notifications.AndroidFlutterLocalNotificationsPlugin().requestExactAlarmsPermission();
-                  setState(() => _notificationsEnabled = true);
-                },
-                child: const Text('Yes, please'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Yes, please button
+            ElevatedButton(
+              onPressed: () async {
+                setState(() {
+                  _selectedPermission = true;
+                });
+                // Request both notifications and exact alarm permissions.
+                await requestNotificationPermission();
+                await requestExactAlarmPermission();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedPermission == true ? Colors.blue : Colors.grey[300],
+                foregroundColor: _selectedPermission == true ? Colors.white : Colors.black,
               ),
-              TextButton(
-                onPressed: () {
-                  setState(() => _notificationsEnabled = false);
-                },
-                child: const Text('No, thanks'),
+              child: const Text("Yes, please"),
+            ),
+            const SizedBox(width: 20),
+            // No, thanks button
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedPermission = false;
+                });
+                // Add any additional logic for "No, thanks" if needed.
+                print("User declined the permissions.");
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedPermission == false ? Colors.blue : Colors.grey[300],
+                foregroundColor: _selectedPermission == false ? Colors.white : Colors.black,
               ),
-            ],
-          ),
+              child: const Text("No, thanks"),
+            ),
+          ],
         ),
       ],
     );
   }
+
+  // Widget _buildNotificationsStep() {
+  //   return Column(
+  //     mainAxisAlignment: MainAxisAlignment.center,
+  //     children: [
+  //       const Icon(Icons.notifications, size: 64),
+  //       const SizedBox(height: 24),
+  //       Text(
+  //         'Would you like to receive notifications?',
+  //         style: Theme.of(context).textTheme.headlineSmall,
+  //         textAlign: TextAlign.center,
+  //       ),
+  //       const SizedBox(height: 16),
+  //       Text(
+  //         'Get reminders to practice and stay on track',
+  //         style: Theme.of(context).textTheme.bodyLarge,
+  //         textAlign: TextAlign.center,
+  //       ),
+  //       const SizedBox(height: 32),
+  //       Padding(
+  //         padding: const EdgeInsets.symmetric(horizontal: 32),
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //           children: [
+  //             FilledButton(
+  //               onPressed: () async {
+  //                 print("Button clicked!");
+  //                 requestNotificationPermission();
+  //                 requestExactAlarmPermission();
+  //                 // await Permission.notification.request();
+  //                 // await notifications.AndroidFlutterLocalNotificationsPlugin().requestExactAlarmsPermission();
+  //                 setState(() => _notificationsEnabled = true);
+  //               },
+  //               child: const Text('Yes, please'),
+  //             ),
+  //             TextButton(
+  //               onPressed: () {
+  //                 setState(() => _notificationsEnabled = false);
+  //               },
+  //               child: const Text('No, thanks'),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   bool _canProceed() {
     switch (_currentPage) {
