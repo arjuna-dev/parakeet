@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import time
-from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -689,3 +689,40 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
             status=500
         )
 
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
+
+def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        target_language = request_data.get("target_language")
+        native_language = request_data.get("native_language")
+
+
+        if not all(param is not None for param in [target_language, native_language]):
+            return https_fn.Response(
+                json.dumps({"error": "Missing required parameters"}),
+                status=400
+            )
+
+        prompt = prompt_suggest_custom_lesson(target_language, native_language)
+
+        response = chatGPT_API_call(prompt, use_stream=False)
+
+        result = json.loads(response.choices[0].message.content)
+
+        return https_fn.Response(
+            json.dumps(result),
+            status=200
+        )
+
+    except Exception as e:
+        print(f"Error in suggest_custom_lesson: {str(e)}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )

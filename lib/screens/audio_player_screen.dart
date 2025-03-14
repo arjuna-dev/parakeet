@@ -135,6 +135,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    print('words_to_repeat: ${widget.wordsToRepeat}');
     player = AudioPlayer();
     player.setSpeed(_playbackSpeed);
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
