@@ -676,6 +676,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     _topic = widget.topic;
     // Convert all words to lowercase
     _wordsToLearn = List<String>.from(widget.wordsToLearn.map((word) => word.toLowerCase()));
+    print('words_to_repeat: $_wordsToLearn');
   }
 
   @override

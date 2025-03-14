@@ -8,7 +8,6 @@ import 'package:parakeet/utils/activate_free_trial.dart';
 import 'dart:convert';
 import 'package:parakeet/utils/language_categories.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/utils/constants.dart';
 
@@ -280,10 +279,11 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
 
   Future<void> _showAddWordDialog() async {
     final TextEditingController wordController = TextEditingController();
+    String? wordValue;
 
-    await showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(
             'Add Word (${_selectedWords.length}/$_maxWordsAllowed)',
@@ -299,21 +299,21 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
             textCapitalization: TextCapitalization.none,
             onSubmitted: (value) {
               if (value.isNotEmpty) {
-                _addWord(value);
-                Navigator.pop(context);
+                wordValue = value;
+                Navigator.pop(dialogContext);
               }
             },
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () {
                 if (wordController.text.isNotEmpty) {
-                  _addWord(wordController.text);
-                  Navigator.pop(context);
+                  wordValue = wordController.text;
+                  Navigator.pop(dialogContext);
                 }
               },
               child: const Text('Add'),
@@ -322,6 +322,12 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
         );
       },
     );
+
+    // Add the word after the dialog is closed and controller is disposed
+    if (wordValue != null && wordValue!.isNotEmpty) {
+      _addWord(wordValue!);
+      print(_selectedWords);
+    }
 
     wordController.dispose();
   }
@@ -423,7 +429,6 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
                 context,
                 MaterialPageRoute(
                   builder: (context) => AudioPlayerScreen(
-                    category: 'Custom Lesson',
                     dialogue: firstDialogue["dialogue"] ?? [],
                     title: firstDialogue["title"] ?? topic,
                     documentID: documentId,
@@ -433,16 +438,13 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
                     targetLanguage: targetLanguage,
                     nativeLanguage: nativeLanguage,
                     languageLevel: languageLevel,
-                    wordsToRepeat: _selectedWords,
+                    wordsToRepeat: List<dynamic>.from(_selectedWords),
                   ),
                 ),
               );
 
               // Reset form
               _topicController.clear();
-              setState(() {
-                _selectedWords.clear();
-              });
             }
           } else {
             throw Exception('Proper data not received from API');

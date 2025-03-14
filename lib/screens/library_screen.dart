@@ -93,7 +93,13 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
       newFavorites[key] = model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
 
       // Get category from document or use default
-      String category = (doc.data()).containsKey('category') ? doc.get('category') : defaultCategory;
+      // Handle cases where category is null, empty, or doesn't exist
+      String category;
+      if ((doc.data()).containsKey('category') && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
+        category = doc.get('category');
+      } else {
+        category = defaultCategory;
+      }
 
       if (!newCategorizedDocuments.containsKey(category)) {
         newCategorizedDocuments[category] = [];
@@ -152,23 +158,34 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
   }
 
   Future<void> deleteDocument(DocumentSnapshot document, HomeScreenModel model) async {
+    // Find document in the main documents list
     final index = documents.indexOf(document);
 
-    // Find and remove from categorized documents
+    // Find document in categorized documents
     String? categoryToUpdate;
+    int docIndex = -1;
+
     for (var entry in categorizedDocuments.entries) {
       final categoryDocs = entry.value;
-      final docIndex = categoryDocs.indexOf(document);
-      if (docIndex != -1) {
+      final idx = categoryDocs.indexOf(document);
+      if (idx != -1) {
         categoryToUpdate = entry.key;
+        docIndex = idx;
         break;
       }
     }
 
+    // Update state only if document was found
     setState(() {
-      documents.removeAt(index);
-      if (categoryToUpdate != null) {
-        categorizedDocuments[categoryToUpdate]!.remove(document);
+      // Remove from main documents list if found
+      if (index != -1) {
+        documents.removeAt(index);
+      }
+
+      // Remove from categorized documents if found
+      if (categoryToUpdate != null && docIndex != -1) {
+        categorizedDocuments[categoryToUpdate]!.removeAt(docIndex);
+
         // Remove category if empty
         if (categorizedDocuments[categoryToUpdate]!.isEmpty) {
           categorizedDocuments.remove(categoryToUpdate);
@@ -177,6 +194,7 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
       }
     });
 
+    // Delete from Firestore regardless of whether it was found in local lists
     await _firestore.runTransaction((Transaction myTransaction) async {
       myTransaction.delete(document.reference);
     });
@@ -600,7 +618,7 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) => AudioPlayerScreen(
-                                                  category: category != "Custom Lessons" ? category : null,
+                                                  category: category,
                                                   documentID: document.reference.parent.parent!.id,
                                                   dialogue: document.get('dialogue'),
                                                   targetLanguage: document.get('target_language'),
