@@ -1039,26 +1039,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<String?> _fetchPreviousTargetPhrase(String documentId, String? previousTargetTrack) async {
-    try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
-
-      if (documentSnapshot.exists) {
-        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
-        return data[previousTargetTrack] as String?;
-      } else {
-        print('Document does not exist');
-        setState(() {
-          speechRecognitionSupported = false;
-        });
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching previous target phrase: $e');
-      return null;
-    }
-  }
-
   void _showLanguageNotSupportedDialog() {
     showDialog(
       context: navigatorKey.currentContext!,
