@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/utils/category_icons.dart';
-import 'package:parakeet/widgets/lesson_item.dart';
+import 'package:parakeet/widgets/library_screen/lesson_item.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 
 class CategorySection extends StatelessWidget {

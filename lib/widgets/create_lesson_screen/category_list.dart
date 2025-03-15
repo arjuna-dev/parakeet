@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/widgets/category_item.dart';
+import 'package:parakeet/widgets/create_lesson_screen/category_item.dart';
 import 'package:parakeet/services/lesson_service.dart';
 
 class CategoryList extends StatelessWidget {
