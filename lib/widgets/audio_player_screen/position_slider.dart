@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:parakeet/widgets/position_data.dart';
+import 'package:parakeet/widgets/audio_player_screen/position_data.dart';
 
 class PositionSlider extends StatelessWidget {
   final Stream<PositionData> positionDataStream;

@@ -132,7 +132,7 @@ class _LibraryState extends State<Library> with WidgetsBindingObserver {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'Library',
+          'All lessons',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),

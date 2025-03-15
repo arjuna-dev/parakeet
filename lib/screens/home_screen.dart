@@ -51,7 +51,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'My Lessons',
+          'Favorites',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
