@@ -24,7 +24,7 @@ import '../utils/vosk_recognizer.dart';
 import 'package:parakeet/utils/supported_language_codes.dart';
 import 'dart:convert';
 import 'package:parakeet/services/streak_service.dart';
-import 'package:parakeet/widgets/streak_display.dart';
+import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:parakeet/screens/lesson_detail_screen.dart';
