@@ -337,7 +337,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
     else:
         raise Exception(f"No matching voice found for language: {language}")
 
-    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", make_public= False)
+    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
 
     return https_fn.Response(
         json.dumps({"message": "Audio content written to and uploaded to bucket."}),

@@ -26,7 +26,6 @@ import 'dart:convert';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
 import 'package:http/http.dart' as http;
 import 'package:parakeet/screens/lesson_detail_screen.dart';
 
@@ -484,10 +483,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   updateHasNicknameAudio() async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_1_nickname.mp3?timestamp=$timestamp';
+    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_1_nickname.mp3?timestamp=$timestamp';
     hasNicknameAudio = await urlExists(
       url,
     );
+    print('hasNicknameAudio: $hasNicknameAudio');
     if (mounted) {
       setState(() {
         hasNicknameAudio = hasNicknameAudio;
@@ -854,15 +854,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
   Future<String> _getNicknameUrl() async {
-    final int callCount = await getCurrentCallCount();
-    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
+    final bool canUseNickname = hasNicknameAudio && addressByNickname;
+    print('canUseNickname: $canUseNickname');
 
     if (canUseNickname) {
-      final List<int> numbers = List.generate(6, (i) => i)..shuffle();
+      final List<int> numbers = List.generate(5, (i) => i)..shuffle();
       for (final randomNumber in numbers) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final url = "https://storage.googleapis.com/user_nicknames/"
-            "${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
+            "${widget.userID}_${widget.nativeLanguage}_${randomNumber + 1}_nickname.mp3?timestamp=$timestamp";
 
         if (await urlExists(url)) {
           return url; // Return first valid URL

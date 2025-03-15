@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/constants.dart';
 import '../utils/native_language_list.dart';
 import '../utils/greetings_list_all_languages.dart';
 import '../services/cloud_function_service.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:just_audio/just_audio.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -16,6 +18,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
+  final player = AudioPlayer();
   int _currentPage = 0;
   String? _selectedNativeLanguage = 'English (US)';
   String? _nickname;
@@ -53,10 +56,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final selectedGreetings = greetingsList[_selectedNativeLanguage]!;
           final usedGreetingIndex = Random().nextInt(selectedGreetings.length);
           final randomGreeting = selectedGreetings[usedGreetingIndex];
-          final userIdN = "${user.uid}_0";
+          final userIdN = "${user.uid}_${_selectedNativeLanguage}_${usedGreetingIndex + 1}";
 
           // Generate initial greeting
           await CloudFunctionService.generateNicknameAudio("$randomGreeting $_nickname!", user.uid, userIdN, _selectedNativeLanguage!);
+          await _fetchAndPlayAudio(userIdN);
 
           // Generate remaining greetings in background
           unawaited(_generateRemainingGreetings(user.uid, _nickname!, _selectedNativeLanguage!, usedGreetingIndex));
@@ -84,6 +88,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  Future<void> _fetchAndPlayAudio(String useridN) async {
+    bool audioFetched = false;
+
+    while (!audioFetched) {
+      try {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        await urlExists(
+          'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp=$timestamp',
+        );
+
+        final timestamp2 = DateTime.now().millisecondsSinceEpoch;
+        await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
+        audioFetched = true;
+        player.play();
+      } catch (e) {
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    }
+  }
+
   Future<void> _generateRemainingGreetings(String userId, String nickname, String language, int usedIndex) async {
     try {
       final selectedGreetings = greetingsList[language]!;
@@ -92,7 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       for (var i = 0; i < selectedGreetings.length; i++) {
         if (i == usedIndex) continue; // Skip the greeting we already generated
         final greeting = selectedGreetings[i];
-        final userIdN = "${userId}_${i + 1}";
+        final userIdN = "${userId}_${language}_${i + 1}";
         unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nickname!", userId, userIdN, language));
       }
     } catch (e) {
