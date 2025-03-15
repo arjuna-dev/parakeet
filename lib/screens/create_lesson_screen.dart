@@ -36,6 +36,31 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
 
   List<Map<String, dynamic>> get categories => getCategoriesForLanguage(targetLanguage);
 
+  // Function to get user language settings
+  Future<Map<String, String>> getUserLanguageSettings() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+
+    try {
+      final DocumentSnapshot doc = await firestore.collection('users').doc(currentUser!.uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'nativeLanguage': data['native_language'] ?? nativeLanguage,
+          'targetLanguage': data['target_language'] ?? targetLanguage,
+          'languageLevel': data['language_level'] ?? languageLevel,
+        };
+      }
+    } catch (e) {
+      print('Error fetching user language settings: $e');
+    }
+    return {
+      'nativeLanguage': nativeLanguage,
+      'targetLanguage': targetLanguage,
+      'languageLevel': languageLevel,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,21 +85,15 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
   }
 
   void _loadUserPreferences() async {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final DocumentReference docRef = firestore.collection('users').doc(FirebaseAuth.instance.currentUser!.uid);
-
     try {
-      final DocumentSnapshot doc = await docRef.get();
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data() as Map<String, dynamic>;
-        setState(() {
-          nativeLanguage = data['native_language'] ?? nativeLanguage;
-          targetLanguage = data['target_language'] ?? targetLanguage;
-          languageLevel = data['language_level'] ?? languageLevel;
-        });
-      }
+      final settings = await getUserLanguageSettings();
+      setState(() {
+        nativeLanguage = settings['nativeLanguage']!;
+        targetLanguage = settings['targetLanguage']!;
+        languageLevel = settings['languageLevel']!;
+      });
     } catch (e) {
-      print('Error fetching user preferences: $e');
+      print('Error loading user preferences: $e');
     }
   }
 
