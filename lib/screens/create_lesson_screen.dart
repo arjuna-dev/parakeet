@@ -32,6 +32,7 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
   final List<String> _selectedWords = [];
   final int _maxWordsAllowed = 5;
   bool _isCreatingCustomLesson = false;
+  bool _isSuggestingRandom = false;
 
   List<Map<String, dynamic>> get categories => getCategoriesForLanguage(targetLanguage);
 
@@ -475,6 +476,57 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
     }
   }
 
+  Future<void> _suggestRandomLesson() async {
+    setState(() {
+      _isSuggestingRandom = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8082'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "target_language": targetLanguage,
+          "native_language": nativeLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body) as Map<String, dynamic>;
+
+        setState(() {
+          // Clear existing data
+          _topicController.text = result['topic'] as String;
+          _selectedWords.clear();
+
+          // Add new words
+          final wordsToLearn = (result['words_to_learn'] as List).cast<String>();
+          for (var word in wordsToLearn) {
+            if (_selectedWords.length < _maxWordsAllowed) {
+              _selectedWords.add(word);
+            }
+          }
+        });
+      } else {
+        throw Exception('Failed to get random lesson suggestion');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to get random suggestion: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSuggestingRandom = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -635,13 +687,37 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Topic',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Topic',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _isSuggestingRandom ? null : _suggestRandomLesson,
+                                  icon: _isSuggestingRandom
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                          ),
+                                        )
+                                      : const Icon(Icons.auto_awesome, size: 16),
+                                  label: const Text('Suggest Random'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    visualDensity: VisualDensity.compact,
+                                    textStyle: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             TextField(
