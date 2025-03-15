@@ -8,6 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/widgets/streak_display.dart';
+import 'package:parakeet/utils/greetings_list_all_languages.dart';
+import 'package:parakeet/services/cloud_function_service.dart';
+import 'dart:async';
+import 'package:parakeet/utils/nickname_generator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -161,12 +165,47 @@ class ProfileScreen extends StatefulWidget {
         'language_level': tempLanguageLevel,
       });
 
+      // Generate greetings in the target language if it changed
+      if (nativeLanguage != tempNativeLanguage) {
+        await _generateNativeLanguageGreetings(user.uid, tempNativeLanguage);
+      }
+
       // Show confirmation
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Language settings updated')),
         );
       }
+    }
+  }
+
+  // Generate greetings in the target language
+  static Future<void> _generateNativeLanguageGreetings(String userId, String nativeLanguage) async {
+    try {
+      // Fetch the user's nickname
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final nickname = userData['nickname'] as String?;
+
+      if (nickname == null || nickname.isEmpty) return; // No nickname to generate greetings for
+
+      // Check if target language has greetings
+      if (!greetingsList.containsKey(nativeLanguage)) return;
+
+      // Get greetings for the target language
+      final targetGreetings = greetingsList[nativeLanguage]!;
+
+      // Generate greetings in the background
+      for (var i = 0; i < targetGreetings.length; i++) {
+        final greeting = targetGreetings[i];
+        final userIdN = "${userId}_${nativeLanguage}_${i + 1}";
+        // Generate the greeting audio
+        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nickname!", userId, userIdN, nativeLanguage));
+      }
+    } catch (e) {
+      print("Error generating target language greetings: $e");
     }
   }
 
