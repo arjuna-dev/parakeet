@@ -496,9 +496,10 @@ def prompt_generate_lesson_topic(category, all_words, target_language, native_la
 
 def prompt_suggest_custom_lesson(target_language, native_language):
   return f'''Generate topic and words for a custom language lesson.
-        The topic should be engaging and practical for language learning and includes exactly 5 relevant words related to the topic.
+        The topic should be engaging, fun and practical for language learning and includes exactly 5 relevant words related to the topic.
         Return the response in this exact JSON format:
         {{
+            "title": "The lesson title in {native_language}",
             "topic": "The lesson topic in {native_language}",
             "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
         }}

@@ -24,8 +24,8 @@ class ProfileScreen extends StatefulWidget {
     if (!userDoc.exists) return;
 
     final userData = userDoc.data() as Map<String, dynamic>;
-    String nativeLanguage = userData['nativeLanguage'] ?? 'English (US)';
-    String targetLanguage = userData['targetLanguage'] ?? 'German';
+    String nativeLanguage = userData['native_language'] ?? 'English (US)';
+    String targetLanguage = userData['target_language'] ?? 'German';
     String languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
 
     final List<String> languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
@@ -156,8 +156,8 @@ class ProfileScreen extends StatefulWidget {
     if (confirmed == true && (nativeLanguage != tempNativeLanguage || targetLanguage != tempTargetLanguage || languageLevel != tempLanguageLevel)) {
       // Update user preferences in Firestore
       await firestore.collection('users').doc(user.uid).update({
-        'nativeLanguage': tempNativeLanguage,
-        'targetLanguage': tempTargetLanguage,
+        'native_language': tempNativeLanguage,
+        'target_language': tempTargetLanguage,
         'language_level': tempLanguageLevel,
       });
 
@@ -248,7 +248,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _nativeLanguage = 'English (US)';
   String _targetLanguage = 'German';
   String _languageLevel = 'Absolute beginner (A1)';
-  final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
 
   @override
   void initState() {
@@ -268,8 +267,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _name = userData['name'] ?? '';
           _email = userData['email'] ?? '';
           _premium = userData['premium'] ?? false;
-          _nativeLanguage = userData['nativeLanguage'] ?? 'English (US)';
-          _targetLanguage = userData['targetLanguage'] ?? 'German';
+          _nativeLanguage = userData['native_language'] ?? 'English (US)';
+          _targetLanguage = userData['target_language'] ?? 'German';
           _languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
         });
       }
@@ -511,11 +510,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await ProfileScreen.showLanguageSettingsDialog(context);
     // Refresh the UI after settings are updated
     _fetchUserData();
-  }
-
-  // Helper method to show language selection list
-  Future<String?> _selectLanguageFromList(BuildContext context, String title, List<String> languages, String currentSelection) async {
-    return ProfileScreen._selectLanguageFromListStatic(context, title, languages, currentSelection);
   }
 
   @override

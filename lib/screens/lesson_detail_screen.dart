@@ -589,7 +589,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                                           builder: (context) => AudioPlayerScreen(
                                             category: widget.category,
                                             dialogue: firstDialogue["dialogue"] ?? [],
-                                            title: firstDialogue["title"] ?? _title,
+                                            title: _title,
                                             documentID: documentId,
                                             userID: userId,
                                             scriptDocumentId: scriptDocRef.id,

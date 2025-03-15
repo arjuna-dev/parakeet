@@ -159,7 +159,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   Consumer<HomeScreenModel> nowPlayingList() {
     return Consumer<HomeScreenModel>(
       builder: (context, model, child) {
-        final colorScheme = Theme.of(context).colorScheme;
         final screenSize = MediaQuery.of(context).size;
         final isSmallScreen = screenSize.height < 700;
 
