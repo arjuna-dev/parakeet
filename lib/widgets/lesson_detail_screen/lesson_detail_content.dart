@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/widgets/word_selection_dialog.dart';
+import 'package:parakeet/widgets/lesson_detail_screen/word_selection_dialog.dart';
 import 'package:parakeet/services/lesson_detail_service.dart';
 
 class LessonDetailContent extends StatelessWidget {

@@ -6,8 +6,8 @@ import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/services/library_service.dart';
 import 'package:parakeet/utils/constants.dart';
-import 'package:parakeet/widgets/category_section.dart';
-import 'package:parakeet/widgets/empty_library_view.dart';
+import 'package:parakeet/widgets/library_screen/category_section.dart';
+import 'package:parakeet/widgets/library_screen/empty_view.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
 
 class Library extends StatefulWidget {

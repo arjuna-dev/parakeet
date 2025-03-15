@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/main.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/services/lesson_detail_service.dart';
-import 'package:parakeet/widgets/lesson_detail_content.dart';
+import 'package:parakeet/widgets/lesson_detail_screen/lesson_detail_content.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String category;

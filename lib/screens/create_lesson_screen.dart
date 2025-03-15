@@ -3,8 +3,8 @@ import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/language_categories.dart';
 import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:parakeet/services/user_service.dart';
-import 'package:parakeet/widgets/category_list.dart';
-import 'package:parakeet/widgets/custom_lesson_form.dart';
+import 'package:parakeet/widgets/create_lesson_screen/category_list.dart';
+import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
 
 class CreateLesson extends StatefulWidget {
   const CreateLesson({Key? key, this.title}) : super(key: key);
