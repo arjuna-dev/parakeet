@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parakeet/widgets/typing_animation_bubble.dart';
+import 'package:parakeet/widgets/audio_player_screen/typing_animation_bubble.dart';
 
 class AnimatedDialogueList extends StatefulWidget {
   final List<dynamic> dialogue;
