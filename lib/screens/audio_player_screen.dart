@@ -427,19 +427,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Exit if widget is no longer mounted
       if (!mounted || _isDisposing) return;
 
-      // Make the second API call
-      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
-
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
+      // Make the second API call
+      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
+
       // Initialize playlist after a delay to allow audio files to be generated
-      Future.delayed(const Duration(seconds: 30), () {
-        if (mounted && !_audioPlayerService.playlistInitialized) {
-          print("Fallback: Initializing playlist after timeout");
-          _initializePlaylist();
-        }
-      });
+
+      if (mounted && !_audioPlayerService.playlistInitialized) {
+        print("Fallback: Initializing playlist after timeout");
+        _initializePlaylist();
+      }
     } catch (e) {
       print('Error creating script and making second API call: $e');
     }
