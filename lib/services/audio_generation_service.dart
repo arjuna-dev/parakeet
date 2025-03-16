@@ -197,4 +197,30 @@ class AudioGenerationService {
     }
     return currentMap;
   }
+
+  /// Removes the user from the active creation collection
+  Future<void> removeFromActiveCreation() async {
+    try {
+      print("Removing user from active creation");
+      final firestore = FirebaseFirestore.instance;
+      DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+
+      await firestore.runTransaction((transaction) async {
+        DocumentSnapshot snapshot = await transaction.get(docRef);
+        if (snapshot.exists) {
+          Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+          List<dynamic> users = data['users'] ?? [];
+
+          // Find and remove the current user's entry
+          users.removeWhere((user) => user is Map<String, dynamic> && user['userId'] == userID && user['documentId'] == documentID);
+
+          transaction.update(docRef, {'users': users});
+        }
+      });
+
+      print("Successfully removed user from active creation");
+    } catch (e) {
+      print("Error removing user from active creation: $e");
+    }
+  }
 }
