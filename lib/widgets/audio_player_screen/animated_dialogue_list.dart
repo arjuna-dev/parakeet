@@ -355,41 +355,27 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
     super.didUpdateWidget(oldWidget);
 
     // Update the last highlighted index if the current track is a dialogue
-    if (widget.currentTrack.isNotEmpty) {
-      // Improved track name parsing logic
-      if (widget.currentTrack.startsWith('dialogue_')) {
-        // Extract the dialogue index from the track name
-        String indexPart = widget.currentTrack.substring('dialogue_'.length);
-        // Handle additional suffixes like "_target" or "_native"
-        int underscoreIndex = indexPart.indexOf('_');
-        if (underscoreIndex > 0) {
-          indexPart = indexPart.substring(0, underscoreIndex);
-        }
+    List<String> parts = widget.currentTrack.split('_');
+    if (parts.length >= 2 && parts[0] == 'dialogue') {
+      int currentDialogueIndex = int.tryParse(parts[1]) ?? -1;
+      if (currentDialogueIndex >= 0) {
+        _lastHighlightedIndex = currentDialogueIndex;
 
-        int currentDialogueIndex = int.tryParse(indexPart) ?? -1;
-        if (currentDialogueIndex >= 0 && currentDialogueIndex < widget.dialogue.length) {
-          if (_lastHighlightedIndex != currentDialogueIndex) {
-            setState(() {
-              _lastHighlightedIndex = currentDialogueIndex;
-            });
+        // Auto-scroll to the highlighted item
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients && currentDialogueIndex > 0) {
+            const itemHeight = 120.0; // Approximate height of each dialogue item
+            final targetPosition = itemHeight * currentDialogueIndex;
 
-            // Auto-scroll to the highlighted item
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_scrollController.hasClients && currentDialogueIndex > 0) {
-                const itemHeight = 120.0; // Approximate height of each dialogue item
-                final targetPosition = itemHeight * currentDialogueIndex;
-
-                if (targetPosition > _scrollController.position.pixels + _scrollController.position.viewportDimension || targetPosition < _scrollController.position.pixels) {
-                  _scrollController.animateTo(
-                    targetPosition,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              }
-            });
+            if (targetPosition > _scrollController.position.pixels + _scrollController.position.viewportDimension || targetPosition < _scrollController.position.pixels) {
+              _scrollController.animateTo(
+                targetPosition,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
           }
-        }
+        });
       }
     }
 
