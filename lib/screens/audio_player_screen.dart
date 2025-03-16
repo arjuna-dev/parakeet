@@ -330,8 +330,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (_isDisposing) return;
 
     if (index < _script.length && mounted) {
+      String newTrack = _script[index];
+
       setState(() {
-        _currentTrack = _script[index];
+        _currentTrack = newTrack;
       });
 
       if (_speechRecognitionActive.value) {
