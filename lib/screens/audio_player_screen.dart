@@ -129,6 +129,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       nativeLanguage: widget.nativeLanguage,
     );
 
+    // Initialize PlaylistGenerator early to avoid LateInitializationError
+    _playlistGenerator = PlaylistGenerator(
+      documentID: widget.documentID,
+      userID: widget.userID,
+      nativeLanguage: widget.nativeLanguage,
+      hasNicknameAudio: false, // Will be updated later
+      addressByNickname: true, // Will be updated later
+      wordsToRepeat: widget.wordsToRepeat,
+    );
+
     // Initialize Firestore services
     _firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, _updatePlaylist, _updateTrackLength, _saveSnapshot);
 
@@ -147,7 +157,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Load preferences and data
     _loadAddressByNicknamePreference();
     _updateHasNicknameAudio().then((_) {
-      _initializePlaylistGenerator();
+      // Update PlaylistGenerator with correct values after loading preferences
+      _updatePlaylistGenerator();
       _initializePlaylist();
     });
 
@@ -163,7 +174,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  void _initializePlaylistGenerator() {
+  // Update PlaylistGenerator with current values
+  void _updatePlaylistGenerator() {
     _playlistGenerator = PlaylistGenerator(
       documentID: widget.documentID,
       userID: widget.userID,
@@ -205,18 +217,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     try {
-      if (snapshot.docs.isNotEmpty) {
-        final data = snapshot.docs[0].data();
-        if (data != null && data is Map<String, dynamic> && data.containsKey("dialogue")) {
-          _script = script_generator.parseAndCreateScript(data["dialogue"] as List<dynamic>, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode);
-        } else {
-          print("Error: Invalid data format in snapshot");
-          return;
-        }
-      } else {
+      if (snapshot.docs.isEmpty) {
         print("Error: No documents in snapshot");
         return;
       }
+
+      final data = snapshot.docs[0].data();
+      if (data == null || data is! Map<String, dynamic> || !data.containsKey("dialogue")) {
+        print("Error: Invalid data format in snapshot");
+        return;
+      }
+
+      _script = script_generator.parseAndCreateScript(data["dialogue"] as List<dynamic>, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
