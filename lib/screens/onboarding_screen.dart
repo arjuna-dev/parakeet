@@ -342,11 +342,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Would you like to enable notifications and exact alarms?',
-          style: TextStyle(fontSize: 16),
+        const Icon(Icons.notifications, size: 64),
+        const SizedBox(height: 24),
+        Text(
+          'Would you like to receive notifications?',
+          style: Theme.of(context).textTheme.headlineSmall,
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
+        Text(
+          'Get reminders to practice and stay on track',
+          style: Theme.of(context).textTheme.bodyLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -361,8 +370,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 await requestExactAlarmPermission();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedPermission == true ? Colors.blue : Colors.grey[300],
-                foregroundColor: _selectedPermission == true ? Colors.white : Colors.black,
+                backgroundColor: _selectedPermission == true ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainer,
+                foregroundColor: _selectedPermission == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.primary,
               ),
               child: const Text("Yes, please"),
             ),
@@ -377,8 +386,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 print("User declined the permissions.");
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedPermission == false ? Colors.blue : Colors.grey[300],
-                foregroundColor: _selectedPermission == false ? Colors.white : Colors.black,
+                backgroundColor: _selectedPermission == false ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainer,
+                foregroundColor: _selectedPermission == false ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.primary,
               ),
               child: const Text("No, thanks"),
             ),
