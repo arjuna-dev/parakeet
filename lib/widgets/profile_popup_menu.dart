@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/nickname_popup.dart';
+import '../screens/profile_screen.dart';
 
 Widget buildProfilePopupMenu(BuildContext context) {
   return PopupMenuButton<String>(
@@ -22,6 +23,10 @@ Widget buildProfilePopupMenu(BuildContext context) {
               return const NicknamePopup();
             },
           );
+          break;
+        case 'Language Settings':
+          ProfileScreen.showLanguageSettingsDialog(context);
+          break;
       }
     },
     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -32,6 +37,10 @@ Widget buildProfilePopupMenu(BuildContext context) {
       const PopupMenuItem<String>(
         value: 'Edit Name',
         child: Text('Edit Name'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'Language Settings',
+        child: Text('Language Settings'),
       ),
       const PopupMenuItem<String>(
         value: 'Logout',
