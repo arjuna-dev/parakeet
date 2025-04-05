@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _notificationsEnabled = false;
   bool? _selectedPermission;
   final NotificationService _notificationService = NotificationService();
-  int get _totalPages => 4;
+  int get _totalPages => 5;
 
   @override
   void dispose() {
