@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class OnboardingProgressIndicator extends StatelessWidget {
   final int currentPage;
@@ -7,7 +8,7 @@ class OnboardingProgressIndicator extends StatelessWidget {
   const OnboardingProgressIndicator({
     Key? key,
     required this.currentPage,
-    this.totalPages = 5,
+    this.totalPages = kIsWeb ? 4 : 5,
   }) : super(key: key);
 
   @override

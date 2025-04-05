@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/native_language_list.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
@@ -29,6 +30,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
   bool? _notificationsEnabled;
+
+  final int totalPages = kIsWeb ? 4 : 5;
 
   @override
   void dispose() {
@@ -112,14 +115,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           });
                         },
                       ),
-                      NotificationsPermissionsStep(
-                        onNotificationsEnabledChanged: (value) {
-                          setState(() {
-                            _notificationsEnabled = value;
-                          });
-                        },
-                        notificationsEnabled: _notificationsEnabled,
-                      ),
+                      if (!kIsWeb)
+                        NotificationsPermissionsStep(
+                          onNotificationsEnabledChanged: (value) {
+                            setState(() {
+                              _notificationsEnabled = value;
+                            });
+                          },
+                          notificationsEnabled: _notificationsEnabled,
+                        ),
                     ],
                   ),
                 ),
@@ -143,17 +147,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       FilledButton(
                         onPressed: OnboardingService.canProceed(_currentPage, _selectedNativeLanguage, _nickname, _selectedTargetLanguage, _selectedLanguageLevel, _notificationsEnabled)
                             ? () {
-                                if (_currentPage < 4) {
+                                if (_currentPage < totalPages - 1) {
                                   _pageController.nextPage(
                                     duration: const Duration(milliseconds: 300),
                                     curve: Curves.easeInOut,
                                   );
                                 } else {
+                                  print("wll save user data");
                                   _saveUserData();
                                 }
                               }
                             : null,
-                        child: Text(_currentPage < 4 ? 'Next' : 'Get Started'),
+                        child: Text(_currentPage < totalPages - 1 ? 'Next' : 'Get Started'),
                       ),
                     ],
                   ),

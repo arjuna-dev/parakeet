@@ -6,6 +6,7 @@ import 'package:parakeet/services/cloud_function_service.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 class OnboardingService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
