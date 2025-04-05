@@ -368,6 +368,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 // Request both notifications and exact alarm permissions.
                 await requestNotificationPermission();
                 await requestExactAlarmPermission();
+                await _notificationService.scheduleDailyReminder(NotificationService.defaultReminderTime);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedPermission == true ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainer,
@@ -383,7 +384,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _selectedPermission = false;
                 });
                 _notificationService.cancelDailyReminder();
-                print("User declined the permissions.");
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedPermission == false ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainer,
