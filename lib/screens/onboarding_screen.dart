@@ -75,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         print("⚠️ Android plugin not found.");
       }
     } on PlatformException catch (e) {
-      print("🚨 Error requesting exact alarm permission: $e");
+      print("Error requesting exact alarm permission: $e");
     }
   }
 
