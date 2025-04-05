@@ -11,6 +11,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
+import 'package:parakeet/services/notification_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -31,9 +32,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isLoading = false;
   bool _notificationsEnabled = false;
   bool? _selectedPermission;
-
-  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
-  int get _totalPages => _isAndroid ? 5 : 4;
+  final NotificationService _notificationService = NotificationService();
+  int get _totalPages => 4;
 
   @override
   void dispose() {
@@ -382,7 +382,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 setState(() {
                   _selectedPermission = false;
                 });
-                // Add any additional logic for "No, thanks" if needed.
+                _notificationService.cancelDailyReminder();
                 print("User declined the permissions.");
               },
               style: ElevatedButton.styleFrom(
@@ -397,53 +397,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // Widget _buildNotificationsStep() {
-  //   return Column(
-  //     mainAxisAlignment: MainAxisAlignment.center,
-  //     children: [
-  //       const Icon(Icons.notifications, size: 64),
-  //       const SizedBox(height: 24),
-  //       Text(
-  //         'Would you like to receive notifications?',
-  //         style: Theme.of(context).textTheme.headlineSmall,
-  //         textAlign: TextAlign.center,
-  //       ),
-  //       const SizedBox(height: 16),
-  //       Text(
-  //         'Get reminders to practice and stay on track',
-  //         style: Theme.of(context).textTheme.bodyLarge,
-  //         textAlign: TextAlign.center,
-  //       ),
-  //       const SizedBox(height: 32),
-  //       Padding(
-  //         padding: const EdgeInsets.symmetric(horizontal: 32),
-  //         child: Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  //           children: [
-  //             FilledButton(
-  //               onPressed: () async {
-  //                 print("Button clicked!");
-  //                 requestNotificationPermission();
-  //                 requestExactAlarmPermission();
-  //                 // await Permission.notification.request();
-  //                 // await notifications.AndroidFlutterLocalNotificationsPlugin().requestExactAlarmsPermission();
-  //                 setState(() => _notificationsEnabled = true);
-  //               },
-  //               child: const Text('Yes, please'),
-  //             ),
-  //             TextButton(
-  //               onPressed: () {
-  //                 setState(() => _notificationsEnabled = false);
-  //               },
-  //               child: const Text('No, thanks'),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
-
   bool _canProceed() {
     switch (_currentPage) {
       case 0:
@@ -455,7 +408,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       case 3:
         return _selectedLanguageLevel != null;
       case 4:
-        return _isAndroid;
+        return true;
       default:
         return false;
     }
@@ -486,7 +439,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _buildNicknameStep(),
                       _buildTargetLanguageStep(),
                       _buildLanguageLevelStep(),
-                      if (_isAndroid) _buildNotificationsStep(),
+                      _buildNotificationsStep(),
                     ],
                   ),
                 ),
