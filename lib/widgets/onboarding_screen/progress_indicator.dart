@@ -7,7 +7,7 @@ class OnboardingProgressIndicator extends StatelessWidget {
   const OnboardingProgressIndicator({
     Key? key,
     required this.currentPage,
-    this.totalPages = 4,
+    this.totalPages = 5,
   }) : super(key: key);
 
   @override
@@ -16,7 +16,7 @@ class OnboardingProgressIndicator extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(totalPages, (index) {
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: const EdgeInsets.symmetric(horizontal: 5),
           width: currentPage == index ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(

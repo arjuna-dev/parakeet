@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import '../utils/native_language_list.dart';
-
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/services/onboarding_service.dart';
@@ -10,6 +8,7 @@ import 'package:parakeet/widgets/onboarding_screen/native_language_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/nickname_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/target_language_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/language_level_step.dart';
+import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -29,6 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
+  bool? _notificationsEnabled;
 
   @override
   void dispose() {
@@ -112,6 +112,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           });
                         },
                       ),
+                      NotificationsPermissionsStep(
+                        onNotificationsEnabledChanged: (value) {
+                          setState(() {
+                            _notificationsEnabled = value;
+                          });
+                        },
+                        notificationsEnabled: _notificationsEnabled,
+                      ),
                     ],
                   ),
                 ),
@@ -133,9 +141,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       else
                         const SizedBox(width: 80),
                       FilledButton(
-                        onPressed: OnboardingService.canProceed(_currentPage, _selectedNativeLanguage, _nickname, _selectedTargetLanguage, _selectedLanguageLevel)
+                        onPressed: OnboardingService.canProceed(_currentPage, _selectedNativeLanguage, _nickname, _selectedTargetLanguage, _selectedLanguageLevel, _notificationsEnabled)
                             ? () {
-                                if (_currentPage < 3) {
+                                if (_currentPage < 4) {
                                   _pageController.nextPage(
                                     duration: const Duration(milliseconds: 300),
                                     curve: Curves.easeInOut,
@@ -145,7 +153,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 }
                               }
                             : null,
-                        child: Text(_currentPage < 3 ? 'Next' : 'Get Started'),
+                        child: Text(_currentPage < 4 ? 'Next' : 'Get Started'),
                       ),
                     ],
                   ),
