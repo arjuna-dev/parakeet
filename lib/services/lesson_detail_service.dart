@@ -18,7 +18,7 @@ class LessonDetailService {
     try {
       // Make the API call to generate a new lesson topic
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080'),
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -85,7 +85,7 @@ class LessonDetailService {
 
       // Make the first API call
       http.post(
-        Uri.parse('http://192.168.2.105:8081'),
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
