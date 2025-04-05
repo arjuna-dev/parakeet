@@ -111,7 +111,7 @@ class OnboardingService {
     }
   }
 
-  static bool canProceed(int currentPage, String? nativeLanguage, String? nickname, String? targetLanguage, String? languageLevel) {
+  static bool canProceed(int currentPage, String? nativeLanguage, String? nickname, String? targetLanguage, String? languageLevel, bool? notificationsEnabled) {
     switch (currentPage) {
       case 0:
         return nativeLanguage != null;
@@ -121,6 +121,8 @@ class OnboardingService {
         return targetLanguage != null;
       case 3:
         return languageLevel != null;
+      case 4:
+        return notificationsEnabled != null;
       default:
         return false;
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/store_view.dart';
-
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/profile_service.dart';
@@ -10,6 +9,8 @@ import 'package:parakeet/widgets/profile_screen/profile_menu_item.dart';
 import 'package:parakeet/widgets/profile_screen/delete_account_button.dart';
 import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -61,6 +62,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showTimePickerDialog() async {
+    await requestNotificationPermission();
+    if (Platform.isAndroid) {
+      bool? alarmPermissions = await requestExactAlarmPermission();
+      if (alarmPermissions == null || !alarmPermissions) {
+        return;
+      }
+    }
+
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _reminderTime ?? NotificationService.defaultReminderTime,
