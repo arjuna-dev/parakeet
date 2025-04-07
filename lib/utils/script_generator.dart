@@ -221,10 +221,12 @@ Future<List<String>> parseAndCreateScript(
 
             // Save audio URLs for word to Firestore
             for (var wordObj in wordObjects) {
-              final targetChunk = bigJsonList[i]["split_sentence"][j]["target_language"];
-              final nativeChunk = bigJsonList[i]["split_sentence"][j]["native_language"];
-              final nativeChunkUrl = await constructUrl(nativeChunk, documentId, nativeLanguage, userId);
-              final targetChunkUrl = await constructUrl(targetChunk, documentId, targetLanguage, userId);
+              final targetScript = 'dialogue_${i}_split_sentence_${j}_target_language';
+              final nativeScript = 'dialogue_${i}_split_sentence_${j}_native_language';
+              // final targetChunk = bigJsonList[i]["split_sentence"][j]["target_language"];
+              // final nativeChunk = bigJsonList[i]["split_sentence"][j]["native_language"];
+              final nativeChunkUrl = await constructUrl(nativeScript, documentId, nativeLanguage, userId);
+              final targetChunkUrl = await constructUrl(targetScript, documentId, targetLanguage, userId);
 
               String word = accessBigJson(bigJsonMap, wordObj["word"]);
               word = word.toLowerCase().trim();
@@ -277,7 +279,7 @@ Future<List<String>> parseAndCreateScript(
 
   final Set<String> overdueSet = overdueList.toSet();
   final List<String> combinedWordsList = overdueSet.union(wordsToRepeatSet).toList();
-  Future<List<fsrs.Card>> _getAllCards(List<String> words) async {
+  Future<List<fsrs.Card>> getAllCards(List<String> words) async {
     List<fsrs.Card> cards = [];
     for (String word in words) {
       final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(word);
@@ -297,7 +299,7 @@ Future<List<String>> parseAndCreateScript(
     return cards;
   }
 
-  List<fsrs.Card> cardsCollection = await _getAllCards(combinedWordsList);
+  List<fsrs.Card> cardsCollection = await getAllCards(combinedWordsList);
   var f = fsrs.FSRS();
   fsrs.Card firstCard = cardsCollection[0];
   var now = DateTime.now();

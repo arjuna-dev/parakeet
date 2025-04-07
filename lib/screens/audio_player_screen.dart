@@ -133,6 +133,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       documentID: widget.documentID,
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
       hasNicknameAudio: false, // Will be updated later
       addressByNickname: true, // Will be updated later
       wordsToRepeat: widget.wordsToRepeat,
@@ -147,29 +148,63 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.onTrackChanged = _handleTrackChange;
     _audioPlayerService.onLessonCompleted = _handleLessonCompletion;
 
-    // Initialize data
-    if (!widget.generating) {
-      _script = script_generator.createFirstScript(widget.dialogue);
-      _currentTrack = _script.isNotEmpty ? _script[0] : '';
-    }
-
-    // Load preferences and data
-    _loadAddressByNicknamePreference();
-    _updateHasNicknameAudio().then((_) {
-      // Update PlaylistGenerator with correct values after loading preferences
-      _updatePlaylistGenerator();
-      _initializePlaylist();
-    });
-
-    _checkPremiumStatus();
-    _getExistingBigJson();
-
     // Setup listeners
     _repetitionsMode.addListener(_updatePlaylistOnTheFly);
 
-    // If generating is true, create script and make second API call
-    if (widget.generating) {
-      _createScriptAndMakeSecondApiCall();
+    // Begin the sequential initialization process
+    _sequentialInitialization();
+  }
+
+  // Sequentially handle all initialization steps in the correct order
+  void _sequentialInitialization() async {
+    try {
+      // Step 1: Get existing big JSON
+      await _getExistingBigJson();
+
+      // Step 2: Check premium status in parallel
+      _checkPremiumStatus();
+
+      // Step 3: Load script based on mode
+      if (!widget.generating) {
+        // For non-generating mode, we need to wait for script creation
+        if (_existingBigJson != null) {
+          // Convert to a properly handled Future chain
+          final script =
+              await script_generator.parseAndCreateScript(_existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
+
+          if (mounted) {
+            setState(() {
+              _script = script;
+              _currentTrack = _script.isNotEmpty ? _script[0] : '';
+            });
+          } else {
+            return; // Exit if widget is no longer mounted
+          }
+        } else {
+          print("Error: _existingBigJson is null for non-generating mode");
+        }
+      }
+
+      // Step 4: Load preferences
+      await _loadAddressByNicknamePreference();
+
+      // Step 5: Update nickname audio status
+      await _updateHasNicknameAudio();
+
+      if (!mounted) return;
+
+      // Step 6: Update playlist generator with latest values
+      _updatePlaylistGenerator();
+
+      // Step 7: Initialize playlist
+      await _initializePlaylist();
+
+      // Step 8: For generating mode, start creation process
+      if (widget.generating) {
+        _createScriptAndMakeSecondApiCall();
+      }
+    } catch (e) {
+      print("Error in sequential initialization: $e");
     }
   }
 
@@ -179,6 +214,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       documentID: widget.documentID,
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
       hasNicknameAudio: _hasNicknameAudio,
       addressByNickname: _addressByNickname,
       wordsToRepeat: widget.wordsToRepeat,
@@ -200,8 +236,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await _audioPlayerService.initializePlaylist(audioSources);
 
     // Calculate track durations
-    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
-    _audioPlayerService.setTrackDurations(trackDurations);
+    // List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    // _audioPlayerService.setTrackDurations(trackDurations);
 
     // Build files to compare map for speech recognition
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
@@ -247,11 +283,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Generate audio sources for new items
     List<AudioSource> newAudioSources = await _playlistGenerator.generateAudioSources(newScript);
 
-    // Add new tracks to playlist
+    // Update playlist
     await _audioPlayerService.addToPlaylist(newAudioSources);
+    // Calculate track durations
+    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    _audioPlayerService.setTrackDurations(trackDurations);
+
+    _audioPlayerService.setFinalTotalDuration();
 
     // Increment update number
     _updateNumber++;
+    print("Update number: $_updateNumber");
   }
 
   // Save snapshot from Firestore
@@ -308,8 +350,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Generate script with repetition mode
-    _script = _playlistGenerator.generateScriptWithRepetitionMode(
-      _existingBigJson!["dialogue"] as List<dynamic>,
+    _script = await _playlistGenerator.generateScriptWithRepetitionMode(
+      _existingBigJson!,
       widget.dialogue,
       _repetitionsMode.value,
     );
