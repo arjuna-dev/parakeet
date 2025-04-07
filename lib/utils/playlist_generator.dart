@@ -8,6 +8,7 @@ class PlaylistGenerator {
   final String documentID;
   final String userID;
   final String nativeLanguage;
+  final String targetLanguage;
   final bool hasNicknameAudio;
   final bool addressByNickname;
   final List<dynamic> wordsToRepeat;
@@ -18,6 +19,7 @@ class PlaylistGenerator {
     required this.documentID,
     required this.userID,
     required this.nativeLanguage,
+    required this.targetLanguage,
     required this.hasNicknameAudio,
     required this.addressByNickname,
     required this.wordsToRepeat,
@@ -37,16 +39,20 @@ class PlaylistGenerator {
   }
 
   /// Generate script from dialogue with repetition mode
-  List<dynamic> generateScriptWithRepetitionMode(List<dynamic> dialogue, List<dynamic> originalDialogue, RepetitionMode repetitionMode) {
+  Future<List<dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> data, List<dynamic> originalDialogue, RepetitionMode repetitionMode) async {
     // Create a ValueNotifier with the repetition mode
     final repetitionModeNotifier = ValueNotifier<RepetitionMode>(repetitionMode);
 
     // Call the script generator with the ValueNotifier
-    final result = script_generator.parseAndCreateScript(
-      dialogue,
+    final result = await script_generator.parseAndCreateScript(
+      data,
       wordsToRepeat,
       originalDialogue,
       repetitionModeNotifier,
+      userID,
+      documentID,
+      targetLanguage,
+      nativeLanguage,
     );
 
     // Dispose the ValueNotifier

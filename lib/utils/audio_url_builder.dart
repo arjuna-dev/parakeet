@@ -18,7 +18,9 @@ class AudioUrlBuilder {
 
   /// Constructs the appropriate URL for a given filename
   Future<String> constructUrl(String fileName) async {
-    if (_isNarratorFile(fileName)) {
+    if (fileName.startsWith("https://")) {
+      return fileName;
+    } else if (_isNarratorFile(fileName)) {
       // narrator_, one_second_break, five_second_break
       return _getNarratorUrl(fileName);
     } else if (fileName == "nickname") {
