@@ -716,7 +716,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
+      // script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -771,7 +771,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     try {
-      script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
+      // script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;

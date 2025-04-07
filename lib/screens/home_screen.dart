@@ -76,7 +76,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           tabs: [
             Tab(
               icon: Icon(Icons.play_circle_filled, size: isSmallScreen ? 22 : 24),
-              text: 'Currently Playing',
+              text: 'Recent',
             ),
             Tab(
               icon: Icon(Icons.favorite, size: isSmallScreen ? 22 : 24),
