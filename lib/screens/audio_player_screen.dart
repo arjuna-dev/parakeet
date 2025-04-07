@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/audio_player_service.dart';
 import 'package:parakeet/services/speech_recognition_service.dart';
 import 'package:parakeet/services/audio_generation_service.dart';
@@ -228,7 +227,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      _script = script_generator.parseAndCreateScript(data["dialogue"] as List<dynamic>, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode);
+      _script =
+          await script_generator.parseAndCreateScript(data, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -492,24 +492,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await _streakService.recordDailyActivity(userId);
-      if (mounted) {
-        setState(() {
-          _showStreak = true;
-        });
-      }
-
-      // Hide streak after 5 seconds
-      Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() {
-            _showStreak = false;
-          });
-        }
+    await _streakService.recordDailyActivity(widget.userID);
+    if (mounted) {
+      setState(() {
+        _showStreak = true;
       });
     }
+
+    // Hide streak after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showStreak = false;
+        });
+      }
+    });
   }
 
   void _toggleSpeechRecognition(bool value) async {

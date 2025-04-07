@@ -60,6 +60,7 @@ dependencies:
   speech_to_text: ^6.6.2
   vosk_flutter: ^0.3.48
   flutter_animate: ^4.5.2
+  fsrs: ^1.1.1
 
 dependency_overrides:
   http: ^1.2.2
