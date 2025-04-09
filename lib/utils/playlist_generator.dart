@@ -39,7 +39,7 @@ class PlaylistGenerator {
   }
 
   /// Generate script from dialogue with repetition mode
-  Future<List<dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> data, List<dynamic> originalDialogue, RepetitionMode repetitionMode) async {
+  Future<List<dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> data, List<dynamic> originalDialogue, RepetitionMode repetitionMode, String category) async {
     // Create a ValueNotifier with the repetition mode
     final repetitionModeNotifier = ValueNotifier<RepetitionMode>(repetitionMode);
 
@@ -53,6 +53,7 @@ class PlaylistGenerator {
       documentID,
       targetLanguage,
       nativeLanguage,
+      category,
     );
 
     // Dispose the ValueNotifier

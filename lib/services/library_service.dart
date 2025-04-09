@@ -18,7 +18,7 @@ class LibraryService {
     List<DocumentSnapshot> allDocuments = [];
 
     // Default category for lessons without a category
-    const String defaultCategory = "Custom Lessons";
+    const String defaultCategory = "Custom Lesson";
 
     for (var doc in snapshot.docs) {
       String parentId = doc.reference.parent.parent!.id;

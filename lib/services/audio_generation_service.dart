@@ -95,13 +95,13 @@ class AudioGenerationService {
   }
 
   /// Creates the script document in Firestore
-  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> completeDialogue) async {
+  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> completeDialogue, String category) async {
     // Save script to Firestore
     DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('script-$userID').doc(scriptDocumentId);
 
     await docRef.set({
       "script": script,
-      "category": null, // This was 'widget.category' in the original code
+      "category": category,
       "title": title,
       "dialogue": completeDialogue,
       "native_language": nativeLanguage,

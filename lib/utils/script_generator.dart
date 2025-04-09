@@ -8,13 +8,12 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 import '../screens/audio_player_s_utils.dart' show accessBigJson;
 
-Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<dynamic> words) async {
-  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+Future<void> ensureFirestoreWords(String userId, String targetLanguage, String category, List<dynamic> words) async {
+  final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
 
   for (var word in words) {
     word = word.toLowerCase().trim();
-    final docRef = collectionRef.doc(word);
-    final docSnap = await docRef.get();
+    final docSnap = await docRef.collection(category).doc(word).get();
 
     if (!docSnap.exists) {
       WordCard newCard = WordCard(
@@ -29,13 +28,13 @@ Future<void> ensureFirestoreWords(String userId, String targetLanguage, List<dyn
         lapses: 0,
         state: fsrs.State.newState,
       );
-      await docRef.set(newCard.toFirestore());
+      await docRef.collection(category).doc(word).set(newCard.toFirestore());
     }
   }
 }
 
-Future<List<String>> getOverdueWords(String userId, String targetLanguage) async {
-  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+Future<List<String>> getOverdueWords(String userId, String targetLanguage, String category) async {
+  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category);
 
   final nowString = DateTime.now().toIso8601String();
   final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).get();
@@ -77,8 +76,8 @@ String formConversationAudioUrl(String documentId, String fileName) {
       "$documentId/$fileName.mp3";
 }
 
-Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage) async {
-  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage, String category) async {
+  final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category);
 
   final nowString = DateTime.now().toIso8601String();
   final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).get();
@@ -107,12 +106,13 @@ Future<List<String>> parseAndCreateScript(
   String documentId,
   String targetLanguage,
   String nativeLanguage,
+  String category,
 ) async {
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
-  await ensureFirestoreWords(userId, targetLanguage, wordsToRepeat);
+  await ensureFirestoreWords(userId, targetLanguage, category, wordsToRepeat);
 
-  final overdueList = await getOverdueWords(userId, targetLanguage);
+  final overdueList = await getOverdueWords(userId, targetLanguage, category);
   final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
   overdueList.removeWhere((word) => wordsToRepeatSet.contains(word));
 
@@ -221,6 +221,7 @@ Future<List<String>> parseAndCreateScript(
 
             // Save audio URLs for word to Firestore
             for (var wordObj in wordObjects) {
+              print("wordObj: $wordObj");
               final targetScript = 'dialogue_${i}_split_sentence_${j}_target_language';
               final nativeScript = 'dialogue_${i}_split_sentence_${j}_native_language';
               // final targetChunk = bigJsonList[i]["split_sentence"][j]["target_language"];
@@ -229,11 +230,15 @@ Future<List<String>> parseAndCreateScript(
               final targetChunkUrl = await constructUrl(targetScript, documentId, targetLanguage, userId);
 
               String word = accessBigJson(bigJsonMap, wordObj["word"]);
-              word = word.toLowerCase().trim();
-              _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, {
-                "native_chunk": nativeChunkUrl,
-                "target_chunk": targetChunkUrl,
-              });
+              word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
+              // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
+              if (wordsToRepeat.any((element) => word.contains(element))) {
+                word = wordsToRepeat.firstWhere((element) => word.contains(element));
+                _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
+                  "native_chunk": nativeChunkUrl,
+                  "target_chunk": targetChunkUrl,
+                });
+              }
             }
           }
         }
@@ -246,7 +251,7 @@ Future<List<String>> parseAndCreateScript(
       }
     }
   }
-  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage);
+  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category);
 
   int overdueWordsToUseLength = overdueWordDocRefs.length > 5 ? 5 : overdueWordDocRefs.length;
 
@@ -254,6 +259,7 @@ Future<List<String>> parseAndCreateScript(
 
   final overdueSequences = <List<String>>[];
   for (var docRef in overdueWordDocRefs) {
+    print('constructing overdue sequence');
     final wordUrls = await getAudioUrlsForWord(docRef);
     if (wordUrls != null && wordUrls['native_chunk'] != null && wordUrls['target_chunk'] != null) {
       print("WordUrls: $wordUrls");
@@ -282,7 +288,7 @@ Future<List<String>> parseAndCreateScript(
   Future<List<fsrs.Card>> getAllCards(List<String> words) async {
     List<fsrs.Card> cards = [];
     for (String word in words) {
-      final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(word);
+      final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
 
       // Get the document snapshot
       final docSnapshot = await collectionRef.get();
@@ -316,9 +322,10 @@ Future<void> _appendRepetitionUrlsToWordDoc(
   String userId,
   String targetLanguage,
   String word,
+  String category,
   Map<String, dynamic> urlsMap,
 ) async {
-  final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(word);
+  final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
 
   await docRef.set(
     {
