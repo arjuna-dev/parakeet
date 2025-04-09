@@ -1,4 +1,5 @@
 String accessBigJson(Map<String, dynamic> listWithBigJson, String filename) {
+  print("listWithBigJson: $listWithBigJson");
   final pattern = RegExp(r'(\D+)|(\d+)');
   final matches = pattern.allMatches(filename);
 

@@ -169,8 +169,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
           // Convert to a properly handled Future chain
-          final script =
-              await script_generator.parseAndCreateScript(_existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
+          final script = await script_generator.parseAndCreateScript(
+              _existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
 
           if (mounted) {
             setState(() {
@@ -263,8 +263,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      _script =
-          await script_generator.parseAndCreateScript(data, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage);
+      _script = await script_generator.parseAndCreateScript(
+          data, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -354,6 +354,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _existingBigJson!,
       widget.dialogue,
       _repetitionsMode.value,
+      widget.category ?? 'Custom Lesson',
     );
 
     // Build files to compare map
@@ -476,7 +477,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (!mounted || _isDisposing) return;
 
       // Save script to Firestore
-      await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue);
+      await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue, widget.category ?? 'Custom Lesson');
 
       // Exit if widget is no longer mounted
       if (!mounted || _isDisposing) return;
