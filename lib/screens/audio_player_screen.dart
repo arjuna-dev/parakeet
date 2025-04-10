@@ -85,6 +85,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // Data variables
   List<dynamic> _script = [];
+  Map<String, dynamic> _overdueWordsUsed = {};
   String _currentTrack = '';
   Map<String, dynamic>? _latestSnapshot;
   Map<int, String> _filesToCompare = {};
@@ -169,12 +170,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
           // Convert to a properly handled Future chain
-          final script = await script_generator.parseAndCreateScript(
+          final scriptData = await script_generator.parseAndCreateScript(
               _existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
 
           if (mounted) {
             setState(() {
-              _script = script;
+              _script = scriptData['script'] ?? [];
+              _overdueWordsUsed = scriptData['overdueWordsUsed'] ?? [];
               _currentTrack = _script.isNotEmpty ? _script[0] : '';
             });
           } else {
@@ -198,6 +200,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Step 7: Initialize playlist
       await _initializePlaylist();
+      print("Overdue words used: $_overdueWordsUsed");
 
       // Step 8: For generating mode, start creation process
       if (widget.generating) {
@@ -263,8 +266,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      _script = await script_generator.parseAndCreateScript(
+      final scriptData = await script_generator.parseAndCreateScript(
           data, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
+
+      _script = scriptData['script'] ?? [];
+      _overdueWordsUsed = scriptData['overdueWordsUsed'] ?? [];
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
