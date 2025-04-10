@@ -8,13 +8,14 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 import '../screens/audio_player_s_utils.dart' show accessBigJson;
 
-Future<void> ensureFirestoreWords(String userId, String targetLanguage, String category, List<dynamic> words) async {
+Future<Map<String, DocumentReference>> ensureFirestoreWords(String userId, String targetLanguage, String category, List<dynamic> words) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
+  Map<String, DocumentReference> wordDocRefs = {};
 
   for (var word in words) {
     word = word.toLowerCase().trim();
     final docSnap = await docRef.collection(category).doc(word).get();
-
+    wordDocRefs[word] = docRef.collection(category).doc(word);
     if (!docSnap.exists) {
       WordCard newCard = WordCard(
         word: word,
@@ -31,6 +32,7 @@ Future<void> ensureFirestoreWords(String userId, String targetLanguage, String c
       await docRef.collection(category).doc(word).set(newCard.toFirestore());
     }
   }
+  return wordDocRefs;
 }
 
 Future<List<String>> getOverdueWords(String userId, String targetLanguage, String category) async {
@@ -80,7 +82,7 @@ Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String target
   final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category);
 
   final nowString = DateTime.now().toIso8601String();
-  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).get();
+  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).limit(5).get();
 
   return querySnapshot.docs.map((doc) => doc.reference).toList();
 }
@@ -94,10 +96,10 @@ Future<Map<String, dynamic>?> getAudioUrlsForWord(DocumentReference docRef) asyn
 
   final data = docSnapshot.data() as Map<String, dynamic>;
 
-  return data['audio_urls'];
+  return data;
 }
 
-Future<List<String>> parseAndCreateScript(
+Future<Map<String, dynamic>> parseAndCreateScript(
   Map<String, dynamic> bigJson,
   List<dynamic> wordsToRepeat,
   List<dynamic> dialogue,
@@ -110,7 +112,9 @@ Future<List<String>> parseAndCreateScript(
 ) async {
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
-  await ensureFirestoreWords(userId, targetLanguage, category, wordsToRepeat);
+  Map<String, DocumentReference> overdueWordsUsed = {};
+
+  overdueWordsUsed = await ensureFirestoreWords(userId, targetLanguage, category, wordsToRepeat);
 
   final overdueList = await getOverdueWords(userId, targetLanguage, category);
   final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
@@ -253,19 +257,22 @@ Future<List<String>> parseAndCreateScript(
   }
   final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category);
 
-  int overdueWordsToUseLength = overdueWordDocRefs.length > 5 ? 5 : overdueWordDocRefs.length;
-
-  int insertOverdueEvery = (script.length / overdueWordsToUseLength).round();
+  int overdueWordsToUseLength = overdueWordDocRefs.length;
+  int insertOverdueEvery = 0;
+  if (overdueWordsToUseLength > 0) {
+    insertOverdueEvery = (script.length / overdueWordsToUseLength).round();
+  }
 
   final overdueSequences = <List<String>>[];
   for (var docRef in overdueWordDocRefs) {
     print('constructing overdue sequence');
     final wordUrls = await getAudioUrlsForWord(docRef);
-    if (wordUrls != null && wordUrls['native_chunk'] != null && wordUrls['target_chunk'] != null) {
+    if (wordUrls != null && wordUrls['audio_urls'] != null && wordUrls['audio_urls']['native_chunk'] != null && wordUrls['audio_urls']['target_chunk'] != null) {
       print("WordUrls: $wordUrls");
+      overdueWordsUsed.addAll({wordUrls['word']: docRef});
       List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
-        wordUrls['native_chunk'],
-        wordUrls['target_chunk'],
+        wordUrls['audio_urls']['native_chunk'],
+        wordUrls['audio_urls']['target_chunk'],
       );
       overdueSequences.add(overdueChunkSequence.toList());
     }
@@ -315,7 +322,7 @@ Future<List<String>> parseAndCreateScript(
   firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
   print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
 
-  return script;
+  return {"script": script, "overdueWordsUsed": overdueWordsUsed};
 }
 
 Future<void> _appendRepetitionUrlsToWordDoc(

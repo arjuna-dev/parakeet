@@ -59,7 +59,7 @@ class PlaylistGenerator {
     // Dispose the ValueNotifier
     repetitionModeNotifier.dispose();
 
-    return result;
+    return result['script'] ?? [];
   }
 
   /// Filter script to remove files that start with '$'
