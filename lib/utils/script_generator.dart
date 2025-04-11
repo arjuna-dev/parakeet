@@ -78,13 +78,15 @@ String formConversationAudioUrl(String documentId, String fileName) {
       "$documentId/$fileName.mp3";
 }
 
-Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage, String category) async {
+Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage, String category, Map<String, DocumentReference> overdueWordsUsed) async {
   final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category);
 
   final nowString = DateTime.now().toIso8601String();
-  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).limit(5).get();
+  // Fetch more words initially to ensure we get up to 5 after filtering, sorted by due date
+  final querySnapshot = await collectionRef.where('due', isLessThanOrEqualTo: nowString).orderBy('due', descending: false).limit(10).get();
 
-  return querySnapshot.docs.map((doc) => doc.reference).toList();
+  // Filter out words that are already in overdueWordsUsed and take up to 5
+  return querySnapshot.docs.where((doc) => !overdueWordsUsed.containsKey(doc.data()['word'])).take(5).map((doc) => doc.reference).toList();
 }
 
 Future<Map<String, dynamic>?> getAudioUrlsForWord(DocumentReference docRef) async {
@@ -255,7 +257,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       }
     }
   }
-  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category);
+  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category, overdueWordsUsed);
 
   int overdueWordsToUseLength = overdueWordDocRefs.length;
   int insertOverdueEvery = 0;
