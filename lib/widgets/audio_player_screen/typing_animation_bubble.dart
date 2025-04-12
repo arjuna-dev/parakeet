@@ -32,7 +32,6 @@ class TypingAnimationBubble extends StatefulWidget {
 class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with SingleTickerProviderStateMixin {
   String _displayedText = '';
   String _displayedSubtitle = '';
-  bool _isTyping = false;
   bool _showTypingIndicator = false;
   bool _showSubtitle = false;
   Timer? _typingTimer;
@@ -69,7 +68,6 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
   void _startTypingAnimation() {
     if (mounted) {
       setState(() {
-        _isTyping = true;
         _showTypingIndicator = false;
       });
 
@@ -84,8 +82,6 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
           charIndex++;
         } else {
           timer.cancel();
-          _isTyping = false;
-
           // Start showing subtitle after main text is complete
           if (widget.subtitle != null) {
             _startSubtitleAnimation();

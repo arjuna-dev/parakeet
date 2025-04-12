@@ -18,7 +18,7 @@ class BottomMenuBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
           IconButton(
-            icon: const Icon(Icons.favorite),
+            icon: const Icon(Icons.favorite, size: 24),
             onPressed: () {
               if (currentRoute != '/favorite') {
                 Navigator.pushReplacementNamed(context, '/favorite');
@@ -27,7 +27,7 @@ class BottomMenuBar extends StatelessWidget {
             color: currentRoute == '/favorite' ? colorScheme.primary : null,
           ),
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.library_add, size: 24),
             onPressed: () {
               if (currentRoute != '/create_lesson') {
                 Navigator.pushReplacementNamed(context, '/create_lesson');
@@ -36,14 +36,14 @@ class BottomMenuBar extends StatelessWidget {
             color: currentRoute == '/create_lesson' ? colorScheme.primary : null,
           ),
           IconButton(
-            icon: const Icon(Icons.library_music),
+            icon: const Icon(Icons.person, size: 24),
             onPressed: () {
-              if (currentRoute != '/library') {
-                Navigator.pushReplacementNamed(context, '/library');
+              if (currentRoute != '/profile') {
+                Navigator.pushReplacementNamed(context, '/profile');
               }
             },
-            color: currentRoute == '/library' ? colorScheme.primary : null,
-          )
+            color: currentRoute == '/profile' ? colorScheme.primary : null,
+          ),
         ],
       ),
     );

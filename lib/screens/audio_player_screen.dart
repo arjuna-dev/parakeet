@@ -1,36 +1,30 @@
-import 'dart:math';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:parakeet/services/ad_service.dart';
-import 'package:parakeet/services/file_duration_update_service.dart';
-import 'package:parakeet/services/update_firestore_service.dart';
-import 'package:parakeet/utils/save_analytics.dart';
-import 'package:parakeet/utils/script_generator.dart' as script_generator;
-import 'package:parakeet/utils/speech_recognition.dart';
-import 'package:parakeet/widgets/position_data.dart';
-import 'package:parakeet/widgets/animated_dialogue_list.dart';
-import 'package:parakeet/widgets/position_slider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rxdart/rxdart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:string_similarity/string_similarity.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
-import '../utils/constants.dart';
-import 'package:parakeet/main.dart';
-import 'package:speech_to_text/speech_to_text.dart';
-import '../utils/vosk_recognizer.dart';
-import 'package:parakeet/utils/supported_language_codes.dart';
-import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parakeet/services/audio_player_service.dart';
+import 'package:parakeet/services/speech_recognition_service.dart';
+import 'package:parakeet/services/audio_generation_service.dart';
+import 'package:parakeet/services/audio_duration_service.dart';
 import 'package:parakeet/services/streak_service.dart';
-import 'package:parakeet/widgets/streak_display.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../utils/nickname_generator.dart' show getCurrentCallCount, maxCalls;
-import 'package:http/http.dart' as http;
+import 'package:parakeet/services/update_firestore_service.dart';
+import 'package:parakeet/services/file_duration_update_service.dart';
+import 'package:parakeet/utils/audio_url_builder.dart';
+import 'package:parakeet/utils/playlist_generator.dart';
+import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
+import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
+import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
+import 'package:parakeet/widgets/audio_player_screen/speech_recognition_toggle.dart';
+import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/screens/lesson_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:parakeet/main.dart';
+import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
+  final String? category;
   final String documentID;
   final List<dynamic> dialogue;
   final String userID;
@@ -48,11 +42,11 @@ class AudioPlayerScreen extends StatefulWidget {
     // Force garbage collection of any shared services
     UpdateFirestoreService.forceCleanup();
     FileDurationUpdate.forceCleanup();
-    // Clear any cached resources that might persist between instances
   }
 
   const AudioPlayerScreen({
     Key? key,
+    this.category,
     required this.documentID,
     required this.dialogue,
     required this.userID,
@@ -70,428 +64,471 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  UpdateFirestoreService? firestoreService;
-  FileDurationUpdate? fileDurationUpdate;
-  late AudioPlayer player;
-  late ConcatenatingAudioSource playlist;
-  late AnalyticsManager analyticsManager;
-  // late List<AudioSource> couldNotListenFeedbackAudio;
-  late AudioSource audioCue;
-
-  // Flag to track if the widget is being disposed or navigated away from
-  bool _isDisposing = false;
-
-  String currentTrack = '';
-  String? previousTargetTrack;
-  String? targetPhraseToCompareWith;
-  String? voiceLanguageCode;
-  bool isLanguageSupported = false;
-  final ValueNotifier<bool> isPlaying = ValueNotifier<bool>(false);
-  int updateNumber = 0;
-  bool speechRecognitionActive = false;
-  bool? speechRecognitionSupported;
-  Map<String, dynamic>? latestSnapshot;
-  Map<int, String> filesToCompare = {};
-  Map<String, dynamic>? existingBigJson;
-  bool hasNicknameAudio = false;
-  bool addressByNickname = true;
-  bool isLoading = false;
-  double _playbackSpeed = 1.0;
-  bool _playlistInitialized = false;
-
-  Duration totalDuration = Duration.zero;
-  Duration finalTotalDuration = Duration.zero;
-  List<Duration> trackDurations = [];
-  List<dynamic> script = [];
-
-  SpeechToText speechInstance = SpeechToText();
-  String liveTextSpeechToText = '';
-
-  Map<String, dynamic>? audioDurations = {};
-  Future<Map<String, dynamic>>? cachedAudioDurations;
-
-  int previousIndex = -1;
-  bool _hasPremium = false;
-  bool _hasShownInitialAd = false;
-
-  late SpeechToTextUltra speechToTextUltra;
-
-  bool isSliderMoving = false;
-
-  bool _isSkipping = false;
-
-  SpeechService? voskSpeechService;
-
+  // Services
+  late AudioPlayerService _audioPlayerService;
+  late SpeechRecognitionService _speechRecognitionService;
+  late AudioGenerationService _audioGenerationService;
+  late AudioDurationService _audioDurationService;
+  late PlaylistGenerator _playlistGenerator;
   final StreakService _streakService = StreakService();
-  bool _showStreak = false;
+  UpdateFirestoreService? _firestoreService;
+  FileDurationUpdate? _fileDurationUpdate;
 
+  // State variables
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
+  final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  bool _isDisposing = false;
+  bool _showStreak = false;
+  bool _hasNicknameAudio = false;
+  bool _addressByNickname = true;
+  bool _isSliderMoving = false;
+  int _updateNumber = 0;
 
-  StreamSubscription? _playerStateSubscription;
-  StreamSubscription? _currentIndexSubscription;
+  // Data variables
+  List<dynamic> _script = [];
+  Map<String, dynamic> _overdueWordsUsed = {};
+  String _currentTrack = '';
+  Map<String, dynamic>? _latestSnapshot;
+  Map<int, String> _filesToCompare = {};
+  Map<String, dynamic>? _existingBigJson;
+  bool _hasPremium = false;
 
   @override
   void initState() {
     super.initState();
-    player = AudioPlayer();
-    player.setSpeed(_playbackSpeed);
-    playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
-    if (!widget.generating) {
-      script = script_generator.createFirstScript(widget.dialogue);
-      currentTrack = script[0];
-    }
-    analyticsManager = AnalyticsManager(widget.userID, widget.documentID);
-    analyticsManager.loadAnalyticsFromFirebase();
-    _listenToPlayerStreams();
-    cachedAudioDurations = getAudioDurationsFromNarratorStorage();
-    firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, updatePlaylist, updateTrackLength, saveSnapshot);
-    fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, calculateTotalDurationAndUpdateTrackDurations);
-    getExistingBigJson();
-    updateHasNicknameAudio().then((_) {
-      _initPlaylist();
-    });
-    _loadAddressByNicknamePreference();
-    speechToTextUltra = SpeechToTextUltra(
-      languageName: widget.targetLanguage,
-      ultraCallback: (String liveText, String finalText, bool isListening) {
-        // Handle the callback
-        print('Live Text: $liveText');
-        print('Final Text: $finalText');
-        print('Is Listening: $isListening');
-        print('speechRecognitionActive: $speechRecognitionActive');
+
+    // Initialize services
+    _audioPlayerService = AudioPlayerService(
+      documentID: widget.documentID,
+      userID: widget.userID,
+      hasPremium: _hasPremium,
+    );
+
+    _speechRecognitionService = SpeechRecognitionService(
+      targetLanguage: widget.targetLanguage,
+      nativeLanguage: widget.nativeLanguage,
+      onLiveTextChanged: (String text) {
         if (mounted) {
-          setState(() {
-            liveTextSpeechToText = liveText;
-          });
-        } else {
-          print('State not mounted for liveTextSpeechToText');
+          setState(() {});
         }
       },
     );
-    _repetitionsMode.addListener(() {
-      updatePlaylistOnTheFly();
-    });
-    isPlaying.addListener(() async {
-      if (isPlaying.value) {
-        await _play();
-      } else {
-        await _pause();
-      }
-    });
 
-    // If generating is true, create script and make second API call
-    if (widget.generating) {
-      _createScriptAndMakeSecondApiCall();
+    _audioGenerationService = AudioGenerationService(
+      documentID: widget.documentID,
+      userID: widget.userID,
+      title: widget.title,
+      nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
+      languageLevel: widget.languageLevel,
+      wordsToRepeat: widget.wordsToRepeat,
+      scriptDocumentId: widget.scriptDocumentId,
+    );
+
+    _audioDurationService = AudioDurationService(
+      documentID: widget.documentID,
+      nativeLanguage: widget.nativeLanguage,
+    );
+
+    // Initialize PlaylistGenerator early to avoid LateInitializationError
+    _playlistGenerator = PlaylistGenerator(
+      documentID: widget.documentID,
+      userID: widget.userID,
+      nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
+      hasNicknameAudio: false, // Will be updated later
+      addressByNickname: true, // Will be updated later
+      wordsToRepeat: widget.wordsToRepeat,
+    );
+
+    // Initialize Firestore services
+    _firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, _updatePlaylist, _updateTrackLength, _saveSnapshot);
+
+    _fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, _calculateTotalDurationAndUpdateTrackDurations);
+
+    // Setup callbacks
+    _audioPlayerService.onTrackChanged = _handleTrackChange;
+    _audioPlayerService.onLessonCompleted = _handleLessonCompletion;
+
+    // Setup listeners
+    _repetitionsMode.addListener(_updatePlaylistOnTheFly);
+
+    // Begin the sequential initialization process
+    _sequentialInitialization();
+  }
+
+  // Sequentially handle all initialization steps in the correct order
+  void _sequentialInitialization() async {
+    try {
+      // Step 1: Get existing big JSON
+      await _getExistingBigJson();
+
+      // Step 2: Check premium status in parallel
+      _checkPremiumStatus();
+
+      // Step 3: Load script based on mode
+      if (!widget.generating) {
+        // For non-generating mode, we need to wait for script creation
+        if (_existingBigJson != null) {
+          // Convert to a properly handled Future chain
+          final scriptData = await script_generator.parseAndCreateScript(
+              _existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
+
+          if (mounted) {
+            setState(() {
+              _script = scriptData['script'] ?? [];
+              _overdueWordsUsed = scriptData['overdueWordsUsed'] ?? [];
+              _currentTrack = _script.isNotEmpty ? _script[0] : '';
+            });
+          } else {
+            return; // Exit if widget is no longer mounted
+          }
+        } else {
+          print("Error: _existingBigJson is null for non-generating mode");
+        }
+      }
+
+      // Step 4: Load preferences
+      await _loadAddressByNicknamePreference();
+
+      // Step 5: Update nickname audio status
+      await _updateHasNicknameAudio();
+
+      if (!mounted) return;
+
+      // Step 6: Update playlist generator with latest values
+      _updatePlaylistGenerator();
+
+      // Step 7: Initialize playlist
+      await _initializePlaylist();
+      print("Overdue words used: $_overdueWordsUsed");
+
+      // Step 8: For generating mode, start creation process
+      if (widget.generating) {
+        _createScriptAndMakeSecondApiCall();
+      }
+    } catch (e) {
+      print("Error in sequential initialization: $e");
     }
   }
 
-  /// Creates the script document and makes the second API call to generate audio
+  // Update PlaylistGenerator with current values
+  void _updatePlaylistGenerator() {
+    _playlistGenerator = PlaylistGenerator(
+      documentID: widget.documentID,
+      userID: widget.userID,
+      nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
+      hasNicknameAudio: _hasNicknameAudio,
+      addressByNickname: _addressByNickname,
+      wordsToRepeat: widget.wordsToRepeat,
+    );
+  }
+
+  Future<void> _initializePlaylist() async {
+    if (_audioPlayerService.playlistInitialized || _isDisposing) {
+      return;
+    }
+
+    // Filter script to remove files that start with '$'
+    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    // Generate audio sources
+    List<AudioSource> audioSources = await _playlistGenerator.generateAudioSources(filteredScript);
+
+    // Initialize playlist
+    await _audioPlayerService.initializePlaylist(audioSources);
+
+    // Calculate track durations
+    // List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    // _audioPlayerService.setTrackDurations(trackDurations);
+
+    // Build files to compare map for speech recognition
+    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+  }
+
+  // Update playlist from Firestore snapshot
+  void _updatePlaylist(QuerySnapshot snapshot) async {
+    // Don't update if we're disposing or resources are already gone
+    if (_isDisposing || _firestoreService == null) {
+      print("Skipping updatePlaylist because widget is disposing");
+      return;
+    }
+
+    try {
+      if (snapshot.docs.isEmpty) {
+        print("Error: No documents in snapshot");
+        return;
+      }
+
+      final data = snapshot.docs[0].data();
+      if (data == null || data is! Map<String, dynamic> || !data.containsKey("dialogue")) {
+        print("Error: Invalid data format in snapshot");
+        return;
+      }
+
+      final scriptData = await script_generator.parseAndCreateScript(
+          data, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
+
+      _script = scriptData['script'] ?? [];
+      _overdueWordsUsed = scriptData['overdueWordsUsed'] ?? [];
+    } catch (e) {
+      print("Error parsing and creating script: $e");
+      return;
+    }
+    print(_script);
+
+    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+
+    // Filter script to remove files that start with '$'
+    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    // Get new script items that aren't already in the playlist
+    var newScript = List.from(filteredScript);
+    newScript.removeRange(0, _audioPlayerService.playlist.children.length);
+
+    // Generate audio sources for new items
+    List<AudioSource> newAudioSources = await _playlistGenerator.generateAudioSources(newScript);
+
+    // Update playlist
+    await _audioPlayerService.addToPlaylist(newAudioSources);
+    // Calculate track durations
+    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    _audioPlayerService.setTrackDurations(trackDurations);
+
+    _audioPlayerService.setFinalTotalDuration();
+
+    // Increment update number
+    _updateNumber++;
+    print("Update number: $_updateNumber");
+  }
+
+  // Save snapshot from Firestore
+  void _saveSnapshot(QuerySnapshot snapshot) {
+    if (_isDisposing) return;
+
+    if (snapshot.docs.isNotEmpty) {
+      _latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
+    }
+  }
+
+  // Update track length from Firestore
+  Future<void> _updateTrackLength() async {
+    if (_isDisposing) return;
+
+    CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
+    QuerySnapshot querySnap = await colRef.get();
+    if (querySnap.docs.isNotEmpty) {
+      await _calculateTotalDurationAndUpdateTrackDurations(querySnap);
+    }
+  }
+
+  // Calculate total duration and update track durations
+  Future<void> _calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
+    if (_isDisposing) return;
+
+    // Filter script to remove files that start with '$'
+    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+
+    // Calculate track durations
+    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    _audioPlayerService.setTrackDurations(trackDurations);
+
+    // Set final total duration after a certain number of updates or if not generating
+    if ((_updateNumber >= 4 || !widget.generating) && !_isDisposing) {
+      print("Setting final total duration. Update number: $_updateNumber, generating: ${widget.generating}");
+      _audioPlayerService.setFinalTotalDuration();
+    }
+  }
+
+  Future<void> _updatePlaylistOnTheFly() async {
+    if (_isDisposing || widget.generating) {
+      return;
+    }
+
+    bool wasPlaying = _audioPlayerService.isPlaying.value;
+    if (wasPlaying) {
+      _audioPlayerService.isPlaying.value = false;
+    }
+
+    if (_existingBigJson == null) {
+      print("Error: Required JSON data is null.");
+      return;
+    }
+
+    // Generate script with repetition mode
+    _script = await _playlistGenerator.generateScriptWithRepetitionMode(
+      _existingBigJson!,
+      widget.dialogue,
+      _repetitionsMode.value,
+      widget.category ?? 'Custom Lesson',
+    );
+
+    // Build files to compare map
+    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+
+    // Filter script
+    List<dynamic> filteredScript = _playlistGenerator.filterScript(_script);
+
+    // Generate audio sources
+    List<AudioSource> audioSources = await _playlistGenerator.generateAudioSources(filteredScript);
+
+    // Update playlist
+    await _audioPlayerService.updatePlaylist(audioSources);
+
+    // Calculate track durations
+    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    _audioPlayerService.setTrackDurations(trackDurations);
+
+    _audioPlayerService.setFinalTotalDuration();
+
+    // Resume playback if it was playing before
+    if (wasPlaying) {
+      _audioPlayerService.isPlaying.value = true;
+    }
+  }
+
+  void _handleTrackChange(int index) {
+    if (_isDisposing) return;
+
+    if (index < _script.length && mounted) {
+      String newTrack = _script[index];
+
+      setState(() {
+        _currentTrack = newTrack;
+      });
+
+      if (_speechRecognitionActive.value) {
+        _handleTrackChangeToCompareSpeech(index);
+      }
+    }
+  }
+
+  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+    if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
+
+    if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
+      final audioFileName = _filesToCompare[currentIndex];
+      if (audioFileName == null) {
+        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+        return;
+      }
+
+      String targetPhrase;
+      try {
+        if (widget.generating && _latestSnapshot != null) {
+          targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
+        } else if (_existingBigJson != null) {
+          targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
+        } else {
+          print("Error: Required JSON data is null.");
+          return;
+        }
+
+        _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
+
+        // Capture the current speech text
+        final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
+
+        // Wait for user to speak and then compare
+        Future.delayed(const Duration(milliseconds: 4500), () async {
+          bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
+
+          // Pause playback to provide feedback
+          if (_audioPlayerService.isPlaying.value) {
+            await _audioPlayerService.pause(analyticsOn: false);
+          }
+
+          // Provide feedback
+          await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
+
+          // Resume playback
+          if (!_isDisposing) {
+            _audioPlayerService.isPlaying.value = true;
+          }
+        });
+      } catch (e) {
+        print("Error in speech comparison: $e");
+      }
+    }
+  }
+
   Future<void> _createScriptAndMakeSecondApiCall() async {
     try {
       // Wait for dialogue to be fully generated
-      await _waitForCompleteDialogue();
+      _latestSnapshot = await _audioGenerationService.waitForCompleteDialogue();
 
       // If widget is no longer mounted, exit early
-      if (!mounted) return;
+      if (!mounted || _isDisposing) return;
 
       // If we don't have the latest snapshot, we can't proceed
-      if (latestSnapshot == null) {
+      if (_latestSnapshot == null) {
         print('Error: No dialogue data available for script creation');
         return;
       }
 
       // Get the complete dialogue from the latest snapshot
-      List<dynamic> completeDialogue = latestSnapshot!['dialogue'] ?? [];
-      print('completeDialogue: $completeDialogue');
+      List<dynamic> completeDialogue = _latestSnapshot!['dialogue'] ?? [];
 
       // Ensure script is created with the complete dialogue
-      if (script.isEmpty) {
-        script = script_generator.createFirstScript(completeDialogue);
+      if (_script.isEmpty) {
+        _script = _playlistGenerator.generateScript(completeDialogue);
         if (mounted) {
           setState(() {
-            currentTrack = script.isNotEmpty ? script[0] : '';
+            _currentTrack = _script.isNotEmpty ? _script[0] : '';
           });
         }
       }
 
       // Exit if widget is no longer mounted
-      if (!mounted) return;
+      if (!mounted || _isDisposing) return;
 
       // Save script to Firestore
-      DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('script-${widget.userID}').doc(widget.scriptDocumentId);
-
-      await docRef.set({
-        "script": script,
-        "title": widget.title,
-        "dialogue": completeDialogue,
-        "native_language": widget.nativeLanguage,
-        "target_language": widget.targetLanguage,
-        "language_level": widget.languageLevel,
-        "words_to_repeat": widget.wordsToRepeat,
-        "user_ID": widget.userID,
-        "timestamp": FieldValue.serverTimestamp(),
-      });
+      await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue, widget.category ?? 'Custom Lesson');
 
       // Exit if widget is no longer mounted
-      if (!mounted) return;
-
-      // Make the second API call using the data from latestSnapshot
-      http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: jsonEncode(<String, dynamic>{
-          "document_id": widget.documentID,
-          "dialogue": completeDialogue,
-          "title": latestSnapshot!['title'] ?? widget.title,
-          "speakers": latestSnapshot!["speakers"] ?? [],
-          "user_ID": widget.userID,
-          "native_language": widget.nativeLanguage,
-          "target_language": widget.targetLanguage,
-          "length": completeDialogue.length.toString(),
-          "language_level": widget.languageLevel,
-          "voice_1_id": latestSnapshot!["voice_1_id"] ?? "",
-          "voice_2_id": latestSnapshot!["voice_2_id"] ?? "",
-          "tts_provider": widget.targetLanguage == "Azerbaijani" ? "3" : "1",
-          "words_to_repeat": widget.wordsToRepeat,
-        }),
-      );
+      if (!mounted || _isDisposing) return;
 
       // Add user to active creation
-      await _addUserToActiveCreation();
+      await _audioGenerationService.addUserToActiveCreation();
 
-      // Exit if widget is no longer mounted
-      if (!mounted) return;
+      // Make the second API call
+      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
 
-      // Instead of waiting for a fixed 10 seconds, we'll initialize the playlist
-      // after all dialogue is displayed. The _allDialogueDisplayed callback will
-      // handle this for us.
+      // Initialize playlist after a delay to allow audio files to be generated
 
-      // We'll still initialize the playlist here as a fallback, but with a longer timeout
-      // in case the callback doesn't trigger for some reason
-      Future.delayed(const Duration(seconds: 30), () {
-        if (mounted && !_playlistInitialized) {
-          print("Fallback: Initializing playlist after timeout");
-          _initPlaylist();
-        }
-      });
+      if (mounted && !_audioPlayerService.playlistInitialized) {
+        print("Fallback: Initializing playlist after timeout");
+        _initializePlaylist();
+      }
     } catch (e) {
       print('Error creating script and making second API call: $e');
     }
   }
 
-  /// Waits for the dialogue to be fully generated
-  Future<void> _waitForCompleteDialogue() async {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    bool isDialogueComplete = false;
-    int attempts = 0;
-    const maxAttempts = 60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
-
-    while (!isDialogueComplete && attempts < maxAttempts && mounted) {
-      attempts++;
-
-      try {
-        // Get the latest dialogue from Firestore
-        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').limit(1).get();
-
-        if (querySnapshot.docs.isNotEmpty) {
-          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
-
-          // Check if dialogue is complete (has the expected number of turns)
-          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
-            List<dynamic> dialogueData = data['dialogue'];
-
-            // Store the latest snapshot for later use
-            if (mounted) {
-              setState(() {
-                latestSnapshot = data;
-              });
-            } else {
-              // If not mounted anymore, exit early
-              return;
-            }
-
-            // Get the expected length from the lesson_detail_screen
-            String expectedLengthStr = data['length'] ?? '0';
-            int expectedLength = int.tryParse(expectedLengthStr) ?? 0;
-
-            // If no expected length is found, try to use a default value
-            if (expectedLength <= 0) {
-              expectedLength = 4; // Default expected length
-            }
-
-            // Count only valid dialogue entries (non-empty)
-            int validEntriesCount = 0;
-            for (var entry in dialogueData) {
-              if (entry is Map && entry.containsKey('target_language') && entry.containsKey('native_language') && entry['target_language'] != null && entry['native_language'] != null) {
-                validEntriesCount++;
-              }
-            }
-
-            print('Expected dialogue length: $expectedLength');
-            print('Current dialogue length: ${dialogueData.length}');
-            print('Valid dialogue entries: $validEntriesCount');
-
-            // If we have the expected number of valid dialogue turns, we're done
-            if (validEntriesCount >= expectedLength && expectedLength > 0) {
-              isDialogueComplete = true;
-
-              // Create the script with the complete dialogue
-              if (mounted) {
-                setState(() {
-                  script = script_generator.createFirstScript(dialogueData);
-                  currentTrack = script.isNotEmpty ? script[0] : '';
-                });
-              }
-
-              break;
-            }
-          }
-        }
-
-        // Check if widget is still mounted before waiting
-        if (!mounted) return;
-
-        // Wait before checking again
-        await Future.delayed(const Duration(seconds: 2));
-      } catch (e) {
-        print('Error checking dialogue completion: $e');
-
-        // Check if widget is still mounted before waiting
-        if (!mounted) return;
-
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    }
-
-    if (!isDialogueComplete && mounted) {
-      print('Warning: Dialogue generation timed out after $attempts attempts');
-    } else if (isDialogueComplete && mounted) {
-      print('Dialogue generation completed successfully after $attempts attempts');
+  Future<void> _getExistingBigJson() async {
+    if (!widget.generating) {
+      _existingBigJson = await _audioGenerationService.getExistingBigJson();
     }
   }
 
-  /// Adds the current user to the active creation collection
-  Future<void> _addUserToActiveCreation() async {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
-    await firestore.runTransaction((transaction) async {
-      DocumentSnapshot snapshot = await transaction.get(docRef);
-      var userData = {"userId": widget.userID, "documentId": widget.documentID, "timestamp": Timestamp.now()};
-      if (snapshot.exists) {
-        transaction.update(docRef, {
-          "users": FieldValue.arrayUnion([userData]),
-        });
-      } else {
-        transaction.set(docRef, {
-          "users": FieldValue.arrayUnion([userData]),
-        });
-      }
-    }).catchError((error) {
-      print('Failed to add user to active creation: $error');
-    });
-  }
-
-  String? getVoskModelUrl(String languageName) {
-    // Get full language code (e.g., "en-US")
-    final fullCode = supportedLanguageCodes[languageName];
-    if (fullCode == null) {
-      return null;
-    }
-
-    // Extract base language code (e.g., "en" from "en-US")
-    if (fullCode == 'en-US' || fullCode == 'en-GB') {
-      return voskModelUrls[fullCode];
-    }
-
-    final partialCode = fullCode.split('-')[0].toLowerCase();
-
-    // Return URL if exists, null otherwise
-    return voskModelUrls[partialCode];
-  }
-
-  Future<void> _initVosk() async {
-    try {
-      VoskFlutterPlugin vosk = VoskFlutterPlugin.instance();
-      String? voskModelUrl = getVoskModelUrl(widget.targetLanguage);
-      if (voskModelUrl == null) {
-        _showLanguageNotSupportedDialog();
-        return;
-      } else {
-        isLanguageSupported = true;
-      }
-
-      Future<String> enSmallModelPath = ModelLoader().loadFromNetwork(voskModelUrl);
-      Future<Model> voskModel = vosk.createModel(await enSmallModelPath);
-
-      final recognizer = await vosk.createRecognizer(
-        model: await voskModel,
-        sampleRate: 16000,
-      );
-
-      voskSpeechService = await vosk.initSpeechService(recognizer);
-      print("initSpeechService called");
-
-      if (mounted && voskSpeechService != null) {
-        voskSpeechService!.onResult().forEach((result) {
-          if (mounted) {
-            final String resultText = jsonDecode(result)['text'];
-            print("result: $resultText");
-            setState(() {
-              liveTextSpeechToText = resultText;
-            });
-          }
-        });
-        await voskSpeechService!.start();
-      }
-    } catch (e) {
-      print('Error initializing Vosk: $e');
-      if (mounted) {
-        setState(() {
-          isLanguageSupported = false;
-          speechRecognitionActive = false;
-        });
-      }
-    }
-  }
-
-  void initializeSpeechRecognition() async {
-    // If device is andoird initialize vosk
-    if (!kIsWeb && Platform.isAndroid) {
-      await _initVosk();
-      return;
-    }
-    // TODO: Error handling
-    // Initialize the speech recognition
-    SpeechToText speechRecognition = await speechToTextUltra.startListening();
-
-    // TODO: Error handling
-    // Check if the specified language is supported
-    isLanguageSupported = await speechToTextUltra.checkIfLanguageSupported(speechRecognition);
-
-    if (!isLanguageSupported) {
-      _showLanguageNotSupportedDialog();
-      return;
-    }
-    //_initFeedbackAudioSources();
-  }
-
-  updateHasNicknameAudio() async {
+  Future<void> _updateHasNicknameAudio() async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_1_nickname.mp3?timestamp=$timestamp';
-    hasNicknameAudio = await urlExists(
-      url,
-    );
+    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_1_nickname.mp3?timestamp=$timestamp';
+    _hasNicknameAudio = await AudioUrlBuilder.urlExists(url);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _loadAddressByNicknamePreference() async {
+    final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        hasNicknameAudio = hasNicknameAudio;
+        _addressByNickname = prefs.getBool('addressByNickname') ?? true;
       });
-    } else {
-      print('State not mounted for hasNicknameAudio');
     }
-    _checkPremiumStatus();
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -501,1162 +538,214 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {
         _hasPremium = userDoc.data()?['premium'] ?? false;
       });
-    } else {
-      print('State not mounted for _hasPremium');
-    }
-
-    if (!_hasPremium) {
-      await AdService.loadInterstitialAd();
     }
   }
 
-  void getExistingBigJson() async {
-    if (!widget.generating) {
-      final firestore = FirebaseFirestore.instance;
-      final docRef = firestore.collection('chatGPT_responses').doc(widget.documentID).collection('all_breakdowns').doc('updatable_big_json');
-      final doc = await docRef.get();
-      if (doc.exists) {
-        existingBigJson = doc.data();
-      }
-    }
-  }
-
-  Future<bool> retryUrlExists(String url, {int retries = 10, Duration delay = const Duration(seconds: 1)}) async {
-    for (int i = 1; i <= retries; i++) {
-      bool exists = await urlExists(url);
-      if (exists) {
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
-        }
-        return true;
-      }
-
-      if (mounted) {
-        setState(() {
-          isLoading = true;
-        });
-
-        if (i == 2 && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('We\'re having trouble finding an audio file 🧐'),
-              action: SnackBarAction(
-                label: 'OK',
-                onPressed: () {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  }
-                },
-              ),
-            ),
-          );
-        }
-      } else {
-        return false; // Exit early if widget is no longer mounted
-      }
-
-      await Future.delayed(delay);
-    }
-    return false;
-  }
-
-  Future<void> _showAudioErrorDialog(BuildContext context) async {
-    if (!mounted) return;
-
+  Future<void> _handleLessonCompletion() async {
+    // show list of words that were used and ask user to review them
     await showDialog(
       context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: const Text('An error occurred while creating the audio 🧐. Check your internet connection and try again!'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
+      builder: (BuildContext context) {
+        return ReviewWordsDialog(words: _overdueWordsUsed);
       },
     );
-  }
 
-  Future<void> _handleFetchingUrlError(int? index) async {
-    if (index != null && !_isDisposing && mounted) {
-      final currentUrl = (playlist.children[index] as UriAudioSource).uri.toString();
-      bool available = await retryUrlExists(currentUrl, retries: 10, delay: const Duration(seconds: 1));
-      if (!available && mounted) {
-        setState(() => isLoading = false);
-        await _showAudioErrorDialog(context);
-      }
-    }
-  }
-
-  void _listenToPlayerStreams() {
-    _playerStateSubscription = player.playerStateStream.listen((playerState) {
-      if (_isDisposing) return;
-
-      if (playerState.processingState == ProcessingState.completed) {
-        if (isPlaying.value) {
-          analyticsManager.storeAnalytics(widget.documentID, 'completed');
-          _handleLessonCompletion();
-        }
-        _stop();
-      }
-    });
-
-    _currentIndexSubscription = player.currentIndexStream.listen((index) async {
-      if (_isDisposing) return;
-
-      await _handleFetchingUrlError(index);
-
-      print("index: $index");
-
-      // Guard against null index
-      if (index == null) {
-        print('Warning: Received null index in stream');
-        return;
-      }
-
-      if (index < script.length && mounted) {
-        setState(() {
-          currentTrack = script[index];
-        });
-        print('currentTrack: $currentTrack');
-        if (speechRecognitionActive) {
-          _handleTrackChangeToCompareSpeech(index);
-        }
-        if (mounted) {
-          setState(() {
-            previousIndex = index;
-          });
-        }
-      }
-    });
-  }
-
-  Future<void> _initPlaylist() async {
-    // If playlist is already initialized, don't do it again
-    if (_playlistInitialized || _isDisposing) {
-      print("Skipping playlist initialization");
-      return;
-    }
-
-    List<String> fileUrls = [];
-    for (var fileName in script) {
-      String url = await _constructUrl(fileName);
-      if (url != "") {
-        fileUrls.add(url);
-      } else {
-        print("Empty string URL for $fileName");
-      }
-    }
-
-    if (fileUrls.isNotEmpty && !_isDisposing) {
-      List<AudioSource> audioSources = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-      playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: audioSources);
-      await player.setAudioSource(playlist).catchError((error) {
-        print("Error setting audio source: $error");
-        return null;
+    // Record streak after review is completed
+    await _streakService.recordDailyActivity(widget.userID);
+    if (mounted) {
+      setState(() {
+        _showStreak = true;
       });
-
-      if (!_isDisposing) {
-        await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
-        isPlaying.value = true;
-        _playlistInitialized = true;
-        print("Playlist initialized successfully");
-      }
-    } else {
-      print("No valid URLs available to initialize the playlist.");
-    }
-  }
-
-  void buildFilesToCompare(List<dynamic> script) {
-    if (_isDisposing || !mounted) return;
-
-    filesToCompare = {};
-    int occurrences = 0;
-    for (int i = 0; i < script.length; i++) {
-      String fileName = script[i];
-      if (!fileName.startsWith('\$')) {
-        // This file is included in the playlist
-        if (fileName == 'five_second_break') {
-          // Map the playlistIndex to the phrase
-          if (i > 0 && script[i - 1].startsWith('\$')) {
-            String fileNameWithDollar = script[i - 1];
-            String fileName = fileNameWithDollar.replaceFirst('\$', '');
-            if (mounted) {
-              setState(() {
-                filesToCompare[i - occurrences - 1] = fileName;
-              });
-            } else {
-              filesToCompare[i - occurrences - 1] = fileName;
-            }
-            occurrences++;
-          } else {
-            print('Warning: Expected a \$-prefixed string before five_second_break at index $i');
-          }
-        }
-      }
-    }
-  }
-
-  void updatePlaylist(snapshot) async {
-    // Don't update if we're disposing or resources are already gone
-    if (_isDisposing || firestoreService == null) {
-      print("Skipping updatePlaylist because widget is disposing");
-      return;
     }
 
-    try {
-      script = script_generator.parseAndCreateScript(snapshot.docs[0].data()["dialogue"] as List<dynamic>, widget.wordsToRepeat, snapshot.docs[0].data()["dialogue"] as List<dynamic>, _repetitionsMode);
-    } catch (e) {
-      print("Error parsing and creating script: $e");
-      return;
-    }
-    print(script);
-
-    buildFilesToCompare(script);
-
-    script = script.where((fileName) => !fileName.startsWith('\$')).toList();
-
-    var newScript = List.from(script);
-    newScript.removeRange(0, playlist.children.length);
-
-    // Filter out files that start with a '$'
-    newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
-
-    List<String> fileUrls = [];
-    for (var fileName in newScript) {
-      fileUrls.add(await _constructUrl(fileName));
-    }
-
-    final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-    await playlist.addAll(newTracks);
-    // if (!widget.generating && !isPlaying.value) {
-    // isPlaying.value = true;
-    // }
-
-    updateNumber++;
-  }
-
-  void updatePlaylistOnTheFly() async {
-    // Don't update if we're disposing
-    if (_isDisposing) {
-      print("Skipping updatePlaylistOnTheFly because widget is disposing");
-      return;
-    }
-
-    bool wasPlaying = isPlaying.value;
-    int lastIndexBeforeUpdate = player.currentIndex!;
-    if (!widget.generating) {
-      isPlaying.value = false;
-    }
-
-    if (widget.generating) {
-      print("Error: updatePlaylistOnTheFly() called while generating.");
-      return;
-    }
-
-    if (existingBigJson == null) {
-      print("Error: Required JSON data is null.");
-      return;
-    }
-
-    try {
-      script = script_generator.parseAndCreateScript(existingBigJson!["dialogue"] as List<dynamic>, widget.wordsToRepeat, widget.dialogue, _repetitionsMode);
-    } catch (e) {
-      print("Error parsing and creating script: $e");
-      return;
-    }
-
-    buildFilesToCompare(script);
-
-    script = script.where((fileName) => !fileName.startsWith('\$')).toList();
-
-    var newScript = List.from(script);
-
-    // Check if lastIndexBeforeUpdate is within the range of newScript
-    if (lastIndexBeforeUpdate >= newScript.length) {
-      await player.seek(Duration.zero, index: newScript.length - 10);
-      _savePlayerPosition();
-    }
-
-    // Filter out files that start with a '$'
-    newScript = newScript.where((fileName) => !fileName.startsWith('\$')).toList();
-
-    List<String> fileUrls = [];
-    for (var fileName in newScript) {
-      fileUrls.add(await _constructUrl(fileName));
-    }
-
-    final newTracks = fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
-
-    await playlist.clear();
-    await playlist.addAll(newTracks);
-    await updateTrackLength();
-    if (!widget.generating && wasPlaying) {
-      isPlaying.value = true;
-    }
-  }
-
-  void saveSnapshot(QuerySnapshot snapshot) {
-    if (_isDisposing) return;
-
-    if (snapshot.docs.isNotEmpty) {
-      latestSnapshot = snapshot.docs[0].data() as Map<String, dynamic>?;
-    }
-  }
-
-  Future<void> updateTrackLength() async {
-    if (_isDisposing) return;
-
-    CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
-    QuerySnapshot querySnap = await colRef.get();
-    if (querySnap.docs.isNotEmpty) {
-      await calculateTotalDurationAndUpdateTrackDurations(querySnap);
-    }
-  }
-
-  Future<String> _constructUrl(String fileName) async {
-    if (_isNarratorFile(fileName)) {
-      // narrator_, one_second_break, five_second_break
-      return _getNarratorUrl(fileName);
-    } else if (fileName == "nickname") {
-      // nickname logic
-      return await _getNicknameUrl();
-    } else if (fileName == "audio_cue") {
-      // audio_cue
-      return _getAudioCueUrl();
-    } else {
-      // default conversation audio
-      return _getConversationAudioUrl(fileName);
-    }
-  }
-
-  /// Returns `true` if the filename indicates a "narrator" or a break file.
-  bool _isNarratorFile(String fileName) {
-    return fileName.startsWith("narrator_") || fileName == "one_second_break" || fileName == "five_second_break";
-  }
-
-  /// Builds the URL for narrator/break files.
-  String _getNarratorUrl(String fileName) {
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "google_tts/narrator_${widget.nativeLanguage}/$fileName.mp3";
-  }
-
-  /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
-  Future<String> _getNicknameUrl() async {
-    final int callCount = await getCurrentCallCount();
-    final bool canUseNickname = hasNicknameAudio && addressByNickname && callCount > maxCalls - 1;
-
-    if (canUseNickname) {
-      final List<int> numbers = List.generate(6, (i) => i)..shuffle();
-      for (final randomNumber in numbers) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final url = "https://storage.googleapis.com/user_nicknames/"
-            "${widget.userID}_${randomNumber}_nickname.mp3?timestamp=$timestamp";
-
-        if (await urlExists(url)) {
-          return url; // Return first valid URL
-        }
-      }
-    }
-
-    // If we can't (or didn't) find a nickname file, return a generic greeting.
-    return _getGenericGreetingUrl();
-  }
-
-  /// Returns the URL to a generic greeting.
-  String _getGenericGreetingUrl() {
-    final randomNumber = Random().nextInt(5) + 1;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "google_tts/narrator_${Uri.encodeComponent(widget.nativeLanguage)}/"
-        "narrator_greetings_$randomNumber.mp3?timestamp=$timestamp";
-  }
-
-  /// Builds the URL for the audio cue file.
-  String _getAudioCueUrl() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return "https://storage.googleapis.com/narrator_audio_files/"
-        "general/audio_cue.mp3?timestamp=$timestamp";
-  }
-
-  /// Builds the URL for the default (conversation) audio files.
-  String _getConversationAudioUrl(String fileName) {
-    return "https://storage.googleapis.com/conversations_audio_files/"
-        "${widget.documentID}/$fileName.mp3";
-  }
-
-  Duration cumulativeDurationUpTo(int currentIndex) {
-    return trackDurations.take(currentIndex).fold(Duration.zero, (total, d) => total + d);
-  }
-
-  Stream<PositionData> get _positionDataStream {
-    int lastIndex = -1;
-    return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
-      player.positionStream.where((_) => isPlaying.value),
-      player.durationStream.whereType<Duration>(),
-      player.currentIndexStream.whereType<int>().startWith(0),
-      (position, duration, index) {
-        bool hasIndexChanged = index != lastIndex;
-        lastIndex = index;
-        Duration cumulativeDuration = cumulativeDurationUpTo(index);
-        Duration totalPosition = cumulativeDuration + position;
-
-        if (hasIndexChanged) return null;
-        if (position < duration) {
-          return PositionData(position, duration, totalPosition);
-        }
-        return null;
-      },
-    ).where((positionData) => positionData != null).cast<PositionData>().distinct((prev, current) => prev.position == current.position);
-  }
-
-  int findTrackIndexForPosition(double milliseconds) {
-    int cumulative = 0;
-    for (int i = 0; i < trackDurations.length; i++) {
-      cumulative += trackDurations[i].inMilliseconds;
-      if (cumulative > milliseconds) return i;
-    }
-    return trackDurations.length - 1;
-  }
-
-  Future<void> calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
-    if (_isDisposing) return;
-
-    totalDuration = Duration.zero;
-    trackDurations = List<Duration>.filled(script.length, Duration.zero);
-    audioDurations!.addAll(snapshot.docs[0].data() as Map<String, dynamic>);
-    audioDurations!.addAll(await getAudioDurationsFromNarratorStorage());
-
-    if (audioDurations!.isNotEmpty && !_isDisposing) {
-      for (int i = 0; i < script.length; i++) {
-        String fileName = script[i];
-        double durationInSeconds = audioDurations?[fileName] ?? 0.0;
-        Duration duration = Duration(milliseconds: (durationInSeconds * 1000).round());
-        totalDuration += duration;
-        trackDurations[i] = duration;
-      }
-      if (mounted && !_isDisposing) {
-        setState(() {});
-      }
-    }
-
-    if ((updateNumber == 4 || !widget.generating) && !_isDisposing) {
-      finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
+    // Hide streak after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _showStreak = false;
+        });
       }
-    }
+    });
   }
 
-  Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
-    if (cachedAudioDurations != null) {
-      return cachedAudioDurations!;
-    }
-
-    CollectionReference colRef = FirebaseFirestore.instance.collection('narrator_audio_files_durations/google_tts/narrator_${widget.nativeLanguage}');
-    QuerySnapshot querySnap = await colRef.get();
-
-    if (querySnap.docs.isNotEmpty) {
-      DocumentSnapshot firstDoc = querySnap.docs.first;
-      return firstDoc.data() as Map<String, dynamic>;
-    }
-    return {};
-  }
-
-  String accessBigJson(Map<String, dynamic> listWithBigJson, String path) {
-    final pattern = RegExp(r'(\D+)|(\d+)');
-    final matches = pattern.allMatches(path);
-
-    dynamic currentMap = listWithBigJson;
-    for (var match in matches) {
-      final key = match.group(0)!;
-      final cleanedKey = key.replaceAll(RegExp(r'^_|_$'), '');
-
-      if (int.tryParse(cleanedKey) != null) {
-        // If it's a number, parse it as an index
-        int index = int.parse(cleanedKey);
-        currentMap = currentMap[index];
-      } else {
-        // If it's not a number, use it as a string key
-        currentMap = currentMap[cleanedKey];
-      }
-
-      // If at any point currentMap is null, the key path is invalid
-      if (currentMap == null) {
-        throw Exception("Invalid path: $path");
-      }
-    }
-    return currentMap;
-  }
-
-  void _handleTrackChangeToCompareSpeech(int localCurrentIndex) async {
-    if (_isSkipping) return;
-
-    if (currentTrack == "five_second_break" && isLanguageSupported && localCurrentIndex > previousIndex && !isSliderMoving) {
-      print("_handleTrackChangeToCompareSpeech called, time:${DateTime.now().toIso8601String()}");
-
-      final audioFileName = filesToCompare[localCurrentIndex];
-      if (audioFileName == null) {
-        print("Error: filesToCompare[localCurrentIndex] is null for index $localCurrentIndex");
+  void _toggleSpeechRecognition(bool value) async {
+    if (value) {
+      bool isSupported = await _speechRecognitionService.initializeSpeechRecognition();
+      if (!isSupported) {
+        _showLanguageNotSupportedDialog();
         return;
       }
-
-      if (widget.generating && latestSnapshot != null) {
-        setState(() {
-          targetPhraseToCompareWith = accessBigJson(latestSnapshot!, audioFileName);
-        });
-      } else if (existingBigJson != null) {
-        setState(() {
-          targetPhraseToCompareWith = accessBigJson(existingBigJson!, audioFileName);
-        });
-      } else {
-        print("Error: Required JSON data is null.");
-        return;
-      }
-
-      if (kIsWeb || Platform.isIOS) {
-        final String stringWhenStarting = liveTextSpeechToText;
-        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase(stringWhenStarting));
-      } else {
-        if (voskSpeechService == null) {
-          print('voskSpeechService is null in _handleTrackChangeToCompareSpeech');
-          return;
-        }
-        voskSpeechService!.reset();
-        Future.delayed(const Duration(milliseconds: 4500), () => _compareSpeechWithPhrase());
-      }
+    } else {
+      _speechRecognitionService.stopListening();
     }
-  }
 
-  Future<String?> _fetchPreviousTargetPhrase(String documentId, String? previousTargetTrack) async {
-    try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('target_phrases').doc('updatable_target_phrases').get();
-
-      if (documentSnapshot.exists) {
-        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
-        return data[previousTargetTrack] as String?;
-      } else {
-        print('Document does not exist');
-        setState(() {
-          speechRecognitionSupported = false;
-        });
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching previous target phrase: $e');
-      return null;
-    }
+    _speechRecognitionActive.value = value;
+    _speechRecognitionService.speechRecognitionActive = value;
   }
 
   void _showLanguageNotSupportedDialog() {
     showDialog(
-      context: navigatorKey.currentContext!,
+      context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Speech Recognition Not Supported'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("${widget.targetLanguage} is not supported for speech recognition on your device, but we're working on it!"),
-              const SizedBox(height: 8),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  speechRecognitionActive = false;
-                  isLanguageSupported = false;
-                });
-              },
-            ),
-          ],
+        return LanguageNotSupportedDialog(
+          targetLanguage: widget.targetLanguage,
+          onDismiss: () {
+            setState(() {
+              _speechRecognitionActive.value = false;
+              _speechRecognitionService.isLanguageSupported = false;
+              _speechRecognitionService.speechRecognitionActive = false;
+            });
+          },
         );
       },
     );
   }
 
-  String getAddedCharacters(String newString, String previousString) {
-    // Split the strings into word lists
-    List<String> newWords = newString.split(RegExp(r'\s+'));
-    List<String> previousWords = previousString.split(RegExp(r'\s+'));
+  void _onAllDialogueDisplayed() {
+    if (_isDisposing) return;
 
-    // Compare word-by-word and find differences
-    int minLength = previousWords.length;
-    for (int i = 0; i < minLength; i++) {
-      if (newWords[i] != previousWords[i]) {
-        // Word has been replaced; return from this point onward
-        return newWords.skip(i).join(' ');
-      }
-    }
-
-    // If all previous words match, return the new additions
-    if (newWords.length > previousWords.length) {
-      return newWords.skip(previousWords.length).join(' ');
-    }
-
-    // If no new words are detected, return an empty string
-    return "";
-  }
-
-  void _compareSpeechWithPhrase([String? stringWhenStarting]) async {
-    if (!isPlaying.value) {
-      print("Returning early because player was paused");
-      return;
-    }
-    if (targetPhraseToCompareWith != null && !isSliderMoving) {
-      String normalizedLiveTextSpeechToText = _normalizeString(liveTextSpeechToText);
-
-      String newSpeech;
-      if ((kIsWeb || Platform.isIOS) && stringWhenStarting != null) {
-        print("liveTextSpeechToText: $liveTextSpeechToText");
-        print("stringWhenStarting: $stringWhenStarting");
-        String normalizedStringWhenStarting = _normalizeString(stringWhenStarting);
-        newSpeech = getAddedCharacters(normalizedLiveTextSpeechToText, normalizedStringWhenStarting);
-      } else {
-        newSpeech = normalizedLiveTextSpeechToText;
-      }
-
-      print("newSpeech: $newSpeech");
-
-      if (newSpeech == '') {
-        // TODO: Add feedback for no audio detected
-        print("NO audio was detected!!!");
-        return;
-      }
-      // Normalize both strings: remove punctuation and convert to lowercase
-      String normalizedResponse = _normalizeString(newSpeech);
-      // Duplicate normalizedResponse for web doubled text bug
-      String doubledNormalizedResponse = '$normalizedResponse $normalizedResponse';
-      String normalizedTargetPhrase = _normalizeString(targetPhraseToCompareWith!);
-
-      print('you said: $normalizedResponse, timestamp: ${DateTime.now().toIso8601String()}');
-      print('target phrase: $normalizedTargetPhrase, timestamp: ${DateTime.now().toIso8601String()}');
-
-      // Calculate similarity
-      double similarity = StringSimilarity.compareTwoStrings(
-        normalizedResponse,
-        normalizedTargetPhrase,
-      );
-
-      double similarityForDoubled = StringSimilarity.compareTwoStrings(
-        doubledNormalizedResponse,
-        normalizedTargetPhrase,
-      );
-
-      if (similarityForDoubled > similarity) {
-        similarity = similarityForDoubled;
-      }
-
-      print('Similarity: $similarity');
-
-      if (similarity >= 0.7) {
-        print('Good job! You repeated the phrase correctly.');
-        await _provideFeedback(isPositive: true);
-      } else {
-        print('Try again. The phrase didn\'t match.');
-        await _provideFeedback(isPositive: false);
-      }
-    }
-  }
-
-// Helper method to normalize strings
-  String _normalizeString(String input) {
-    // Remove punctuation but preserve Unicode letters including Devanagari
-    return input.replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), '').toLowerCase();
-    // return input.replaceAll(RegExp(r'[^\w\s]+'), '').toLowerCase();
-  }
-
-// Method to provide audio feedback
-  Future<void> _provideFeedback({required bool isPositive}) async {
-    // String answerUrl = isPositive ? 'https://storage.googleapis.com/pronunciation_feedback/correct_answer.mp3' : 'https://storage.googleapis.com/pronunciation_feedback/incorrect_answer.mp3';
-
-    if (player.playing) {
-      await player.pause();
-    }
-
-    // Create a separate AudioPlayer for feedback
-    AudioPlayer feedbackPlayer = AudioPlayer();
-
-    // Get the feedback audio URL
-    String feedbackUrl = _getFeedbackAudioUrl(isPositive);
-    print('Playing feedback audio from: $feedbackUrl'); // Add debug print
-
-    // Set the audio source using the cloud URL
-    await feedbackPlayer.setAudioSource(
-      AudioSource.uri(Uri.parse(feedbackUrl)),
-    );
-
-    // Play the feedback
-    await feedbackPlayer.play();
-
-    // Release the feedback player resources
-    await feedbackPlayer.dispose();
-
-    await player.play();
-  }
-
-  // Add a new method to get random feedback audio URL
-  String _getFeedbackAudioUrl(bool isPositive) {
-    final random = Random();
-    final num = isPositive ? random.nextInt(3) : random.nextInt(2) + 3; // 0-2 for positive, 3-4 for negative
-    return 'https://storage.googleapis.com/pronunciation_feedback/feedback_${widget.nativeLanguage}_${isPositive ? "positive" : "negative"}_$num.mp3';
-  }
-
-  Future<void> _changePlaybackSpeed(double speed) async {
-    await player.setSpeed(speed);
-    setState(() {
-      _playbackSpeed = speed;
-    });
-  }
-
-  Future<void> _handleLessonCompletion() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await _streakService.recordDailyActivity(userId);
-      setState(() {
-        _showStreak = true;
-      });
-
-      // Hide streak after 5 seconds
-      Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() {
-            _showStreak = false;
-          });
-        }
-      });
+    print("All dialogue items have been displayed, initializing playlist");
+    if (!_audioPlayerService.playlistInitialized) {
+      _initializePlaylist();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
-      child: Stack(
-        children: [
-          // Main content
-          PopScope(
-            canPop: false,
-            onPopInvoked: (bool didPop) async {
-              if (didPop) return;
+        child: Stack(
+      children: [
+        // Main content
+        PopScope(
+          canPop: false,
+          onPopInvoked: (bool didPop) async {
+            if (didPop) return;
 
-              print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
+            print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
 
-              // Set disposing flag to prevent any async operations from using disposed resources
-              _isDisposing = true;
+            // Set disposing flag to prevent any async operations from using disposed resources
+            _isDisposing = true;
 
-              final NavigatorState navigator = Navigator.of(context);
+            final NavigatorState navigator = Navigator.of(context);
 
-              // Always pause audio regardless of generation state
-              if (isPlaying.value) await _pause();
+            // Always pause audio regardless of generation state
+            if (_audioPlayerService.isPlaying.value) {
+              await _audioPlayerService.pause();
+            }
 
-              // Cancel any ongoing operations if generating
-              if (widget.generating) {
-                print("AudioPlayerScreen - navigating to home screen");
-                // Cancel any ongoing API calls or listeners that might be active
-                firestoreService?.dispose();
-                firestoreService = null; // Set to null immediately to prevent further access
+            // Clean up any shared resources
+            AudioPlayerScreen.cleanupSharedResources();
 
-                // Ensure we don't try to initialize the playlist after navigating away
-                setState(() {
-                  _playlistInitialized = true; // Prevent further initialization attempts
-                });
+            // Reset any LessonDetailScreen state before navigating
+            LessonDetailScreen.resetStaticState();
 
-                // Clean up any shared resources
-                AudioPlayerScreen.cleanupSharedResources();
-
-                // Reset any LessonDetailScreen state before navigating
-                LessonDetailScreen.resetStaticState();
-
-                // Navigate to home screen and clear stack
-                navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
-              } else {
-                print("AudioPlayerScreen - popping with 'reload'");
-
-                // Clean up any shared resources
-                AudioPlayerScreen.cleanupSharedResources();
-
-                // Reset any LessonDetailScreen state before navigating
-                LessonDetailScreen.resetStaticState();
-
-                // Normal navigation if not generating
-                navigator.pop('reload');
-              }
-            },
-            child: FutureBuilder<int>(
-              future: _getSavedPosition(),
-              builder: (context, snapshot) {
-                int savedPosition = snapshot.data ?? 0;
-                return Scaffold(
-                  appBar: AppBar(title: Text(widget.title)),
-                  body: Container(
-                    decoration: const BoxDecoration(
-                      // Chat-like background with subtle pattern
-                      color: Color(0xFF1E1E2E),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              const Text('check pronunciation:'),
-                              Switch(
-                                value: speechRecognitionActive,
-                                onChanged: (bool value) {
-                                  if (value) {
-                                    initializeSpeechRecognition();
-                                  } else if (!value && kIsWeb || (!kIsWeb && Platform.isIOS)) {
-                                    speechToTextUltra.stopListening();
-                                  } else if (!value && !kIsWeb && Platform.isAndroid) {
-                                    voskSpeechService?.stop();
-                                    voskSpeechService?.dispose();
-                                  }
-                                  setState(() {
-                                    speechRecognitionActive = value;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          AnimatedDialogueList(
-                            dialogue: widget.dialogue,
-                            currentTrack: currentTrack,
-                            wordsToRepeat: widget.wordsToRepeat,
-                            documentID: widget.documentID,
-                            useStream: widget.generating,
-                            generating: widget.generating,
-                            onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
-                          ),
-                          // Audio generation message
-                          if (widget.generating && !_playlistInitialized)
-                            Container(
-                              margin: const EdgeInsets.symmetric(vertical: 16),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    "Generating audio files...",
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          PositionSlider(
-                            positionDataStream: _positionDataStream,
-                            totalDuration: totalDuration,
-                            finalTotalDuration: finalTotalDuration,
-                            isPlaying: isPlaying.value,
-                            savedPosition: savedPosition,
-                            findTrackIndexForPosition: findTrackIndexForPosition,
-                            player: player,
-                            cumulativeDurationUpTo: cumulativeDurationUpTo,
-                            pause: _pause,
-                            onSliderChangeStart: () {
-                              setState(() {
-                                isSliderMoving = true;
-                              });
-                            },
-                            onSliderChangeEnd: () {
-                              setState(() {
-                                isSliderMoving = false;
-                              });
-                            },
-                          ),
+            if (widget.generating) {
+              // Navigate to home screen and clear stack
+              navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
+            } else {
+              // Normal navigation if not generating
+              navigator.pop('reload');
+            }
+          },
+          child: FutureBuilder<int>(
+            future: _audioPlayerService.getSavedPosition(),
+            builder: (context, snapshot) {
+              int savedPosition = snapshot.data ?? 0;
+              return Scaffold(
+                appBar: AppBar(title: Text(widget.title)),
+                body: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E2E),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        SpeechRecognitionToggle(
+                          speechRecognitionService: _speechRecognitionService,
+                          isActive: _speechRecognitionActive,
+                          onToggle: _toggleSpeechRecognition,
+                        ),
+                        AnimatedDialogueList(
+                          dialogue: widget.dialogue,
+                          currentTrack: _currentTrack,
+                          wordsToRepeat: widget.wordsToRepeat,
+                          documentID: widget.documentID,
+                          useStream: widget.generating,
+                          generating: widget.generating,
+                          onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
+                        ),
+                        // Audio generation message
+                        if (widget.generating && !_audioPlayerService.playlistInitialized)
                           Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: Column(
+                            margin: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 32), // Adjust this value as needed
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: <Widget>[
-                                      IconButton(
-                                        icon: const Icon(Icons.skip_previous),
-                                        onPressed: player.hasPrevious ? () => player.seekToPrevious() : null,
-                                      ),
-                                      ValueListenableBuilder<bool>(
-                                        valueListenable: isPlaying,
-                                        builder: (context, playing, child) {
-                                          return IconButton(
-                                            icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                                            onPressed: () {
-                                              isPlaying.value = !isPlaying.value;
-                                            },
-                                          );
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.skip_next),
-                                        onPressed: player.hasNext
-                                            ? () {
-                                                setState(() {
-                                                  _isSkipping = true;
-                                                });
-                                                player.seekToNext();
-                                                Future.delayed(const Duration(seconds: 1), () {
-                                                  setState(() {
-                                                    _isSkipping = false;
-                                                  });
-                                                });
-                                              }
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      PopupMenuButton<RepetitionMode>(
-                                        offset: const Offset(0, 40),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              'Repetitions',
-                                              style: TextStyle(
-                                                color: Theme.of(context).colorScheme.primary,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.arrow_drop_down,
-                                              color: Theme.of(context).colorScheme.primary,
-                                              size: 20,
-                                            ),
-                                          ],
-                                        ),
-                                        itemBuilder: (BuildContext context) => <PopupMenuEntry<RepetitionMode>>[
-                                          PopupMenuItem<RepetitionMode>(
-                                            value: RepetitionMode.normal,
-                                            child: Row(
-                                              children: [
-                                                const Text('Normal Repetitions'),
-                                                if (_repetitionsMode.value == RepetitionMode.normal)
-                                                  const Padding(
-                                                    padding: EdgeInsets.only(left: 8.0),
-                                                    child: Icon(Icons.check, size: 18),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                          PopupMenuItem<RepetitionMode>(
-                                            value: RepetitionMode.less,
-                                            child: Row(
-                                              children: [
-                                                const Text('Less Repetitions'),
-                                                if (_repetitionsMode.value == RepetitionMode.less)
-                                                  const Padding(
-                                                    padding: EdgeInsets.only(left: 8.0),
-                                                    child: Icon(Icons.check, size: 18),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                        onSelected: (RepetitionMode value) {
-                                          if (widget.generating) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: const Text('Please wait until we finish generating your audio to change this setting!'),
-                                                action: SnackBarAction(
-                                                  label: 'OK',
-                                                  onPressed: () {
-                                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                  },
-                                                ),
-                                              ),
-                                            );
-                                          } else {
-                                            _repetitionsMode.value = value;
-                                          }
-                                        },
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.speed,
-                                            size: 18,
-                                            color: Theme.of(context).colorScheme.primary,
-                                          ),
-                                          DropdownButton<double>(
-                                            value: _playbackSpeed,
-                                            isDense: true,
-                                            underline: Container(), // Remove the default underline,
-                                            icon: Icon(
-                                              Icons.arrow_drop_down,
-                                              color: Theme.of(context).colorScheme.primary,
-                                              size: 20,
-                                            ),
-                                            items: const [
-                                              DropdownMenuItem(value: 0.7, child: Text('0.7x')),
-                                              DropdownMenuItem(value: 0.8, child: Text('0.8x')),
-                                              DropdownMenuItem(value: 0.9, child: Text('0.9x')),
-                                              DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                                              DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                                              DropdownMenuItem(value: 1.5, child: Text('1.5x')),
-                                              DropdownMenuItem(value: 2.0, child: Text('2.0x')),
-                                            ],
-                                            onChanged: (double? newValue) {
-                                              if (newValue != null) {
-                                                _changePlaybackSpeed(newValue);
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                Text(
+                                  "Generating audio files...",
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        PositionSlider(
+                          positionDataStream: _audioPlayerService.positionDataStream,
+                          totalDuration: _audioPlayerService.totalDuration,
+                          finalTotalDuration: _audioPlayerService.finalTotalDuration,
+                          isPlaying: _audioPlayerService.isPlaying.value,
+                          savedPosition: savedPosition,
+                          findTrackIndexForPosition: _audioPlayerService.findTrackIndexForPosition,
+                          player: _audioPlayerService.player,
+                          cumulativeDurationUpTo: _audioPlayerService.cumulativeDurationUpTo,
+                          pause: ({bool analyticsOn = true}) => _audioPlayerService.pause(analyticsOn: analyticsOn),
+                          onSliderChangeStart: () {
+                            setState(() {
+                              _isSliderMoving = true;
+                              _speechRecognitionService.isSliderMoving = true;
+                            });
+                          },
+                          onSliderChangeEnd: () {
+                            setState(() {
+                              _isSliderMoving = false;
+                              _speechRecognitionService.isSliderMoving = false;
+                            });
+                          },
+                        ),
+                        AudioControls(
+                          audioPlayerService: _audioPlayerService,
+                          repetitionMode: _repetitionsMode,
+                          generating: widget.generating,
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Streak overlay
+        if (_showStreak)
+          Container(
+            color: Colors.black54,
+            child: Center(
+              child: StreakDisplay(),
             ),
           ),
-
-          // Streak overlay
-          if (_showStreak)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: StreakDisplay(),
-              ),
-            ),
-
-          // Loading spinner overlay
-          if (isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _savePlayerPosition() async {
-    final prefs = await SharedPreferences.getInstance();
-    final positionData = await player.positionStream.first;
-    final currentPosition = positionData.inMilliseconds;
-    int currentIndex = player.currentIndex ?? 0;
-    print("will now save position: $currentPosition, player.currentIndex: ${player.currentIndex}");
-    await prefs.setInt('savedPosition_${widget.documentID}_${widget.userID}', currentPosition);
-    await prefs.setInt('savedTrackIndex_${widget.documentID}_${widget.userID}', currentIndex);
-    await prefs.setBool("now_playing_${widget.documentID}_${widget.userID}", true);
-
-    final nowPlayingKey = "now_playing_${widget.userID}";
-    final nowPlayingList = prefs.getStringList(nowPlayingKey) ?? [];
-    if (!nowPlayingList.contains(widget.documentID)) {
-      nowPlayingList.add(widget.documentID);
-    }
-    await prefs.setStringList(nowPlayingKey, nowPlayingList);
-  }
-
-  Future<void> _pause({bool analyticsOn = true}) async {
-    _savePlayerPosition();
-    player.pause();
-
-    if (analyticsOn) {
-      analyticsManager.storeAnalytics(widget.documentID, 'pause');
-    }
-  }
-
-  Future<void> _play() async {
-    print("_play() called");
-    final prefs = await SharedPreferences.getInstance();
-    final savedPosition = prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
-    final savedTrackIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
-
-    print("savedPosition: $savedPosition, savedTrackIndex: $savedTrackIndex");
-    if (savedPosition != null && savedTrackIndex != null) {
-      print("will now seek to position: $savedPosition, index: $savedTrackIndex");
-      await player.seek(Duration(milliseconds: savedPosition), index: savedTrackIndex);
-      print("player.currentIndex: ${player.currentIndex}");
-    }
-    player.play();
-
-    // Show ad for non-premium users every time they start playing
-    if (!_hasPremium && !_hasShownInitialAd) {
-      _hasShownInitialAd = true; // Prevent showing ad multiple times in same session
-      print("Now showing add");
-      await AdService.showInterstitialAd(
-        onAdShown: () async {
-          isPlaying.value = false;
-        },
-        onAdDismissed: () async {
-          isPlaying.value = true;
-        },
-      );
-    }
-
-    analyticsManager.storeAnalytics(widget.documentID, 'play');
-  }
-
-  Future<void> _stop() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.remove('savedPosition_${widget.documentID}_${widget.userID}');
-    prefs.remove('savedTrackIndex_${widget.documentID}_${widget.userID}');
-    prefs.remove("now_playing_${widget.documentID}_${widget.userID}");
-
-    List<String>? nowPlayingList = prefs.getStringList("now_playing_${widget.userID}");
-
-    if (nowPlayingList != null) {
-      nowPlayingList.remove(widget.documentID);
-      await prefs.setStringList("now_playing_${widget.userID}", nowPlayingList);
-    }
-
-    player.stop();
-    player.seek(Duration.zero, index: 0);
-    isPlaying.value = false;
-    setState(() {
-      currentTrack = script[0];
-    });
-  }
-
-  Future<int> _getSavedPosition() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedPosition = prefs.getInt('savedPosition_${widget.documentID}_${widget.userID}');
-    final savedIndex = prefs.getInt('savedTrackIndex_${widget.documentID}_${widget.userID}');
-    final position = savedPosition! + cumulativeDurationUpTo(savedIndex!).inMilliseconds;
-    return position;
-  }
-
-  Future<void> _loadAddressByNicknamePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      addressByNickname = prefs.getBool('addressByNickname') ?? true;
-    });
+      ],
+    ));
   }
 
   @override
@@ -1664,46 +753,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
     _isDisposing = true;
 
-    // Cancel stream subscriptions first
-    _playerStateSubscription?.cancel();
-    _currentIndexSubscription?.cancel();
+    // Dispose of Firestore services
+    _firestoreService?.dispose();
+    _firestoreService = null;
 
-    // Then cancel all listeners
+    _fileDurationUpdate?.dispose();
+    _fileDurationUpdate = null;
+
+    // Dispose of services
+    _audioPlayerService.dispose();
+    _speechRecognitionService.dispose();
+
+    // Dispose of notifiers
     _repetitionsMode.dispose();
-    isPlaying.dispose();
-
-    // Then dispose of services
-    firestoreService?.dispose();
-    firestoreService = null; // Prevent further access
-
-    fileDurationUpdate?.dispose();
-    fileDurationUpdate = null; // Prevent further access
-
-    // Then dispose of audio resources
-    player.dispose();
-
-    // Finally dispose of speech services
-    if (!kIsWeb && Platform.isAndroid) {
-      // Safely dispose of voskSpeechService only if it's initialized
-      if (voskSpeechService != null) {
-        voskSpeechService!.stop();
-        voskSpeechService!.dispose();
-        voskSpeechService = null; // Prevent further access
-      }
-    } else {
-      speechToTextUltra.dispose();
-    }
+    _speechRecognitionActive.dispose();
 
     super.dispose();
-  }
-
-  /// Called when all dialogue items have been displayed
-  void _onAllDialogueDisplayed() {
-    if (_isDisposing) return;
-
-    print("All dialogue items have been displayed, initializing playlist");
-    if (!_playlistInitialized) {
-      _initPlaylist();
-    }
   }
 }
