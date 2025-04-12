@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/store_view.dart';
+import 'package:parakeet/Navigation/bottom_menu_bar.dart';
+import 'package:parakeet/screens/nickname_popup.dart';
 
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/notification_service.dart';
@@ -221,6 +223,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: _showLanguageSelectionDialog,
             ),
             ProfileMenuItem(
+              icon: Icons.edit,
+              title: 'Edit Nickname',
+              subtitle: 'Change how the app addresses you',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return const NicknamePopup();
+                  },
+                ).then((_) {
+                  // Refresh user data after nickname change
+                  _fetchUserData();
+                });
+              },
+            ),
+            ProfileMenuItem(
               icon: Icons.shopping_bag,
               title: 'Store',
               subtitle: 'View available packages and offers',
@@ -248,12 +266,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: _showTimePickerDialog,
               onClear: _reminderTime != null ? _cancelReminder : null,
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
+            const Divider(),
+            ProfileMenuItem(
+              icon: Icons.logout,
+              title: 'Logout',
+              subtitle: 'Sign out of your account',
+              onTap: () async {
+                await _authService.signOut();
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              },
+            ),
+            const SizedBox(height: 16),
             DeleteAccountButton(onDelete: _deleteAccount),
-            SizedBox(height: isSmallScreen ? 16 : 24),
+            const SizedBox(height: 32),
           ],
         ),
       ),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/profile"),
     );
   }
 }

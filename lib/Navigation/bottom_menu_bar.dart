@@ -36,14 +36,14 @@ class BottomMenuBar extends StatelessWidget {
             color: currentRoute == '/create_lesson' ? colorScheme.primary : null,
           ),
           IconButton(
-            icon: const Icon(Icons.library_music, size: 24),
+            icon: const Icon(Icons.person, size: 24),
             onPressed: () {
-              if (currentRoute != '/library') {
-                Navigator.pushReplacementNamed(context, '/library');
+              if (currentRoute != '/profile') {
+                Navigator.pushReplacementNamed(context, '/profile');
               }
             },
-            color: currentRoute == '/library' ? colorScheme.primary : null,
-          )
+            color: currentRoute == '/profile' ? colorScheme.primary : null,
+          ),
         ],
       ),
     );

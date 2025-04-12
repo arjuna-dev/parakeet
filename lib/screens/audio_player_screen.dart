@@ -21,6 +21,7 @@ import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
+import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -541,6 +542,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
+    // show list of words that were used and ask user to review them
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ReviewWordsDialog(words: _overdueWordsUsed);
+      },
+    );
+
+    // Record streak after review is completed
     await _streakService.recordDailyActivity(widget.userID);
     if (mounted) {
       setState(() {

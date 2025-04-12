@@ -234,6 +234,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               // final nativeChunk = bigJsonList[i]["split_sentence"][j]["native_language"];
               final nativeChunkUrl = await constructUrl(nativeScript, documentId, nativeLanguage, userId);
               final targetChunkUrl = await constructUrl(targetScript, documentId, targetLanguage, userId);
+              print("nativeChunkUrl: $nativeChunkUrl");
+              print("targetChunkUrl: $targetChunkUrl");
 
               String word = accessBigJson(bigJsonMap, wordObj["word"]);
               word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
@@ -269,6 +271,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   for (var docRef in overdueWordDocRefs) {
     print('constructing overdue sequence');
     final wordUrls = await getAudioUrlsForWord(docRef);
+
     if (wordUrls != null && wordUrls['audio_urls'] != null && wordUrls['audio_urls']['native_chunk'] != null && wordUrls['audio_urls']['target_chunk'] != null) {
       print("WordUrls: $wordUrls");
       overdueWordsUsed.addAll({wordUrls['word']: docRef});
@@ -297,16 +300,20 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   Future<List<fsrs.Card>> getAllCards(List<String> words) async {
     List<fsrs.Card> cards = [];
     for (String word in words) {
+      print("word: $word");
       final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
+      print("collectionRef: $collectionRef");
 
       // Get the document snapshot
       final docSnapshot = await collectionRef.get();
+      print("doc: ${docSnapshot.data()}");
 
       // Check if document exists and has data
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
         if (data != null) {
-          fsrs.Card card = WordCard.fromFirestore(data);
+          print("data: $data");
+          fsrs.Card card = WordCard.fromFirestore(data).card;
           cards.add(card);
         }
       }
