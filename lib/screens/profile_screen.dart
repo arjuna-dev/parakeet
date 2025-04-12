@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/store_view.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parakeet/Navigation/bottom_menu_bar.dart';
+import 'package:parakeet/screens/nickname_popup.dart';
+
 import 'package:parakeet/services/auth_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/services/notification_service.dart';
-import 'package:parakeet/widgets/streak_display.dart';
+import 'package:parakeet/services/profile_service.dart';
+import 'package:parakeet/widgets/profile_screen/streak_display.dart';
+import 'package:parakeet/widgets/profile_screen/profile_header.dart';
+import 'package:parakeet/widgets/profile_screen/profile_menu_item.dart';
+import 'package:parakeet/widgets/profile_screen/delete_account_button.dart';
+import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  // Static method to show language settings dialog from anywhere
+  static Future<void> showLanguageSettingsDialog(BuildContext context) async {
+    await ProfileService.showLanguageSettingsDialog(context);
+  }
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -17,35 +27,32 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  User? _user;
   String _name = '';
   String _email = '';
   bool _premium = false;
   final NotificationService _notificationService = NotificationService();
   TimeOfDay? _reminderTime;
+  String _nativeLanguage = 'English (US)';
+  String _targetLanguage = 'German';
+  String _languageLevel = 'Absolute beginner (A1)';
 
   @override
   void initState() {
     super.initState();
-    _user = FirebaseAuth.instance.currentUser;
     _fetchUserData();
     _loadReminderTime();
   }
 
   Future<void> _fetchUserData() async {
-    if (_user != null) {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(_user!.uid).get();
-      if (userDoc.exists) {
-        final userData = userDoc.data() as Map<String, dynamic>;
-        print('userDoc email: ${userData['email']}');
-        setState(() {
-          _name = userData['name'] ?? '';
-          _email = userData['email'] ?? '';
-          _premium = userData['premium'] ?? false;
-        });
-      }
-    }
+    final userData = await ProfileService.fetchUserData();
+    setState(() {
+      _name = userData['name'] ?? '';
+      _email = userData['email'] ?? '';
+      _premium = userData['premium'] ?? false;
+      _nativeLanguage = userData['native_language'] ?? 'English (US)';
+      _targetLanguage = userData['target_language'] ?? 'German';
+      _languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
+    });
   }
 
   Future<void> _loadReminderTime() async {
@@ -85,7 +92,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _deleteAccount() async {
-    print('email: $_email');
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -124,127 +130,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Widget _buildProfileHeader() {
-    final isSmallScreen = MediaQuery.of(context).size.height < 700;
-
-    String getInitial() {
-      if (_name.isNotEmpty) {
-        return _name[0].toUpperCase();
-      }
-      if (_email.isNotEmpty) {
-        return _email[0].toUpperCase();
-      }
-      return '?';
-    }
-
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 8 : 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: isSmallScreen ? 40 : 50,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(
-                getInitial(),
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 32 : 40,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            Text(
-              _name.isNotEmpty ? _name : _email,
-              style: TextStyle(
-                fontSize: isSmallScreen ? 20 : 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (_name.isNotEmpty)
-              Text(
-                _email,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    final isSmallScreen = MediaQuery.of(context).size.height < 700;
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 12 : 16,
-          vertical: isSmallScreen ? 8 : 12,
-        ),
-        leading: Container(
-          width: isSmallScreen ? 40 : 48,
-          height: isSmallScreen ? 40 : 48,
-          decoration: BoxDecoration(
-            color: (iconColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor ?? Theme.of(context).colorScheme.primary,
-            size: isSmallScreen ? 20 : 24,
-          ),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 15 : 16,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: isSmallScreen ? 12 : 13,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Theme.of(context).colorScheme.primary,
-          size: isSmallScreen ? 24 : 28,
-        ),
-        onTap: onTap,
-      ),
-    );
-  }
-
   void _handleStoreNavigation() {
     if (kIsWeb) {
       showDialog(
@@ -279,9 +164,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _showLanguageSelectionDialog() async {
+    final updated = await ProfileService.showLanguageSettingsDialog(context);
+    if (updated) {
+      // Refresh the UI after settings are updated
+      _fetchUserData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
 
     return Scaffold(
@@ -298,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildProfileHeader(),
+            ProfileHeader(name: _name, email: _email),
             Card(
               elevation: 2,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
@@ -317,99 +209,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: StreakDisplay(),
               ),
             ),
-            _buildMenuItem(
+            ProfileMenuItem(
               icon: _premium ? Icons.star : Icons.star_border,
               iconColor: _premium ? Colors.amber : null,
               title: _premium ? 'Premium Member' : 'Free Account',
               subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
               onTap: _handleStoreNavigation,
             ),
-            _buildMenuItem(
+            ProfileMenuItem(
+              icon: Icons.translate,
+              title: 'Language Settings',
+              subtitle: 'Native: $_nativeLanguage • Target: $_targetLanguage • Level: $_languageLevel',
+              onTap: _showLanguageSelectionDialog,
+            ),
+            ProfileMenuItem(
+              icon: Icons.edit,
+              title: 'Edit Nickname',
+              subtitle: 'Change how the app addresses you',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return const NicknamePopup();
+                  },
+                ).then((_) {
+                  // Refresh user data after nickname change
+                  _fetchUserData();
+                });
+              },
+            ),
+            ProfileMenuItem(
               icon: Icons.shopping_bag,
               title: 'Store',
               subtitle: 'View available packages and offers',
               onTap: _handleStoreNavigation,
             ),
-            _buildMenuItem(
+            ProfileMenuItem(
               icon: Icons.help_outline,
               title: 'Help & Support',
               subtitle: 'FAQs and contact information',
               onTap: () {
-                _launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"));
+                ProfileService.launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"));
               },
             ),
-            _buildMenuItem(
+            ProfileMenuItem(
               icon: Icons.privacy_tip_outlined,
               title: 'Privacy Policy',
               subtitle: 'View our privacy policy',
               onTap: () {
-                _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
+                ProfileService.launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
               },
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.notifications),
-              title: const Text('Daily Practice Reminder'),
-              subtitle: Text(_reminderTime != null ? 'Reminder set for ${_reminderTime!.format(context)}' : 'No reminder set'),
-              trailing: _reminderTime != null
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: _cancelReminder,
-                    )
-                  : null,
+            ReminderTile(
+              reminderTime: _reminderTime,
               onTap: _showTimePickerDialog,
+              onClear: _reminderTime != null ? _cancelReminder : null,
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: colorScheme.error.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: InkWell(
-                  onTap: _deleteAccount,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 12 : 16,
-                      vertical: isSmallScreen ? 12 : 16,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.delete_forever,
-                          color: colorScheme.error,
-                          size: isSmallScreen ? 20 : 24,
-                        ),
-                        SizedBox(width: isSmallScreen ? 8 : 12),
-                        Text(
-                          'Delete Account',
-                          style: TextStyle(
-                            color: colorScheme.error,
-                            fontWeight: FontWeight.bold,
-                            fontSize: isSmallScreen ? 15 : 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            const Divider(),
+            ProfileMenuItem(
+              icon: Icons.logout,
+              title: 'Logout',
+              subtitle: 'Sign out of your account',
+              onTap: () async {
+                await _authService.signOut();
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              },
             ),
-            SizedBox(height: isSmallScreen ? 16 : 24),
+            const SizedBox(height: 16),
+            DeleteAccountButton(onDelete: _deleteAccount),
+            const SizedBox(height: 32),
           ],
         ),
       ),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/profile"),
     );
   }
-}
-
-void _launchURL(Uri url) async {
-  await canLaunchUrl(url) ? await launchUrl(url) : throw 'Could not launch $url';
 }

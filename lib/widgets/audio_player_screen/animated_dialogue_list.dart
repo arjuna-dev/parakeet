@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parakeet/widgets/typing_animation_bubble.dart';
+import 'package:parakeet/widgets/audio_player_screen/typing_animation_bubble.dart';
 
 class AnimatedDialogueList extends StatefulWidget {
   final List<dynamic> dialogue;
@@ -72,7 +72,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         if (firstValidIndex >= 0) {
           // Check if the message is fully generated
           final dynamic dialogueItem = _dialogueNotifier.value[firstValidIndex];
-          final String dialogueTarget = dialogueItem["target_language"]?.toString() ?? "";
           final String dialogueNative = dialogueItem["native_language"]?.toString() ?? "";
 
           // If native language is expected but missing, don't initialize yet
@@ -754,40 +753,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       print("==============================");
     } catch (e) {
       print("Error in _logDialogueState: $e");
-    }
-  }
-
-  void _updateVisibleMessages(List<dynamic> dialogueData) {
-    try {
-      if (!mounted) return;
-
-      setState(() {
-        try {
-          _visibleMessages.clear();
-
-          for (int i = 0; i < dialogueData.length; i++) {
-            try {
-              // Skip null entries
-              if (dialogueData[i] == null) continue;
-
-              // Check if the message has content
-              final String target = dialogueData[i]["target_language"]?.toString() ?? "";
-              if (target.trim().isEmpty) continue;
-
-              // Add to visible messages if it's already animated
-              if (_animatedMessages.contains(i)) {
-                _visibleMessages.add(i);
-              }
-            } catch (e) {
-              print("Error processing message $i in _updateVisibleMessages: $e");
-            }
-          }
-        } catch (e) {
-          print("Error in setState of _updateVisibleMessages: $e");
-        }
-      });
-    } catch (e) {
-      print("Error in _updateVisibleMessages: $e");
     }
   }
 

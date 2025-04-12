@@ -14,7 +14,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
-import 'screens/library_screen.dart';
+
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
@@ -392,7 +392,7 @@ class _MyAppState extends State<MyApp> {
                                             });
                                             return const Center(child: CircularProgressIndicator());
                                           }
-                                          return const CreateLesson(title: 'Start A New Lesson');
+                                          return const CreateLesson(title: 'Create New Lesson');
                                         }
                                       }
                                       return const Center(child: CircularProgressIndicator());
@@ -424,14 +424,6 @@ class _MyAppState extends State<MyApp> {
             case '/login':
               builder = (context) => const ResponsiveScreenWrapper(
                     child: AuthScreen(),
-                  );
-              break;
-            case '/library':
-              builder = (context) => ResponsiveScreenWrapper(
-                    child: ChangeNotifierProvider(
-                      create: (context) => HomeScreenModel(),
-                      child: const Library(),
-                    ),
                   );
               break;
             case '/profile':

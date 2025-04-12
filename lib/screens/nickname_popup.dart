@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'dart:async';
-import '../utils/native_language_list.dart';
 import 'dart:math';
 
 class NicknamePopup extends StatefulWidget {
@@ -25,8 +24,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
   final player = AudioPlayer();
   String userId = FirebaseAuth.instance.currentUser!.uid;
   String? _currentNickname;
-  String _selectedLanguage = "English (US)"; // Add this line near other state variables
-  int? _usedGreetingIndex; // Add this near other state variables
+  String _nativeLanguage = "English (US)";
+  int? _usedGreetingIndex;
+  StreamSubscription? _playerStateSubscription;
 
   @override
   void initState() {
@@ -34,6 +34,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
     _nicknameController.addListener(_onTextChanged);
     _loadUseNamePreference();
     _fetchNickname();
+    _fetchUserLanguage();
   }
 
   Future<void> _fetchNickname() async {
@@ -52,9 +53,30 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
   }
 
+  Future<void> _fetchUserLanguage() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data();
+          if (data != null && data.containsKey('native_language')) {
+            setState(() {
+              _nativeLanguage = data['native_language'];
+            });
+          }
+        }
+      }
+    } catch (error) {
+      print("Error fetching user language: $error");
+    }
+  }
+
   @override
   void dispose() {
     _nicknameController.dispose();
+    _playerStateSubscription?.cancel();
+    player.dispose();
     super.dispose();
   }
 
@@ -142,13 +164,13 @@ class _NicknamePopupState extends State<NicknamePopup> {
     }
 
     try {
-      // Generate and play greeting in selected language with random greeting
-      final selectedGreetings = greetingsList[_selectedLanguage]!;
+      // Generate and play greeting in native language with random greeting
+      final selectedGreetings = greetingsList[_nativeLanguage]!;
       _usedGreetingIndex = Random().nextInt(selectedGreetings.length);
       final randomGreeting = selectedGreetings[_usedGreetingIndex!];
-      final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_0";
+      final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${_usedGreetingIndex! + 1}";
 
-      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _selectedLanguage);
+      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _nativeLanguage);
       await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText);
 
@@ -157,14 +179,25 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _isLoading = false;
       });
 
+      // Cancel any existing subscription
+      _playerStateSubscription?.cancel();
+
+      // Wait for audio to complete playing before closing
+      _playerStateSubscription = player.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed && mounted) {
+          // Generate remaining greetings in background
+          unawaited(_generateRemainingGreetings(nicknameText));
+
+          // Close the popup
+          Navigator.of(context).pop();
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Your nickname has been saved!"),
         ),
       );
-
-      // Generate remaining greetings in background
-      unawaited(_generateRemainingGreetings(nicknameText));
     } catch (e) {
       print("Error generating nicknames: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -222,15 +255,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _generateRemainingGreetings(String nicknameText) async {
     try {
-      // First generate remaining English (US) greetings
-      final selectedGreetings = greetingsList[_selectedLanguage]!;
+      // Generate remaining greetings for native language, skipping the used one
+      final selectedGreetings = greetingsList[_nativeLanguage]!;
 
-      // Generate remaining greetings for selected language, skipping the used one
+      // Generate remaining greetings for native language, skipping the used one
       for (var i = 0; i < selectedGreetings.length; i++) {
         if (i == _usedGreetingIndex) continue; // Skip the greeting we already generated
         final greeting = selectedGreetings[i];
-        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${i + 1}";
-        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _selectedLanguage));
+        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${i + 1}";
+        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _nativeLanguage));
       }
     } catch (e) {
       print("Error queuing remaining greetings: $e");
@@ -322,46 +355,6 @@ class _NicknamePopupState extends State<NicknamePopup> {
                         horizontal: isSmallScreen ? 8 : 12,
                         vertical: isSmallScreen ? 4 : 8,
                       ),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedLanguage,
-                        decoration: InputDecoration(
-                          labelText: 'Select Language',
-                          labelStyle: TextStyle(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          border: InputBorder.none,
-                        ),
-                        items: nativeLanguageCodes.keys.map((String language) {
-                          return DropdownMenuItem<String>(
-                            value: language,
-                            child: Text(
-                              language,
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 13 : 14,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedLanguage = newValue;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(height: isSmallScreen ? 8 : 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 8 : 12,
-                        vertical: isSmallScreen ? 4 : 8,
-                      ),
                       child: Row(
                         children: [
                           Switch(
@@ -404,8 +397,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
       ),
       actions: [
         TextButton(
-          onPressed: () async {
-            player.dispose();
+          onPressed: () {
             Navigator.of(context).pop();
           },
           style: TextButton.styleFrom(
@@ -429,7 +421,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
             ),
           ),
           child: Text(
-            'Create & Save',
+            'Save',
             style: TextStyle(
               fontSize: isSmallScreen ? 13 : 14,
               fontWeight: FontWeight.bold,

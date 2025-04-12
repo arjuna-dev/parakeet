@@ -7,7 +7,8 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-All the words in keywords list should always be used in the dialogue. If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue.
+If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
 This is an example of a request you could get and its expected output.
 
@@ -427,7 +428,8 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-The keywords should be used in the dialogue if they are provided. If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
+IMPORTANT: EVERY word in {keywords} list MUST be used in the dialogue.
+If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
 Here is an example of data you could get and its expected output.
 
@@ -492,4 +494,16 @@ def prompt_generate_lesson_topic(category, all_words, target_language, native_la
             "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
         }}
         The words should be in lower case.
+        '''
+
+def prompt_suggest_custom_lesson(target_language, native_language):
+  return f'''Generate topic and words for a custom language lesson.
+        The topic should be engaging, fun and practical for language learning and includes exactly 5 relevant words related to the topic.
+        Return the response in this exact JSON format:
+        {{
+            "title": "The lesson title in {native_language}",
+            "topic": "The lesson topic in {native_language}",
+            "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
+        }}
+        The words should be in {target_language} and in lower case.
         '''

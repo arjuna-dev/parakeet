@@ -10,7 +10,7 @@ class FirstAPIRequest(BaseModel):
     document_id: str
     tts_provider: str
     language_level: str
-    keywords: List[str]
+    keywords: List[str] | Optional[str] = ""
 
 class SecondAPIRequest(BaseModel):
     dialogue: List[dict[str, str]]
