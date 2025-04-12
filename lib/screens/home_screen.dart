@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:provider/provider.dart';
-import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:parakeet/services/home_screen_service.dart';
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 
@@ -56,9 +55,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: <Widget>[
-          buildProfilePopupMenu(context),
-        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: colorScheme.primary,

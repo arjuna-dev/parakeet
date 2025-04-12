@@ -42,9 +42,9 @@ class WordCard {
     };
   }
 
-  static fsrs.Card fromFirestore(Map<String, dynamic> cardData) {
+  static WordCard fromFirestore(Map<String, dynamic> cardData) {
     print("in fromFirestore, cardData: $cardData");
-    return fsrs.Card.def(
+    final card = fsrs.Card.def(
       DateTime.parse(cardData['due'] as String),
       DateTime.parse(cardData['lastReview'] as String),
       (cardData['stability'] ?? 0).toDouble(),
@@ -54,6 +54,18 @@ class WordCard {
       cardData['reps'] ?? 0,
       cardData['lapses'] ?? 0,
       fsrs.State.values[cardData['state'] ?? 0],
+    );
+    return WordCard(
+      word: cardData['word'] as String,
+      due: card.due,
+      lastReview: card.lastReview,
+      stability: card.stability,
+      difficulty: card.difficulty,
+      elapsedDays: card.elapsedDays,
+      scheduledDays: card.scheduledDays,
+      reps: card.reps,
+      lapses: card.lapses,
+      state: card.state,
     );
   }
 }

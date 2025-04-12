@@ -161,7 +161,7 @@ class LibraryService {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('savedPosition_${parentId}_${user.uid}');
-    await prefs.remove('savedTrackIndex_${parentId}_${user.uid}');
+    await prefs.remove('savedTrackName_${parentId}_${user.uid}');
     await prefs.remove("now_playing_${parentId}_${user.uid}");
 
     List<String>? nowPlayingList = prefs.getStringList("now_playing_${user.uid}");

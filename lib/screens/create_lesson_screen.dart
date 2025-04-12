@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/language_categories.dart';
-import 'package:parakeet/widgets/profile_popup_menu.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/widgets/create_lesson_screen/category_list.dart';
 import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
@@ -74,9 +73,6 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: <Widget>[
-          buildProfilePopupMenu(context),
-        ],
       ),
       body: Column(
         children: [
@@ -120,22 +116,19 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
                   nativeLanguage: nativeLanguage,
                   targetLanguage: targetLanguage,
                   languageLevel: languageLevel,
-                  isSmallScreen: isSmallScreen,
                 ),
-
                 // Custom Lesson Tab
                 CustomLessonForm(
                   nativeLanguage: nativeLanguage,
                   targetLanguage: targetLanguage,
                   languageLevel: languageLevel,
-                  isSmallScreen: isSmallScreen,
                 ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/create_lesson"),
     );
   }
 }

@@ -49,7 +49,7 @@ class HomeScreenService {
                 ),
                 children: <TextSpan>[
                   TextSpan(
-                    text: 'Go to library',
+                    text: 'Create a lesson',
                     style: TextStyle(
                       decoration: TextDecoration.underline,
                       color: colorScheme.primary,
@@ -57,10 +57,10 @@ class HomeScreenService {
                     ),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () {
-                        Navigator.pushReplacementNamed(context, '/library');
+                        Navigator.pushReplacementNamed(context, '/create_lesson');
                       },
                   ),
-                  const TextSpan(text: ' to add audio lessons to your favorite list!'),
+                  const TextSpan(text: ' to add it to your favorite list!'),
                 ],
               ),
             ),

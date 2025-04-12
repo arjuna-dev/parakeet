@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/widgets/create_lesson_screen/category_item.dart';
-import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/screens/category_detail_screen.dart';
 
 class CategoryList extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
@@ -38,12 +38,16 @@ class CategoryList extends StatelessWidget {
   }
 
   void _handleCategorySelection(BuildContext context, Map<String, dynamic> category) {
-    LessonService.createCategoryLesson(
+    Navigator.push(
       context,
-      category,
-      nativeLanguage,
-      targetLanguage,
-      languageLevel,
+      MaterialPageRoute(
+        builder: (context) => CategoryDetailScreen(
+          category: category,
+          nativeLanguage: nativeLanguage,
+          targetLanguage: targetLanguage,
+          languageLevel: languageLevel,
+        ),
+      ),
     );
   }
 }
