@@ -4,6 +4,7 @@ import 'package:parakeet/screens/category_detail_screen.dart';
 
 class CategoryList extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
+  final List<Map<String, dynamic>> nativeCategories;
   final String nativeLanguage;
   final String targetLanguage;
   final String languageLevel;
@@ -12,6 +13,7 @@ class CategoryList extends StatelessWidget {
   const CategoryList({
     Key? key,
     required this.categories,
+    required this.nativeCategories,
     required this.nativeLanguage,
     required this.targetLanguage,
     required this.languageLevel,
@@ -28,21 +30,23 @@ class CategoryList extends StatelessWidget {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
+        final nativeCategory = nativeCategories[index];
         return CategoryItem(
           category: category,
-          onTap: () => _handleCategorySelection(context, category),
+          onTap: () => _handleCategorySelection(context, category, nativeCategory),
           isSmallScreen: isSmallScreen,
         );
       },
     );
   }
 
-  void _handleCategorySelection(BuildContext context, Map<String, dynamic> category) {
+  void _handleCategorySelection(BuildContext context, Map<String, dynamic> category, Map<String, dynamic> nativeCategory) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CategoryDetailScreen(
           category: category,
+          nativeCategory: nativeCategory,
           nativeLanguage: nativeLanguage,
           targetLanguage: targetLanguage,
           languageLevel: languageLevel,

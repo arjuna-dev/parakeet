@@ -10,6 +10,7 @@ import 'package:parakeet/main.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   final Map<String, dynamic> category;
+  final Map<String, dynamic> nativeCategory;
   final String nativeLanguage;
   final String targetLanguage;
   final String languageLevel;
@@ -17,6 +18,7 @@ class CategoryDetailScreen extends StatefulWidget {
   const CategoryDetailScreen({
     Key? key,
     required this.category,
+    required this.nativeCategory,
     required this.nativeLanguage,
     required this.targetLanguage,
     required this.languageLevel,
@@ -118,7 +120,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withOpacity(0.7),
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      // color: colorScheme.primaryContainer.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -154,7 +157,53 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       ],
                     ),
                   ),
-
+                  // Listing of words to learn in this category
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      // color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      color: colorScheme.primaryContainer.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      childAspectRatio: 3,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 1,
+                      mainAxisSpacing: 1,
+                      children: (widget.category['words'] as List).asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final word = entry.value.toString();
+                        final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                                backgroundColor: colorScheme.surfaceContainer,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () => showCenteredToast(context, nativeWord),
+                              child: Text(
+                                word,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6), // increased space between word and progress bar
+                            WordProgressBar(score: 29),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
                   // Create New Lesson Button
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -269,4 +318,62 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
     ));
   }
+}
+
+class WordProgressBar extends StatelessWidget {
+  final int score;
+  const WordProgressBar({required this.score, super.key});
+
+  double get progress => (score.clamp(0, 30)) / 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return FractionallySizedBox(
+      widthFactor: 0.5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          value: progress,
+          minHeight: 5,
+          backgroundColor: Colors.purple.shade100,
+          valueColor: AlwaysStoppedAnimation<Color?>(colorScheme.primary),
+        ),
+      ),
+    );
+  }
+}
+
+void showCenteredToast(BuildContext context, String message) {
+  final colorScheme = Theme.of(context).colorScheme;
+  final overlay = Overlay.of(context);
+  final overlayEntry = OverlayEntry(
+    builder: (context) => Center(
+      child: Material(
+        color: colorScheme.surface,
+        child: AnimatedOpacity(
+          opacity: 1.0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(overlayEntry);
+
+  Future.delayed(const Duration(seconds: 2), () {
+    overlayEntry.remove();
+  });
 }

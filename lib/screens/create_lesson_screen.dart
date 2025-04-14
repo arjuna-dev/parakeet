@@ -21,6 +21,7 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
   late TabController _tabController;
 
   List<Map<String, dynamic>> get categories => getCategoriesForLanguage(targetLanguage);
+  List<Map<String, dynamic>> get nativeCategories => getCategoriesForLanguage(nativeLanguage);
 
   @override
   void initState() {
@@ -113,6 +114,7 @@ class _CreateLessonState extends State<CreateLesson> with SingleTickerProviderSt
                 // Categories Tab
                 CategoryList(
                   categories: categories,
+                  nativeCategories: nativeCategories,
                   nativeLanguage: nativeLanguage,
                   targetLanguage: targetLanguage,
                   languageLevel: languageLevel,

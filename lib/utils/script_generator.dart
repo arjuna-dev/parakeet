@@ -8,7 +8,7 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 import '../screens/audio_player_s_utils.dart' show accessBigJson;
 
-Future<Map<String, DocumentReference>> ensureFirestoreWords(String userId, String targetLanguage, String category, List<dynamic> words) async {
+Future<Map<String, DocumentReference>> getWordCardDocRefs(String userId, String targetLanguage, String category, List<dynamic> words) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
   Map<String, DocumentReference> wordDocRefs = {};
 
@@ -116,7 +116,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
   Map<String, DocumentReference> overdueWordsUsed = {};
 
-  overdueWordsUsed = await ensureFirestoreWords(userId, targetLanguage, category, wordsToRepeat);
+  overdueWordsUsed = await getWordCardDocRefs(userId, targetLanguage, category, wordsToRepeat);
 
   final overdueList = await getOverdueWords(userId, targetLanguage, category);
   final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
