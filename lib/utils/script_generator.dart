@@ -305,7 +305,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       print("collectionRef: $collectionRef");
 
       // Get the document snapshot
-      final docSnapshot = await collectionRef.get();
+      final docSnapshot = await collectionRef.get(const GetOptions(source: Source.server));
       print("doc: ${docSnapshot.data()}");
 
       // Check if document exists and has data

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ReviewWordsDialog extends StatefulWidget {
   final Map<String, dynamic> words;
@@ -220,7 +221,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
       );
 
       // Save the updated card
-      await docRef.set(updatedWordCard.toFirestore());
+      await docRef.set(updatedWordCard.toFirestore(), SetOptions(merge: true));
     }
 
     // Move to next word
