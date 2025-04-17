@@ -32,7 +32,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   final HomeScreenModel _model = HomeScreenModel();
   Map<String, bool> _localFavorites = {};
   List<DocumentSnapshot> _categoryLessons = [];
-  List<String> _learningWords = [];
+  List<Map<String, dynamic>> _learningWords = [];
   bool _isLoading = true;
   bool _showAllWords = false;
   bool _wordsExpanded = false; // new state variable for expansion
@@ -50,7 +50,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
 
       setState(() {
-        _learningWords = snapshot.docs.map((doc) => doc.id).toList();
+        // Changed: storing word data (with stability) instead of only doc.id
+        _learningWords = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
       });
     } catch (e) {
       print('Error loading learning words: $e');
@@ -87,9 +88,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   }
 
   List<String> get _displayedWords {
-    if (_showAllWords) return _learningWords;
+    if (_showAllWords) return _learningWords.map((word) => word['word'] as String).toList();
     // Calculate how many words fit in 2 rows (assuming ~4 words per row)
-    return _learningWords.take(5).toList();
+    return _learningWords.take(5).map((word) => word['word'] as String).toList();
   }
 
   @override
@@ -179,6 +180,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             final index = entry.key;
                             final word = entry.value.toString();
                             final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                            // Find matching word data for score calculation
+                            final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
+                            // Use stability if found, otherwise fallback to 9
+                            final stability = matching.isEmpty ? 0 : matching['stability'];
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -200,7 +205,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                WordProgressBar(score: 9),
+                                // Changed: pass calculated stability as score
+                                WordProgressBar(score: stability),
                               ],
                             );
                           }).toList()),
@@ -344,7 +350,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               ),
         bottomSheet: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(6),
             child: FilledButton.icon(
               onPressed: _handleCreateNewLesson,
               icon: const Icon(Icons.add),
@@ -363,9 +369,11 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
 class WordProgressBar extends StatelessWidget {
   final int score;
+  final int learnedScore = 100;
+  final int masteredScore = 365;
   const WordProgressBar({required this.score, super.key});
 
-  double get progress => (score.clamp(0, 30)) / 30;
+  double get progress => (score.clamp(0, learnedScore)) / learnedScore;
 
   @override
   Widget build(BuildContext context) {
