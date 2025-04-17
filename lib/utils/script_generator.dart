@@ -103,7 +103,7 @@ Future<Map<String, dynamic>?> getAudioUrlsForWord(DocumentReference docRef) asyn
 
 Future<Map<String, dynamic>> parseAndCreateScript(
   Map<String, dynamic> bigJson,
-  List<dynamic> wordsToRepeat,
+  List<dynamic> selectedWords,
   List<dynamic> dialogue,
   ValueNotifier<RepetitionMode> repetitionMode,
   String userId,
@@ -114,13 +114,13 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 ) async {
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
-  Map<String, DocumentReference> overdueWordsUsed = {};
+  Map<String, DocumentReference> selectedWordsCards = {};
 
-  overdueWordsUsed = await getWordCardDocRefs(userId, targetLanguage, category, wordsToRepeat);
+  selectedWordsCards = await getWordCardDocRefs(userId, targetLanguage, category, selectedWords);
 
   final overdueList = await getOverdueWords(userId, targetLanguage, category);
-  final Set<String> wordsToRepeatSet = wordsToRepeat.cast<String>().toSet();
-  overdueList.removeWhere((word) => wordsToRepeatSet.contains(word));
+  final Set<String> selectedWordsSet = selectedWords.cast<String>().toSet();
+  overdueList.removeWhere((word) => selectedWordsSet.contains(word));
 
   List<String> script = createFirstScript(dialogue);
 
@@ -151,13 +151,13 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       script.addAll(sentenceSequence);
 
       // Check if any words to repeat appear in this entire sentence
-      bool sentenceHasTargetWords = wordsToRepeat.any((element) => bigJsonList[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
+      bool sentenceHasTargetWords = selectedWords.any((element) => bigJsonList[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
       if (sentenceHasTargetWords) {
         // Process each 'split_sentence' item
         for (int j = 0; j < bigJsonList[i]["split_sentence"].length; j++) {
           bool splitHasTargetWords =
-              wordsToRepeat.any((element) => bigJsonList[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
+              selectedWords.any((element) => bigJsonList[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
           if (splitHasTargetWords) {
             // 8f. Check if any word in this chunk is overdue
@@ -184,7 +184,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             // Word objects for chunkSequence
             List<Map<String, dynamic>> wordObjects = [];
             for (int index = 0; index < bigJsonList[i]["split_sentence"][j]['words'].length; index++) {
-              bool wordIsTarget = wordsToRepeat
+              bool wordIsTarget = selectedWords
                   .any((element) => bigJsonList[i]["split_sentence"][j]["words"][index]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
               if (wordIsTarget) {
                 String wordFile = "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
@@ -240,8 +240,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               String word = accessBigJson(bigJsonMap, wordObj["word"]);
               word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
               // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
-              if (wordsToRepeat.any((element) => word.contains(element))) {
-                word = wordsToRepeat.firstWhere((element) => word.contains(element));
+              if (selectedWords.any((element) => word.contains(element))) {
+                word = selectedWords.firstWhere((element) => word.contains(element));
                 _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
                   "native_chunk": nativeChunkUrl,
                   "target_chunk": targetChunkUrl,
@@ -259,7 +259,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       }
     }
   }
-  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category, overdueWordsUsed);
+  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category, selectedWordsCards);
 
   int overdueWordsToUseLength = overdueWordDocRefs.length;
   int insertOverdueEvery = 0;
@@ -274,7 +274,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 
     if (wordUrls != null && wordUrls['audio_urls'] != null && wordUrls['audio_urls']['native_chunk'] != null && wordUrls['audio_urls']['target_chunk'] != null) {
       print("WordUrls: $wordUrls");
-      overdueWordsUsed.addAll({wordUrls['word']: docRef});
+      selectedWordsCards.addAll({wordUrls['word']: docRef});
       List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
         wordUrls['audio_urls']['native_chunk'],
         wordUrls['audio_urls']['target_chunk'],
@@ -296,7 +296,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   }
 
   final Set<String> overdueSet = overdueList.toSet();
-  final List<String> combinedWordsList = overdueSet.union(wordsToRepeatSet).toList();
+  final List<String> combinedWordsList = overdueSet.union(selectedWordsSet).toList();
   Future<List<fsrs.Card>> getAllCards(List<String> words) async {
     List<fsrs.Card> cards = [];
     for (String word in words) {
@@ -331,7 +331,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
   print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
 
-  return {"script": script, "overdueWordsUsed": overdueWordsUsed};
+  return {"script": script, "selectedWordsCards": selectedWordsCards};
 }
 
 Future<void> _appendRepetitionUrlsToWordDoc(
