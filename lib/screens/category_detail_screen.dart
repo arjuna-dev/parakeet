@@ -35,6 +35,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   List<String> _learningWords = [];
   bool _isLoading = true;
   bool _showAllWords = false;
+  bool _wordsExpanded = false; // new state variable for expansion
 
   @override
   void initState() {
@@ -98,225 +99,265 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final isSmallScreen = screenSize.height < 700;
 
     return ResponsiveScreenWrapper(
-        child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          widget.category['name'],
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.category['name'],
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category Info Section
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                      // color: colorScheme.primaryContainer.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LessonConstants.getCategoryIcon(widget.category['name']),
-                          color: colorScheme.primary,
-                          size: isSmallScreen ? 24 : 32,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  color: colorScheme.onPrimaryContainer,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${(widget.category['words'] as List).length} words available',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                  color: colorScheme.onPrimaryContainer.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Listing of words to learn in this category
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      // color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                      color: colorScheme.primaryContainer.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      childAspectRatio: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 1,
-                      mainAxisSpacing: 1,
-                      children: (widget.category['words'] as List).asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final word = entry.value.toString();
-                        final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                                backgroundColor: colorScheme.surfaceContainer,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () => showCenteredToast(context, nativeWord),
-                              child: Text(
-                                word,
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6), // increased space between word and progress bar
-                            WordProgressBar(score: 29),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // Create New Lesson Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: FilledButton.icon(
-                      onPressed: _handleCreateNewLesson,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Lesson'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: Size(double.infinity, isSmallScreen ? 40 : 48),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Words Being Learned Section
-                  if (_learningWords.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Words You\'re Learning',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 16 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category Info Section
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _displayedWords
-                                .map((word) => Chip(
-                                      label: Text(
-                                        word,
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 12 : 14,
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                      backgroundColor: colorScheme.surfaceContainerHighest,
-                                    ))
-                                .toList(),
+                          Icon(
+                            LessonConstants.getCategoryIcon(widget.category['name']),
+                            color: colorScheme.primary,
+                            size: isSmallScreen ? 24 : 32,
                           ),
-                          if (_learningWords.length > 5) ...[
-                            const SizedBox(height: 8),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showAllWords = !_showAllWords;
-                                });
-                              },
-                              child: Text(
-                                _showAllWords ? 'Show Less' : 'Show More',
-                                style: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontSize: isSmallScreen ? 12 : 14,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    color: colorScheme.onPrimaryContainer,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${(widget.category['words'] as List).length} words available',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                    color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-                  ],
-
-                  // Existing Lessons Section
-                  if (_categoryLessons.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Existing Lessons',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 16 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
+                    // Listing of words to learn in this category (fixed size with expand button)
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        childAspectRatio: 3,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 1,
+                        mainAxisSpacing: 1,
+                        children: [
+                          // Render only first 5 words if not expanded; all words if expanded.
+                          ...((widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).toList().asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final word = entry.value.toString();
+                            final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                                    backgroundColor: colorScheme.surfaceContainer,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () => showCenteredToast(context, nativeWord),
+                                  child: Text(
+                                    word,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 12 : 14,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                WordProgressBar(score: 9),
+                              ],
+                            );
+                          }).toList()),
+                          if ((widget.category['words'] as List).length % 2 == 0 && _wordsExpanded) const SizedBox(),
+                          // Always include the "see more"/"see less" button if there are more than 5 words.
+                          if ((widget.category['words'] as List).length > 5)
+                            Center(
+                              child: SizedBox(
+                                height: 36,
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    minimumSize: Size.zero,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _wordsExpanded = !_wordsExpanded;
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _wordsExpanded ? "see less" : "see more",
+                                        style: TextStyle(
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        _wordsExpanded ? Icons.expand_less : Icons.expand_more,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    ..._categoryLessons.map((doc) => LessonItem(
-                          document: doc,
-                          category: widget.category['name'],
-                          isSmallScreen: isSmallScreen,
-                          model: _model,
-                          localFavorites: _localFavorites,
-                          updateFavorites: (favorites) {
-                            setState(() => _localFavorites = favorites);
-                          },
-                          onDelete: (doc) {
-                            setState(() {
-                              _categoryLessons.remove(doc);
-                            });
-                          },
-                        )),
+
+                    // Words Being Learned Section
+                    if (_learningWords.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Words You\'re Learning',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _displayedWords
+                                  .map((word) => Chip(
+                                        label: Text(
+                                          word,
+                                          style: TextStyle(
+                                            fontSize: isSmallScreen ? 12 : 14,
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        backgroundColor: colorScheme.surfaceContainerHighest,
+                                      ))
+                                  .toList(),
+                            ),
+                            if (_learningWords.length > 5) ...[
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _showAllWords = !_showAllWords;
+                                  });
+                                },
+                                child: Text(
+                                  _showAllWords ? 'Show Less' : 'Show More',
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Existing Lessons Section
+                    if (_categoryLessons.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Existing Lessons',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ..._categoryLessons.map((doc) => LessonItem(
+                            document: doc,
+                            category: widget.category['name'],
+                            isSmallScreen: isSmallScreen,
+                            model: _model,
+                            localFavorites: _localFavorites,
+                            updateFavorites: (favorites) {
+                              setState(() => _localFavorites = favorites);
+                            },
+                            onDelete: (doc) {
+                              setState(() {
+                                _categoryLessons.remove(doc);
+                              });
+                            },
+                          )),
+                    ],
+                    const SizedBox(height: 80),
                   ],
-                ],
+                ),
+              ),
+        bottomSheet: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: FilledButton.icon(
+              onPressed: _handleCreateNewLesson,
+              icon: const Icon(Icons.add),
+              label: const Text('Create New Lesson'),
+              style: FilledButton.styleFrom(
+                minimumSize: Size(double.infinity, isSmallScreen ? 40 : 48),
               ),
             ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
-    ));
+          ),
+        ),
+        bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
+      ),
+    );
   }
 }
 
