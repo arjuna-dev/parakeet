@@ -336,7 +336,7 @@ class WordProgressBar extends StatelessWidget {
         child: LinearProgressIndicator(
           value: progress,
           minHeight: 5,
-          backgroundColor: Colors.purple.shade100,
+          backgroundColor: colorScheme.surfaceContainerHighest,
           valueColor: AlwaysStoppedAnimation<Color?>(colorScheme.primary),
         ),
       ),
