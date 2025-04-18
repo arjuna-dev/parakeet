@@ -173,11 +173,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           // Convert to a properly handled Future chain
           final scriptData = await script_generator.parseAndCreateScript(
               _existingBigJson!, widget.wordsToRepeat, widget.dialogue, _repetitionsMode, widget.userID, widget.documentID, widget.targetLanguage, widget.nativeLanguage, widget.category ?? 'Custom Lesson');
+          print('scriptData: $scriptData');
 
           if (mounted) {
             setState(() {
               _script = scriptData['script'] ?? [];
-              _overdueWordsUsed = scriptData['overdueWordsUsed'] ?? [];
+              _overdueWordsUsed = scriptData['allUsedWordsCards'] ?? [];
               _currentTrack = _script.isNotEmpty ? _script[0] : '';
             });
           } else {

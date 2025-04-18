@@ -45,6 +45,48 @@ Future<List<String>> getOverdueWords(String userId, String targetLanguage, Strin
   return querySnapshot.docs.map((doc) => doc.id).toList();
 }
 
+Future<List<DocumentReference>> getAllOverdueWordsRefs(String userId, String targetLanguage, List<dynamic> selectedWords) async {
+  final categoriesRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
+  final categoriesSnapshot = await categoriesRef.get();
+
+  List<Map<String, dynamic>> overdueWordsWithDates = [];
+  final now = DateTime.now();
+
+  // Loop through all categories
+  for (var categoryDoc in categoriesSnapshot.docs) {
+    final category = categoryDoc.id;
+    final wordsCollectionRef = categoriesRef.doc(category).collection(category);
+
+    // Query overdue words in this category
+    final querySnapshot = await wordsCollectionRef.where('due', isLessThanOrEqualTo: now.toIso8601String()).get();
+
+    // Add each overdue word with its due date and reference
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      if (data.containsKey('due') && data.containsKey('word') && !selectedWords.contains(data['word'])) {
+        try {
+          final dueDate = DateTime.parse(data['due']);
+          final daysOverdue = now.difference(dueDate).inDays;
+
+          overdueWordsWithDates.add({
+            'reference': doc.reference,
+            'daysOverdue': daysOverdue,
+          });
+        } catch (e) {
+          // Skip if date parsing fails
+          print('Error parsing date for word ${doc.id}: $e');
+        }
+      }
+    }
+  }
+
+  // Sort by days overdue (descending) and take the top 5
+  overdueWordsWithDates.sort((a, b) => b['daysOverdue'].compareTo(a['daysOverdue']));
+
+  // Return only the references of the 5 most overdue words
+  return overdueWordsWithDates.take(5).map((item) => item['reference'] as DocumentReference).toList();
+}
+
 List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
   List<String> parts = inputString.split('||');
   List<Map<String, dynamic>> result = [];
@@ -73,10 +115,10 @@ List<String> createFirstScript(List<dynamic> data) {
   return script;
 }
 
-String formConversationAudioUrl(String documentId, String fileName) {
-  return "https://storage.googleapis.com/conversations_audio_files/"
-      "$documentId/$fileName.mp3";
-}
+// String getWordAudioUrl(String documentId, String fileName) {
+//   return "https://storage.googleapis.com/conversations_audio_files/"
+//       "$documentId/$fileName.mp3";
+// }
 
 Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String targetLanguage, String category, Map<String, DocumentReference> overdueWordsUsed) async {
   final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category);
@@ -89,7 +131,8 @@ Future<List<DocumentReference>> getOverdueWordsRefs(String userId, String target
   return querySnapshot.docs.where((doc) => !overdueWordsUsed.containsKey(doc.data()['word'])).take(5).map((doc) => doc.reference).toList();
 }
 
-Future<Map<String, dynamic>?> getAudioUrlsForWord(DocumentReference docRef) async {
+// TODO: Please make this function more efficient
+Future<Map<String, dynamic>?> getDocumentFromRef(DocumentReference docRef) async {
   final docSnapshot = await docRef.get();
 
   if (!docSnapshot.exists) {
@@ -114,15 +157,16 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 ) async {
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
-  Map<String, DocumentReference> selectedWordsCards = {};
+  Map<String, DocumentReference> allUsedWordsCards = {};
 
-  selectedWordsCards = await getWordCardDocRefs(userId, targetLanguage, category, selectedWords);
+  allUsedWordsCards = await getWordCardDocRefs(userId, targetLanguage, category, selectedWords);
 
-  final overdueList = await getOverdueWords(userId, targetLanguage, category);
-  final Set<String> selectedWordsSet = selectedWords.cast<String>().toSet();
-  overdueList.removeWhere((word) => selectedWordsSet.contains(word));
+  final overdueListRefs = await getAllOverdueWordsRefs(userId, targetLanguage, selectedWords);
+  final overdueListDocs = await Future.wait(overdueListRefs.map((ref) => ref.get()));
+  final overdueList = overdueListDocs.map((doc) => (doc.data() as Map<String, dynamic>)['word'] as String).toList();
 
   List<String> script = createFirstScript(dialogue);
+  print("first script");
 
   for (int i = 0; i < bigJsonList.length; i++) {
     if ((bigJsonList[i] as Map).isNotEmpty) {
@@ -182,12 +226,12 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             String splitTarget = "dialogue_${i}_split_sentence_${j}_target_language";
 
             // Word objects for chunkSequence
-            List<Map<String, dynamic>> wordObjects = [];
+            List<Map<String, dynamic>> wordKeys = [];
             for (int index = 0; index < bigJsonList[i]["split_sentence"][j]['words'].length; index++) {
               bool wordIsTarget = selectedWords
                   .any((element) => bigJsonList[i]["split_sentence"][j]["words"][index]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
               if (wordIsTarget) {
-                String wordFile = "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
+                String wordKey = "dialogue_${i}_split_sentence_${j}_words_${index}_target_language";
 
                 String text = bigJsonList[i]["split_sentence"][j]['words'][index]["narrator_translation"];
                 List<Map<String, dynamic>> classifiedText2 = extractAndClassifyEnclosedWords(text);
@@ -197,19 +241,20 @@ Future<Map<String, dynamic>> parseAndCreateScript(
                   narratorTranslations.add(narratorTranslation);
                 }
 
-                wordObjects.add({
-                  "word": wordFile,
-                  "translation": narratorTranslations,
+                wordKeys.add({
+                  "word_key": wordKey,
+                  "narrator_translation_keys": narratorTranslations,
                 });
               }
             }
+            print("wordKeys added");
             // Insert the chunk sequence with normal or reduced repetition
             if (repetitionMode.value == RepetitionMode.normal) {
               List<String> chunkSequence = sequences.chunkSequence1(
                 narratorTranslationsChunk,
                 splitNative,
                 splitTarget,
-                wordObjects,
+                wordKeys,
                 j,
               );
               script.addAll(chunkSequence);
@@ -219,25 +264,21 @@ Future<Map<String, dynamic>> parseAndCreateScript(
                 narratorTranslationsChunk,
                 splitNative,
                 splitTarget,
-                wordObjects,
+                wordKeys,
                 j,
               );
               script.addAll(chunkSequence);
             }
 
             // Save audio URLs for word to Firestore
-            for (var wordObj in wordObjects) {
-              print("wordObj: $wordObj");
-              final targetScript = 'dialogue_${i}_split_sentence_${j}_target_language';
-              final nativeScript = 'dialogue_${i}_split_sentence_${j}_native_language';
-              // final targetChunk = bigJsonList[i]["split_sentence"][j]["target_language"];
-              // final nativeChunk = bigJsonList[i]["split_sentence"][j]["native_language"];
-              final nativeChunkUrl = await constructUrl(nativeScript, documentId, nativeLanguage, userId);
-              final targetChunkUrl = await constructUrl(targetScript, documentId, targetLanguage, userId);
-              print("nativeChunkUrl: $nativeChunkUrl");
-              print("targetChunkUrl: $targetChunkUrl");
+            for (var wordKey in wordKeys) {
+              final targetChunkKey = 'dialogue_${i}_split_sentence_${j}_target_language';
+              final nativeChunkKey = 'dialogue_${i}_split_sentence_${j}_native_language';
 
-              String word = accessBigJson(bigJsonMap, wordObj["word"]);
+              final nativeChunkUrl = await constructUrl(nativeChunkKey, documentId, nativeLanguage, userId);
+              final targetChunkUrl = await constructUrl(targetChunkKey, documentId, targetLanguage, userId);
+
+              String word = accessBigJson(bigJsonMap, wordKey["word_key"]);
               word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
               // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
               if (selectedWords.any((element) => word.contains(element))) {
@@ -259,29 +300,30 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       }
     }
   }
-  final overdueWordDocRefs = await getOverdueWordsRefs(userId, targetLanguage, category, selectedWordsCards);
 
-  int overdueWordsToUseLength = overdueWordDocRefs.length;
+  int overdueWordsToUseLength = overdueList.length;
   int insertOverdueEvery = 0;
+  //TODO: Change this approach
   if (overdueWordsToUseLength > 0) {
     insertOverdueEvery = (script.length / overdueWordsToUseLength).round();
   }
 
   final overdueSequences = <List<String>>[];
-  for (var docRef in overdueWordDocRefs) {
+  for (var docRef in overdueListRefs) {
     print('constructing overdue sequence');
-    final wordUrls = await getAudioUrlsForWord(docRef);
+    final wordDoc = await getDocumentFromRef(docRef);
 
-    if (wordUrls != null && wordUrls['audio_urls'] != null && wordUrls['audio_urls']['native_chunk'] != null && wordUrls['audio_urls']['target_chunk'] != null) {
-      print("WordUrls: $wordUrls");
-      selectedWordsCards.addAll({wordUrls['word']: docRef});
+    if (wordDoc != null && wordDoc['audio_urls'] != null && wordDoc['audio_urls']['native_chunk'] != null && wordDoc['audio_urls']['target_chunk'] != null) {
+      print("WordUrls: $wordDoc");
+      allUsedWordsCards.addAll({wordDoc['word']: docRef});
       List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
-        wordUrls['audio_urls']['native_chunk'],
-        wordUrls['audio_urls']['target_chunk'],
+        wordDoc['audio_urls']['native_chunk'],
+        wordDoc['audio_urls']['target_chunk'],
       );
       overdueSequences.add(overdueChunkSequence.toList());
     }
   }
+//   TODO: change the appproach
   for (int i = insertOverdueEvery; i < script.length && overdueSequences.isNotEmpty; i++) {
     if (i % insertOverdueEvery == 0) {
       if (i >= script.length) {
@@ -295,43 +337,48 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     script.addAll(overdueSequences.removeAt(0));
   }
 
+  final Set<String> selectedWordsSet = selectedWords.cast<String>().toSet();
   final Set<String> overdueSet = overdueList.toSet();
   final List<String> combinedWordsList = overdueSet.union(selectedWordsSet).toList();
-  Future<List<fsrs.Card>> getAllCards(List<String> words) async {
-    List<fsrs.Card> cards = [];
-    for (String word in words) {
-      print("word: $word");
-      final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
-      print("collectionRef: $collectionRef");
 
-      // Get the document snapshot
-      final docSnapshot = await collectionRef.get(const GetOptions(source: Source.server));
-      print("doc: ${docSnapshot.data()}");
+//   Getting all cards and checking it for debugging
+//   Future<List<fsrs.Card>> getAllCards(List<String> words) async {
+//     List<fsrs.Card> cards = [];
+//     for (String word in words) {
+//       print("word: $word");
+//       final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
+//       print("collectionRef: $collectionRef");
 
-      // Check if document exists and has data
-      if (docSnapshot.exists) {
-        final data = docSnapshot.data();
-        if (data != null) {
-          print("data: $data");
-          fsrs.Card card = WordCard.fromFirestore(data).card;
-          cards.add(card);
-        }
-      }
-    }
-    return cards;
-  }
+//       // Get the document snapshot
+//       final docSnapshot = await collectionRef.get(const GetOptions(source: Source.server));
+//       print("doc: ${docSnapshot.data()}");
 
-  List<fsrs.Card> cardsCollection = await getAllCards(combinedWordsList);
-  var f = fsrs.FSRS();
-  fsrs.Card firstCard = cardsCollection[0];
-  var now = DateTime.now();
-  print("Now: $now");
-  var cardPossibleSchedulings = f.repeat(firstCard, now);
-  print("Due 1: ${firstCard.due}, State 1: ${firstCard.state}");
-  firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
-  print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
+//       // Check if document exists and has data
+//       if (docSnapshot.exists) {
+//         final data = docSnapshot.data();
+//         if (data != null) {
+//           print("data: $data");
+//           fsrs.Card card = WordCard.fromFirestore(data).card;
+//           cards.add(card);
+//         }
+//       }
+//     }
+//     return cards;
+//   }
 
-  return {"script": script, "selectedWordsCards": selectedWordsCards};
+//   List<fsrs.Card> cardsCollection = await getAllCards(combinedWordsList);
+//   var f = fsrs.FSRS();
+//   fsrs.Card firstCard = cardsCollection[0];
+//   var now = DateTime.now();
+//   print("Now: $now");
+//   var cardPossibleSchedulings = f.repeat(firstCard, now);
+//   print("Due 1: ${firstCard.due}, State 1: ${firstCard.state}");
+//   firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
+//   print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
+
+//   -----------------------------------------
+
+  return {"script": script, "allUsedWordsCards": allUsedWordsCards};
 }
 
 Future<void> _appendRepetitionUrlsToWordDoc(

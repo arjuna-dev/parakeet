@@ -368,7 +368,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 }
 
 class WordProgressBar extends StatelessWidget {
-  final int score;
+  final double score;
   final int learnedScore = 100;
   final int masteredScore = 365;
   const WordProgressBar({required this.score, super.key});

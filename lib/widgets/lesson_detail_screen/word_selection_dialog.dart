@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class WordSelectionDialog extends StatefulWidget {
   final List<String> allWords;
-  final List<String> selectedWords;
+  final List<dynamic> selectedWords;
   final int maxWordsAllowed;
   final Function(List<String>) onSave;
 
@@ -17,7 +17,7 @@ class WordSelectionDialog extends StatefulWidget {
   static Future<void> show({
     required BuildContext context,
     required List<String> allWords,
-    required List<String> selectedWords,
+    required List<dynamic> selectedWords,
     required int maxWordsAllowed,
     required Function(List<String>) onSave,
   }) async {

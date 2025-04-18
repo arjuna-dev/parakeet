@@ -207,7 +207,7 @@ class LessonService {
   static Future<void> createCustomLesson(
     BuildContext context,
     String topic,
-    List<String> selectedWords,
+    List<dynamic> selectedWords,
     String nativeLanguage,
     String targetLanguage,
     String languageLevel,
@@ -312,7 +312,7 @@ class LessonService {
                   targetLanguage: targetLanguage,
                   nativeLanguage: nativeLanguage,
                   languageLevel: languageLevel,
-                  wordsToRepeat: List<dynamic>.from(selectedWords),
+                  wordsToRepeat: List<String>.from(selectedWords),
                 ),
               ),
             );

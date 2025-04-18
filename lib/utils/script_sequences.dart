@@ -118,9 +118,9 @@ List<String> activeRecallSequence1Less(String native, String target) {
 }
 
 List<Function> chunkSequences = [chunkSequence1];
-List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordObjects, int chunkNumber) {
-  List<String> allWordsRepetitions = words2Reps(wordObjects);
-  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
+List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordKeys, int chunkNumber) {
+  List<String> allWordsRepetitions = words2Reps(wordKeys);
+  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordKeys);
   String firstPhrase = chunkNumber == 0 ? "narrator_navigation_phrases_17" : "narrator_navigation_phrases_23";
   List<String> scriptPart = [
     firstPhrase,
@@ -156,9 +156,9 @@ List<String> chunkSequence1(List<String> narratorTranslationsChunk, String nativ
   return scriptPart;
 }
 
-List<String> chunkSequence1Less(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordObjects, int chunkNumber) {
-  List<String> allWordsRepetitions = words2RepsLess(wordObjects);
-  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordObjects);
+List<String> chunkSequence1Less(List<String> narratorTranslationsChunk, String nativeLanguage, String targetLanguage, List<Map<String, dynamic>> wordKeys, int chunkNumber) {
+  List<String> allWordsRepetitions = words2RepsLess(wordKeys);
+  //List<String> chunkSpaced = spacedWordsFixElevenlabsLonelyWords(wordKeys);
   String firstPhrase = chunkNumber == 0 ? "narrator_navigation_phrases_17" : "narrator_navigation_phrases_23";
   List<String> scriptPart = [
     firstPhrase,
@@ -191,16 +191,16 @@ List<String> chunkSequence1Less(List<String> narratorTranslationsChunk, String n
   return scriptPart;
 }
 
-List<String> words2Reps(List<Map<String, dynamic>> wordObjects) {
+List<String> words2Reps(List<Map<String, dynamic>> wordKeys) {
   List<String> scriptPart = [];
-  for (int i = 0; i < wordObjects.length; i++) {
-    scriptPart.addAll(wordObjects[i]["translation"]);
+  for (int i = 0; i < wordKeys.length; i++) {
+    scriptPart.addAll(wordKeys[i]["narrator_translation_keys"]);
     if (i == 0) {
       scriptPart.add("one_second_break");
       scriptPart.add("narrator_repetition_phrases_4"); // Listen and repeat
       scriptPart.add("one_second_break");
     }
-    String word = wordObjects[i]["word"];
+    String word = wordKeys[i]["word_key"];
     scriptPart.add(word);
     scriptPart.add('\$$word');
     scriptPart.add("five_second_break");
@@ -211,16 +211,16 @@ List<String> words2Reps(List<Map<String, dynamic>> wordObjects) {
   return scriptPart;
 }
 
-List<String> words2RepsLess(List<Map<String, dynamic>> wordObjects) {
+List<String> words2RepsLess(List<Map<String, dynamic>> wordKeys) {
   List<String> scriptPart = [];
-  for (int i = 0; i < wordObjects.length; i++) {
-    scriptPart.addAll(wordObjects[i]["translation"]);
+  for (int i = 0; i < wordKeys.length; i++) {
+    scriptPart.addAll(wordKeys[i]["narrator_translation_keys"]);
     if (i == 0) {
       scriptPart.add("one_second_break");
       scriptPart.add("narrator_repetition_phrases_4"); // Listen and repeat
       scriptPart.add("one_second_break");
     }
-    String word = wordObjects[i]["word"];
+    String word = wordKeys[i]["word_key"];
     scriptPart.add(word);
     scriptPart.add('\$$word');
     scriptPart.add("five_second_break");
@@ -228,10 +228,10 @@ List<String> words2RepsLess(List<Map<String, dynamic>> wordObjects) {
   return scriptPart;
 }
 
-List<String> spacedWords(List<Map<String, dynamic>> wordObjects) {
+List<String> spacedWords(List<Map<String, dynamic>> wordKeys) {
   List<String> scriptPart = [];
-  for (int i = 0; i < wordObjects.length; i++) {
-    String word = wordObjects[i]["word"];
+  for (int i = 0; i < wordKeys.length; i++) {
+    String word = wordKeys[i]["word_key"];
     scriptPart.add(word);
     scriptPart.add('\$$word');
     scriptPart.add("one_second_break");
