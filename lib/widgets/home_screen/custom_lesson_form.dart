@@ -22,7 +22,7 @@ class CustomLessonForm extends StatefulWidget {
 
 class _CustomLessonFormState extends State<CustomLessonForm> {
   final TextEditingController _topicController = TextEditingController();
-  final List<String> _selectedWords = [];
+  final List<dynamic> _selectedWords = [];
   bool _isCreatingCustomLesson = false;
   bool _isSuggestingRandom = false;
 
