@@ -350,7 +350,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               ),
         bottomSheet: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(16),
             child: FilledButton.icon(
               onPressed: _handleCreateNewLesson,
               icon: const Icon(Icons.add),
