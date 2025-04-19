@@ -107,10 +107,6 @@ class AudioPlayerService {
       });
 
       if (!isDisposing) {
-        await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
-
-        isPlaying.value = true;
-
         playlistInitialized = true;
 
         print("Playlist initialized successfully");
@@ -118,6 +114,12 @@ class AudioPlayerService {
     } else {
       print("No valid URLs available to initialize the playlist.");
     }
+  }
+
+  Future<void> playFirstTrack() async {
+    await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
+
+    isPlaying.value = true;
   }
 
   // Update playlist with new audio sources

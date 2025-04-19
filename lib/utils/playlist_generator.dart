@@ -39,13 +39,13 @@ class PlaylistGenerator {
   }
 
   /// Generate script from dialogue with repetition mode
-  Future<List<dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> data, List<dynamic> originalDialogue, RepetitionMode repetitionMode, String category) async {
+  Future<Map<String, dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> bigJson, List<dynamic> originalDialogue, RepetitionMode repetitionMode, String category) async {
     // Create a ValueNotifier with the repetition mode
     final repetitionModeNotifier = ValueNotifier<RepetitionMode>(repetitionMode);
 
     // Call the script generator with the ValueNotifier
     final result = await script_generator.parseAndCreateScript(
-      data,
+      bigJson,
       wordsToRepeat,
       originalDialogue,
       repetitionModeNotifier,
@@ -59,7 +59,7 @@ class PlaylistGenerator {
     // Dispose the ValueNotifier
     repetitionModeNotifier.dispose();
 
-    return result['script'] ?? [];
+    return result;
   }
 
   /// Filter script to remove files that start with '$'
