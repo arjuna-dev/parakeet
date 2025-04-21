@@ -11,7 +11,6 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
-import 'package:parakeet/utils/script_generator.dart' as script_generator;
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
@@ -242,7 +241,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Play first track only for non-generating mode
     if (!widget.generating) {
       await _audioPlayerService.playFirstTrack();
+    } else {
+      await _audioPlayerService.loadFirstTrack();
     }
+    _audioPlayerService.playlistInitialized = true;
+    setState(() {});
 
     //Calculate track durations
     List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
@@ -685,29 +688,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           generating: widget.generating,
                           onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
                         ),
-                        // Audio generation message
-                        if (widget.generating && !_audioPlayerService.playlistInitialized)
-                          Container(
-                            margin: const EdgeInsets.symmetric(vertical: 16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Generating audio files...",
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         PositionSlider(
+                          audioPlayerService: _audioPlayerService,
                           positionDataStream: _audioPlayerService.positionDataStream,
                           totalDuration: _audioPlayerService.totalDuration,
                           finalTotalDuration: _audioPlayerService.finalTotalDuration,

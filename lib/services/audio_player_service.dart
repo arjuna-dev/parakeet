@@ -122,6 +122,13 @@ class AudioPlayerService {
     isPlaying.value = true;
   }
 
+  Future<void> loadFirstTrack() async {
+    await player.playerStateStream.where((state) => state.processingState == ProcessingState.ready).first;
+    positionDataStream.listen((positionData) {
+      positionData.position = const Duration(milliseconds: 0);
+    });
+  }
+
   // Update playlist with new audio sources
   Future<void> updatePlaylist(List<AudioSource> newAudioSources) async {
     if (isDisposing) return;
