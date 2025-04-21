@@ -32,30 +32,14 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   final HomeScreenModel _model = HomeScreenModel();
   Map<String, bool> _localFavorites = {};
   List<DocumentSnapshot> _categoryLessons = [];
-  List<Map<String, dynamic>> _learningWords = [];
+  final List<Map<String, dynamic>> _learningWords = [];
   bool _isLoading = true;
-  bool _showAllWords = false;
   bool _wordsExpanded = false; // new state variable for expansion
 
   @override
   void initState() {
     super.initState();
     _loadCategoryLessons();
-    _loadLearningWords();
-  }
-
-  Future<void> _loadLearningWords() async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
-
-      setState(() {
-        // Changed: storing word data (with stability) instead of only doc.id
-        _learningWords = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-      });
-    } catch (e) {
-      print('Error loading learning words: $e');
-    }
   }
 
   Future<void> _loadCategoryLessons() async {
@@ -85,12 +69,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       widget.targetLanguage,
       widget.languageLevel,
     );
-  }
-
-  List<String> get _displayedWords {
-    if (_showAllWords) return _learningWords.map((word) => word['word'] as String).toList();
-    // Calculate how many words fit in 2 rows (assuming ~4 words per row)
-    return _learningWords.take(5).map((word) => word['word'] as String).toList();
   }
 
   @override
@@ -158,7 +136,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+
                     // Listing of words to learn in this category (fixed size with expand button)
                     Container(
                       margin: const EdgeInsets.all(16),
@@ -252,67 +230,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     ),
 
                     // Words Being Learned Section
-                    if (_learningWords.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Words You\'re Learning',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _displayedWords
-                                  .map((word) => Chip(
-                                        label: Text(
-                                          word,
-                                          style: TextStyle(
-                                            fontSize: isSmallScreen ? 12 : 14,
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                        backgroundColor: colorScheme.surfaceContainerHighest,
-                                      ))
-                                  .toList(),
-                            ),
-                            if (_learningWords.length > 5) ...[
-                              const SizedBox(height: 8),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _showAllWords = !_showAllWords;
-                                  });
-                                },
-                                child: Text(
-                                  _showAllWords ? 'Show Less' : 'Show More',
-                                  style: TextStyle(
-                                    color: colorScheme.primary,
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
 
                     // Existing Lessons Section
                     if (_categoryLessons.isNotEmpty) ...[
