@@ -257,7 +257,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'Existing Lessons',
+                          'Saved Lessons',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 16 : 18,
                             fontWeight: FontWeight.bold,
