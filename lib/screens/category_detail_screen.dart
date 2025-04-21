@@ -52,6 +52,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     }
   }
 
+  Future<void> _refreshCategoryLessons() async {
+    await _loadCategoryLessons();
+  }
+
   Future<void> _loadCategoryLessons() async {
     setState(() => _isLoading = true);
     try {
@@ -275,9 +279,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             updateFavorites: (favorites) {
                               setState(() => _localFavorites = favorites);
                             },
-                            onDelete: (doc) {
+                            onDeleteComplete: () {
                               setState(() {
-                                _categoryLessons.remove(doc);
+                                _refreshCategoryLessons();
                               });
                             },
                           )),

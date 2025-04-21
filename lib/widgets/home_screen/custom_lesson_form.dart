@@ -218,6 +218,12 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
   }
 
+  Future<void> _refreshCustomLessons() async {
+    setState(() {
+      _loadCustomLessons();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -471,10 +477,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                       updateFavorites: (favorites) {
                                         setState(() => _localFavorites = favorites);
                                       },
-                                      onDelete: (doc) {
-                                        setState(() {
-                                          _customLessons.remove(doc);
-                                        });
+                                      onDeleteComplete: () {
+                                        _refreshCustomLessons();
                                       },
                                     ))
                                 .toList(),

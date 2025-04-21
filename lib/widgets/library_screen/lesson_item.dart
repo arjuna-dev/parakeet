@@ -12,7 +12,7 @@ class LessonItem extends StatelessWidget {
   final HomeScreenModel model;
   final Map<String, bool> localFavorites;
   final Function(Map<String, bool>) updateFavorites;
-  final Function(DocumentSnapshot) onDelete;
+  final Function() onDeleteComplete;
 
   const LessonItem({
     Key? key,
@@ -22,7 +22,7 @@ class LessonItem extends StatelessWidget {
     required this.model,
     required this.localFavorites,
     required this.updateFavorites,
-    required this.onDelete,
+    required this.onDeleteComplete,
   }) : super(key: key);
 
   bool isFavorite() {
@@ -205,9 +205,10 @@ class LessonItem extends StatelessWidget {
                                     'Delete',
                                     style: TextStyle(color: colorScheme.error),
                                   ),
-                                  onPressed: () {
+                                  onPressed: () async {
                                     Navigator.of(context).pop();
-                                    onDelete(document);
+                                    await LibraryService.deleteDocument(document, model);
+                                    onDeleteComplete();
                                   },
                                 ),
                               ],
