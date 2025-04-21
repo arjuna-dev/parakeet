@@ -164,21 +164,33 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _ReviewButton(
-                label: 'Again',
-                icon: Icons.refresh,
+                label: 'I forgot',
+                icon: Icons.sentiment_very_dissatisfied,
                 color: colorScheme.error,
                 onPressed: () => _handleReview(fsrs.Rating.again),
               ),
               _ReviewButton(
-                label: 'Good',
-                icon: Icons.check,
+                label: 'Got it',
+                icon: Icons.sentiment_satisfied,
                 color: colorScheme.primary,
                 onPressed: () => _handleReview(fsrs.Rating.good),
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
               _ReviewButton(
-                label: 'Easy',
-                icon: Icons.star,
-                color: colorScheme.tertiary,
+                label: 'Tough',
+                icon: Icons.sentiment_dissatisfied,
+                color: Colors.amber,
+                onPressed: () => _handleReview(fsrs.Rating.hard),
+              ),
+              _ReviewButton(
+                label: 'Too easy',
+                icon: Icons.sentiment_very_satisfied,
+                color: Colors.green,
                 onPressed: () => _handleReview(fsrs.Rating.easy),
               ),
             ],
@@ -247,25 +259,32 @@ class _ReviewButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
+    final buttonWidth = isSmallScreen ? 140.0 : 160.0;
+    final buttonHeight = isSmallScreen ? 48.0 : 56.0;
 
-    return FilledButton.icon(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: color,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 12 : 16,
-          vertical: isSmallScreen ? 8 : 12,
+    return SizedBox(
+      width: buttonWidth,
+      height: buttonHeight,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12 : 16,
+            vertical: isSmallScreen ? 8 : 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          minimumSize: Size(buttonWidth, buttonHeight),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: Icon(icon, size: isSmallScreen ? 20 : 24),
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: isSmallScreen ? 14 : 16,
-          fontWeight: FontWeight.w500,
+        icon: Icon(icon, size: isSmallScreen ? 20 : 24),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 14 : 16,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
