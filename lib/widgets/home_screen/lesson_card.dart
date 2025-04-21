@@ -125,7 +125,7 @@ class LessonCard extends StatelessWidget {
                                 label: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.stairs, size: 14, color: colorScheme.secondary),
+                                    Icon(Icons.stairs, size: 14, color: colorScheme.primary),
                                     const SizedBox(width: 4),
                                     Text(
                                       audioFile.get('language_level'),
