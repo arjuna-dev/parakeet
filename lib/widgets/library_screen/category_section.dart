@@ -13,7 +13,7 @@ class CategorySection extends StatelessWidget {
   final HomeScreenModel model;
   final Map<String, bool> localFavorites;
   final Function(Map<String, bool>) updateFavorites;
-  final Function(DocumentSnapshot) onDeleteDocument;
+  final Function() onDeleteComplete;
 
   const CategorySection({
     Key? key,
@@ -25,7 +25,7 @@ class CategorySection extends StatelessWidget {
     required this.model,
     required this.localFavorites,
     required this.updateFavorites,
-    required this.onDeleteDocument,
+    required this.onDeleteComplete,
   }) : super(key: key);
 
   @override
@@ -95,7 +95,7 @@ class CategorySection extends StatelessWidget {
                 model: model,
                 localFavorites: localFavorites,
                 updateFavorites: updateFavorites,
-                onDelete: onDeleteDocument,
+                onDeleteComplete: onDeleteComplete,
               )),
       ],
     );

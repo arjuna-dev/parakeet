@@ -98,78 +98,42 @@ class LibraryService {
   }
 
   // Delete document
-  static Future<void> deleteDocument(DocumentSnapshot document, HomeScreenModel model, List<DocumentSnapshot> documents, Map<String, List<DocumentSnapshot>> categorizedDocuments, Map<String, bool> expandedCategories,
-      Function(List<DocumentSnapshot>, Map<String, List<DocumentSnapshot>>, Map<String, bool>) updateState) async {
-    // Find document in the main documents list
-    final index = documents.indexOf(document);
-    List<DocumentSnapshot> updatedDocuments = List<DocumentSnapshot>.from(documents);
-    Map<String, List<DocumentSnapshot>> updatedCategorizedDocuments = Map<String, List<DocumentSnapshot>>.from(categorizedDocuments);
-    Map<String, bool> updatedExpandedCategories = Map<String, bool>.from(expandedCategories);
-
-    // Find document in categorized documents
-    String? categoryToUpdate;
-    int docIndex = -1;
-
-    for (var entry in categorizedDocuments.entries) {
-      final categoryDocs = entry.value;
-      final idx = categoryDocs.indexOf(document);
-      if (idx != -1) {
-        categoryToUpdate = entry.key;
-        docIndex = idx;
-        break;
-      }
-    }
-
-    // Update state only if document was found
-    // Remove from main documents list if found
-    if (index != -1) {
-      updatedDocuments.removeAt(index);
-    }
-
-    // Remove from categorized documents if found
-    if (categoryToUpdate != null && docIndex != -1) {
-      updatedCategorizedDocuments[categoryToUpdate]!.removeAt(docIndex);
-
-      // Remove category if empty
-      if (updatedCategorizedDocuments[categoryToUpdate]!.isEmpty) {
-        updatedCategorizedDocuments.remove(categoryToUpdate);
-        updatedExpandedCategories.remove(categoryToUpdate);
-      }
-    }
-
-    // Update state with modified collections
-    updateState(updatedDocuments, updatedCategorizedDocuments, updatedExpandedCategories);
-
-    // Delete from Firestore regardless of whether it was found in local lists
-    await _firestore.runTransaction((Transaction myTransaction) async {
-      myTransaction.delete(document.reference);
-    });
-
+  static Future<void> deleteDocument(DocumentSnapshot document, HomeScreenModel model) async {
     final user = FirebaseAuth.instance.currentUser;
-    final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    String parentId = document.reference.parent.parent!.id;
-    String docId = document.reference.id;
+    if (user == null) return;
 
+    final String userId = user.uid;
+    final String parentId = document.reference.parent.parent!.id;
+    final String docId = document.reference.id;
+
+    // 1. Remove from favorites if it's a favorite
     if (model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId)) {
       model.removeAudioFile(document);
-      await userDocRef.update({
+      await _firestore.collection('users').doc(userId).update({
         'favoriteAudioFiles': FieldValue.arrayRemove([
           {'parentId': parentId, 'docId': docId}
         ])
       });
     }
 
+    // 2. Remove from "now playing" list in SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('savedPosition_${parentId}_${user.uid}');
-    await prefs.remove('savedTrackName_${parentId}_${user.uid}');
-    await prefs.remove("now_playing_${parentId}_${user.uid}");
+    await prefs.remove('savedPosition_${parentId}_$userId');
+    await prefs.remove('savedTrackName_${parentId}_$userId');
+    await prefs.remove("now_playing_${parentId}_$userId");
 
-    List<String>? nowPlayingList = prefs.getStringList("now_playing_${user.uid}");
+    List<String>? nowPlayingList = prefs.getStringList("now_playing_$userId");
     if (nowPlayingList != null) {
       nowPlayingList.remove(parentId);
-      await prefs.setStringList("now_playing_${user.uid}", nowPlayingList);
+      await prefs.setStringList("now_playing_$userId", nowPlayingList);
     }
 
+    // 3. Delete the document from Firestore
+    await _firestore.runTransaction((Transaction myTransaction) async {
+      myTransaction.delete(document.reference);
+    });
+
+    // 4. Delete the audio file by calling cloud function
     deleteFromCloudStorage(parentId);
   }
 
