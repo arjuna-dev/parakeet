@@ -39,7 +39,17 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCategoryLessons();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      await _model.loadAudioFiles();
+      _loadCategoryLessons();
+    } catch (e) {
+      print('Error loading favorites: $e');
+      _loadCategoryLessons();
+    }
   }
 
   Future<void> _loadCategoryLessons() async {
@@ -51,8 +61,19 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name']);
       print('filteredData: ${filteredData.map((doc) => doc.data())}');
 
+      // Initialize _localFavorites map with current favorite state
+      Map<String, bool> initialFavorites = {};
+      for (var doc in filteredData) {
+        String parentId = doc.reference.parent.parent!.id;
+        String docId = doc.reference.id;
+        String key = '$parentId-$docId';
+
+        initialFavorites[key] = _model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
+      }
+
       setState(() {
         _categoryLessons = filteredData.toList();
+        _localFavorites = initialFavorites;
         _isLoading = false;
       });
     } catch (e) {

@@ -29,7 +29,14 @@ class LessonItem extends StatelessWidget {
     String parentId = document.reference.parent.parent!.id;
     String docId = document.reference.id;
     String key = '$parentId-$docId';
-    return localFavorites[key] ?? false;
+
+    // First check local favorites which may have changed during this session
+    if (localFavorites.containsKey(key)) {
+      return localFavorites[key]!;
+    }
+
+    // Then fall back to checking the model's favoriteAudioFileIds
+    return model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
   }
 
   @override
@@ -139,7 +146,7 @@ class LessonItem extends StatelessWidget {
                                 label: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.stairs, size: 14, color: colorScheme.secondary),
+                                    Icon(Icons.stairs, size: 14, color: colorScheme.primary),
                                     const SizedBox(width: 4),
                                     Text(
                                       document.get('language_level'),
@@ -162,9 +169,11 @@ class LessonItem extends StatelessWidget {
                     IconButton(
                       icon: Icon(
                         isFavorite() ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite() ? colorScheme.error : colorScheme.onSurfaceVariant,
+                        color: isFavorite() ? colorScheme.primary : colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: () => LibraryService.toggleFavorite(document, model, localFavorites, updateFavorites),
+                      onPressed: () async {
+                        await LibraryService.toggleFavorite(document, model, localFavorites, updateFavorites);
+                      },
                     ),
                   ],
                 ),
