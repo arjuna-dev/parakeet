@@ -402,22 +402,13 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _isCreatingCustomLesson
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          'Create Custom Lesson',
-                          style: TextStyle(
-                            fontSize: widget.isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  child: Text(
+                    'Create Custom Lesson',
+                    style: TextStyle(
+                      fontSize: widget.isSmallScreen ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -15,6 +15,7 @@ language_level: {language_level}
 
 {keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
+The "keywords_used" should be the keywords that are exactly used in the dialogue.
 
 This is an example of a request you could get and its expected output.
 
@@ -22,7 +23,7 @@ This is an example of a request you could get and its expected output.
 Request:
 ###
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
-"keywords": ["discriminar", "contexto", "exactamente", "axila"]
+"keywords": ["discriminación", "contexto", "exactamente", "axila"]
 "native_language": "English",
 "target_language": "Spanish",
 "language_level": "C2",
@@ -477,6 +478,7 @@ language_level: {language_level}
 {keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
+The "keywords_used" should be the keywords that are exactly used in the dialogue.
 Here is an example of data you could get and its expected output.
 
 Data:
