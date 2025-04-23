@@ -1,4 +1,10 @@
-def prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length):
+def prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length):
+   keywords_instruction = ""
+   if category == 'Custom Lesson':
+      keywords_instruction = f"All the words in {keywords} list should be used in the dialogue."
+   else:
+      keywords_instruction = "IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue."
+
    return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the the following content:
 
 requested_scenario: {requested_scenario}
@@ -7,7 +13,7 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue.
+{keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 
 This is an example of a request you could get and its expected output.
@@ -16,7 +22,7 @@ This is an example of a request you could get and its expected output.
 Request:
 ###
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
-"keywords": ["discrimination", "patience", "salmon", "armpit"]
+"keywords": ["discriminar", "contexto", "exactamente", "axila"]
 "native_language": "English",
 "target_language": "Spanish",
 "language_level": "C2",
@@ -48,7 +54,8 @@ Expected output in JSON format:
             "speaker": "speaker_2",
             "gender": "m"
         }}
-    ]
+    ],
+    "keywords_used": ["discriminar", "contexto", "exactamente"]
 }}
 ###
 
@@ -58,7 +65,7 @@ Request:
 
 ###
 "requested_scenario": "Reasons to become vegetarian",
-"keywords": ["health", "compassion", "peanut butter"]
+"keywords": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
 "native_language": "German",
 "target_language": "English",
 "language_level": "A1"
@@ -101,9 +108,42 @@ Expected output in JSON format:
             "speaker": "speaker_2",
             "gender": "f"
         }}
-    ]
+    ],
+    "keywords_used": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
 }}
 ###
+'''
+
+def prompt_translate_keywords(keywords, target_language):
+   return f'''Please translate the following keywords {keywords} to {target_language}. if it is already in {target_language} return the same keywords:
+
+Example request:
+###
+keywords: ["health", "compassion", "peanut butter"]
+target_language: "German"
+###
+
+Expected output in JSON format:
+###
+{{
+    "keywords": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
+}}
+###
+
+Example request:
+###
+keywords: ["Gesundheit", "compassion", "Erdnussbutter"]
+target_language: "German"
+###
+
+Expected output in JSON format:
+###
+{{
+    "keywords": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
+}}
+###
+
+
 '''
 
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
@@ -415,10 +455,16 @@ Continue adding turns until you reach {length} turns.
 '''
 
 
-def prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length):
+def prompt_dialogue_w_transliteration(requested_scenario, category, native_language, target_language, language_level, keywords, length):
   chinese_korean_addition = ""
   if target_language == "Mandarin Chinese" or target_language == "Japanese":
     chinese_korean_addition = 'Please add a space between words even though it is not the traditional way of writing'
+
+  keywords_instruction = ""
+  if category == 'Custom Lesson':
+    keywords_instruction = f"All the words in {keywords} list should be used in the dialogue."
+  else:
+    keywords_instruction = "IMPORTANT: EVERY word in {keywords} list MUST be used in the dialogue."
 
   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
 
@@ -428,7 +474,7 @@ target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
 
-IMPORTANT: EVERY word in {keywords} list MUST be used in the dialogue.
+{keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
 Here is an example of data you could get and its expected output.
@@ -436,7 +482,7 @@ Here is an example of data you could get and its expected output.
 Data:
 """
 "requested_scenario": "Shankaracharya explains to a disciple the meaning of Viveka Chudamani",
-"keywords": ["discrimination", "patience"],
+"keywords": ["能力", "耐心"],
 "native_language": "English",
 "target_language": "Mandarin Chinese",
 "language_level": "C2",
@@ -479,7 +525,8 @@ Expected JSON output:
             "speaker": "speaker_2",
             "gender": "m"
         }}
-    ]
+    ],
+    "keywords_used": ["能力", "耐心"]
 }}
 """
 '''

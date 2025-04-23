@@ -92,6 +92,7 @@ class LessonDetailService {
         },
         body: jsonEncode(<String, dynamic>{
           "requested_scenario": topic,
+          "category": category,
           "keywords": wordsToLearn,
           "native_language": nativeLanguage,
           "target_language": targetLanguage,

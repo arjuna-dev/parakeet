@@ -3,6 +3,7 @@ from typing import List, Optional
 
 class FirstAPIRequest(BaseModel):
     requested_scenario: str
+    category: Optional[str] = "Custom Lesson"
     native_language: str
     target_language: str
     length: str

@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import time
-from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson, prompt_translate_keywords
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -43,6 +43,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
             status=400,
         )
     requested_scenario = request_data.get("requested_scenario")
+    category = request_data.get("category")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
     length = request_data.get("length")
@@ -122,10 +123,10 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                             mock=is_mock)
     first_API_calls.line_handler = first_API_calls.handle_line_1st_API
 
-    prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+    prompt = prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length)
 
     if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
-        prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
+        prompt = prompt_dialogue_w_transliteration(requested_scenario, category, native_language, target_language, language_level, keywords, length)
 
 
     if first_API_calls.mock == True:
@@ -397,6 +398,29 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
         cors_methods=["POST"]
     )
 )
+def translate_keywords(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        keywords = request_data.get("keywords")
+        target_language = request_data.get("target_language")
+
+        prompt = prompt_translate_keywords(keywords, target_language)
+
+        response = chatGPT_API_call(prompt, use_stream=False)
+
+        result = json.loads(response.choices[0].message.content)
+
+        return https_fn.Response(
+            json.dumps(result),
+            status=200
+        )
+
+    except Exception as e:
+        print(f"Error in translate_keywords: {str(e)}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
 
 def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
     try:

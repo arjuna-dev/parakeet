@@ -259,6 +259,28 @@ class LessonService {
       final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+      final response = await http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "keywords": selectedWords,
+          "target_language": targetLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        print("data: $data");
+        final List<dynamic> keywords = data['keywords'].map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+        print("keywords: $keywords");
+        print("selectedWords: $selectedWords");
+        selectedWords = keywords;
+      }
+      print("response.body: ${response.body}");
+      print("selectedWords: $selectedWords");
 
       // Make the API call
       http.post(
