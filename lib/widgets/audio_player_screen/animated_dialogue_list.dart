@@ -76,7 +76,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
           // If native language is expected but missing, don't initialize yet
           if (dialogueNative.trim().isEmpty && dialogueItem.containsKey("native_language")) {
-            print("First message has target text but native text is still generating, waiting...");
             // Try again after a delay
             Future.delayed(const Duration(milliseconds: 500), () {
               if (mounted) {
@@ -146,8 +145,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
     try {
       final currentDialogue = _dialogueNotifier.value;
-      _logDialogueState(currentDialogue, "Before animation");
-
       // If we're currently animating a message, don't start another one
       if (_currentlyAnimatingIndex != -1 && !_animatedMessages.contains(_currentlyAnimatingIndex)) {
         print("Already animating message $_currentlyAnimatingIndex, waiting for completion");
@@ -156,8 +153,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
       // Find the next message that should be shown
       int nextIndex = _findNextMessageToShow(currentDialogue);
-
-      print("_animateNextMessage called, next index: $nextIndex, visible messages: $_visibleMessages");
 
       if (nextIndex >= 0 && nextIndex < currentDialogue.length) {
         try {
@@ -192,7 +187,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
           }
 
           if (isFullyGenerated) {
-            print("Showing message $nextIndex: $dialogueTarget");
             setState(() {
               _currentlyAnimatingIndex = nextIndex;
               _visibleMessages.add(nextIndex);
@@ -225,8 +219,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
           });
         }
       } else {
-        print("No more messages to animate");
-
         // Reset the current animating index since we're done
         setState(() {
           _currentlyAnimatingIndex = -1;
@@ -496,7 +488,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         onAnimationComplete: () {
           // Only handle animation completion if we're generating content
           if (widget.generating) {
-            print("Animation completed for message $index");
             if (!_animatedMessages.contains(index)) {
               setState(() {
                 _animatedMessages.add(index);
@@ -509,7 +500,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
               // Animate next message after this one is complete
               Future.delayed(const Duration(milliseconds: 1000), () {
                 if (mounted) {
-                  print("Triggering next animation after message $index");
                   _animateNextMessage();
                 }
               });
@@ -558,7 +548,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
                         // Update the dialogue data
                         _dialogueNotifier.value = List.from(newDialogueData);
-                        _logDialogueState(newDialogueData, "Stream update");
 
                         // Reset the notification flag when new dialogue data is received
                         if (newDialogueData.length != oldLength) {
@@ -592,8 +581,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                         }
                         // If generating, already have visible messages, and new content was added
                         else if (widget.generating && newDialogueData.length > oldLength) {
-                          print("New messages added: ${newDialogueData.length - oldLength}");
-
                           // Check if any of the new messages have content
                           bool hasNewContent = false;
                           bool allNewMessagesComplete = true;
@@ -630,10 +617,8 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                               // Check if we're currently animating
                               if (_currentlyAnimatingIndex != -1 && !_animatedMessages.contains(_currentlyAnimatingIndex)) {
                                 // We're still animating, so we'll let the onAnimationComplete callback handle the next message
-                                print("Currently animating message $_currentlyAnimatingIndex, waiting for completion");
                               } else {
                                 // We're not animating, so we can animate the next message now
-                                print("Not currently animating, triggering next message animation");
                                 // Add a small delay to ensure the UI is updated
                                 Future.delayed(const Duration(milliseconds: 300), () {
                                   if (mounted) {
@@ -642,10 +627,10 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                                 });
                               }
                             } else {
-                              print("New messages added but some are still being generated, waiting for completion");
+                              // print("New messages added but some are still being generated, waiting for completion");
                             }
                           } else {
-                            print("New messages added but they're all empty");
+                            // print("New messages added but they're all empty");
                           }
                         }
                         // If the content changed but length didn't increase
@@ -653,7 +638,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                           // Check if there are messages that should be visible but aren't yet
                           int nextIndex = _findNextMessageToShow(newDialogueData);
                           if (nextIndex >= 0) {
-                            print("Found message $nextIndex that should be shown");
+                            // print("Found message $nextIndex that should be shown");
                             if (!_animatedMessages.contains(_currentlyAnimatingIndex)) {
                               _animateNextMessage();
                             }
@@ -727,33 +712,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
     _scrollController.dispose();
     _dialogueNotifier.dispose();
     super.dispose();
-  }
-
-  // Debug method to log the current state of dialogue data
-  void _logDialogueState(List<dynamic> dialogueData, String context) {
-    try {
-      print("=== Dialogue State ($context) ===");
-      print("Total messages: ${dialogueData.length}");
-      print("Visible messages: $_visibleMessages");
-      print("Animated messages: $_animatedMessages");
-      print("Currently animating: $_currentlyAnimatingIndex");
-
-      for (int i = 0; i < dialogueData.length; i++) {
-        try {
-          final String target = dialogueData[i]["target_language"]?.toString() ?? "";
-          final bool hasContent = target.trim().isNotEmpty;
-          final bool isVisible = _visibleMessages.contains(i);
-          final bool isAnimated = _animatedMessages.contains(i);
-
-          print("Message $i: ${hasContent ? 'Has content' : 'Empty'}, ${isVisible ? 'Visible' : 'Hidden'}, ${isAnimated ? 'Animated' : 'Not animated'}");
-        } catch (e) {
-          print("Error logging message $i: $e");
-        }
-      }
-      print("==============================");
-    } catch (e) {
-      print("Error in _logDialogueState: $e");
-    }
   }
 
   // Helper method to show all messages immediately without animation

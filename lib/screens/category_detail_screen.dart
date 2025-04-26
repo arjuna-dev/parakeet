@@ -61,9 +61,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
-      print('snapshot: ${snapshot.docs.map((doc) => doc.data())}');
       final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name']);
-      print('filteredData: ${filteredData.map((doc) => doc.data())}');
 
       // Initialize _localFavorites map with current favorite state
       Map<String, bool> initialFavorites = {};

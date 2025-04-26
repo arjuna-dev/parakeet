@@ -37,7 +37,6 @@ class AudioPlayerScreen extends StatefulWidget {
 
   // Static method to ensure proper cleanup of any shared resources
   static void cleanupSharedResources() {
-    print("AudioPlayerScreen - cleanupSharedResources called");
     // Force garbage collection of any shared services
     UpdateFirestoreService.forceCleanup();
     FileDurationUpdate.forceCleanup();
@@ -205,7 +204,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       } else {
         _createScriptAndMakeSecondApiCall();
       }
-      print("Overdue words used: $_allUsedWordsCards");
     } catch (e) {
       print("Error in sequential initialization: $e");
     }
@@ -266,7 +264,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
     // Don't update if we're disposing or resources are already gone
     if (_isDisposing || _firestoreService == null) {
-      print("Skipping updatePlaylist because widget is disposing");
       return;
     }
 
@@ -290,7 +287,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       print("Error parsing and creating script: $e");
       return;
     }
-    print(_script);
 
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
 
@@ -314,7 +310,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Increment update number
     _updateNumber++;
-    print("Update number: $_updateNumber");
   }
 
   // Save snapshot from Firestore
@@ -350,7 +345,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Set final total duration after a certain number of updates or if not generating
     if ((_updateNumber >= 4 || !widget.generating) && !_isDisposing) {
-      print("Setting final total duration. Update number: $_updateNumber, generating: ${widget.generating}");
       _audioPlayerService.setFinalTotalDuration();
     }
   }
@@ -515,7 +509,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Initialize playlist after a delay to allow audio files to be generated
 
       if (mounted && !_audioPlayerService.playlistInitialized) {
-        print("Fallback: Initializing playlist after timeout");
         _initializePlaylist();
       }
     } catch (e) {
@@ -619,7 +612,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _onAllDialogueDisplayed() {
     if (_isDisposing) return;
 
-    print("All dialogue items have been displayed, initializing playlist");
     if (!_audioPlayerService.playlistInitialized) {
       _initializePlaylist();
     }
@@ -635,8 +627,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           canPop: false,
           onPopInvoked: (bool didPop) async {
             if (didPop) return;
-
-            print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
 
             // Set disposing flag to prevent any async operations from using disposed resources
             _isDisposing = true;
@@ -744,7 +734,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
-    print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
     _isDisposing = true;
 
     // Dispose of Firestore services
