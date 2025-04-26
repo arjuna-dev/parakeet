@@ -95,7 +95,7 @@ class AudioPlayerService {
   // Initialize playlist with audio sources
   Future<void> initializePlaylist(List<AudioSource> audioSources) async {
     if (playlistInitialized || isDisposing) {
-      print("Skipping playlist initialization");
+      print("Skipping playlist initialization: already initialized or disposing.");
       return;
     }
 
@@ -108,8 +108,6 @@ class AudioPlayerService {
 
       if (!isDisposing) {
         playlistInitialized = true;
-
-        print("Playlist initialized successfully");
       }
     } else {
       print("No valid URLs available to initialize the playlist.");
@@ -145,12 +143,10 @@ class AudioPlayerService {
 
   // Play audio
   Future<void> play() async {
-    print("play() called");
     final prefs = await SharedPreferences.getInstance();
     final savedPosition = prefs.getInt('savedPosition_${documentID}_$userID');
     final savedTrackName = prefs.getString('savedTrackName_${documentID}_$userID');
 
-    print("savedPosition: $savedPosition, savedTrackName: $savedTrackName");
     if (savedPosition != null && savedTrackName != null && savedTrackName.isNotEmpty) {
       // Find the index of the saved track name in the playlist
       int? trackIndex;
@@ -170,9 +166,7 @@ class AudioPlayerService {
       }
 
       if (trackIndex != null) {
-        print("will now seek to position: $savedPosition, track: $savedTrackName (index: $trackIndex)");
         await player.seek(Duration(milliseconds: savedPosition), index: trackIndex);
-        print("player.currentIndex: ${player.currentIndex}");
       }
     }
     player.play();
@@ -181,7 +175,6 @@ class AudioPlayerService {
     // Skip showing ads on web platform
     if (!kIsWeb && !hasPremium && !hasShownInitialAd) {
       hasShownInitialAd = true; // Prevent showing ad multiple times in same session
-      print("Now showing ad");
       await AdService.showInterstitialAd(
         onAdShown: () async {
           isPlaying.value = false;
@@ -262,7 +255,6 @@ class AudioPlayerService {
       }
     }
 
-    print("will now save position: $currentPosition, track name: $currentTrackName");
     await prefs.setInt('savedPosition_${documentID}_$userID', currentPosition);
     await prefs.setString('savedTrackName_${documentID}_$userID', currentTrackName ?? '');
     await prefs.setBool("now_playing_${documentID}_$userID", true);

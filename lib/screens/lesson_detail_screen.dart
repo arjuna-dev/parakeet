@@ -22,7 +22,6 @@ class LessonDetailScreen extends StatefulWidget {
 
   // Method to clear any static or shared resources when navigating to a new screen
   static void resetStaticState() {
-    print("LessonDetailScreen - resetStaticState called");
     _activeScreenIds.clear();
   }
 
@@ -215,14 +214,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void initState() {
     super.initState();
-    print("LessonDetailScreen - initState() called");
 
     // Generate a unique ID for this instance
     final String instanceId = DateTime.now().millisecondsSinceEpoch.toString();
 
     // Add this instance to active screens
     LessonDetailScreen._activeScreenIds.add(instanceId);
-    print("LessonDetailScreen - Active screens: ${LessonDetailScreen._activeScreenIds.length}");
 
     // Initialize fields
     ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
@@ -233,13 +230,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     _topic = widget.topic;
     // Convert all words to lowercase
     _wordsToLearn = List<String>.from(widget.wordsToLearn.map((word) => word.toLowerCase()));
-    print('words_to_repeat: $_wordsToLearn');
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print("LessonDetailScreen - didChangeDependencies() called");
     // Reset state when this screen becomes active again
     setState(() {
       _isGeneratingLesson = false;
@@ -248,13 +243,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   @override
   void dispose() {
-    print("LessonDetailScreen - dispose() called");
     // Make sure to clear any state or resources when disposed
     _isGeneratingLesson = false;
 
     // Clear static resources for this widget
     if (LessonDetailScreen._activeScreenIds.length > 1) {
-      print("LessonDetailScreen - Warning: Multiple instances detected during disposal");
+      print("Warning: LessonDetailScreen - Multiple instances detected during disposal");
     }
 
     super.dispose();
