@@ -35,6 +35,23 @@ Future<Map<String, DocumentReference>> getSelectedWordCardDocRefs(String userId,
   return wordDocRefs;
 }
 
+Future<Map<String, Map<String, dynamic>>> fetchSelectedWordCardDocs(
+  Map<String, DocumentReference<Object?>> wordDocRefs,
+) async {
+  final Map<String, Map<String, dynamic>> wordDocs = {};
+
+  // Iterate over every (word → reference) pair and fetch the snapshot
+  for (final entry in wordDocRefs.entries) {
+    final DocumentSnapshot docSnap = await entry.value.get();
+
+    if (docSnap.exists && docSnap.data() != null) {
+      wordDocs[entry.key] = docSnap.data()! as Map<String, dynamic>;
+    }
+  }
+
+  return wordDocs;
+}
+
 Future<List<DocumentReference>> get5MostOverdueWordsRefs(String userId, String targetLanguage, List<dynamic> selectedWords) async {
   final categoriesRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
   final categoriesSnapshot = await categoriesRef.get();
@@ -164,11 +181,16 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   String nativeLanguage,
   String category,
 ) async {
-  print("Parsing and creating script 🫡");
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
 
   List<String> script = createFirstScript(dialogue);
+
+  Map<String, DocumentReference> selectedWordCardsRefs = await getSelectedWordCardDocRefs(userId, targetLanguage, category, selectedWords);
+  // Fetch the documents for the selected words
+  final Map<String, Map<String, dynamic>> selectedWordCards = await fetchSelectedWordCardDocs(selectedWordCardsRefs);
+
+  print("selectedWordCards: $selectedWordCards");
 
   final List<DocumentReference> overdueListRefs = await get5MostOverdueWordsRefs(userId, targetLanguage, selectedWords);
   final List<DocumentSnapshot<Object?>> overdueListDocs = await Future.wait(overdueListRefs.map((ref) => ref.get()));
@@ -209,8 +231,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
           bool splitHasSelectedWords =
               selectedWords.any((element) => bigJsonList[i]["split_sentence"][j]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
-          print("splity:  ${bigJsonList[i]["split_sentence"][j]["target_language"]}");
-
           if (splitHasSelectedWords) {
             // Build chunk-level narration
             List<String> narratorTranslationsChunk = buildKeysForNarratorTranslation(bigJsonList[i]["split_sentence"][j]["narrator_translation"], i, j);
@@ -243,8 +263,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               script.addAll(chunkSequence);
             }
 
-            print("wordKeys: $wordKeys");
-
             // Save audio URLs for word to Firestore
             for (var wordKey in wordKeys) {
               final targetChunkKey = 'dialogue_${i}_split_sentence_${j}_target_language';
@@ -257,14 +275,19 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
               // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
               if (selectedWords.any((element) => word.contains(element))) {
-                print("selectedWords: $selectedWords");
-                print("word_1: $word");
                 word = selectedWords.firstWhere((element) => word.contains(element));
-                print("word_2: $word");
-                _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
-                  "native_chunk": nativeChunkUrl,
-                  "target_chunk": targetChunkUrl,
-                });
+
+                // Check if this word already has audio URLs
+                bool hasExistingAudioUrls = selectedWordCards.containsKey(word) && selectedWordCards[word]!.containsKey('audio_urls');
+
+                // Only append URLs if there are no existing ones
+                if (!hasExistingAudioUrls) {
+                  print("!hasExistingAudioUrls");
+                  _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
+                    "native_chunk": nativeChunkUrl,
+                    "target_chunk": targetChunkUrl,
+                  });
+                }
               }
             }
           }
