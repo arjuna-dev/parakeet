@@ -260,6 +260,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // Update playlist from Firestore snapshot
   void _updatePlaylist(QuerySnapshot snapshot) async {
+    // If it is not generating return
+    if (!widget.generating) {
+      return;
+    }
     // Don't update if we're disposing or resources are already gone
     if (_isDisposing || _firestoreService == null) {
       print("Skipping updatePlaylist because widget is disposing");
