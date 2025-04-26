@@ -185,31 +185,43 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
                             // Find matching word data for score calculation
                             final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
-                            // Use stability if found, otherwise fallback to 9
-                            final stability = matching.isEmpty ? 0 : matching['stability'];
+                            // Compute stability based on matched data;
+                            final stabilityVal = matching.isEmpty ? 0.0 : matching['stability'];
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                TextButton(
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                                    backgroundColor: colorScheme.surfaceContainer,
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  onPressed: () => showCenteredToast(context, nativeWord),
-                                  child: Text(
-                                    word,
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 12 : 14,
-                                      color: colorScheme.onSurfaceVariant,
+                                Row(
+                                  children: [
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                                        backgroundColor: colorScheme.surfaceContainer,
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: () => showCenteredToast(context, nativeWord),
+                                      child: Text(
+                                        word, // changed: add star if needed, update text
+                                        style: TextStyle(
+                                          fontSize: isSmallScreen ? 12 : 14,
+                                          // color: wordTextColor, // changed: green if stability >= 100
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    (stabilityVal > 365)
+                                        ? Icon(
+                                            Icons.star,
+                                            size: 14,
+                                            color: colorScheme.primary,
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
-                                // Changed: pass calculated stability as score
-                                WordProgressBar(score: stability),
+                                // Changed: pass calculated stabilityVal as score
+                                WordProgressBar(score: stabilityVal),
                               ],
                             );
                           }).toList()),
@@ -312,7 +324,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 class WordProgressBar extends StatelessWidget {
   final double score;
   final int learnedScore = 100;
-  final int masteredScore = 365;
   const WordProgressBar({required this.score, super.key});
 
   double get progress => (score.clamp(0, learnedScore)) / learnedScore;
@@ -320,6 +331,8 @@ class WordProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    // Changed: set progress color to green if score >= 100, else use primary color
+    final progressColor = score >= 100 ? const Color.fromARGB(255, 136, 225, 139) : colorScheme.primary;
     return FractionallySizedBox(
       widthFactor: 0.5,
       child: ClipRRect(
@@ -328,7 +341,7 @@ class WordProgressBar extends StatelessWidget {
           value: progress,
           minHeight: 5,
           backgroundColor: colorScheme.surfaceContainerHighest,
-          valueColor: AlwaysStoppedAnimation<Color?>(colorScheme.primary),
+          valueColor: AlwaysStoppedAnimation<Color?>(progressColor),
         ),
       ),
     );
