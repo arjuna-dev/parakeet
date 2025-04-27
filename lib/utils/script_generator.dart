@@ -10,6 +10,9 @@ import '../screens/audio_player_s_utils.dart' show accessBigJson;
 
 Future<List<DocumentReference>> getSelectedWordCardDocRefs(String userId, String targetLanguage, String category, List<dynamic> words) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
+  // Ensure the parent *category* document exists; create a stub if it doesn't.
+  await docRef.set({'createdAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+  print('wrote category $category');
   List<DocumentReference> wordDocRefs = [];
 
   for (var word in words) {
@@ -182,7 +185,6 @@ List<String> createFirstScript(List<dynamic> data) {
   int randomI = Random().nextInt(sequences.introSequences.length);
   List<String> introSequence = sequences.introSequences[randomI]();
   script.addAll(introSequence);
-  print("script 1: $script");
 
   if (data.length < 2) {
     print("Error: Data length for script dialogue is less than 2");
@@ -191,10 +193,8 @@ List<String> createFirstScript(List<dynamic> data) {
   for (int i = 0; i < data.length; i++) {
     script.add("dialogue_${i}_target_language");
   }
-  print("script 2: $script");
 
   script.addAll(sequences.introOutroSequence1());
-  print("script 3: $script");
   return script;
 }
 
@@ -362,64 +362,30 @@ Future<Map<String, dynamic>> parseAndCreateScript(
         }
       }
 
+      if (overdueListCards[i]['audio_urls'] != null && overdueListCards[i]['audio_urls']['native_chunk'] != null && overdueListCards[i]['audio_urls']['target_chunk'] != null) {
+        List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
+          overdueListCards[i]['audio_urls']['native_chunk'],
+          overdueListCards[i]['audio_urls']['target_chunk'],
+        );
+        script.addAll(overdueChunkSequence);
+      }
+
       if (i == dialogue.length - 1) {
+        int iPlus1 = i + 1;
+        if (overdueListCards[iPlus1]['audio_urls'] != null && overdueListCards[iPlus1]['audio_urls']['native_chunk'] != null && overdueListCards[iPlus1]['audio_urls']['target_chunk'] != null) {
+          List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
+            overdueListCards[iPlus1]['audio_urls']['native_chunk'],
+            overdueListCards[iPlus1]['audio_urls']['target_chunk'],
+          );
+          script.addAll(overdueChunkSequence);
+        }
         Random random = Random();
         int randomNumber = random.nextInt(5);
         script.add("narrator_closing_phrases_$randomNumber");
       }
     }
+    print("script: $script");
   }
-
-  for (var wordDoc in overdueListCards) {
-    if (wordDoc['audio_urls'] != null && wordDoc['audio_urls']['native_chunk'] != null && wordDoc['audio_urls']['target_chunk'] != null) {
-      List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
-        wordDoc['audio_urls']['native_chunk'],
-        wordDoc['audio_urls']['target_chunk'],
-      );
-      // TODO: Add the overdue chunk sequence to the script in the correct place
-    }
-  }
-
-//   Getting all cards and checking it for debugging
-
-  // Future<List<fsrs.Card>> getAllUsedCardsInCategory(List<String> words) async {
-  //   List<fsrs.Card> cards = [];
-  //   for (String word in words) {
-  //     print("word: $word");
-  //     final collectionRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
-  //     print("collectionRef: $collectionRef");
-
-  //     // Get the document snapshot
-  //     final docSnapshot = await collectionRef.get(const GetOptions(source: Source.server));
-
-  //     // Check if document exists and has data
-  //     if (docSnapshot.exists) {
-  //       final data = docSnapshot.data();
-  //       print("doc: $data");
-  //       if (data != null) {
-  //         fsrs.Card card = WordCard.fromFirestore(data).card;
-  //         cards.add(card);
-  //       }
-  //     }
-  //   }
-  //   return cards;
-  // }
-
-  // final Set<String> overdueSet = overdueWordsList.toSet();
-  // final Set<String> selectedWordsSet = selectedWords.cast<String>().toSet();
-  // final List<String> combinedWordsList = overdueSet.union(selectedWordsSet).toList();
-
-  // List<fsrs.Card> cardsCollection = await getAllUsedCardsInCategory(combinedWordsList);
-  // var f = fsrs.FSRS();
-  // fsrs.Card firstCard = cardsCollection[0];
-  // var now = DateTime.now();
-  // print("Now: $now");
-  // var cardPossibleSchedulings = f.repeat(firstCard, now);
-  // print("Due 1: ${firstCard.due}, State 1: ${firstCard.state}");
-  // firstCard = cardPossibleSchedulings[fsrs.Rating.easy]!.card;
-  // print("Due 2: ${firstCard.due}, State 2: ${firstCard.state}");
-
-//   -----------------------------------------
 
   return {"script": script, "allUsedWordsCardsRefsMap": allUsedWordsCardsRefsMap};
 }
@@ -431,9 +397,16 @@ Future<void> _appendRepetitionUrlsToWordDoc(
   String category,
   Map<String, dynamic> urlsMap,
 ) async {
-  final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
+  // Make sure the category (parent) document exists
+  final parentRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
+  await parentRef.set(
+    {'createdAt': FieldValue.serverTimestamp()},
+    SetOptions(merge: true),
+  );
 
-  await docRef.set(
+  // Update / create the word document inside that category’s sub‑collection
+  final wordRef = parentRef.collection(category).doc(word);
+  await wordRef.set(
     {
       'audio_urls': urlsMap,
     },
