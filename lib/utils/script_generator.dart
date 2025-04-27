@@ -224,7 +224,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
 
-  print("will create first script inside parseandcreatescript");
   List<String> script = createFirstScript(dialogue);
 
   // Get the selected words references
