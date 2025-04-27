@@ -264,7 +264,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _updatePlaylist(QuerySnapshot snapshot) async {
     // If it is not generating return
     if (!widget.generating) {
-      print("_updatePlaylist called when not generating: !widget.generating");
       return;
     }
     // Don't update if we're disposing or resources are already gone
