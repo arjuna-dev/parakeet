@@ -33,15 +33,14 @@ class PlaylistGenerator {
     );
   }
 
-  /// Generate script from dialogue
-  List<dynamic> generateScript(List<dynamic> dialogue) {
-    return script_generator.createFirstScript(dialogue);
-  }
-
   /// Generate script from dialogue with repetition mode
   Future<Map<String, dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> bigJson, List<dynamic> originalDialogue, RepetitionMode repetitionMode, String category) async {
     // Create a ValueNotifier with the repetition mode
     final repetitionModeNotifier = ValueNotifier<RepetitionMode>(repetitionMode);
+
+    if (originalDialogue.isEmpty) {
+      print("Error: Original dialogue is empty.");
+    }
 
     // Call the script generator with the ValueNotifier
     final result = await script_generator.parseAndCreateScript(
