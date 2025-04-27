@@ -99,7 +99,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
             // Schedule the next message to appear after the first one finishes
             // The animation completion callback will handle showing the next message
           } else {
-            print("Already animating message $_currentlyAnimatingIndex, not initializing new messages");
+            // print("Already animating message $_currentlyAnimatingIndex, not initializing new messages");
           }
         } else {
           print("No valid messages found to initialize");
@@ -147,7 +147,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       final currentDialogue = _dialogueNotifier.value;
       // If we're currently animating a message, don't start another one
       if (_currentlyAnimatingIndex != -1 && !_animatedMessages.contains(_currentlyAnimatingIndex)) {
-        print("Already animating message $_currentlyAnimatingIndex, waiting for completion");
+        // print("Already animating message $_currentlyAnimatingIndex, waiting for completion");
         return;
       }
 
@@ -247,7 +247,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
           // If all valid messages are visible, notify
           if (validMessageCount > 0 && visibleValidMessageCount >= validMessageCount) {
-            print("All dialogue messages have been displayed ($visibleValidMessageCount/$validMessageCount). Notifying parent from _animateNextMessage.");
             _hasNotifiedAllDisplayed = true;
             widget.onAllDialogueDisplayed?.call();
           } else {
@@ -305,7 +304,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
       // If we have valid messages and all are visible, notify
       if (validMessageCount > 0 && _visibleMessages.length >= validMessageCount) {
-        print("All dialogue messages have been displayed (${_visibleMessages.length}/$validMessageCount). Notifying parent.");
         _hasNotifiedAllDisplayed = true;
         widget.onAllDialogueDisplayed?.call();
       } else {
