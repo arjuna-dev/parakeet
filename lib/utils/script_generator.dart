@@ -8,14 +8,18 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 import '../screens/audio_player_s_utils.dart' show accessBigJson;
 
-Future<Map<String, DocumentReference>> getSelectedWordCardDocRefs(String userId, String targetLanguage, String category, List<dynamic> words) async {
+Future<List<DocumentReference>> getSelectedWordCardDocRefs(String userId, String targetLanguage, String category, List<dynamic> words) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
-  Map<String, DocumentReference> wordDocRefs = {};
+  List<DocumentReference> wordDocRefs = [];
 
   for (var word in words) {
     word = word.toLowerCase().trim();
-    final docSnap = await docRef.collection(category).doc(word).get();
-    wordDocRefs[word] = docRef.collection(category).doc(word);
+    final documentRef = docRef.collection(category).doc(word);
+    final docSnap = await documentRef.get();
+
+    // Add reference to list
+    wordDocRefs.add(documentRef);
+
     if (!docSnap.exists) {
       WordCard newCard = WordCard(
         word: word,
@@ -29,7 +33,7 @@ Future<Map<String, DocumentReference>> getSelectedWordCardDocRefs(String userId,
         lapses: 0,
         state: fsrs.State.newState,
       );
-      await docRef.collection(category).doc(word).set(newCard.toFirestore());
+      await documentRef.set(newCard.toFirestore());
     }
   }
   return wordDocRefs;
@@ -95,6 +99,35 @@ Future<List<DocumentReference>> get5MostOverdueWordsRefs(String userId, String t
   return overdueWordsWithDates.take(5).map((item) => item['reference'] as DocumentReference).toList();
 }
 
+Future<Map<String, dynamic>> getDocsAndRefsMaps(List<DocumentReference> refs) async {
+  // Use Future.wait to fetch all documents in parallel
+  final snapshots = await Future.wait(refs.map((ref) => ref.get()));
+
+  // Convert snapshots to data maps, filtering out non-existent documents
+  final List<Map<String, dynamic>> documents = [];
+  final Map<String, DocumentReference> refsMap = {};
+
+  // Process each snapshot and build both the documents list and refs map
+  for (int i = 0; i < snapshots.length; i++) {
+    final snapshot = snapshots[i];
+    if (snapshot.exists) {
+      final data = snapshot.data() as Map<String, dynamic>;
+      documents.add(data);
+
+      // If the document has a 'word' property, add it to the refsMap
+      if (data.containsKey('word')) {
+        final word = data['word'] as String;
+        refsMap[word] = refs[i];
+      }
+    }
+  }
+
+  return {
+    'docs': documents,
+    'refsMap': refsMap,
+  };
+}
+
 List<Map<String, dynamic>> extractAndClassifyEnclosedWords(String inputString) {
   List<String> parts = inputString.split('||');
   List<Map<String, dynamic>> result = [];
@@ -149,12 +182,19 @@ List<String> createFirstScript(List<dynamic> data) {
   int randomI = Random().nextInt(sequences.introSequences.length);
   List<String> introSequence = sequences.introSequences[randomI]();
   script.addAll(introSequence);
+  print("script 1: $script");
+
+  if (data.length < 2) {
+    print("Error: Data length for script dialogue is less than 2");
+  }
 
   for (int i = 0; i < data.length; i++) {
     script.add("dialogue_${i}_target_language");
   }
+  print("script 2: $script");
 
   script.addAll(sequences.introOutroSequence1());
+  print("script 3: $script");
   return script;
 }
 
@@ -184,17 +224,38 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
 
+  print("will create first script inside parseandcreatescript");
   List<String> script = createFirstScript(dialogue);
 
-  Map<String, DocumentReference> selectedWordCardsRefs = await getSelectedWordCardDocRefs(userId, targetLanguage, category, selectedWords);
-  // Fetch the documents for the selected words
-  final Map<String, Map<String, dynamic>> selectedWordCards = await fetchSelectedWordCardDocs(selectedWordCardsRefs);
+  // Get the selected words references
+  List<DocumentReference> selectedWordCardsRefs = await getSelectedWordCardDocRefs(userId, targetLanguage, category, selectedWords);
+  // Get the documents and ref maps for selected words
+  final Map<String, dynamic> selectedWordCardsAndRefMap = await getDocsAndRefsMaps(selectedWordCardsRefs);
+  // Get the selected word cards
+  final List<Map<String, dynamic>> selectedWordCards = selectedWordCardsAndRefMap['docs'];
+  // Get the selected word cards ref maps
+  final Map<String, DocumentReference> selectedWordCardsRefsMap = selectedWordCardsAndRefMap['refsMap'];
 
-  print("selectedWordCards: $selectedWordCards");
+  // Fetch the documents for the overdue words
+  final List<DocumentReference> overdueListCardsRefs = await get5MostOverdueWordsRefs(userId, targetLanguage, selectedWords);
+  // Get the documents and ref maps for overdue words
+  final Map<String, dynamic> overdueListCardsAndRefMap = await getDocsAndRefsMaps(overdueListCardsRefs);
+  // Get the overdue word cards
+  final List<Map<String, dynamic>> overdueListCards = overdueListCardsAndRefMap['docs'];
+  // Get the overdue word cards ref maps
+  final Map<String, DocumentReference> overdueListCardsRefsMap = overdueListCardsAndRefMap['refsMap'];
 
-  final List<DocumentReference> overdueListRefs = await get5MostOverdueWordsRefs(userId, targetLanguage, selectedWords);
-  final List<DocumentSnapshot<Object?>> overdueListDocs = await Future.wait(overdueListRefs.map((ref) => ref.get()));
-  // final List<String> overdueWordsList = overdueListDocs.map((doc) => (doc.data() as Map<String, dynamic>)['word'] as String).toList();
+  // Get the words from the overdue documents
+  // final List<String> overdueWordsList = overdueListCards.map((doc) => doc['word'] as String).toList();
+
+  // Create a combined list of word cards
+  final List<Map<String, dynamic>> allUsedWordsCards = [...selectedWordCards, ...overdueListCards];
+
+  // Create a map of all used words cards references
+  final Map<String, DocumentReference> allUsedWordsCardsRefsMap = {
+    ...selectedWordCardsRefsMap,
+    ...overdueListCardsRefsMap,
+  };
 
   for (int i = 0; i < bigJsonList.length; i++) {
     if ((bigJsonList[i] as Map).isNotEmpty) {
@@ -277,12 +338,20 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               if (selectedWords.any((element) => word.contains(element))) {
                 word = selectedWords.firstWhere((element) => word.contains(element));
 
+                // Get the correct word card from the selectedWordCards list
+                Map<String, dynamic> selectedWordCard = selectedWordCards.firstWhere((card) => card['word'] == word, orElse: () => {});
+
+                // Check if the word card is not empty
+                if (selectedWordCard.isEmpty) {
+                  print("Error: word card for $word not found in selectedWordCards.");
+                  continue;
+                }
+
                 // Check if this word already has audio URLs
-                bool hasExistingAudioUrls = selectedWordCards.containsKey(word) && selectedWordCards[word]!.containsKey('audio_urls');
+                bool hasExistingAudioUrls = selectedWordCard['audio_urls'] != null && selectedWordCard['audio_urls']['native_chunk'] != null && selectedWordCard['audio_urls']['target_chunk'] != null;
 
                 // Only append URLs if there are no existing ones
                 if (!hasExistingAudioUrls) {
-                  print("!hasExistingAudioUrls");
                   _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
                     "native_chunk": nativeChunkUrl,
                     "target_chunk": targetChunkUrl,
@@ -302,19 +371,13 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     }
   }
 
-  Map<String, DocumentReference> allUsedWordsCards = {};
-  allUsedWordsCards = await getSelectedWordCardDocRefs(userId, targetLanguage, category, selectedWords);
-  final overdueSequences = <List<String>>[];
-  for (var docRef in overdueListRefs) {
-    final wordDoc = await getDocumentDataFromRef(docRef);
-
-    if (wordDoc != null && wordDoc['audio_urls'] != null && wordDoc['audio_urls']['native_chunk'] != null && wordDoc['audio_urls']['target_chunk'] != null) {
-      allUsedWordsCards.addAll({wordDoc['word']: docRef});
+  for (var wordDoc in overdueListCards) {
+    if (wordDoc['audio_urls'] != null && wordDoc['audio_urls']['native_chunk'] != null && wordDoc['audio_urls']['target_chunk'] != null) {
       List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
         wordDoc['audio_urls']['native_chunk'],
         wordDoc['audio_urls']['target_chunk'],
       );
-      overdueSequences.add(overdueChunkSequence.toList());
+      // TODO: Add the overdue chunk sequence to the script in the correct place
     }
   }
 
@@ -359,7 +422,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 
 //   -----------------------------------------
 
-  return {"script": script, "allUsedWordsCards": allUsedWordsCards};
+  return {"script": script, "allUsedWordsCardsRefsMap": allUsedWordsCardsRefsMap};
 }
 
 Future<void> _appendRepetitionUrlsToWordDoc(
@@ -370,8 +433,6 @@ Future<void> _appendRepetitionUrlsToWordDoc(
   Map<String, dynamic> urlsMap,
 ) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).doc(word);
-
-  print("urlsMap: $urlsMap");
 
   await docRef.set(
     {
