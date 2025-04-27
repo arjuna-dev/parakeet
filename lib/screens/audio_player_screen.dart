@@ -11,6 +11,7 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
@@ -83,9 +84,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int _updateNumber = 0;
 
   // Data variables
+  late List<dynamic> _dialogue;
   List<dynamic> _script = [];
   Map<String, dynamic> _scriptAndWordCards = {};
-  Map<String, dynamic> _allUsedWordsCards = {};
+  Map<String, DocumentReference> _allUsedWordsCardsRefsMap = {};
   String _currentTrack = '';
   Map<String, dynamic>? _latestSnapshot;
   Map<int, String> _filesToCompare = {};
@@ -95,6 +97,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Make a mutable copy of the initial dialogue that we can update over time
+    _dialogue = List<dynamic>.from(widget.dialogue);
 
     // Initialize services
     _audioPlayerService = AudioPlayerService(
@@ -177,21 +181,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
           // Convert to a properly handled Future chain
+          print("will call generateScriptWithRepetitionMode 1");
           _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
             _existingBigJson!,
-            widget.dialogue,
+            _dialogue,
             _repetitionsMode.value,
             widget.category ?? 'Custom Lesson',
           );
 
           _script = _scriptAndWordCards['script'] ?? [];
-          _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? [];
+          _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
           _currentTrack = _script.isNotEmpty ? _script[0] : '';
 
           if (mounted) {
             setState(() {
               _script = _scriptAndWordCards['script'] ?? [];
-              _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? [];
+              _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
               _currentTrack = _script.isNotEmpty ? _script[0] : '';
             });
           } else {
@@ -260,6 +265,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _updatePlaylist(QuerySnapshot snapshot) async {
     // If it is not generating return
     if (!widget.generating) {
+      print("_updatePlaylist called when not generating: !widget.generating");
       return;
     }
     // Don't update if we're disposing or resources are already gone
@@ -279,10 +285,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, widget.dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
+      print("will call generateScriptWithRepetitionMode 2");
+      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, _dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
 
       _script = scriptData['script'] ?? [];
-      _allUsedWordsCards = scriptData['allUsedWordsCards'] ?? [];
+      _allUsedWordsCardsRefsMap = scriptData['allUsedWordsCardsRefsMap'] ?? [];
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
@@ -365,15 +372,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Generate script with repetition mode
+    print("will call generateScriptWithRepetitionMode 3");
     _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
       _existingBigJson!,
-      widget.dialogue,
+      _dialogue,
       _repetitionsMode.value,
       widget.category ?? 'Custom Lesson',
     );
 
     _script = _scriptAndWordCards['script'] ?? [];
-    _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? {};
+    _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? {};
 
     // Build files to compare map
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
@@ -480,10 +488,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Get the complete dialogue from the latest snapshot
       List<dynamic> completeDialogue = _latestSnapshot!['dialogue'] ?? [];
+      _dialogue = completeDialogue;
+      if (mounted) {
+        setState(() {});
+      }
 
       // Ensure script is created with the complete dialogue
       if (_script.isEmpty) {
-        _script = _playlistGenerator.generateScript(completeDialogue);
+        print("will create first script in audio player screen's _createScriptAndMakeSecondApiCall");
+        _script = createFirstScript(completeDialogue);
         if (mounted) {
           setState(() {
             _currentTrack = _script.isNotEmpty ? _script[0] : '';
@@ -497,9 +510,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Save script to Firestore
       await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue, widget.category ?? 'Custom Lesson');
 
-      // Exit if widget is no longer mounted
-      if (!mounted || _isDisposing) return;
-
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
@@ -507,7 +517,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
 
       // Initialize playlist after a delay to allow audio files to be generated
-
       if (mounted && !_audioPlayerService.playlistInitialized) {
         _initializePlaylist();
       }
@@ -554,7 +563,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ReviewWordsDialog(words: _allUsedWordsCards);
+        return ReviewWordsDialog(words: _allUsedWordsCardsRefsMap);
       },
     );
 
@@ -674,7 +683,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           onToggle: _toggleSpeechRecognition,
                         ),
                         AnimatedDialogueList(
-                          dialogue: widget.dialogue,
+                          dialogue: _dialogue,
                           currentTrack: _currentTrack,
                           wordsToRepeat: widget.wordsToRepeat,
                           documentID: widget.documentID,
