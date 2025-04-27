@@ -12,7 +12,6 @@ Future<List<DocumentReference>> getSelectedWordCardDocRefs(String userId, String
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
   // Ensure the parent *category* document exists; create a stub if it doesn't.
   await docRef.set({'createdAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-  print('wrote category $category');
   List<DocumentReference> wordDocRefs = [];
 
   for (var word in words) {
@@ -210,6 +209,51 @@ Future<Map<String, dynamic>?> getDocumentDataFromRef(DocumentReference docRef) a
   return data;
 }
 
+Future<void> saveWordAudioUrls({
+  required Map<String, dynamic> bigJsonMap,
+  required String wordKeyPath,
+  required String nativeChunkKey,
+  required String targetChunkKey,
+  required String documentId,
+  required String nativeLanguage,
+  required String targetLanguage,
+  required String userId,
+  required List<dynamic> selectedWords,
+  required List<Map<String, dynamic>> selectedWordCards,
+  required String category,
+}) async {
+  final nativeChunkUrl = await constructUrl(nativeChunkKey, documentId, nativeLanguage, userId);
+  final targetChunkUrl = await constructUrl(targetChunkKey, documentId, targetLanguage, userId);
+
+  String word = accessBigJson(bigJsonMap, wordKeyPath);
+  word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
+
+  // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
+  if (selectedWords.any((element) => word.contains(element))) {
+    word = selectedWords.firstWhere((element) => word.contains(element));
+
+    // Get the correct word card from the selectedWordCards list
+    Map<String, dynamic> selectedWordCard = selectedWordCards.firstWhere((card) => card['word'] == word, orElse: () => {});
+
+    // Check if the word card is not empty
+    if (selectedWordCard.isEmpty) {
+      print("Error: word card for $word not found in selectedWordCards.");
+      return;
+    }
+
+    // Check if this word already has audio URLs
+    bool hasExistingAudioUrls = selectedWordCard['audio_urls'] != null && selectedWordCard['audio_urls']['native_chunk'] != null && selectedWordCard['audio_urls']['target_chunk'] != null;
+
+    // Only append URLs if there are no existing ones
+    if (!hasExistingAudioUrls) {
+      _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
+        "native_chunk": nativeChunkUrl,
+        "target_chunk": targetChunkUrl,
+      });
+    }
+  }
+}
+
 Future<Map<String, dynamic>> parseAndCreateScript(
   Map<String, dynamic> bigJson,
   List<dynamic> selectedWords,
@@ -256,6 +300,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     ...overdueListCardsRefsMap,
   };
 
+  List<String> activeRecallSequenceForNextTurn = [];
+
   for (int i = 0; i < bigJsonList.length; i++) {
     if ((bigJsonList[i] as Map).isNotEmpty) {
       String nativeSentence = "dialogue_${i}_native_language";
@@ -285,6 +331,9 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       // Check if any words to repeat appear in this entire sentence
       bool sentenceHasSelectedWords = selectedWords.any((element) => bigJsonList[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
+      String nativeChunkKey = "";
+      String targetChunkKey = "";
+
       if (sentenceHasSelectedWords) {
         // Process each 'split_sentence' item
         for (int j = 0; j < bigJsonList[i]["split_sentence"].length; j++) {
@@ -295,8 +344,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             // Build chunk-level narration
             List<String> narratorTranslationsChunk = buildKeysForNarratorTranslation(bigJsonList[i]["split_sentence"][j]["narrator_translation"], i, j);
 
-            String splitNative = "dialogue_${i}_split_sentence_${j}_native_language";
-            String splitTarget = "dialogue_${i}_split_sentence_${j}_target_language";
+            nativeChunkKey = "dialogue_${i}_split_sentence_${j}_native_language";
+            targetChunkKey = "dialogue_${i}_split_sentence_${j}_target_language";
 
             // Get the word keys for the current split sentence
             List<Map<String, dynamic>> wordKeys = getWordKeys(bigJsonList[i]["split_sentence"][j]['words'], i, j, selectedWords);
@@ -305,8 +354,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             if (repetitionMode.value == RepetitionMode.normal) {
               List<String> chunkSequence = sequences.chunkSequence1(
                 narratorTranslationsChunk,
-                splitNative,
-                splitTarget,
+                nativeChunkKey,
+                targetChunkKey,
                 wordKeys,
                 j,
               );
@@ -315,8 +364,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               // repetitionMode.value == RepetitionMode.less
               List<String> chunkSequence = sequences.chunkSequence1Less(
                 narratorTranslationsChunk,
-                splitNative,
-                splitTarget,
+                nativeChunkKey,
+                targetChunkKey,
                 wordKeys,
                 j,
               );
@@ -325,57 +374,59 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 
             // Save audio URLs for word to Firestore
             for (var wordKey in wordKeys) {
-              final targetChunkKey = 'dialogue_${i}_split_sentence_${j}_target_language';
-              final nativeChunkKey = 'dialogue_${i}_split_sentence_${j}_native_language';
-
-              final nativeChunkUrl = await constructUrl(nativeChunkKey, documentId, nativeLanguage, userId);
-              final targetChunkUrl = await constructUrl(targetChunkKey, documentId, targetLanguage, userId);
-
-              String word = accessBigJson(bigJsonMap, wordKey["word_key"]);
-              word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
-              // match the word in the words_to_repeat list even if it matches partly and if it is in the list, assign word to the word in the list
-              if (selectedWords.any((element) => word.contains(element))) {
-                word = selectedWords.firstWhere((element) => word.contains(element));
-
-                // Get the correct word card from the selectedWordCards list
-                Map<String, dynamic> selectedWordCard = selectedWordCards.firstWhere((card) => card['word'] == word, orElse: () => {});
-
-                // Check if the word card is not empty
-                if (selectedWordCard.isEmpty) {
-                  print("Error: word card for $word not found in selectedWordCards.");
-                  continue;
-                }
-
-                // Check if this word already has audio URLs
-                bool hasExistingAudioUrls = selectedWordCard['audio_urls'] != null && selectedWordCard['audio_urls']['native_chunk'] != null && selectedWordCard['audio_urls']['target_chunk'] != null;
-
-                // Only append URLs if there are no existing ones
-                if (!hasExistingAudioUrls) {
-                  _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
-                    "native_chunk": nativeChunkUrl,
-                    "target_chunk": targetChunkUrl,
-                  });
-                }
-              }
+              await saveWordAudioUrls(
+                bigJsonMap: bigJsonMap,
+                wordKeyPath: wordKey["word_key"],
+                nativeChunkKey: nativeChunkKey,
+                targetChunkKey: targetChunkKey,
+                documentId: documentId,
+                nativeLanguage: nativeLanguage,
+                targetLanguage: targetLanguage,
+                userId: userId,
+                selectedWords: selectedWords,
+                selectedWordCards: selectedWordCards,
+                category: category,
+              );
             }
-          }
-        }
-      }
+          } // End of split has selected words check
+        } // End of split sentence loop
+      } // End has selected words check before split sentence loop
 
+      // Add overdue words to the script
       if (overdueListCards[i]['audio_urls'] != null && overdueListCards[i]['audio_urls']['native_chunk'] != null && overdueListCards[i]['audio_urls']['target_chunk'] != null) {
         List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
           overdueListCards[i]['audio_urls']['native_chunk'],
           overdueListCards[i]['audio_urls']['target_chunk'],
+          sequences.RecallType.overdueWord,
         );
         script.addAll(overdueChunkSequence);
       }
 
+      // Add the active recall sequence from the previous turn
+      if (activeRecallSequenceForNextTurn.isNotEmpty) {
+        print("Adding active recall sequence for turn $i");
+        print("activeRecallSequenceForNextTurn: $activeRecallSequenceForNextTurn");
+        script.addAll(activeRecallSequenceForNextTurn);
+      }
+
+      print("nativeChunkKey: $nativeChunkKey");
+      print("targetChunkKey: $targetChunkKey");
+
+      // Create the active recall sequence for the next turn
+      activeRecallSequenceForNextTurn = sequences.activeRecallSequence1Less(
+        nativeChunkKey,
+        targetChunkKey,
+        sequences.RecallType.thisConversation,
+      );
+
       if (i == dialogue.length - 1) {
         int iPlus1 = i + 1;
+        // Add remaining overdue words to the script
         if (overdueListCards[iPlus1]['audio_urls'] != null && overdueListCards[iPlus1]['audio_urls']['native_chunk'] != null && overdueListCards[iPlus1]['audio_urls']['target_chunk'] != null) {
           List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
             overdueListCards[iPlus1]['audio_urls']['native_chunk'],
             overdueListCards[iPlus1]['audio_urls']['target_chunk'],
+            sequences.RecallType.overdueWord,
           );
           script.addAll(overdueChunkSequence);
         }
