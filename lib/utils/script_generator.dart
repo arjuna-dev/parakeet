@@ -300,7 +300,8 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     ...overdueListCardsRefsMap,
   };
 
-  List<String> activeRecallSequenceForNextTurn = [];
+  // Use a list to store multiple active recall sequences for the next turn
+  List<List<String>> activeRecallSequencesForNextTurn = [];
 
   for (int i = 0; i < bigJsonList.length; i++) {
     if ((bigJsonList[i] as Map).isNotEmpty) {
@@ -331,8 +332,18 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       // Check if any words to repeat appear in this entire sentence
       bool sentenceHasSelectedWords = selectedWords.any((element) => bigJsonList[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
 
-      String nativeChunkKey = "";
-      String targetChunkKey = "";
+      // Add all active recall sequences from the previous turn
+      if (activeRecallSequencesForNextTurn.isNotEmpty) {
+        print("Adding ${activeRecallSequencesForNextTurn.length} active recall sequences for turn $i");
+        for (var sequence in activeRecallSequencesForNextTurn) {
+          script.addAll(sequence);
+        }
+        // Clear sequences after adding them
+        activeRecallSequencesForNextTurn.clear();
+      }
+
+      // Track chunk keys for this sentence
+      List<Map<String, String>> chunkKeysForThisSentence = [];
 
       if (sentenceHasSelectedWords) {
         // Process each 'split_sentence' item
@@ -344,11 +355,12 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             // Build chunk-level narration
             List<String> narratorTranslationsChunk = buildKeysForNarratorTranslation(bigJsonList[i]["split_sentence"][j]["narrator_translation"], i, j);
 
-            nativeChunkKey = "dialogue_${i}_split_sentence_${j}_native_language";
-            targetChunkKey = "dialogue_${i}_split_sentence_${j}_target_language";
+            String nativeChunkKey = "dialogue_${i}_split_sentence_${j}_native_language";
+            String targetChunkKey = "dialogue_${i}_split_sentence_${j}_target_language";
 
-            // Get the word keys for the current split sentence
-            List<Map<String, dynamic>> wordKeys = getWordKeys(bigJsonList[i]["split_sentence"][j]['words'], i, j, selectedWords);
+            List<Map<String, dynamic>> wordKeys = getWordKeys(bigJsonList[i]["split_sentence"][j]["words"], i, j, selectedWords);
+            // Store valid chunk keys for later active recall
+            chunkKeysForThisSentence.add({'nativeChunkKey': nativeChunkKey, 'targetChunkKey': targetChunkKey});
 
             // Insert the chunk sequence with normal or reduced repetition
             if (repetitionMode.value == RepetitionMode.normal) {
@@ -402,22 +414,18 @@ Future<Map<String, dynamic>> parseAndCreateScript(
         script.addAll(overdueChunkSequence);
       }
 
-      // Add the active recall sequence from the previous turn
-      if (activeRecallSequenceForNextTurn.isNotEmpty) {
-        print("Adding active recall sequence for turn $i");
-        print("activeRecallSequenceForNextTurn: $activeRecallSequenceForNextTurn");
-        script.addAll(activeRecallSequenceForNextTurn);
+      // Create active recall sequences for the next turn for each set of chunk keys
+      for (var keys in chunkKeysForThisSentence) {
+        // Only create sequences if we have valid keys
+        if (keys['nativeChunkKey']!.isNotEmpty && keys['targetChunkKey']!.isNotEmpty) {
+          List<String> activeRecallSequence = sequences.activeRecallSequence1Less(
+            keys['nativeChunkKey']!,
+            keys['targetChunkKey']!,
+            sequences.RecallType.thisConversation,
+          );
+          activeRecallSequencesForNextTurn.add(activeRecallSequence);
+        }
       }
-
-      print("nativeChunkKey: $nativeChunkKey");
-      print("targetChunkKey: $targetChunkKey");
-
-      // Create the active recall sequence for the next turn
-      activeRecallSequenceForNextTurn = sequences.activeRecallSequence1Less(
-        nativeChunkKey,
-        targetChunkKey,
-        sequences.RecallType.thisConversation,
-      );
 
       if (i == dialogue.length - 1) {
         int iPlus1 = i + 1;
