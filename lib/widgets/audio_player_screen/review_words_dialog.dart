@@ -4,7 +4,7 @@ import 'package:parakeet/utils/spaced_repetition_fsrs.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ReviewWordsDialog extends StatefulWidget {
-  final Map<String, dynamic> words;
+  final Map<String, DocumentReference> words;
 
   const ReviewWordsDialog({
     Key? key,
@@ -207,7 +207,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
     // Get the word document from the correct path
     final docRef = widget.words[word];
 
-    final docSnapshot = await docRef.get();
+    final docSnapshot = await docRef!.get();
     if (docSnapshot.exists) {
       final data = docSnapshot.data() as Map<String, dynamic>;
       final wordCard = WordCard.fromFirestore(data);
