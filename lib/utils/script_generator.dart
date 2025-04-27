@@ -300,11 +300,29 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     ...overdueListCardsRefsMap,
   };
 
-  // Use a list to store multiple active recall sequences for the next turn
-  List<List<String>> activeRecallSequencesForNextTurn = [];
+  // Use a list to store active recall sequences for different turns
+  List<List<String>> nextTurnRecallSequences = []; // Sequences to add in the next turn
+  List<List<String>> delayedRecallSequences = []; // Sequences to add after a delay
 
   for (int i = 0; i < bigJsonList.length; i++) {
     if ((bigJsonList[i] as Map).isNotEmpty) {
+      // Add sequences from two turns ago (for active recall spacing)
+      if (delayedRecallSequences.isNotEmpty) {
+        print("Adding ${delayedRecallSequences.length} delayed recall sequences for turn $i");
+        for (var sequence in delayedRecallSequences) {
+          script.addAll(sequence);
+        }
+        // Clear after adding
+        delayedRecallSequences.clear();
+      }
+
+      // Move next turn sequences to become delayed sequences
+      delayedRecallSequences = List.from(nextTurnRecallSequences);
+      nextTurnRecallSequences.clear();
+
+      // Track chunk keys for this sentence
+      List<Map<String, String>> chunkKeysForThisSentence = [];
+
       String nativeSentence = "dialogue_${i}_native_language";
       String targetSentence = "dialogue_${i}_target_language";
 
@@ -331,19 +349,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 
       // Check if any words to repeat appear in this entire sentence
       bool sentenceHasSelectedWords = selectedWords.any((element) => bigJsonList[i]["target_language"].replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '').toLowerCase().split(' ').contains(element));
-
-      // Add all active recall sequences from the previous turn
-      if (activeRecallSequencesForNextTurn.isNotEmpty) {
-        print("Adding ${activeRecallSequencesForNextTurn.length} active recall sequences for turn $i");
-        for (var sequence in activeRecallSequencesForNextTurn) {
-          script.addAll(sequence);
-        }
-        // Clear sequences after adding them
-        activeRecallSequencesForNextTurn.clear();
-      }
-
-      // Track chunk keys for this sentence
-      List<Map<String, String>> chunkKeysForThisSentence = [];
 
       if (sentenceHasSelectedWords) {
         // Process each 'split_sentence' item
@@ -414,7 +419,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
         script.addAll(overdueChunkSequence);
       }
 
-      // Create active recall sequences for the next turn for each set of chunk keys
+      // Create active recall sequences for each set of chunk keys found in this turn
       for (var keys in chunkKeysForThisSentence) {
         // Only create sequences if we have valid keys
         if (keys['nativeChunkKey']!.isNotEmpty && keys['targetChunkKey']!.isNotEmpty) {
@@ -423,7 +428,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             keys['targetChunkKey']!,
             sequences.RecallType.thisConversation,
           );
-          activeRecallSequencesForNextTurn.add(activeRecallSequence);
+          nextTurnRecallSequences.add(activeRecallSequence);
         }
       }
 
@@ -444,6 +449,14 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       }
     }
     print("script: $script");
+  }
+
+  // If we have any remaining delayed sequences at the end, add them too
+  if (delayedRecallSequences.isNotEmpty) {
+    print("Adding remaining ${delayedRecallSequences.length} delayed recall sequences at the end");
+    for (var sequence in delayedRecallSequences) {
+      script.addAll(sequence);
+    }
   }
 
   return {"script": script, "allUsedWordsCardsRefsMap": allUsedWordsCardsRefsMap};
