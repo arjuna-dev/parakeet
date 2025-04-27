@@ -181,7 +181,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
           // Convert to a properly handled Future chain
-          print("will call generateScriptWithRepetitionMode 1");
           _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
             _existingBigJson!,
             _dialogue,
@@ -285,7 +284,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      print("will call generateScriptWithRepetitionMode 2");
       final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, _dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
 
       _script = scriptData['script'] ?? [];
@@ -372,7 +370,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Generate script with repetition mode
-    print("will call generateScriptWithRepetitionMode 3");
     _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
       _existingBigJson!,
       _dialogue,
@@ -495,7 +492,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Ensure script is created with the complete dialogue
       if (_script.isEmpty) {
-        print("will create first script in audio player screen's _createScriptAndMakeSecondApiCall");
         _script = createFirstScript(completeDialogue);
         if (mounted) {
           setState(() {
