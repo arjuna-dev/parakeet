@@ -15,7 +15,7 @@ language_level: {language_level}
 
 {keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
-The "keywords_used" should be the keywords that are exactly used in the dialogue.
+For "keywords_used", include the exact form of the keywords as they appear in the dialogue, even if they differ from their base or dictionary form. Do not alter, stem, or normalize the words — capture them exactly as used.
 
 This is an example of a request you could get and its expected output.
 

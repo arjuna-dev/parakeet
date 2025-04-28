@@ -95,7 +95,7 @@ class AudioGenerationService {
   }
 
   /// Creates the script document in Firestore
-  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> completeDialogue, String category) async {
+  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> keywordsUsedInDialogue, List<dynamic> completeDialogue, String category) async {
     // Save script to Firestore
     DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('script-$userID').doc(scriptDocumentId);
 
@@ -107,14 +107,14 @@ class AudioGenerationService {
       "native_language": nativeLanguage,
       "target_language": targetLanguage,
       "language_level": languageLevel,
-      "words_to_repeat": wordsToRepeat,
+      "words_to_repeat": keywordsUsedInDialogue,
       "user_ID": userID,
       "timestamp": FieldValue.serverTimestamp(),
     });
   }
 
   /// Makes the second API call to generate audio
-  Future<void> makeSecondApiCall(Map<String, dynamic> data) async {
+  Future<void> makeSecondApiCall(Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
     await http.post(
       Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
       headers: <String, String>{
@@ -134,7 +134,7 @@ class AudioGenerationService {
         "voice_1_id": data["voice_1_id"] ?? "",
         "voice_2_id": data["voice_2_id"] ?? "",
         "tts_provider": targetLanguage == "Azerbaijani" ? "3" : "1",
-        "words_to_repeat": wordsToRepeat,
+        "words_to_repeat": keywordsUsedInDialogue,
       }),
     );
   }
