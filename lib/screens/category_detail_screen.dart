@@ -123,39 +123,76 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     // Category Info Section
                     Container(
                       margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(16),
+                      height: 90,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12),
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
-                      child: Row(
+                      child: Stack(
                         children: [
-                          Icon(
-                            LessonConstants.getCategoryIcon(widget.category['name']),
-                            color: colorScheme.primary,
-                            size: isSmallScreen ? 24 : 32,
+                          // Gradient overlay for visual effect
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: RadialGradient(
+                                  center: const Alignment(1.2, 0.5),
+                                  radius: 1.2,
+                                  colors: [
+                                    _getCategoryColor(widget.category['name']).withOpacity(0.5),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 14 : 16,
-                                    color: colorScheme.onPrimaryContainer,
+
+                          // Category icon
+                          Positioned(
+                            right: 16,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: Icon(
+                                LessonConstants.getCategoryIcon(widget.category['name']),
+                                color: _getCategoryColor(widget.category['name']),
+                                size: isSmallScreen ? 38 : 48,
+                              ),
+                            ),
+                          ),
+
+                          // Category info
+                          Positioned(
+                            left: 16,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 16 : 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${(widget.category['words'] as List).length} words available',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                    color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${(widget.category['words'] as List).length} words available',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 13 : 14,
+                                      color: Colors.white.withOpacity(0.8),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -165,103 +202,174 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     // Listing of words to learn in this category (fixed size with expand button)
                     Container(
                       margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        childAspectRatio: 3,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 1,
-                        mainAxisSpacing: 1,
+                      child: Stack(
                         children: [
-                          // Render only first 5 words if not expanded; all words if expanded.
-                          ...((widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).toList().asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final word = entry.value.toString();
-                            final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
-                            // Find matching word data for score calculation
-                            final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
-                            // Compute stability based on matched data;
-                            final stabilityVal = matching.isEmpty ? 0.0 : matching['stability'];
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    TextButton(
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                                        backgroundColor: colorScheme.surfaceContainer,
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      onPressed: () => showCenteredToast(context, nativeWord),
-                                      child: Text(
-                                        word, // changed: add star if needed, update text
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 12 : 14,
-                                          // color: wordTextColor, // changed: green if stability >= 100
-                                        ),
-                                      ),
-                                    ),
-                                    (stabilityVal > 365)
-                                        ? Icon(
-                                            Icons.star,
-                                            size: 14,
-                                            color: colorScheme.primary,
-                                          )
-                                        : const SizedBox.shrink(),
+                          // Gradient overlay for visual effect
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: RadialGradient(
+                                  center: const Alignment(0.5, -0.5),
+                                  radius: 1.2,
+                                  colors: [
+                                    colorScheme.primary.withOpacity(0.3),
+                                    Colors.transparent,
                                   ],
-                                ),
-                                const SizedBox(height: 6),
-                                // Changed: pass calculated stabilityVal as score
-                                WordProgressBar(score: stabilityVal),
-                              ],
-                            );
-                          }).toList()),
-                          if ((widget.category['words'] as List).length % 2 == 0 && _wordsExpanded) const SizedBox(),
-                          // Always include the "see more"/"see less" button if there are more than 5 words.
-                          if ((widget.category['words'] as List).length > 5)
-                            Center(
-                              child: SizedBox(
-                                height: 36,
-                                child: TextButton(
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    minimumSize: Size.zero,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _wordsExpanded = !_wordsExpanded;
-                                    });
-                                  },
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _wordsExpanded ? "see less" : "see more",
-                                        style: TextStyle(
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Icon(
-                                        _wordsExpanded ? Icons.expand_less : Icons.expand_more,
-                                        size: 18,
-                                        color: colorScheme.primary,
-                                      ),
-                                    ],
-                                  ),
                                 ),
                               ),
                             ),
+                          ),
+
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header
+                              const Padding(
+                                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Words to Learn',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Words grid - more compact
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                child: GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 2.8,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                                  itemCount: (widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).length,
+                                  itemBuilder: (context, index) {
+                                    final words = (widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).toList();
+                                    final word = words[index].toString();
+                                    final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+
+                                    // Find matching word data for score calculation
+                                    final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
+
+                                    // Compute stability based on matched data
+                                    final stabilityVal = matching.isEmpty ? 0.0 : matching['stability'];
+                                    final isLearned = stabilityVal > 365;
+
+                                    return InkWell(
+                                      onTap: () => showCenteredToast(context, nativeWord),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: isLearned ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    word,
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: Colors.white,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.info_outline,
+                                                  size: 14,
+                                                  color: Colors.white.withOpacity(0.6),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                if (isLearned)
+                                                  const Icon(
+                                                    Icons.check_circle,
+                                                    size: 14,
+                                                    color: Color.fromARGB(255, 136, 225, 139),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            WordProgressBar(score: stabilityVal),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+
+                              // See more/less button at the end
+                              if ((widget.category['words'] as List).length > 5)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                                  child: Center(
+                                    child: TextButton(
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _wordsExpanded = !_wordsExpanded;
+                                        });
+                                      },
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            _wordsExpanded ? "See less" : "See more",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            _wordsExpanded ? Icons.expand_less : Icons.expand_more,
+                                            size: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -318,6 +426,24 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
       ),
     );
+  }
+
+  // Helper method to generate colors based on category name
+  Color _getCategoryColor(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'at the coffee shop':
+        return Colors.pink;
+      case 'in the library':
+        return Colors.blue;
+      case 'weather talk':
+        return Colors.indigo;
+      case 'making small talk':
+        return Colors.teal;
+      default:
+        // Generate a color based on the first letter of the category name
+        final int hashCode = categoryName.toLowerCase().hashCode;
+        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.8);
+    }
   }
 }
 
