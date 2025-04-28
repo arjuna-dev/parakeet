@@ -23,6 +23,7 @@ class CategoryItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          height: 180,
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(16),
@@ -33,52 +34,45 @@ class CategoryItem extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        LessonConstants.getCategoryIcon(category['name'] as String),
-                        color: colorScheme.primary,
-                        size: 24,
-                      ),
+              // Gradient overlay for visual effect
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: RadialGradient(
+                      center: const Alignment(0.5, 0.5),
+                      radius: 0.8,
+                      colors: [
+                        _getCategoryColor(category['name'] as String).withOpacity(0.5),
+                        Colors.transparent,
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category['name'] as String,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${(category['words'] as List).length} words',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 13 : 14,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 16,
-                    ),
-                  ],
+                  ),
+                ),
+              ),
+
+              // Category icon/image (could be replaced with actual illustrations)
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: Icon(
+                  LessonConstants.getCategoryIcon(category['name'] as String),
+                  color: _getCategoryColor(category['name'] as String),
+                  size: 80,
+                ),
+              ),
+
+              // Category title
+              Positioned(
+                left: 20,
+                bottom: 20,
+                child: Text(
+                  category['name'] as String,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -86,5 +80,23 @@ class CategoryItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper method to generate colors based on category name
+  Color _getCategoryColor(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'at the coffee shop':
+        return Colors.pink;
+      case 'in the library':
+        return Colors.blue;
+      case 'weather talk':
+        return Colors.indigo;
+      case 'making small talk':
+        return Colors.teal;
+      default:
+        // Generate a color based on the first letter of the category name
+        final int hashCode = categoryName.toLowerCase().hashCode;
+        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.8);
+    }
   }
 }
