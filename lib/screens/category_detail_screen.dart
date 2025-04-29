@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:math';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/widgets/library_screen/lesson_item.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/main.dart';
+
+// Global variable to track active toast
+OverlayEntry? _activeToastEntry;
 
 class CategoryDetailScreen extends StatefulWidget {
   final Map<String, dynamic> category;
@@ -40,6 +44,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   void initState() {
     super.initState();
     _loadFavorites();
+    _loadLearningWords();
   }
 
   Future<void> _loadFavorites() async {
@@ -49,6 +54,22 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     } catch (e) {
       print('Error loading favorites: $e');
       _loadCategoryLessons();
+    }
+  }
+
+  Future<void> _loadLearningWords() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser!.uid;
+      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
+
+      final wordsData = snapshot.docs.map((doc) => doc.data()).toList();
+      if (mounted) {
+        setState(() {
+          _learningWords.addAll(wordsData);
+        });
+      }
+    } catch (e) {
+      print('Error loading learning words: $e');
     }
   }
 
@@ -239,7 +260,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Words to Learn',
+                                      'Words to be learned',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -258,22 +279,56 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   physics: const NeverScrollableScrollPhysics(),
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 2,
-                                    childAspectRatio: 2.8,
+                                    childAspectRatio: 2,
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
                                   ),
-                                  itemCount: (widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).length,
+                                  itemCount: () {
+                                    // Calculate item count based on sorted words
+                                    final allWords = (widget.category['words'] as List).toList();
+                                    final sortedWords = allWords.map((word) {
+                                      final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
+                                      return {
+                                        'word': word.toString(),
+                                        'score': matching.isEmpty ? 0.0 : matching['scheduledDays'],
+                                      };
+                                    }).toList()
+                                      ..sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+                                    return _wordsExpanded ? sortedWords.length : min(4, sortedWords.length);
+                                  }(),
                                   itemBuilder: (context, index) {
-                                    final words = (widget.category['words'] as List).take(_wordsExpanded ? (widget.category['words'] as List).length : 5).toList();
-                                    final word = words[index].toString();
-                                    final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                                    // Get all words first
+                                    final allWords = (widget.category['words'] as List).toList();
+
+                                    // Create a list of all word data with scores for sorting
+                                    final List<Map<String, dynamic>> allWordsWithScores = allWords.map((word) {
+                                      final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
+                                      final scheduledDayVal = matching.isEmpty ? 0.0 : matching['scheduledDays'];
+                                      return {
+                                        'word': word.toString(),
+                                        'score': scheduledDayVal,
+                                        'index': allWords.indexOf(word), // Keep original index to match with native word
+                                      };
+                                    }).toList();
+
+                                    // Sort all words by score (descending)
+                                    allWordsWithScores.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+                                    // Then limit to display count
+                                    final displayWords = allWordsWithScores.take(_wordsExpanded ? allWordsWithScores.length : 4).toList();
+
+                                    // Use the sorted and limited data
+                                    final word = displayWords[index]['word'] as String;
+                                    final originalIndex = displayWords[index]['index'] as int;
+                                    final nativeWord = (widget.nativeCategory['words'] as List)[originalIndex].toString();
 
                                     // Find matching word data for score calculation
                                     final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
 
                                     // Compute stability based on matched data
-                                    final stabilityVal = matching.isEmpty ? 0.0 : matching['stability'];
-                                    final isLearned = stabilityVal > 365;
+                                    final scheduledDayVal = matching.isEmpty ? 0.0 : matching['scheduledDays'];
+                                    final isLearned = scheduledDayVal >= 60;
 
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
@@ -305,22 +360,26 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                Icon(
-                                                  Icons.info_outline,
-                                                  size: 14,
-                                                  color: Colors.white.withOpacity(0.6),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                if (isLearned)
+                                                if (isLearned) ...[
+                                                  const SizedBox(width: 4),
                                                   const Icon(
                                                     Icons.check_circle,
                                                     size: 14,
                                                     color: Color.fromARGB(255, 136, 225, 139),
                                                   ),
+                                                ]
                                               ],
                                             ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'tap for translation',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.white.withOpacity(0.6),
+                                              ),
+                                            ),
                                             const SizedBox(height: 4),
-                                            WordProgressBar(score: stabilityVal),
+                                            WordProgressBar(score: scheduledDayVal),
                                           ],
                                         ),
                                       ),
@@ -477,6 +536,13 @@ class WordProgressBar extends StatelessWidget {
 void showCenteredToast(BuildContext context, String message) {
   final colorScheme = Theme.of(context).colorScheme;
   final overlay = Overlay.of(context);
+
+  // Dismiss any existing toast first
+  if (_activeToastEntry != null) {
+    _activeToastEntry!.remove();
+    _activeToastEntry = null;
+  }
+
   final overlayEntry = OverlayEntry(
     builder: (context) => Center(
       child: Material(
@@ -501,9 +567,15 @@ void showCenteredToast(BuildContext context, String message) {
     ),
   );
 
+  // Save reference to current toast
+  _activeToastEntry = overlayEntry;
   overlay.insert(overlayEntry);
 
   Future.delayed(const Duration(seconds: 2), () {
-    overlayEntry.remove();
+    // Only remove if this is still the active toast
+    if (_activeToastEntry == overlayEntry) {
+      overlayEntry.remove();
+      _activeToastEntry = null;
+    }
   });
 }
