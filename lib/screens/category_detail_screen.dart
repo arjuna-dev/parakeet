@@ -288,9 +288,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     final allWords = (widget.category['words'] as List).toList();
                                     final sortedWords = allWords.map((word) {
                                       final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
+                                      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
                                       return {
                                         'word': word.toString(),
-                                        'score': matching.isEmpty ? 0.0 : matching['scheduledDays'],
+                                        'score': scheduledDays,
                                       };
                                     }).toList()
                                       ..sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
@@ -304,10 +305,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     // Create a list of all word data with scores for sorting
                                     final List<Map<String, dynamic>> allWordsWithScores = allWords.map((word) {
                                       final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
-                                      final scheduledDayVal = matching.isEmpty ? 0.0 : matching['scheduledDays'];
+                                      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
                                       return {
                                         'word': word.toString(),
-                                        'score': scheduledDayVal,
+                                        'score': scheduledDays,
                                         'index': allWords.indexOf(word), // Keep original index to match with native word
                                       };
                                     }).toList();
@@ -327,8 +328,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
 
                                     // Compute stability based on matched data
-                                    final scheduledDayVal = matching.isEmpty ? 0.0 : matching['scheduledDays'];
-                                    final isLearned = scheduledDayVal >= 60;
+                                    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+                                    final isLearned = scheduledDays >= 60;
 
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
@@ -379,7 +380,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            WordProgressBar(score: scheduledDayVal),
+                                            WordProgressBar(score: scheduledDays),
                                           ],
                                         ),
                                       ),
@@ -507,17 +508,22 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 }
 
 class WordProgressBar extends StatelessWidget {
-  final double score;
+  final dynamic score;
   final int learnedScore = 100;
   const WordProgressBar({required this.score, super.key});
 
-  double get progress => (score.clamp(0, learnedScore)) / learnedScore;
+  double get progress {
+    // Convert score to double safely
+    final doubleScore = score is int ? score.toDouble() : (score is double ? score : 0.0);
+    return (doubleScore.clamp(0, learnedScore)) / learnedScore;
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // Changed: set progress color to green if score >= 100, else use primary color
-    final progressColor = score >= 100 ? const Color.fromARGB(255, 136, 225, 139) : colorScheme.primary;
+    // Convert score to double safely
+    final doubleScore = score is int ? score.toDouble() : (score is double ? score : 0.0);
+    final progressColor = doubleScore >= 100 ? const Color.fromARGB(255, 136, 225, 139) : colorScheme.primary;
     return FractionallySizedBox(
       widthFactor: 0.5,
       child: ClipRRect(
