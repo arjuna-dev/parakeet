@@ -41,7 +41,14 @@ class StreakService {
     int streak = 0;
     bool streakBroken = false;
 
-    for (int i = 0; !streakBroken; i++) {
+    // Check if today's activity exists
+    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    final todayDoc = await _firestore.collection('users').doc(userId).collection('activity').doc(todayStr).get();
+
+    // Start counting from today if there's activity, otherwise start from yesterday
+    int startDay = todayDoc.exists ? 0 : 1;
+
+    for (int i = startDay; !streakBroken; i++) {
       final date = today.subtract(Duration(days: i));
       final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
