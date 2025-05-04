@@ -21,8 +21,6 @@ def add_nickname_to_users():
         
         # Add the nickname field to the document
         users_ref.document(user.id).update({"nickname": ""})
-        
-        print(f"Added nickname '{""}' to user with ID: {user.id}")
 
 # Run the function
 add_nickname_to_users()

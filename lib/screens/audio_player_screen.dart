@@ -11,6 +11,7 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
@@ -37,7 +38,6 @@ class AudioPlayerScreen extends StatefulWidget {
 
   // Static method to ensure proper cleanup of any shared resources
   static void cleanupSharedResources() {
-    print("AudioPlayerScreen - cleanupSharedResources called");
     // Force garbage collection of any shared services
     UpdateFirestoreService.forceCleanup();
     FileDurationUpdate.forceCleanup();
@@ -85,9 +85,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int _updateNumber = 0;
 
   // Data variables
+  late List<dynamic> _dialogue;
   List<dynamic> _script = [];
   Map<String, dynamic> _scriptAndWordCards = {};
-  Map<String, dynamic> _allUsedWordsCards = {};
+  Map<String, DocumentReference> _allUsedWordsCardsRefsMap = {};
   String _currentTrack = '';
   Map<String, dynamic>? _latestSnapshot;
   Map<int, String> _filesToCompare = {};
@@ -97,6 +98,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Make a mutable copy of the initial dialogue that we can update over time
+    _dialogue = List<dynamic>.from(widget.dialogue);
 
     _wordsToRepeat = widget.wordsToRepeat;
 
@@ -183,19 +186,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           // Convert to a properly handled Future chain
           _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
             _existingBigJson!,
-            widget.dialogue,
+            _dialogue,
             _repetitionsMode.value,
             widget.category ?? 'Custom Lesson',
           );
 
           _script = _scriptAndWordCards['script'] ?? [];
-          _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? [];
+          _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
           _currentTrack = _script.isNotEmpty ? _script[0] : '';
 
           if (mounted) {
             setState(() {
               _script = _scriptAndWordCards['script'] ?? [];
-              _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? [];
+              _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
               _currentTrack = _script.isNotEmpty ? _script[0] : '';
             });
           } else {
@@ -208,7 +211,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       } else {
         _createScriptAndMakeSecondApiCall();
       }
-      print("Overdue words used: $_allUsedWordsCards");
     } catch (e) {
       print("Error in sequential initialization: $e");
     }
@@ -263,9 +265,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // Update playlist from Firestore snapshot
   void _updatePlaylist(QuerySnapshot snapshot) async {
+    // If it is not generating return
+    if (!widget.generating) {
+      return;
+    }
     // Don't update if we're disposing or resources are already gone
     if (_isDisposing || _firestoreService == null) {
-      print("Skipping updatePlaylist because widget is disposing");
       return;
     }
 
@@ -281,15 +286,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, widget.dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
+      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, _dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
 
       _script = scriptData['script'] ?? [];
-      _allUsedWordsCards = scriptData['allUsedWordsCards'] ?? [];
+      _allUsedWordsCardsRefsMap = scriptData['allUsedWordsCardsRefsMap'] ?? [];
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
     }
-    print(_script);
 
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
 
@@ -313,7 +317,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Increment update number
     _updateNumber++;
-    print("Update number: $_updateNumber");
   }
 
   // Save snapshot from Firestore
@@ -349,7 +352,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Set final total duration after a certain number of updates or if not generating
     if ((_updateNumber >= 4 || !widget.generating) && !_isDisposing) {
-      print("Setting final total duration. Update number: $_updateNumber, generating: ${widget.generating}");
       _audioPlayerService.setFinalTotalDuration();
     }
   }
@@ -372,13 +374,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Generate script with repetition mode
     _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
       _existingBigJson!,
-      widget.dialogue,
+      _dialogue,
       _repetitionsMode.value,
       widget.category ?? 'Custom Lesson',
     );
 
     _script = _scriptAndWordCards['script'] ?? [];
-    _allUsedWordsCards = _scriptAndWordCards['allUsedWordsCards'] ?? {};
+    _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? {};
 
     // Build files to compare map
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
@@ -485,10 +487,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Get the complete dialogue from the latest snapshot
       List<dynamic> completeDialogue = _latestSnapshot!['dialogue'] ?? [];
+      _dialogue = completeDialogue;
+      if (mounted) {
+        setState(() {});
+      }
 
       // Ensure script is created with the complete dialogue
       if (_script.isEmpty) {
-        _script = _playlistGenerator.generateScript(completeDialogue);
+        _script = createFirstScript(completeDialogue);
         if (mounted) {
           setState(() {
             _currentTrack = _script.isNotEmpty ? _script[0] : '';
@@ -514,9 +520,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Save script to Firestore
       await _audioGenerationService.saveScriptToFirestore(_script, keywordsUsedInDialogue, completeDialogue, widget.category ?? 'Custom Lesson');
 
-      // Exit if widget is no longer mounted
-      if (!mounted || _isDisposing) return;
-
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
@@ -524,9 +527,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await _audioGenerationService.makeSecondApiCall(_latestSnapshot!, keywordsUsedInDialogue);
 
       // Initialize playlist after a delay to allow audio files to be generated
-
       if (mounted && !_audioPlayerService.playlistInitialized) {
-        print("Fallback: Initializing playlist after timeout");
         _initializePlaylist();
       }
     } catch (e) {
@@ -572,7 +573,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ReviewWordsDialog(words: _allUsedWordsCards);
+        return ReviewWordsDialog(words: _allUsedWordsCardsRefsMap);
       },
     );
 
@@ -630,7 +631,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _onAllDialogueDisplayed() {
     if (_isDisposing) return;
 
-    print("All dialogue items have been displayed, initializing playlist");
     if (!_audioPlayerService.playlistInitialized) {
       _initializePlaylist();
     }
@@ -646,8 +646,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           canPop: false,
           onPopInvoked: (bool didPop) async {
             if (didPop) return;
-
-            print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
 
             // Set disposing flag to prevent any async operations from using disposed resources
             _isDisposing = true;
@@ -695,7 +693,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           onToggle: _toggleSpeechRecognition,
                         ),
                         AnimatedDialogueList(
-                          dialogue: widget.dialogue,
+                          dialogue: _dialogue,
                           currentTrack: _currentTrack,
                           wordsToRepeat: _wordsToRepeat ?? [],
                           documentID: widget.documentID,
@@ -755,7 +753,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   @override
   void dispose() {
-    print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
     _isDisposing = true;
 
     // Dispose of Firestore services
