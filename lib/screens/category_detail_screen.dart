@@ -8,6 +8,7 @@ import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/widgets/library_screen/lesson_item.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/main.dart';
+import 'package:parakeet/services/word_stats_service.dart';
 
 // Global variable to track active toast
 OverlayEntry? _activeToastEntry;
@@ -38,13 +39,32 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   List<DocumentSnapshot> _categoryLessons = [];
   final List<Map<String, dynamic>> _learningWords = [];
   bool _isLoading = true;
-  bool _wordsExpanded = false; // new state variable for expansion
+  bool _wordsExpanded = false;
+  WordStats? _wordStats;
+  String _currentTargetLanguage = '';
 
   @override
   void initState() {
     super.initState();
+    _currentTargetLanguage = widget.targetLanguage;
     _loadFavorites();
     _loadLearningWords();
+    _loadWordStats();
+  }
+
+  @override
+  void didUpdateWidget(CategoryDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Check if target language has changed
+    if (widget.targetLanguage != _currentTargetLanguage) {
+      _currentTargetLanguage = widget.targetLanguage;
+      _learningWords.clear();
+      _wordStats = null;
+      _loadLearningWords();
+      _loadWordStats();
+      _refreshCategoryLessons(); // Refresh lessons when target language changes
+    }
   }
 
   Future<void> _loadFavorites() async {
@@ -73,6 +93,23 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     }
   }
 
+  Future<void> _loadWordStats() async {
+    try {
+      final stats = await WordStatsService.getCategoryWordStats(
+        widget.category['name'],
+        widget.targetLanguage,
+      );
+
+      if (mounted) {
+        setState(() {
+          _wordStats = stats;
+        });
+      }
+    } catch (e) {
+      print('Error loading word stats: $e');
+    }
+  }
+
   Future<void> _refreshCategoryLessons() async {
     await _loadCategoryLessons();
   }
@@ -83,7 +120,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
       print('snapshot: ${snapshot.docs.map((doc) => doc.data())}');
-      final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name']);
+      final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name'] && doc.data()['target_language'] == widget.targetLanguage);
       print('filteredData: ${filteredData.map((doc) => doc.data())}');
 
       // Initialize _localFavorites map with current favorite state
@@ -144,7 +181,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     // Category Info Section
                     Container(
                       margin: const EdgeInsets.all(16),
-                      height: 90,
+                      height: _wordStats != null ? 170 : 90,
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(16),
@@ -186,16 +223,18 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             ),
                           ),
 
-                          // Category info
+                          // Category info with stats
                           Positioned(
                             left: 16,
                             top: 0,
                             bottom: 0,
+                            right: 70, // Leave space for the icon
                             child: Center(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
+                                  // Title and lesson count
                                   Text(
                                     '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
                                     style: TextStyle(
@@ -212,6 +251,30 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                       color: Colors.white.withOpacity(0.8),
                                     ),
                                   ),
+
+                                  // Add word stats display
+                                  if (_wordStats != null) ...[
+                                    const SizedBox(height: 16),
+                                    // Constrain width but allow full height for the stats
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 150,
+                                        maxWidth: 250,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Fixed width container
+                                          SizedBox(
+                                            width: 200,
+                                            child: _buildProgressBar(context, _wordStats!),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          _buildLegend(context, _wordStats!),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -504,6 +567,152 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         final int hashCode = categoryName.toLowerCase().hashCode;
         return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.8);
     }
+  }
+
+  Widget _buildProgressBar(BuildContext context, WordStats stats) {
+    // Get total words from category, not just from learning status
+    final totalAvailableWords = (widget.category['words'] as List).length;
+    const barHeight = 12.0;
+
+    // Handle edge case of no words
+    if (totalAvailableWords == 0) {
+      return SizedBox(
+        height: barHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+      );
+    }
+
+    // Calculate proportions based on total available words
+    final masteredWidth = totalAvailableWords > 0 ? stats.mastered / totalAvailableWords : 0.0;
+    final learnedWidth = totalAvailableWords > 0 ? stats.learned / totalAvailableWords : 0.0;
+    final learningWidth = totalAvailableWords > 0 ? stats.learning / totalAvailableWords : 0.0;
+
+    return SizedBox(
+      height: barHeight,
+      child: LayoutBuilder(builder: (context, constraints) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              // Mastered (green)
+              if (masteredWidth > 0)
+                SizedBox(
+                  width: constraints.maxWidth * masteredWidth,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(6),
+                        bottomLeft: const Radius.circular(6),
+                        topRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                      ),
+                    ),
+                  ),
+                ),
+              // Learned (blue)
+              if (learnedWidth > 0)
+                SizedBox(
+                  width: constraints.maxWidth * learnedWidth,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.only(
+                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        topRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                      ),
+                    ),
+                  ),
+                ),
+              // Learning (amber)
+              if (learningWidth > 0)
+                SizedBox(
+                  width: constraints.maxWidth * learningWidth,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.only(
+                        topLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        topRight: const Radius.circular(6),
+                        bottomRight: const Radius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildLegend(BuildContext context, WordStats stats) {
+    // Get total words from category
+    final totalAvailableWords = (widget.category['words'] as List).length;
+
+    // Always include all three states
+    final List<Widget> legendItems = [
+      _buildLegendItem(context, stats.mastered, totalAvailableWords, 'Mastered', Colors.green),
+      _buildLegendItem(context, stats.learned, totalAvailableWords, 'Learned', Colors.blue),
+      _buildLegendItem(context, stats.learning, totalAvailableWords, 'Learning', Colors.amber),
+    ];
+
+    // Split items into rows of 2
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            legendItems[0],
+            const SizedBox(width: 16),
+            legendItems[1],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            legendItems[2],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(BuildContext context, int count, int total, String label, Color color) {
+    // Calculate percentage - avoid division by zero
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$percentage% $label',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.9),
+          ),
+        ),
+      ],
+    );
   }
 }
 
