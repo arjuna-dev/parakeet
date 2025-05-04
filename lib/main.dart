@@ -26,6 +26,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/ad_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/onboarding_form_screen.dart';
 
 const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
@@ -364,8 +365,19 @@ class _MyAppState extends State<MyApp> {
           WidgetBuilder builder;
           switch (settings.name) {
             case '/onboarding':
-              builder = (context) => const ResponsiveScreenWrapper(
-                    child: OnboardingScreen(),
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: WillPopScope(
+                      onWillPop: () async => false, // Prevent navigation back
+                      child: const OnboardingScreen(),
+                    ),
+                  );
+              break;
+            case '/onboarding_form':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: WillPopScope(
+                      onWillPop: () async => false, // Prevent navigation back
+                      child: const OnboardingFormScreen(),
+                    ),
                   );
               break;
             case '/create_lesson':

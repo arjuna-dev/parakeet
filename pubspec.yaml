@@ -121,6 +121,10 @@ flutter:
     - assets/audio_cue.mp3
     - assets/I_couldnt_hear_what_you_said!.mp3
     - assets/I_didnt_quite_get_that!.mp3
+    - assets/images/welcome.png
+    - assets/images/context.png
+    - assets/images/science.png
+    - assets/images/ready.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
