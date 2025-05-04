@@ -35,6 +35,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
+  final int numberOfTurns;
 
   // Static method to ensure proper cleanup of any shared resources
   static void cleanupSharedResources() {
@@ -56,6 +57,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
+    required this.numberOfTurns,
   }) : super(key: key);
 
   @override
@@ -83,6 +85,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _addressByNickname = true;
   bool _isSliderMoving = false;
   int _updateNumber = 0;
+  late bool _generating;
 
   // Data variables
   late List<dynamic> _dialogue;
@@ -98,6 +101,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize _generating with widget.generating
+    _generating = widget.generating;
+
     // Make a mutable copy of the initial dialogue that we can update over time
     _dialogue = List<dynamic>.from(widget.dialogue);
 
@@ -266,7 +272,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Update playlist from Firestore snapshot
   void _updatePlaylist(QuerySnapshot snapshot) async {
     // If it is not generating return
-    if (!widget.generating) {
+    if (!_generating) {
       return;
     }
     // Don't update if we're disposing or resources are already gone
@@ -317,6 +323,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Increment update number
     _updateNumber++;
+
+    // Check if we've reached the numberOfTurns and set _generating to false if so
+    if (_updateNumber >= widget.numberOfTurns) {
+      setState(() {
+        _generating = false;
+      });
+    }
   }
 
   // Save snapshot from Firestore
@@ -350,14 +363,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
-    // Set final total duration after a certain number of updates or if not generating
-    if ((_updateNumber >= 4 || !widget.generating) && !_isDisposing) {
+    // Set final total duration after reaching numberOfTurns or if not generating
+    if ((_updateNumber >= widget.numberOfTurns || !widget.generating) && !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
     }
   }
 
   Future<void> _updatePlaylistOnTheFly() async {
-    if (_isDisposing || widget.generating) {
+    if (_isDisposing || _generating) {
       return;
     }
 
@@ -728,7 +741,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         AudioControls(
                           audioPlayerService: _audioPlayerService,
                           repetitionMode: _repetitionsMode,
-                          generating: widget.generating,
+                          generating: _generating,
                         ),
                       ],
                     ),

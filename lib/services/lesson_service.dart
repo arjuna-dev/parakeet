@@ -330,6 +330,7 @@ class LessonService {
                   nativeLanguage: nativeLanguage,
                   languageLevel: languageLevel,
                   wordsToRepeat: List<String>.from(selectedWords),
+                  numberOfTurns: 4,
                 ),
               ),
             );

@@ -46,6 +46,7 @@ class LessonCard extends StatelessWidget {
                   scriptDocumentId: audioFile.id,
                   generating: false,
                   wordsToRepeat: audioFile.get('words_to_repeat'),
+                  numberOfTurns: 4,
                 ),
               ),
             ).then((result) {
@@ -183,6 +184,7 @@ class LessonCard extends StatelessWidget {
                               scriptDocumentId: audioFile.id,
                               generating: false,
                               wordsToRepeat: audioFile.get('words_to_repeat'),
+                              numberOfTurns: 4,
                             ),
                           ),
                         ).then((result) {
