@@ -443,19 +443,17 @@ Future<Map<String, dynamic>> parseAndCreateScript(
           );
           script.addAll(overdueChunkSequence);
         }
+        // If we have any remaining delayed sequences at the end, add them too
+        if (delayedRecallSequences.isNotEmpty) {
+          print("Adding remaining ${delayedRecallSequences.length} delayed recall sequences at the end");
+          for (var sequence in delayedRecallSequences) {
+            script.addAll(sequence);
+          }
+        }
         Random random = Random();
         int randomNumber = random.nextInt(5);
         script.add("narrator_closing_phrases_$randomNumber");
       }
-    }
-    print("script: $script");
-  }
-
-  // If we have any remaining delayed sequences at the end, add them too
-  if (delayedRecallSequences.isNotEmpty) {
-    print("Adding remaining ${delayedRecallSequences.length} delayed recall sequences at the end");
-    for (var sequence in delayedRecallSequences) {
-      script.addAll(sequence);
     }
   }
 
