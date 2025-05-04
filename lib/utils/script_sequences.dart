@@ -1,3 +1,10 @@
+import 'dart:math';
+
+enum RecallType {
+  overdueWord,
+  thisConversation,
+}
+
 List<Function> introSequences = [introSequence1, introSequence2, introSequence3, introSequence4, introSequence5];
 
 List<String> introSequence1() {
@@ -103,9 +110,28 @@ List<String> activeRecallSequence1(String native, String target) {
   return scriptPart;
 }
 
-List<String> activeRecallSequence1Less(String native, String target) {
+List<String> activeRecallSequence1Less(String native, String target, RecallType recallType) {
+  String narratorPhrase;
+  if (recallType == RecallType.overdueWord) {
+    final random = Random();
+    final int randomIndex = random.nextInt(3);
+    final List<String> phrases = [
+      "narrator_navigation_phrases_1_0",
+      "narrator_navigation_phrases_5",
+      "narrator_navigation_phrases_3_0"
+    ]; //"reflect on the vocabulary previously learned how do you say" - "to refresh our memory what was the word for" - "before we dive into new material please repeat the phrase for"
+    narratorPhrase = phrases[randomIndex];
+  } else if (recallType == RecallType.thisConversation) {
+    final random = Random();
+    final int randomIndex = random.nextInt(3);
+    final List<String> phrases = ["narrator_navigation_phrases_8_0", "narrator_navigation_phrases_4_0", "narrator_navigation_phrases_15"]; //"do you remember how to say..." - "how do you say" - "now try to say"
+    narratorPhrase = phrases[randomIndex];
+  } else {
+    print("Error: Invalid recall type");
+    narratorPhrase = "narrator_navigation_phrases_8_0"; // Default to overdueWord
+  }
   List<String> scriptPart = [
-    "narrator_navigation_phrases_8_0", // do you remember how to say...
+    narratorPhrase,
     "one_second_break",
     native,
     '\$$target',

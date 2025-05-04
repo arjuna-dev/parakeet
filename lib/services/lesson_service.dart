@@ -273,14 +273,9 @@ class LessonService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
-        print("data: $data");
         final List<dynamic> keywords = data['keywords'].map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
-        print("keywords: $keywords");
-        print("selectedWords: $selectedWords");
         selectedWords = keywords;
       }
-      print("response.body: ${response.body}");
-      print("selectedWords: $selectedWords");
 
       // Make the API call
       http.post(

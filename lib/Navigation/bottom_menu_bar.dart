@@ -11,7 +11,6 @@ class BottomMenuBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    print('Current route in BottomMenuBar: $currentRoute');
 
     return BottomAppBar(
       child: Row(

@@ -64,11 +64,6 @@ class AudioGenerationService {
                 validEntriesCount++;
               }
             }
-
-            print('Expected dialogue length: $expectedLength');
-            print('Current dialogue length: ${dialogueData.length}');
-            print('Valid dialogue entries: $validEntriesCount');
-
             // If we have the expected number of valid dialogue turns, we're done
             if (validEntriesCount >= expectedLength && expectedLength > 0) {
               isDialogueComplete = true;
@@ -201,7 +196,6 @@ class AudioGenerationService {
   /// Removes the user from the active creation collection
   Future<void> removeFromActiveCreation() async {
     try {
-      print("Removing user from active creation");
       final firestore = FirebaseFirestore.instance;
       DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
 
@@ -217,8 +211,6 @@ class AudioGenerationService {
           transaction.update(docRef, {'users': users});
         }
       });
-
-      print("Successfully removed user from active creation");
     } catch (e) {
       print("Error removing user from active creation: $e");
     }

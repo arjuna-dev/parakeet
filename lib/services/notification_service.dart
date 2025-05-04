@@ -61,14 +61,11 @@ class NotificationService {
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           // Handle notification tap
-          print('Notification tapped: ${details.payload}');
         },
       );
 
       // Handle FCM messages when app is in background
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        print('Message opened app: ${message.data}');
-      });
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {});
 
       // Handle FCM messages when app is in foreground
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {

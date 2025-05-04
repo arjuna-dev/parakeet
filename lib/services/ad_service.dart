@@ -26,7 +26,6 @@ class AdService {
   }
 
   static Future<void> loadInterstitialAd() async {
-    print('Ad Unit ID: $adUnitId');
     if (kIsWeb) return; // Skip loading on web
     if (_isAdLoading) return;
     _isAdLoading = true;

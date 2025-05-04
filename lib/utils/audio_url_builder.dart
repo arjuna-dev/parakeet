@@ -49,8 +49,6 @@ class AudioUrlBuilder {
   /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
   Future<String> _getNicknameUrl() async {
     final bool canUseNickname = hasNicknameAudio && addressByNickname;
-    print('canUseNickname: $canUseNickname');
-
     if (canUseNickname) {
       final List<int> numbers = List.generate(5, (i) => i)..shuffle();
       for (final randomNumber in numbers) {
