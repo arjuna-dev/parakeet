@@ -76,6 +76,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // State variables
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
   final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  List<dynamic>? _wordsToRepeat;
   bool _isDisposing = false;
   bool _showStreak = false;
   bool _hasNicknameAudio = false;
@@ -99,6 +100,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     super.initState();
     // Make a mutable copy of the initial dialogue that we can update over time
     _dialogue = List<dynamic>.from(widget.dialogue);
+
+    _wordsToRepeat = widget.wordsToRepeat;
 
     // Initialize services
     _audioPlayerService = AudioPlayerService(
@@ -502,14 +505,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Exit if widget is no longer mounted
       if (!mounted || _isDisposing) return;
 
+      // wait until the the first api call is complete (last item in the _latestSnapshot)
+      while (!_latestSnapshot!.containsKey('voice_2_id')) {
+        await Future.delayed(const Duration(seconds: 1));
+      }
+
+      // Get keywords used in dialogue and set _wordsToRepeat to them
+      List<dynamic> keywordsUsedInDialogue = _latestSnapshot!['keywords_used'] ?? [];
+      keywordsUsedInDialogue = keywordsUsedInDialogue.map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+      setState(() {
+        _wordsToRepeat = keywordsUsedInDialogue;
+      });
+
       // Save script to Firestore
-      await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue, widget.category ?? 'Custom Lesson');
+      await _audioGenerationService.saveScriptToFirestore(_script, keywordsUsedInDialogue, completeDialogue, widget.category ?? 'Custom Lesson');
 
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
       // Make the second API call
-      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
+      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!, keywordsUsedInDialogue);
 
       // Initialize playlist after a delay to allow audio files to be generated
       if (mounted && !_audioPlayerService.playlistInitialized) {
@@ -680,7 +695,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         AnimatedDialogueList(
                           dialogue: _dialogue,
                           currentTrack: _currentTrack,
-                          wordsToRepeat: widget.wordsToRepeat,
+                          wordsToRepeat: _wordsToRepeat ?? [],
                           documentID: widget.documentID,
                           useStream: widget.generating,
                           generating: widget.generating,
