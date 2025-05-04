@@ -71,6 +71,7 @@ class LessonItem extends StatelessWidget {
                   generating: false,
                   wordsToRepeat: document.get('words_to_repeat'),
                   scriptDocumentId: document.id,
+                  numberOfTurns: 4,
                 ),
               ),
             );
@@ -241,6 +242,7 @@ class LessonItem extends StatelessWidget {
                               generating: false,
                               wordsToRepeat: document.get('words_to_repeat'),
                               scriptDocumentId: document.id,
+                              numberOfTurns: 4,
                             ),
                           ),
                         );

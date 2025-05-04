@@ -308,7 +308,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
     if ((bigJsonList[i] as Map).isNotEmpty) {
       // Add sequences from two turns ago (for active recall spacing)
       if (delayedRecallSequences.isNotEmpty) {
-        print("Adding ${delayedRecallSequences.length} delayed recall sequences for turn $i");
         for (var sequence in delayedRecallSequences) {
           script.addAll(sequence);
         }
@@ -445,7 +444,6 @@ Future<Map<String, dynamic>> parseAndCreateScript(
         }
         // If we have any remaining delayed sequences at the end, add them too
         if (delayedRecallSequences.isNotEmpty) {
-          print("Adding remaining ${delayedRecallSequences.length} delayed recall sequences at the end");
           for (var sequence in delayedRecallSequences) {
             script.addAll(sequence);
           }
