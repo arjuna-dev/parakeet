@@ -586,7 +586,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   Color _getCategoryColor(String categoryName) {
     switch (categoryName.toLowerCase()) {
       case 'at the coffee shop':
-        return Colors.pink;
+        return Colors.brown;
       case 'in the library':
         return Colors.blue;
       case 'weather talk':
