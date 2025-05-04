@@ -318,7 +318,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             children: [
                               // Header
                               const Padding(
-                                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                                padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
@@ -331,6 +331,19 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+
+                              // Subtitle about tapping for translation
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                child: Text(
+                                  'Tap any word to see its translation',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
                               ),
 
@@ -392,7 +405,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
                                     // Compute stability based on matched data
                                     final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-                                    final isLearned = scheduledDays >= 60;
+                                    final isLearned = scheduledDays >= 80;
+                                    final isMastered = scheduledDays >= 100;
 
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
@@ -424,7 +438,14 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                if (isLearned) ...[
+                                                if (isMastered) ...[
+                                                  const SizedBox(width: 4),
+                                                  const Icon(
+                                                    Icons.star,
+                                                    size: 14,
+                                                    color: Color.fromARGB(255, 136, 225, 139),
+                                                  ),
+                                                ] else if (isLearned) ...[
                                                   const SizedBox(width: 4),
                                                   const Icon(
                                                     Icons.check_circle,
@@ -436,10 +457,20 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              'tap for translation',
+                                              () {
+                                                if (isMastered) return 'Mastered';
+                                                if (isLearned) return 'Learned';
+                                                if (scheduledDays > 0) return 'Learning';
+                                                return 'Not started';
+                                              }(),
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                color: Colors.white.withOpacity(0.6),
+                                                color: () {
+                                                  if (isMastered) return const Color.fromARGB(255, 136, 225, 139);
+                                                  if (isLearned) return const Color.fromARGB(255, 136, 225, 139).withOpacity(0.8);
+                                                  if (scheduledDays > 0) return Colors.amber;
+                                                  return Colors.white.withOpacity(0.6);
+                                                }(),
                                               ),
                                             ),
                                             const SizedBox(height: 4),
