@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/category_detail_screen.dart';
+import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/word_stats_service.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class CategoryList extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -10,6 +12,7 @@ class CategoryList extends StatefulWidget {
   final String targetLanguage;
   final String languageLevel;
   final bool isSmallScreen;
+  final bool isPremiumUser;
 
   const CategoryList({
     Key? key,
@@ -19,6 +22,7 @@ class CategoryList extends StatefulWidget {
     required this.targetLanguage,
     required this.languageLevel,
     this.isSmallScreen = false,
+    this.isPremiumUser = false,
   }) : super(key: key);
 
   @override
@@ -98,6 +102,54 @@ class _CategoryListState extends State<CategoryList> {
     });
   }
 
+  void _handleStoreNavigation() {
+    if (kIsWeb) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.phone_android, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text('Mobile App Required'),
+              ],
+            ),
+            content: const Text(
+              'Please use the Parakeet mobile app to view and purchase premium features.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const StoreView()),
+      );
+    }
+  }
+
+  bool _isCategoryLocked(int index) {
+    // If user is premium, no categories are locked
+    if (widget.isPremiumUser) {
+      return false;
+    }
+
+    // Lock the last 10 categories or all categories after the 4th one
+    // whichever is smaller (to avoid locking all categories if there are fewer than 14)
+    final totalCategories = widget.categories.length;
+    final maxUnlockedCategories = totalCategories > 10 ? totalCategories - 10 : 4;
+
+    return index >= maxUnlockedCategories;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -116,13 +168,66 @@ class _CategoryListState extends State<CategoryList> {
           final nativeCategory = visibleNativeCategories[index];
           final categoryName = category['name'];
           final stats = _categoryStats[categoryName];
+          final isLocked = _isCategoryLocked(index);
 
-          return CategoryItemWithStats(
-            category: category,
-            onTap: () => _handleCategorySelection(context, category, nativeCategory),
-            isSmallScreen: widget.isSmallScreen,
-            stats: stats,
-            isLoading: _loadingStats.contains(categoryName),
+          return Stack(
+            children: [
+              CategoryItemWithStats(
+                category: category,
+                onTap: isLocked ? () => _handleStoreNavigation() : () => _handleCategorySelection(context, category, nativeCategory),
+                isSmallScreen: widget.isSmallScreen,
+                stats: stats,
+                isLoading: _loadingStats.contains(categoryName),
+              ),
+
+              // Locked overlay for premium categories
+              if (isLocked)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => _handleStoreNavigation(),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Premium Only',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Text(
+                                'Upgrade to unlock this category',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         } else {
           // This is the "More categories" button
