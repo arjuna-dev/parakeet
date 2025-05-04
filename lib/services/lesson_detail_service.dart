@@ -138,6 +138,7 @@ class LessonDetailService {
                   nativeLanguage: nativeLanguage,
                   languageLevel: languageLevel,
                   wordsToRepeat: wordsToLearn,
+                  numberOfTurns: 4,
                 ),
               ),
             );
