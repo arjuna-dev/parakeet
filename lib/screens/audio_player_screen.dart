@@ -379,6 +379,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _audioPlayerService.isPlaying.value = false;
     }
 
+    await _getExistingBigJson();
+
     if (_existingBigJson == null) {
       print("Error: Required JSON data is null.");
       return;
