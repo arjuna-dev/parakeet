@@ -210,34 +210,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               elevation: 2,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
                   width: 1,
                 ),
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : 16,
-                  vertical: isSmallScreen ? 8 : 12,
-                ),
-                child: StreakDisplay(),
-              ),
-            ),
-            Card(
-              elevation: 2,
-              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : 16,
-                  vertical: isSmallScreen ? 12 : 16,
+                  horizontal: isSmallScreen ? 14 : 16,
+                  vertical: isSmallScreen ? 12 : 14,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,59 +229,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Icon(
                           Icons.auto_awesome,
                           color: Theme.of(context).colorScheme.primary,
-                          size: 20,
+                          size: 18,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           'Daily Lesson Generator',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _apiCallsRemaining > 0 ? 'You have $_apiCallsRemaining ${_apiCallsRemaining == 1 ? 'lesson' : 'lessons'} left today' : 'No lessons left today',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
+                        Row(
+                          children: [
+                            Text(
+                              '$_apiCallsRemaining',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
+                                  ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'lesson${_apiCallsRemaining == 1 ? '' : 's'} left',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                            ),
+                          ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: _premium ? Colors.amber.withOpacity(0.2) : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             _premium ? 'Premium' : 'Free',
                             style: TextStyle(
                               color: _premium ? Colors.amber.shade800 : Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: _apiCallsUsed / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit),
-                        minHeight: 8,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
+                    Container(
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: _apiCallsRemaining / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _apiCallsRemaining > 0
+                                  ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
+                                  : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Used $_apiCallsUsed of ${_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit} daily lessons',
+                      '$_apiCallsRemaining of ${_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit} lessons remaining',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 11,
                           ),
                     ),
                     if (!_premium && _apiCallsRemaining <= 1)
@@ -307,19 +326,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.only(top: 8.0),
                         child: GestureDetector(
                           onTap: _handleStoreNavigation,
-                          child: Text(
-                            'Upgrade to premium for more lessons',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                              decoration: TextDecoration.underline,
-                              fontSize: 13,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star_border,
+                                  size: 14,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Upgrade to Premium',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                   ],
                 ),
+              ),
+            ),
+            Card(
+              elevation: 2,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 14 : 16,
+                  vertical: isSmallScreen ? 12 : 14,
+                ),
+                child: StreakDisplay(),
               ),
             ),
             ProfileMenuItem(
