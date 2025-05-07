@@ -535,7 +535,7 @@ Expected JSON output:
 
 def prompt_generate_lesson_topic(category, all_words, target_language, native_language):
   return f'''Generate a language lesson topic that fits the category '{category}'.
-        The topic should be engaging and practical for language learning and includes exactly 5 relevant words from this list: {', '.join(all_words)}.
+        The topic should be fun, engaging and practical for language learning and includes exactly 5 relevant words from this list: {', '.join(all_words)}.
         Return the response in this exact JSON format:
         {{
             "title": "The lesson title in {native_language}",

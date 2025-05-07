@@ -10,6 +10,8 @@ import 'package:parakeet/screens/audio_player_screen.dart';
 
 class LessonService {
   static const int activeCreationAllowed = 20;
+  static const int freeAPILimit = 2;
+  static const int premiumAPILimit = 10;
 
   // Function to check premium status and API limits
   static Future<bool> checkPremiumAndAPILimits(BuildContext context) async {
@@ -18,15 +20,16 @@ class LessonService {
     final isPremium = userDoc.data()?['premium'] ?? false;
     final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
 
+    final apiCalls = await countAPIcallsByUser();
+    // Free user limit
     if (!isPremium) {
-      final apiCalls = await countAPIcallsByUser();
-      if (apiCalls >= 5) {
+      if (apiCalls > freeAPILimit) {
         final shouldEnablePremium = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Generate up to 15 lessons per day'),
+              title: const Text('Generate up to 10 lessons per day'),
               content: const Text('You\'ve reached the free limit. Activate premium mode!!'),
               actions: [
                 TextButton(
@@ -54,25 +57,26 @@ class LessonService {
           return false;
         }
       }
+    } else {
+      // Premium user limit
+      if (apiCalls > premiumAPILimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return false;
+      }
     }
 
+    // Check if there are too many users in active creation
     var usersInActiveCreation = await countUsersInActiveCreation();
     if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
           duration: Duration(seconds: 5),
-        ),
-      );
-      return false;
-    }
-
-    var apiCallsByUser = await countAPIcallsByUser();
-    if (apiCallsByUser != -1 && apiCallsByUser >= getAPICallLimit(isPremium)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isPremium ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.' : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
-          duration: const Duration(seconds: 5),
         ),
       );
       return false;

@@ -6,6 +6,7 @@ import 'package:parakeet/screens/nickname_popup.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/profile_service.dart';
+import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/widgets/profile_screen/profile_header.dart';
 import 'package:parakeet/widgets/profile_screen/profile_menu_item.dart';
@@ -35,12 +36,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _nativeLanguage = 'English (US)';
   String _targetLanguage = 'German';
   String _languageLevel = 'Absolute beginner (A1)';
+  int _apiCallsUsed = 0;
+  int _apiCallsRemaining = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
     _loadReminderTime();
+    _fetchLessonGenerationCount();
+  }
+
+  Future<void> _fetchLessonGenerationCount() async {
+    final apiCallsUsed = await LessonService.countAPIcallsByUser();
+    setState(() {
+      _apiCallsUsed = apiCallsUsed;
+      int limit = _premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
+      _apiCallsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+    });
   }
 
   Future<void> _fetchUserData() async {
@@ -53,6 +66,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _targetLanguage = userData['target_language'] ?? 'German';
       _languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
     });
+    // Update lesson count after premium status is fetched
+    _fetchLessonGenerationCount();
   }
 
   Future<void> _loadReminderTime() async {
@@ -207,6 +222,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   vertical: isSmallScreen ? 8 : 12,
                 ),
                 child: StreakDisplay(),
+              ),
+            ),
+            Card(
+              elevation: 2,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 12 : 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Daily Lesson Generator',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _apiCallsRemaining > 0 ? 'You have $_apiCallsRemaining ${_apiCallsRemaining == 1 ? 'lesson' : 'lessons'} left today' : 'No lessons left today',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _premium ? Colors.amber.withOpacity(0.2) : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _premium ? 'Premium' : 'Free',
+                            style: TextStyle(
+                              color: _premium ? Colors.amber.shade800 : Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: _apiCallsUsed / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit),
+                        minHeight: 8,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Used $_apiCallsUsed of ${_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit} daily lessons',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    if (!_premium && _apiCallsRemaining <= 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: GestureDetector(
+                          onTap: _handleStoreNavigation,
+                          child: Text(
+                            'Upgrade to premium for more lessons',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             ProfileMenuItem(
