@@ -67,7 +67,7 @@ class AudioPlayerScreen extends StatefulWidget {
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Services
   late AudioPlayerService _audioPlayerService;
-  late SpeechRecognitionService _speechRecognitionService;
+  // late SpeechRecognitionService _speechRecognitionService;
   late AudioGenerationService _audioGenerationService;
   late AudioDurationService _audioDurationService;
   late PlaylistGenerator _playlistGenerator;
@@ -77,7 +77,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // State variables
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
-  final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  // final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
   List<dynamic>? _wordsToRepeat;
   bool _isDisposing = false;
   bool _showStreak = false;
@@ -116,15 +116,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       hasPremium: _hasPremium,
     );
 
-    _speechRecognitionService = SpeechRecognitionService(
-      targetLanguage: widget.targetLanguage,
-      nativeLanguage: widget.nativeLanguage,
-      onLiveTextChanged: (String text) {
-        if (mounted) {
-          setState(() {});
-        }
-      },
-    );
+    // _speechRecognitionService = SpeechRecognitionService(
+    //   targetLanguage: widget.targetLanguage,
+    //   nativeLanguage: widget.nativeLanguage,
+    //   onLiveTextChanged: (String text) {
+    //     if (mounted) {
+    //       setState(() {});
+    //     }
+    //   },
+    // );
 
     _audioGenerationService = AudioGenerationService(
       documentID: widget.documentID,
@@ -431,60 +431,60 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _currentTrack = newTrack;
       });
 
-      if (_speechRecognitionActive.value) {
-        _handleTrackChangeToCompareSpeech(index);
-      }
+      // if (_speechRecognitionActive.value) {
+      //   _handleTrackChangeToCompareSpeech(index);
+      // }
     }
   }
 
-  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-    if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
+  // void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+  //   if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
 
-    if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
-      final audioFileName = _filesToCompare[currentIndex];
-      if (audioFileName == null) {
-        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
-        return;
-      }
+  //   if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
+  //     final audioFileName = _filesToCompare[currentIndex];
+  //     if (audioFileName == null) {
+  //       print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+  //       return;
+  //     }
 
-      String targetPhrase;
-      try {
-        if (widget.generating && _latestSnapshot != null) {
-          targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
-        } else if (_existingBigJson != null) {
-          targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
-        } else {
-          print("Error: Required JSON data is null.");
-          return;
-        }
+  //     String targetPhrase;
+  //     try {
+  //       if (widget.generating && _latestSnapshot != null) {
+  //         targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
+  //       } else if (_existingBigJson != null) {
+  //         targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
+  //       } else {
+  //         print("Error: Required JSON data is null.");
+  //         return;
+  //       }
 
-        _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
+  //       _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
 
-        // Capture the current speech text
-        final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
+  //       // Capture the current speech text
+  //       final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
 
-        // Wait for user to speak and then compare
-        Future.delayed(const Duration(milliseconds: 4500), () async {
-          bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
+  //       // Wait for user to speak and then compare
+  //       Future.delayed(const Duration(milliseconds: 4500), () async {
+  //         bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
 
-          // Pause playback to provide feedback
-          if (_audioPlayerService.isPlaying.value) {
-            await _audioPlayerService.pause(analyticsOn: false);
-          }
+  //         // Pause playback to provide feedback
+  //         if (_audioPlayerService.isPlaying.value) {
+  //           await _audioPlayerService.pause(analyticsOn: false);
+  //         }
 
-          // Provide feedback
-          await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
+  //         // Provide feedback
+  //         await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
 
-          // Resume playback
-          if (!_isDisposing) {
-            _audioPlayerService.isPlaying.value = true;
-          }
-        });
-      } catch (e) {
-        print("Error in speech comparison: $e");
-      }
-    }
-  }
+  //         // Resume playback
+  //         if (!_isDisposing) {
+  //           _audioPlayerService.isPlaying.value = true;
+  //         }
+  //       });
+  //     } catch (e) {
+  //       print("Error in speech comparison: $e");
+  //     }
+  //   }
+  // }
 
   Future<void> _createScriptAndMakeSecondApiCall() async {
     try {
@@ -610,38 +610,38 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
-  void _toggleSpeechRecognition(bool value) async {
-    if (value) {
-      bool isSupported = await _speechRecognitionService.initializeSpeechRecognition();
-      if (!isSupported) {
-        _showLanguageNotSupportedDialog();
-        return;
-      }
-    } else {
-      _speechRecognitionService.stopListening();
-    }
+  // void _toggleSpeechRecognition(bool value) async {
+  //   if (value) {
+  //     bool isSupported = await _speechRecognitionService.initializeSpeechRecognition();
+  //     if (!isSupported) {
+  //       _showLanguageNotSupportedDialog();
+  //       return;
+  //     }
+  //   } else {
+  //     _speechRecognitionService.stopListening();
+  //   }
 
-    _speechRecognitionActive.value = value;
-    _speechRecognitionService.speechRecognitionActive = value;
-  }
+  //   _speechRecognitionActive.value = value;
+  //   _speechRecognitionService.speechRecognitionActive = value;
+  // }
 
-  void _showLanguageNotSupportedDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return LanguageNotSupportedDialog(
-          targetLanguage: widget.targetLanguage,
-          onDismiss: () {
-            setState(() {
-              _speechRecognitionActive.value = false;
-              _speechRecognitionService.isLanguageSupported = false;
-              _speechRecognitionService.speechRecognitionActive = false;
-            });
-          },
-        );
-      },
-    );
-  }
+  // void _showLanguageNotSupportedDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return LanguageNotSupportedDialog(
+  //         targetLanguage: widget.targetLanguage,
+  //         onDismiss: () {
+  //           setState(() {
+  //             _speechRecognitionActive.value = false;
+  //             _speechRecognitionService.isLanguageSupported = false;
+  //             _speechRecognitionService.speechRecognitionActive = false;
+  //           });
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
   void _onAllDialogueDisplayed() {
     if (_isDisposing) return;
@@ -702,11 +702,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
-                        SpeechRecognitionToggle(
-                          speechRecognitionService: _speechRecognitionService,
-                          isActive: _speechRecognitionActive,
-                          onToggle: _toggleSpeechRecognition,
-                        ),
+                        // SpeechRecognitionToggle(
+                        //   speechRecognitionService: _speechRecognitionService,
+                        //   isActive: _speechRecognitionActive,
+                        //   onToggle: _toggleSpeechRecognition,
+                        // ),
                         AnimatedDialogueList(
                           dialogue: _dialogue,
                           currentTrack: _currentTrack,
@@ -730,13 +730,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           onSliderChangeStart: () {
                             setState(() {
                               _isSliderMoving = true;
-                              _speechRecognitionService.isSliderMoving = true;
+                              // _speechRecognitionService.isSliderMoving = true;
                             });
                           },
                           onSliderChangeEnd: () {
                             setState(() {
                               _isSliderMoving = false;
-                              _speechRecognitionService.isSliderMoving = false;
+                              // _speechRecognitionService.isSliderMoving = false;
                             });
                           },
                         ),
@@ -779,11 +779,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Dispose of services
     _audioPlayerService.dispose();
-    _speechRecognitionService.dispose();
+    // _speechRecognitionService.dispose();
 
     // Dispose of notifiers
     _repetitionsMode.dispose();
-    _speechRecognitionActive.dispose();
+    // _speechRecognitionActive.dispose();
 
     super.dispose();
   }
