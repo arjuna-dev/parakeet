@@ -29,7 +29,7 @@ class LessonService {
           barrierDismissible: false,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Generate up to 10 lessons per day'),
+              title: const Text('Generate up to 10x lessons per day'),
               content: const Text('You\'ve reached the free limit. Activate premium mode!!'),
               actions: [
                 TextButton(
@@ -62,7 +62,7 @@ class LessonService {
       if (apiCalls > premiumAPILimit) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.'),
+            content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please come back tomorrow.'),
             duration: Duration(seconds: 5),
           ),
         );
@@ -124,11 +124,6 @@ class LessonService {
       print('Error fetching api_call counts from user collection: $e');
       return -1;
     }
-  }
-
-  // Function to get API call limit based on premium status
-  static int getAPICallLimit(bool isPremium) {
-    return isPremium ? 15 : 5;
   }
 
   // Function to create a category-based lesson
