@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/services/lesson_service.dart';
 
 class LessonDetailService {
   // Function to regenerate a lesson
@@ -62,6 +63,12 @@ class LessonDetailService {
     required Function(bool) setIsGeneratingLesson,
   }) async {
     if (wordsToLearn.isEmpty) return;
+
+    final canProceed = await LessonService.checkPremiumAndAPILimits(context);
+    if (!canProceed) {
+      Navigator.pop(context); // Close loading dialog
+      return;
+    }
 
     setIsGeneratingLesson(true);
 
