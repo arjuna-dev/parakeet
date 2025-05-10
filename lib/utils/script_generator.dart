@@ -409,7 +409,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       } // End has selected words check before split sentence loop
 
       // Add overdue words to the script
-      if (overdueListCards[i]['audio_urls'] != null && overdueListCards[i]['audio_urls']['native_chunk'] != null && overdueListCards[i]['audio_urls']['target_chunk'] != null) {
+      if (i < overdueListCards.length && overdueListCards[i]['audio_urls'] != null && overdueListCards[i]['audio_urls']['native_chunk'] != null && overdueListCards[i]['audio_urls']['target_chunk'] != null) {
         List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
           overdueListCards[i]['audio_urls']['native_chunk'],
           overdueListCards[i]['audio_urls']['target_chunk'],
@@ -434,7 +434,10 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       if (i == dialogue.length - 1) {
         int iPlus1 = i + 1;
         // Add remaining overdue words to the script
-        if (overdueListCards[iPlus1]['audio_urls'] != null && overdueListCards[iPlus1]['audio_urls']['native_chunk'] != null && overdueListCards[iPlus1]['audio_urls']['target_chunk'] != null) {
+        if (iPlus1 < overdueListCards.length &&
+            overdueListCards[iPlus1]['audio_urls'] != null &&
+            overdueListCards[iPlus1]['audio_urls']['native_chunk'] != null &&
+            overdueListCards[iPlus1]['audio_urls']['target_chunk'] != null) {
           List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
             overdueListCards[iPlus1]['audio_urls']['native_chunk'],
             overdueListCards[iPlus1]['audio_urls']['target_chunk'],
