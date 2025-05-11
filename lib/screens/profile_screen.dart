@@ -36,7 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _nativeLanguage = 'English (US)';
   String _targetLanguage = 'German';
   String _languageLevel = 'Absolute beginner (A1)';
-  int _apiCallsUsed = 0;
+
   int _apiCallsRemaining = 0;
 
   @override
@@ -50,7 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchLessonGenerationCount() async {
     final apiCallsUsed = await LessonService.countAPIcallsByUser();
     setState(() {
-      _apiCallsUsed = apiCallsUsed;
       int limit = _premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
       _apiCallsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
     });
