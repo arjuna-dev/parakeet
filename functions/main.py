@@ -273,25 +273,46 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
         request_data = req.get_json()
         print(request_data)
         document_id = request_data.get("document_id")
+        user_id = request_data.get("user_id")
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
         )
     bucket_name = "conversations_audio_files"
+
+    # delete the script document to remove it from users lesson collection
+    db = firestore.client()
+    col_ref = db.collection('chatGPT_responses').document(document_id).collection(f'script-{user_id}')
+    for doc in col_ref.get():
+        doc.reference.delete()
+
+    # get all the word card audio file names and skip it from deletion
+    col_ref_word_card_audio_urls = db.collection('chatGPT_responses').document(document_id).collection('word_card_audio_urls')
+    docs = col_ref_word_card_audio_urls.get()
+    word_card_audio_files = []
+    if docs:
+        for doc in docs:
+            word_card_audio_files.append(document_id + '/' + doc.get("nativeChunkKey"))
+            word_card_audio_files.append(document_id + '/' + doc.get("targetChunkKey"))
+
+
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
 
     blobs = bucket.list_blobs(prefix=document_id + '/')
+    print(blobs)
+    print(word_card_audio_files)
 
     for blob in blobs:
         try:
-            blob.delete()
-            print(f"Blob {blob.name} deleted.")
+            if blob.name in word_card_audio_files:
+                print(f"Blob {blob.name} not deleted.")
+            else:
+                blob.delete()
+                print(f"Blob {blob.name} deleted.")
         except Exception as e:
             print(f"Blob {blob.name} not found.")
-    # delete the folder as well
-
 
     return https_fn.Response(status=200)
 

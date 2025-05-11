@@ -128,17 +128,12 @@ class LibraryService {
       await prefs.setStringList("now_playing_$userId", nowPlayingList);
     }
 
-    // 3. Delete the document from Firestore
-    await _firestore.runTransaction((Transaction myTransaction) async {
-      myTransaction.delete(document.reference);
-    });
-
-    // 4. Delete the audio file by calling cloud function
-    deleteFromCloudStorage(parentId);
+    // 3. Delete the audio file and document by calling cloud function
+    deleteFromStorageAndFirestore(parentId, userId);
   }
 
   // Delete from cloud storage
-  static void deleteFromCloudStorage(String documentId) {
+  static void deleteFromStorageAndFirestore(String documentId, String userId) {
     http.post(
       Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/delete_audio_file'),
       headers: <String, String>{
@@ -147,6 +142,7 @@ class LibraryService {
       },
       body: jsonEncode(<String, String>{
         "document_id": documentId,
+        "user_id": userId,
       }),
     );
   }

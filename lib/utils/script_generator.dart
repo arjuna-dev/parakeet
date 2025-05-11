@@ -222,9 +222,6 @@ Future<void> saveWordAudioUrls({
   required List<Map<String, dynamic>> selectedWordCards,
   required String category,
 }) async {
-  final nativeChunkUrl = await constructUrl(nativeChunkKey, documentId, nativeLanguage, userId);
-  final targetChunkUrl = await constructUrl(targetChunkKey, documentId, targetLanguage, userId);
-
   String word = accessBigJson(bigJsonMap, wordKeyPath);
   word = word.toLowerCase().trim().replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
 
@@ -246,6 +243,13 @@ Future<void> saveWordAudioUrls({
 
     // Only append URLs if there are no existing ones
     if (!hasExistingAudioUrls) {
+      final nativeChunkUrl = await constructUrl(nativeChunkKey, documentId, nativeLanguage, userId);
+      final targetChunkUrl = await constructUrl(targetChunkKey, documentId, targetLanguage, userId);
+      // save nativeChunkKey and targetChunkKey in the firestore lessson document to not delete these file when deleting the lesson
+      await FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentId).collection('word_card_audio_urls').doc(word).set({
+        'nativeChunkKey': '$nativeChunkKey.mp3',
+        'targetChunkKey': '$targetChunkKey.mp3',
+      });
       _appendRepetitionUrlsToWordDoc(userId, targetLanguage, word, category, {
         "native_chunk": nativeChunkUrl,
         "target_chunk": targetChunkUrl,
