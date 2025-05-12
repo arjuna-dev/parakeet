@@ -535,14 +535,12 @@ Expected JSON output:
 
 def prompt_generate_lesson_topic(category, all_words, target_language, native_language):
   return f'''Generate a language lesson topic that fits the category '{category}'.
-        The topic should be fun, engaging and practical for language learning and includes exactly 5 relevant words from this list: {', '.join(all_words)}.
+        The topic should be fun, engaging and practical for language learning.
         Return the response in this exact JSON format:
         {{
             "title": "The lesson title in {native_language}",
-            "topic": "The lesson topic in {native_language}",
-            "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
+            "topic": "The lesson topic in {native_language}"
         }}
-        The words should be in lower case.
         '''
 
 def prompt_suggest_custom_lesson(target_language, native_language):

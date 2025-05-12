@@ -202,6 +202,44 @@ class LessonService {
     }
   }
 
+  // create a function to select 5 words from the category according to certain criteria
+  static Future<List<dynamic>> selectWordsFromCategory(String category, List<String> allWords, String targetLanguage) async {
+    // check if there are due words in the category stored in the firestore
+    final userId = FirebaseAuth.instance.currentUser!.uid.toString();
+    final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
+    // check each word in categoryDocs and see if it is due or overdue
+    var words = [];
+    final existingWordsCard = [];
+    final closestDueDateCard = [];
+    for (var doc in categoryDocs.docs) {
+      final dueDate = doc.data()['due_date'];
+      // CASE 1: if there are due or overdue words, add them to the words list
+      if (dueDate != null && dueDate.isBefore(DateTime.now())) {
+        words.add(doc.data()['word']);
+      }
+      if (dueDate != null && dueDate.isAfter(DateTime.now())) {
+        closestDueDateCard.add(doc.data()['word']);
+      }
+      existingWordsCard.add(doc.data()['word']);
+    }
+    if (words.length > 5) {
+      words = words.sublist(0, 5);
+    }
+    if (words.length < 5) {
+      // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
+      final newWords = allWords.where((word) => !existingWordsCard.contains(word)).toList();
+      if (newWords.isNotEmpty) {
+        words.addAll(newWords.sublist(0, 5 - words.length));
+      }
+      if (words.length < 5) {
+        // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
+        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
+        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
+      }
+    }
+    return words;
+  }
+
   // Function to create a custom lesson
   static Future<void> createCustomLesson(
     BuildContext context,
