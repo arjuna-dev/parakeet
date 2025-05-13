@@ -376,25 +376,19 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = req.get_json()
         category = request_data.get("category")
-        all_words = request_data.get("allWords")
+        selected_words = request_data.get("selectedWords")
         target_language = request_data.get("target_language")
         native_language = request_data.get("native_language")
 
-        print(category, all_words, target_language, native_language)
+        print(category, selected_words, target_language, native_language)
 
-        if not all(param is not None for param in [category, all_words, target_language, native_language]):
+        if not all(param is not None for param in [category, selected_words, target_language, native_language]):
             return https_fn.Response(
                 json.dumps({"error": "Missing required parameters"}),
                 status=400
             )
 
-        if not isinstance(all_words, list) or len(all_words) < 5:
-            return https_fn.Response(
-                json.dumps({"error": "allWords must be a list with at least 5 words"}),
-                status=400
-            )
-
-        prompt = prompt_generate_lesson_topic(category, all_words, target_language, native_language)
+        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language)
 
         response = chatGPT_API_call(prompt, use_stream=False)
 

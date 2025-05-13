@@ -18,6 +18,7 @@ class LessonDetailService {
   }) async {
     try {
       // Make the API call to generate a new lesson topic
+      final selectedWords = await LessonService.selectWordsFromCategory(category, allWords, targetLanguage);
       final response = await http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
         headers: <String, String>{
@@ -26,7 +27,7 @@ class LessonDetailService {
         },
         body: jsonEncode(<String, dynamic>{
           "category": category,
-          "allWords": allWords,
+          "selectedWords": selectedWords,
           "target_language": targetLanguage,
           "native_language": nativeLanguage,
         }),
@@ -53,7 +54,7 @@ class LessonDetailService {
   static Future<void> startLesson({
     required BuildContext context,
     required String topic,
-    required List<String> wordsToLearn,
+    required List<dynamic> wordsToLearn,
     required String nativeLanguage,
     required String targetLanguage,
     required String languageLevel,

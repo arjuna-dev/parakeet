@@ -533,8 +533,8 @@ Expected JSON output:
 """
 '''
 
-def prompt_generate_lesson_topic(category, all_words, target_language, native_language):
-  return f'''Generate a language lesson topic that fits the category '{category}'.
+def prompt_generate_lesson_topic(category, selected_words, target_language, native_language):
+  return f'''Generate a language lesson topic that fits the category '{category}' that can be taught with the words in {selected_words}.
         The topic should be fun, engaging and practical for language learning.
         Return the response in this exact JSON format:
         {{
