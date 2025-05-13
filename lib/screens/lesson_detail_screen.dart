@@ -5,13 +5,14 @@ import 'package:parakeet/main.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/services/lesson_detail_service.dart';
 import 'package:parakeet/widgets/lesson_detail_screen/lesson_detail_content.dart';
+import 'package:parakeet/services/lesson_service.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String category;
   final List<String> allWords;
   final String title;
   final String topic;
-  final List<String> wordsToLearn;
+  final List<dynamic> wordsToLearn;
   final String languageLevel;
   final String length;
   final String nativeLanguage;
@@ -49,7 +50,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   // State variables for regeneration
   late String _title;
   late String _topic;
-  late List<String> _wordsToLearn;
+  late List<dynamic> _wordsToLearn;
 
   // Maximum number of words that can be selected
   final int _maxWordsAllowed = 5;
@@ -66,7 +67,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Change Lesson?'),
-          content: const Text('This will create a lesson in same category with different title, topic, and words to learn. Continue?'),
+          content: const Text('This will create a lesson in same category with different title and topic. Continue?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -109,6 +110,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         targetLanguage: widget.targetLanguage,
         nativeLanguage: widget.nativeLanguage,
       );
+      List<dynamic> wordsToLearn = await LessonService.selectWordsFromCategory(widget.category, widget.allWords, widget.targetLanguage);
 
       if (result != null && mounted) {
         Navigator.pop(context); // Close loading dialog
@@ -118,7 +120,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           // Update the state with new values from the API response
           _title = result['title'] as String;
           _topic = result['topic'] as String;
-          _wordsToLearn = (result['words_to_learn'] as List).cast<String>();
+          _wordsToLearn = wordsToLearn;
         });
 
         // Show success message

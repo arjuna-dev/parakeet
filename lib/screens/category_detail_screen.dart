@@ -405,6 +405,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
                                     // Compute stability based on matched data
                                     final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+                                    final learning = matching.isEmpty ? false : matching['reps'] > 0;
                                     final isLearned = scheduledDays >= 80;
                                     final isMastered = scheduledDays >= 100;
 
@@ -460,7 +461,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                               () {
                                                 if (isMastered) return 'Mastered';
                                                 if (isLearned) return 'Learned';
-                                                if (scheduledDays > 0) return 'Learning';
+                                                if (learning) return 'Learning';
                                                 return 'Not started';
                                               }(),
                                               style: TextStyle(
@@ -468,7 +469,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                                 color: () {
                                                   if (isMastered) return const Color.fromARGB(255, 136, 225, 139);
                                                   if (isLearned) return const Color.fromARGB(255, 136, 225, 139).withOpacity(0.8);
-                                                  if (scheduledDays > 0) return Colors.amber;
+                                                  if (learning) return Colors.amber;
                                                   return Colors.white.withOpacity(0.6);
                                                 }(),
                                               ),

@@ -151,6 +151,7 @@ class LessonService {
     }
 
     try {
+      final selectedWords = await selectWordsFromCategory(category['name'], category['words'], targetLanguage);
       final response = await http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
         headers: <String, String>{
@@ -159,7 +160,7 @@ class LessonService {
         },
         body: jsonEncode(<String, dynamic>{
           "category": category['name'],
-          "allWords": category['words'],
+          "selectedWords": selectedWords,
           "target_language": targetLanguage,
           "native_language": nativeLanguage,
         }),
@@ -180,7 +181,7 @@ class LessonService {
               allWords: category['words'] as List<String>,
               title: result['title'] as String,
               topic: result['topic'] as String,
-              wordsToLearn: (result['words_to_learn'] as List).cast<String>(),
+              wordsToLearn: selectedWords,
               languageLevel: languageLevel,
               length: '4',
               nativeLanguage: nativeLanguage,
@@ -212,13 +213,20 @@ class LessonService {
     final existingWordsCard = [];
     final closestDueDateCard = [];
     for (var doc in categoryDocs.docs) {
-      final dueDate = doc.data()['due_date'];
-      // CASE 1: if there are due or overdue words, add them to the words list
-      if (dueDate != null && dueDate.isBefore(DateTime.now())) {
-        words.add(doc.data()['word']);
-      }
-      if (dueDate != null && dueDate.isAfter(DateTime.now())) {
-        closestDueDateCard.add(doc.data()['word']);
+      final dueDate = DateTime.parse(doc.data()['due']);
+      final lastReview = DateTime.parse(doc.data()['lastReview']);
+      final daysOverdue = DateTime.now().difference(dueDate).inDays;
+      final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
+
+      // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
+      if (daysSinceLastReview > 0) {
+        if (daysOverdue <= 0) {
+          words.add(doc.data()['word']);
+        } else {
+          closestDueDateCard.add(doc.data()['word']);
+        }
+        print('words: $words');
+        print('closestDueDateCard: $closestDueDateCard');
       }
       existingWordsCard.add(doc.data()['word']);
     }
@@ -227,7 +235,8 @@ class LessonService {
     }
     if (words.length < 5) {
       // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
-      final newWords = allWords.where((word) => !existingWordsCard.contains(word)).toList();
+      final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
+      final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
       if (newWords.isNotEmpty) {
         words.addAll(newWords.sublist(0, 5 - words.length));
       }

@@ -5,7 +5,7 @@ class LessonDetailContent extends StatelessWidget {
   final String category;
   final String title;
   final String topic;
-  final List<String> wordsToLearn;
+  final List<dynamic> wordsToLearn;
   final List<String> allWords;
   final String nativeLanguage;
   final String targetLanguage;
