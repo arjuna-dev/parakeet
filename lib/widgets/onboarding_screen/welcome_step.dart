@@ -28,7 +28,7 @@ class WelcomeStep extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
-              '../../../assets/images/welcome.png',
+              'assets/images/welcome.png',
               height: 200,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {

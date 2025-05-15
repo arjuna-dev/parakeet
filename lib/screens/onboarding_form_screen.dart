@@ -66,6 +66,19 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
     );
   }
 
+  void _goToNextPage() {
+    FocusScope.of(context).unfocus();
+
+    if (_currentPage < 3) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _saveUserData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget content = Scaffold(
@@ -145,18 +158,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                       else
                         const SizedBox(width: 80), // Empty space instead of Back button
                       FilledButton(
-                        onPressed: _canProceed()
-                            ? () {
-                                if (_currentPage < 3) {
-                                  _pageController.nextPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  );
-                                } else {
-                                  _saveUserData();
-                                }
-                              }
-                            : null,
+                        onPressed: _canProceed() ? _goToNextPage : null,
                         child: Text(_currentPage < 3 ? 'Next' : 'Get Started'),
                       ),
                     ],

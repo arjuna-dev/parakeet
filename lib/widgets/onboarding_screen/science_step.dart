@@ -30,7 +30,7 @@ class ScienceStep extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
-              '../../../assets/images/science.png',
+              'assets/images/science.png',
               height: 200,
               fit: BoxFit.cover,
             ),
