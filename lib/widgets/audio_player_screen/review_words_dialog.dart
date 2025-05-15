@@ -162,7 +162,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
           const SizedBox(height: 32),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 350;
+              final isNarrow = constraints.maxWidth < 250;
               return isNarrow
                   ? Column(
                       children: [
