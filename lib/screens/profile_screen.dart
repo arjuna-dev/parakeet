@@ -205,162 +205,193 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             ProfileHeader(name: _name, email: _email),
+            // Combined account status and lesson generator card
             Card(
-              elevation: 2,
-              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
+              elevation: 4,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 6 : 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
-                  width: 1,
+                  color: _premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                  width: 1.5,
                 ),
               ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 14 : 16,
-                  vertical: isSmallScreen ? 12 : 14,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Daily Lesson Generator',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '$_apiCallsRemaining',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
-                                  ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'lesson${_apiCallsRemaining == 1 ? '' : 's'} left',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                  ),
-                            ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: _premium
+                        ? [
+                            Colors.amber.withOpacity(0.05),
+                            Theme.of(context).cardColor,
+                          ]
+                        : [
+                            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
+                            Theme.of(context).cardColor,
                           ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _premium ? Colors.amber.withOpacity(0.2) : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _premium ? 'Premium' : 'Free',
-                            style: TextStyle(
-                              color: _premium ? Colors.amber.shade800 : Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: _apiCallsRemaining / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: _apiCallsRemaining > 0
-                                  ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
-                                  : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _premium ? Icons.star : Icons.person,
+                                color: _premium ? Colors.amber : Theme.of(context).colorScheme.primary,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _premium ? 'Premium Account' : 'Free Account',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: _premium ? Colors.amber.shade800 : Theme.of(context).colorScheme.onSurface,
+                                    ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$_apiCallsRemaining of ${_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit} lessons remaining',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 11,
+
+                      const Divider(height: 24),
+
+                      // Lesson generator section
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 18,
                           ),
-                    ),
-                    if (!_premium && _apiCallsRemaining <= 1)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: GestureDetector(
-                          onTap: _handleStoreNavigation,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.star_border,
-                                  size: 14,
-                                  color: Theme.of(context).colorScheme.primary,
+                          const SizedBox(width: 6),
+                          Text(
+                            'Lesson Generator',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
                                 ),
-                                const SizedBox(width: 4),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '$_apiCallsRemaining',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber.shade700 : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
+                                    ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'lesson${_apiCallsRemaining == 1 ? '' : 's'} remaining',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+                      Stack(
+                        children: [
+                          Container(
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          Container(
+                            height: 12,
+                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit)),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: _apiCallsRemaining > 0
+                                    ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
+                                    : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+                      Text(
+                        _premium ? 'Premium access: $_apiCallsRemaining of ${LessonService.premiumAPILimit} lessons' : '$_apiCallsRemaining of ${LessonService.freeAPILimit} lessons remaining',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                      ),
+
+                      if (!_premium)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: ElevatedButton(
+                            onPressed: _handleStoreNavigation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              minimumSize: const Size(double.infinity, 40),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.star, size: 16),
+                                SizedBox(width: 8),
                                 Text(
                                   'Upgrade to Premium',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
+
+            // Separate streak display card
             Card(
               elevation: 2,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
@@ -379,13 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: StreakDisplay(),
               ),
             ),
-            ProfileMenuItem(
-              icon: _premium ? Icons.star : Icons.star_border,
-              iconColor: _premium ? Colors.amber : null,
-              title: _premium ? 'Premium Member' : 'Free Account',
-              subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
-              onTap: _handleStoreNavigation,
-            ),
+
             ProfileMenuItem(
               icon: Icons.translate,
               title: 'Language Settings',
