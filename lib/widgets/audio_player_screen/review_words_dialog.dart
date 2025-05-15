@@ -160,40 +160,81 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
             ),
           ),
           const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _ReviewButton(
-                label: 'I forgot',
-                icon: Icons.sentiment_very_dissatisfied,
-                color: colorScheme.error,
-                onPressed: () => _handleReview(fsrs.Rating.again),
-              ),
-              _ReviewButton(
-                label: 'Got it',
-                icon: Icons.sentiment_satisfied,
-                color: colorScheme.primary,
-                onPressed: () => _handleReview(fsrs.Rating.good),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _ReviewButton(
-                label: 'Tough',
-                icon: Icons.sentiment_dissatisfied,
-                color: Colors.amber,
-                onPressed: () => _handleReview(fsrs.Rating.hard),
-              ),
-              _ReviewButton(
-                label: 'Too easy',
-                icon: Icons.sentiment_very_satisfied,
-                color: Colors.green,
-                onPressed: () => _handleReview(fsrs.Rating.easy),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 350;
+              return isNarrow
+                  ? Column(
+                      children: [
+                        _ReviewButton(
+                          label: 'I forgot',
+                          icon: Icons.sentiment_very_dissatisfied,
+                          color: colorScheme.error,
+                          onPressed: () => _handleReview(fsrs.Rating.again),
+                        ),
+                        const SizedBox(height: 16),
+                        _ReviewButton(
+                          label: 'Got it',
+                          icon: Icons.sentiment_satisfied,
+                          color: colorScheme.primary,
+                          onPressed: () => _handleReview(fsrs.Rating.good),
+                        ),
+                        const SizedBox(height: 16),
+                        _ReviewButton(
+                          label: 'Tough',
+                          icon: Icons.sentiment_dissatisfied,
+                          color: Colors.amber,
+                          onPressed: () => _handleReview(fsrs.Rating.hard),
+                        ),
+                        const SizedBox(height: 16),
+                        _ReviewButton(
+                          label: 'Too easy',
+                          icon: Icons.sentiment_very_satisfied,
+                          color: Colors.green,
+                          onPressed: () => _handleReview(fsrs.Rating.easy),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _ReviewButton(
+                              label: 'I forgot',
+                              icon: Icons.sentiment_very_dissatisfied,
+                              color: colorScheme.error,
+                              onPressed: () => _handleReview(fsrs.Rating.again),
+                            ),
+                            _ReviewButton(
+                              label: 'Got it',
+                              icon: Icons.sentiment_satisfied,
+                              color: colorScheme.primary,
+                              onPressed: () => _handleReview(fsrs.Rating.good),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _ReviewButton(
+                              label: 'Tough',
+                              icon: Icons.sentiment_dissatisfied,
+                              color: Colors.amber,
+                              onPressed: () => _handleReview(fsrs.Rating.hard),
+                            ),
+                            _ReviewButton(
+                              label: 'Too easy',
+                              icon: Icons.sentiment_very_satisfied,
+                              color: Colors.green,
+                              onPressed: () => _handleReview(fsrs.Rating.easy),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+            },
           ),
           const SizedBox(height: 16),
         ],
