@@ -237,6 +237,8 @@ class LessonService {
       // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
       final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
       final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
+      // randomize the newWords list
+      newWords.shuffle();
       if (newWords.isNotEmpty) {
         words.addAll(newWords.sublist(0, 5 - words.length));
       }
