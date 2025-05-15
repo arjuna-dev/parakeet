@@ -13,7 +13,7 @@ class ReadyStep extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
-              '../../../assets/images/ready.png',
+              'assets/images/ready.png',
               height: 200,
               fit: BoxFit.cover,
             ),

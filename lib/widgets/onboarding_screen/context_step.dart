@@ -13,7 +13,7 @@ class ContextStep extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
-              '../../../assets/images/context.png',
+              'assets/images/context.png',
               height: 200,
               fit: BoxFit.cover,
             ),
