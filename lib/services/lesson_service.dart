@@ -23,7 +23,7 @@ class LessonService {
     final apiCalls = await countAPIcallsByUser();
     // Free user limit
     if (!isPremium) {
-      if (apiCalls > freeAPILimit) {
+      if (apiCalls >= freeAPILimit) {
         final shouldEnablePremium = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
@@ -45,7 +45,7 @@ class LessonService {
                       Navigator.pop(context, false);
                     }
                   },
-                  child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 30 days'),
+                  child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 14 days'),
                 ),
               ],
             );

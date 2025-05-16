@@ -124,16 +124,15 @@ class _StoreViewState extends State<StoreView> {
   String? _getDiscountedPrice(ProductDetails product) {
     if (Platform.isAndroid) {
       final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
+      print("googleProduct: ${googleProduct.price}");
+
       final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
 
       if (offerDetails != null && offerDetails.isNotEmpty) {
+        print("offerDetails: ${offerDetails.first.pricingPhases.length}");
         final phases = offerDetails.first.pricingPhases;
-
-        // If not a free trial and has more than one pricing phase (regular price + discounted price)
-        if (phases.length > 1 && phases.first.priceAmountMicros > 0) {
-          final discountedFormattedPrice = phases.first.formattedPrice;
-          return discountedFormattedPrice;
-        }
+        final discountedFormattedPrice = phases.first.formattedPrice;
+        return discountedFormattedPrice;
       }
     } else if (Platform.isIOS) {
       final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
@@ -145,6 +144,9 @@ class _StoreViewState extends State<StoreView> {
         if (introPrice > 0 && introPrice < normalPrice) {
           // Format the price with currency symbol
           return iOSProduct.skProduct.introductoryPrice!.priceLocale.currencySymbol + introPrice.toString();
+        }
+        if (introPrice == 0) {
+          return 'Free for ${iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.numberOfUnits} days';
         }
       }
     }
