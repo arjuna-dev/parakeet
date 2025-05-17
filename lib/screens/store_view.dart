@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 class StoreView extends StatefulWidget {
   const StoreView({super.key});
@@ -107,32 +106,32 @@ class _StoreViewState extends State<StoreView> {
     }
   }
 
-  bool _hasIntroductoryOffer(ProductDetails product) {
+  String? _getOriginalProductPriceForAndroid(ProductDetails product) {
     if (Platform.isAndroid) {
       final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
-      final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
-
-      // Check if there are any offers and the first phase is free
-      return offerDetails != null && offerDetails.isNotEmpty && offerDetails.first.pricingPhases.first.priceAmountMicros == 0;
-    } else if (Platform.isIOS) {
-      final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
-      return iOSProduct.skProduct.introductoryPrice != null;
+      return googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.last.formattedPrice;
     }
-    return false;
+    return null;
   }
 
   String? _getDiscountedPrice(ProductDetails product) {
     if (Platform.isAndroid) {
       final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
-      print("googleProduct: ${googleProduct.price}");
+      print("google product: ${googleProduct.rawPrice}");
 
       final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
 
       if (offerDetails != null && offerDetails.isNotEmpty) {
-        print("offerDetails: ${offerDetails.first.pricingPhases.length}");
+        print("offerDetailsAndroid: ${offerDetails.length}");
         final phases = offerDetails.first.pricingPhases;
-        final discountedFormattedPrice = phases.first.formattedPrice;
-        return discountedFormattedPrice;
+        if (phases.length > 1) {
+          final discountedFormattedPrice = phases.first.formattedPrice;
+          final discountedRawPrice = phases.first.priceAmountMicros;
+          if (discountedFormattedPrice == "Free" || discountedRawPrice == 0) {
+            return "Free for ${phases.first.billingPeriod}";
+          }
+          return discountedFormattedPrice;
+        }
       }
     } else if (Platform.isIOS) {
       final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
@@ -153,48 +152,6 @@ class _StoreViewState extends State<StoreView> {
     return null;
   }
 
-  String _getTrialPeriod(ProductDetails product) {
-    if (Platform.isAndroid) {
-      final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
-      final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
-
-      if (offerDetails != null && offerDetails.isNotEmpty) {
-        final firstPhase = offerDetails.first.pricingPhases.first;
-        if (firstPhase.priceAmountMicros == 0) {
-          // Format the billing period
-          final billingPeriod = firstPhase.billingPeriod;
-          if (billingPeriod.contains('D')) {
-            final days = billingPeriod.replaceAll('P', '').replaceAll('D', '');
-            return '$days-day free trial';
-          } else if (billingPeriod.contains('W')) {
-            final weeks = billingPeriod.replaceAll('P', '').replaceAll('W', '');
-            return '$weeks-week free trial';
-          } else if (billingPeriod.contains('M')) {
-            final months = billingPeriod.replaceAll('P', '').replaceAll('M', '');
-            return '$months-month free trial';
-          }
-          return 'Free trial';
-        }
-      }
-    } else if (Platform.isIOS) {
-      final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
-      if (iOSProduct.skProduct.introductoryPrice != null && iOSProduct.skProduct.introductoryPrice!.price == 0) {
-        final periodUnit = iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.unit;
-        final periodUnits = iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.numberOfUnits;
-
-        if (periodUnit == SKSubscriptionPeriodUnit.day.index) {
-          return '$periodUnits-day free trial';
-        } else if (periodUnit == SKSubscriptionPeriodUnit.week.index) {
-          return '$periodUnits-week free trial';
-        } else if (periodUnit == SKSubscriptionPeriodUnit.month.index) {
-          return '$periodUnits-month free trial';
-        }
-        return 'Free trial';
-      }
-    }
-    return '';
-  }
-
   Future<void> _makePurchase(ProductDetails productDetails) async {
     late PurchaseParam purchaseParam;
 
@@ -206,7 +163,7 @@ class _StoreViewState extends State<StoreView> {
 
     if (productDetails.id == "1m" || productDetails.id == "1year") {
       await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
-      if (_hasIntroductoryOffer(productDetails) && !_hasUsedTrial) {
+      if (!_hasUsedTrial) {
         // Update the user's trial status in Firestore
         final userId = FirebaseAuth.instance.currentUser?.uid;
         if (userId != null) {
@@ -268,10 +225,9 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Widget _buildSubscriptionCard(ProductDetails productDetails) {
-    bool hasIntro = _hasIntroductoryOffer(productDetails);
-    bool hasFreeTrialOffer = hasIntro && _getTrialPeriod(productDetails).isNotEmpty && !_hasUsedTrial;
     String? discountedPrice = _getDiscountedPrice(productDetails);
-    bool hasDiscountedPrice = discountedPrice != null && !hasFreeTrialOffer;
+    print("discountedPrice: $discountedPrice");
+    bool hasDiscountedPrice = discountedPrice != null;
 
     final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
@@ -366,18 +322,6 @@ class _StoreViewState extends State<StoreView> {
                           ],
                         ],
                       ),
-                      if (hasFreeTrialOffer)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            "Includes ${_getTrialPeriod(productDetails)}",
-                            style: TextStyle(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                              fontSize: isSmallScreen ? 12 : 13,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -415,37 +359,37 @@ class _StoreViewState extends State<StoreView> {
                       onPressed: () => _makePurchase(productDetails),
                       child: Column(
                         children: [
-                          Text(
-                            hasFreeTrialOffer
-                                ? 'Start Free Trial'
-                                : hasDiscountedPrice
-                                    ? discountedPrice
-                                    : productDetails.price,
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                           if (hasDiscountedPrice)
+                            Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    discountedPrice,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    // check the platform and return the correct price
+                                    Platform.isAndroid ? _getOriginalProductPriceForAndroid(productDetails)! : productDetails.price,
+                                    style: TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      fontSize: isSmallScreen ? 12 : 13,
+                                      color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (!hasDiscountedPrice)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
                                 productDetails.price,
                                 style: TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  fontSize: isSmallScreen ? 12 : 13,
-                                  color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
-                                ),
-                              ),
-                            ),
-                          if (!hasFreeTrialOffer && !hasDiscountedPrice)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                productDetails.id == "1m" ? "Billed monthly" : "Billed annually",
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 13,
-                                  color: isAnnual ? colorScheme.onPrimary.withOpacity(0.8) : colorScheme.primary.withOpacity(0.8),
+                                  fontSize: isSmallScreen ? 14 : 15,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
