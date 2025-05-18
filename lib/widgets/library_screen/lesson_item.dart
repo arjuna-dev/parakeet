@@ -12,7 +12,7 @@ class LessonItem extends StatelessWidget {
   final HomeScreenModel model;
   final Map<String, bool> localFavorites;
   final Function(Map<String, bool>) updateFavorites;
-  final Function(DocumentSnapshot) onDelete;
+  final Function() onDeleteComplete;
 
   const LessonItem({
     Key? key,
@@ -22,7 +22,7 @@ class LessonItem extends StatelessWidget {
     required this.model,
     required this.localFavorites,
     required this.updateFavorites,
-    required this.onDelete,
+    required this.onDeleteComplete,
   }) : super(key: key);
 
   bool isFavorite() {
@@ -30,162 +30,253 @@ class LessonItem extends StatelessWidget {
     String docId = document.reference.id;
     String key = '$parentId-$docId';
 
-    return localFavorites[key] ?? false;
+    // First check local favorites which may have changed during this session
+    if (localFavorites.containsKey(key)) {
+      return localFavorites[key]!;
+    }
+
+    // Then fall back to checking the model's favoriteAudioFileIds
+    return model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
 
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 6 : 8),
+      child: Card(
+        elevation: 2,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 12 : 16,
-          vertical: isSmallScreen ? 8 : 12,
-        ),
-        title: Text(
-          document.get('title'),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 15 : 16,
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.translate, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    "${(document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)'} → ${document.get('target_language')}",
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 13,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () async {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AudioPlayerScreen(
+                  category: category,
+                  documentID: document.reference.parent.parent!.id,
+                  dialogue: document.get('dialogue'),
+                  targetLanguage: document.get('target_language'),
+                  nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
+                  languageLevel: document.get('language_level'),
+                  userID: FirebaseAuth.instance.currentUser!.uid,
+                  title: document.get('title'),
+                  generating: false,
+                  wordsToRepeat: document.get('words_to_repeat'),
+                  scriptDocumentId: document.id,
+                  numberOfTurns: 4,
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.stairs, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    "${document.get('language_level')}",
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 13,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        leading: Container(
-          width: isSmallScreen ? 40 : 48,
-          height: isSmallScreen ? 40 : 48,
-          decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            icon: Icon(
-              isFavorite() ? Icons.favorite : Icons.favorite_border,
-              color: colorScheme.primary,
-              size: isSmallScreen ? 24 : 28,
-            ),
-            onPressed: () => LibraryService.toggleFavorite(document, model, localFavorites, updateFavorites),
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.delete,
-                color: colorScheme.error,
-                size: isSmallScreen ? 22 : 24,
               ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Confirmation'),
-                      content: const Text('Are you sure you want to delete this audio?'),
-                      actions: <Widget>[
-                        TextButton(
-                          child: const Text('Cancel'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        TextButton(
-                          child: Text(
-                            'Delete',
-                            style: TextStyle(color: colorScheme.error),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with gradient background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colorScheme.primary.withOpacity(0.1),
+                      colorScheme.secondary.withOpacity(0.15),
+                    ],
+                  ),
+                ),
+                padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and tags column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            document.get('title'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isSmallScreen ? 16 : 18,
+                              color: colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
                           ),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            onDelete(document);
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: colorScheme.primary,
-              size: isSmallScreen ? 24 : 28,
-            ),
-          ],
-        ),
-        onTap: () async {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AudioPlayerScreen(
-                category: category,
-                documentID: document.reference.parent.parent!.id,
-                dialogue: document.get('dialogue'),
-                targetLanguage: document.get('target_language'),
-                nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
-                languageLevel: document.get('language_level'),
-                userID: FirebaseAuth.instance.currentUser!.uid,
-                title: document.get('title'),
-                generating: false,
-                wordsToRepeat: document.get('words_to_repeat'),
-                scriptDocumentId: document.id,
+                          const SizedBox(height: 12),
+                          // Tags row
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              // Language tag
+                              Chip(
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.zero,
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.translate, size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${(document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)'} → ${document.get('target_language')}",
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 11 : 12,
+                                        color: colorScheme.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              // Level tag
+                              Chip(
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.zero,
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.stairs, size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      document.get('language_level'),
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 11 : 12,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.7),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Favorite button
+                    IconButton(
+                      icon: Icon(
+                        isFavorite() ? Icons.favorite : Icons.favorite_border,
+                        color: isFavorite() ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () async {
+                        await LibraryService.toggleFavorite(document, model, localFavorites, updateFavorites);
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+              // Footer with actions
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Delete button
+                    TextButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text('Confirmation'),
+                              content: const Text('Are you sure you want to delete this lesson?'),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('Cancel'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                TextButton(
+                                  child: Text(
+                                    'Delete',
+                                    style: TextStyle(color: colorScheme.error),
+                                  ),
+                                  onPressed: () async {
+                                    Navigator.of(context).pop();
+                                    await LibraryService.deleteDocument(document, model);
+                                    onDeleteComplete();
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      icon: Icon(Icons.delete_outline, color: colorScheme.error),
+                      label: Text('Delete', style: TextStyle(color: colorScheme.error)),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
+                    // Play button
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                              category: category,
+                              documentID: document.reference.parent.parent!.id,
+                              dialogue: document.get('dialogue'),
+                              targetLanguage: document.get('target_language'),
+                              nativeLanguage: (document.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? document.get('native_language') : 'English (US)',
+                              languageLevel: document.get('language_level'),
+                              userID: FirebaseAuth.instance.currentUser!.uid,
+                              title: document.get('title'),
+                              generating: false,
+                              wordsToRepeat: document.get('words_to_repeat'),
+                              scriptDocumentId: document.id,
+                              numberOfTurns: 4,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.play_circle_outline,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                      label: const Text(
+                        'Play Lesson',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        side: BorderSide(
+                          color: colorScheme.primary.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/store_view.dart';
+import 'package:parakeet/Navigation/bottom_menu_bar.dart';
+import 'package:parakeet/screens/nickname_popup.dart';
+
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/profile_service.dart';
+import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/widgets/profile_screen/profile_header.dart';
 import 'package:parakeet/widgets/profile_screen/profile_menu_item.dart';
@@ -35,11 +39,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _targetLanguage = 'German';
   String _languageLevel = 'Absolute beginner (A1)';
 
+  int _apiCallsRemaining = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchUserData();
     _loadReminderTime();
+    _fetchLessonGenerationCount();
+  }
+
+  Future<void> _fetchLessonGenerationCount() async {
+    final apiCallsUsed = await LessonService.countAPIcallsByUser();
+    setState(() {
+      int limit = _premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
+      _apiCallsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+    });
   }
 
   Future<void> _fetchUserData() async {
@@ -52,6 +67,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _targetLanguage = userData['target_language'] ?? 'German';
       _languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
     });
+    // Update lesson count after premium status is fetched
+    _fetchLessonGenerationCount();
   }
 
   Future<void> _loadReminderTime() async {
@@ -190,36 +207,252 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             ProfileHeader(name: _name, email: _email),
+            // Combined account status and lesson generator card
+            Card(
+              elevation: 4,
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 6 : 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: _premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: _premium
+                        ? [
+                            Colors.amber.withOpacity(0.05),
+                            Theme.of(context).cardColor,
+                          ]
+                        : [
+                            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
+                            Theme.of(context).cardColor,
+                          ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _premium ? Icons.star : Icons.person,
+                                color: _premium ? Colors.amber : Theme.of(context).colorScheme.primary,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _premium ? 'Premium Account' : 'Free Account',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: _premium ? Colors.amber.shade800 : Theme.of(context).colorScheme.onSurface,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const Divider(height: 24),
+
+                      // Lesson generator section
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Daily Lesson Generator',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Resets at midnight',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '$_apiCallsRemaining',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: _apiCallsRemaining > 0 ? (_premium ? Colors.amber.shade700 : Theme.of(context).colorScheme.primary) : Theme.of(context).colorScheme.error,
+                                    ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'lesson${_apiCallsRemaining == 1 ? '' : 's'} remaining',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+                      Stack(
+                        children: [
+                          Container(
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          Container(
+                            height: 12,
+                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit)),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: _apiCallsRemaining > 0
+                                    ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
+                                    : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+                      Text(
+                        _premium ? 'Premium access: $_apiCallsRemaining of ${LessonService.premiumAPILimit} lessons' : '$_apiCallsRemaining of ${LessonService.freeAPILimit} lessons remaining',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                      ),
+
+                      if (!_premium)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: ElevatedButton(
+                            onPressed: _handleStoreNavigation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              minimumSize: const Size(double.infinity, 40),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.star, size: 16),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Upgrade to Premium',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Separate streak display card
             Card(
               elevation: 2,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
                   width: 1,
                 ),
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : 16,
-                  vertical: isSmallScreen ? 8 : 12,
+                  horizontal: isSmallScreen ? 14 : 16,
+                  vertical: isSmallScreen ? 12 : 14,
                 ),
                 child: StreakDisplay(),
               ),
             ),
-            ProfileMenuItem(
-              icon: _premium ? Icons.star : Icons.star_border,
-              iconColor: _premium ? Colors.amber : null,
-              title: _premium ? 'Premium Member' : 'Free Account',
-              subtitle: _premium ? 'Enjoy unlimited access' : 'Upgrade to premium for more features',
-              onTap: _handleStoreNavigation,
-            ),
+
             ProfileMenuItem(
               icon: Icons.translate,
               title: 'Language Settings',
               subtitle: 'Native: $_nativeLanguage • Target: $_targetLanguage • Level: $_languageLevel',
               onTap: _showLanguageSelectionDialog,
+            ),
+            ProfileMenuItem(
+              icon: Icons.edit,
+              title: 'Edit Nickname',
+              subtitle: 'Change how the app addresses you',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return const NicknamePopup();
+                  },
+                ).then((_) {
+                  // Refresh user data after nickname change
+                  _fetchUserData();
+                });
+              },
             ),
             ProfileMenuItem(
               icon: Icons.shopping_bag,
@@ -249,12 +482,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: _showTimePickerDialog,
               onClear: _reminderTime != null ? _cancelReminder : null,
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
+            const Divider(),
+            ProfileMenuItem(
+              icon: Icons.logout,
+              title: 'Logout',
+              subtitle: 'Sign out of your account',
+              onTap: () async {
+                await _authService.signOut();
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              },
+            ),
+            const SizedBox(height: 16),
             DeleteAccountButton(onDelete: _deleteAccount),
-            SizedBox(height: isSmallScreen ? 16 : 24),
+            const SizedBox(height: 32),
           ],
         ),
       ),
+      bottomNavigationBar: const BottomMenuBar(currentRoute: "/profile"),
     );
   }
 }

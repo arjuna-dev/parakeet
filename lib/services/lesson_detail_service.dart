@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/services/lesson_service.dart';
 
 class LessonDetailService {
   // Function to regenerate a lesson
@@ -17,6 +18,7 @@ class LessonDetailService {
   }) async {
     try {
       // Make the API call to generate a new lesson topic
+      final selectedWords = await LessonService.selectWordsFromCategory(category, allWords, targetLanguage);
       final response = await http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
         headers: <String, String>{
@@ -25,7 +27,7 @@ class LessonDetailService {
         },
         body: jsonEncode(<String, dynamic>{
           "category": category,
-          "allWords": allWords,
+          "selectedWords": selectedWords,
           "target_language": targetLanguage,
           "native_language": nativeLanguage,
         }),
@@ -52,7 +54,7 @@ class LessonDetailService {
   static Future<void> startLesson({
     required BuildContext context,
     required String topic,
-    required List<String> wordsToLearn,
+    required List<dynamic> wordsToLearn,
     required String nativeLanguage,
     required String targetLanguage,
     required String languageLevel,
@@ -62,6 +64,12 @@ class LessonDetailService {
     required Function(bool) setIsGeneratingLesson,
   }) async {
     if (wordsToLearn.isEmpty) return;
+
+    final canProceed = await LessonService.checkPremiumAndAPILimits(context);
+    if (!canProceed) {
+      Navigator.pop(context); // Close loading dialog
+      return;
+    }
 
     setIsGeneratingLesson(true);
 
@@ -92,6 +100,7 @@ class LessonDetailService {
         },
         body: jsonEncode(<String, dynamic>{
           "requested_scenario": topic,
+          "category": category,
           "keywords": wordsToLearn,
           "native_language": nativeLanguage,
           "target_language": targetLanguage,
@@ -137,6 +146,7 @@ class LessonDetailService {
                   nativeLanguage: nativeLanguage,
                   languageLevel: languageLevel,
                   wordsToRepeat: wordsToLearn,
+                  numberOfTurns: 4,
                 ),
               ),
             );

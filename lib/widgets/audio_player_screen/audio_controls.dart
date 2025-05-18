@@ -16,6 +16,9 @@ class AudioControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (audioPlayerService.playlistInitialized == false) {
+      return const SizedBox.shrink();
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(

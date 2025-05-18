@@ -64,11 +64,6 @@ class AudioGenerationService {
                 validEntriesCount++;
               }
             }
-
-            print('Expected dialogue length: $expectedLength');
-            print('Current dialogue length: ${dialogueData.length}');
-            print('Valid dialogue entries: $validEntriesCount');
-
             // If we have the expected number of valid dialogue turns, we're done
             if (validEntriesCount >= expectedLength && expectedLength > 0) {
               isDialogueComplete = true;
@@ -95,26 +90,26 @@ class AudioGenerationService {
   }
 
   /// Creates the script document in Firestore
-  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> completeDialogue) async {
+  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> keywordsUsedInDialogue, List<dynamic> completeDialogue, String category) async {
     // Save script to Firestore
     DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('script-$userID').doc(scriptDocumentId);
 
     await docRef.set({
       "script": script,
-      "category": null, // This was 'widget.category' in the original code
+      "category": category,
       "title": title,
       "dialogue": completeDialogue,
       "native_language": nativeLanguage,
       "target_language": targetLanguage,
       "language_level": languageLevel,
-      "words_to_repeat": wordsToRepeat,
+      "words_to_repeat": keywordsUsedInDialogue,
       "user_ID": userID,
       "timestamp": FieldValue.serverTimestamp(),
     });
   }
 
   /// Makes the second API call to generate audio
-  Future<void> makeSecondApiCall(Map<String, dynamic> data) async {
+  Future<void> makeSecondApiCall(Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
     await http.post(
       Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
       headers: <String, String>{
@@ -134,7 +129,7 @@ class AudioGenerationService {
         "voice_1_id": data["voice_1_id"] ?? "",
         "voice_2_id": data["voice_2_id"] ?? "",
         "tts_provider": targetLanguage == "Azerbaijani" ? "3" : "1",
-        "words_to_repeat": wordsToRepeat,
+        "words_to_repeat": keywordsUsedInDialogue,
       }),
     );
   }
@@ -201,7 +196,6 @@ class AudioGenerationService {
   /// Removes the user from the active creation collection
   Future<void> removeFromActiveCreation() async {
     try {
-      print("Removing user from active creation");
       final firestore = FirebaseFirestore.instance;
       DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
 
@@ -217,8 +211,6 @@ class AudioGenerationService {
           transaction.update(docRef, {'users': users});
         }
       });
-
-      print("Successfully removed user from active creation");
     } catch (e) {
       print("Error removing user from active creation: $e");
     }

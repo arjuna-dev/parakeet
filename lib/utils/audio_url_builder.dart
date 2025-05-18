@@ -18,7 +18,9 @@ class AudioUrlBuilder {
 
   /// Constructs the appropriate URL for a given filename
   Future<String> constructUrl(String fileName) async {
-    if (_isNarratorFile(fileName)) {
+    if (fileName.startsWith("https://")) {
+      return fileName;
+    } else if (_isNarratorFile(fileName)) {
       // narrator_, one_second_break, five_second_break
       return _getNarratorUrl(fileName);
     } else if (fileName == "nickname") {
@@ -47,8 +49,6 @@ class AudioUrlBuilder {
   /// Builds the URL for nickname files or, if unavailable, returns a generic greeting URL.
   Future<String> _getNicknameUrl() async {
     final bool canUseNickname = hasNicknameAudio && addressByNickname;
-    print('canUseNickname: $canUseNickname');
-
     if (canUseNickname) {
       final List<int> numbers = List.generate(5, (i) => i)..shuffle();
       for (final randomNumber in numbers) {

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/widgets/lesson_detail_screen/word_selection_dialog.dart';
 import 'package:parakeet/services/lesson_detail_service.dart';
 
 class LessonDetailContent extends StatelessWidget {
   final String category;
   final String title;
   final String topic;
-  final List<String> wordsToLearn;
+  final List<dynamic> wordsToLearn;
   final List<String> allWords;
   final String nativeLanguage;
   final String targetLanguage;
@@ -33,17 +32,6 @@ class LessonDetailContent extends StatelessWidget {
     required this.onWordsChanged,
     required this.setIsGeneratingLesson,
   }) : super(key: key);
-
-  // Function to show word selection dialog
-  Future<void> _showWordSelectionDialog(BuildContext context) async {
-    await WordSelectionDialog.show(
-      context: context,
-      allWords: allWords,
-      selectedWords: wordsToLearn,
-      maxWordsAllowed: maxWordsAllowed,
-      onSave: onWordsChanged,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +149,7 @@ class LessonDetailContent extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Words to Repeat Section with Edit button
+          // Words to Repeat Section (without Edit button)
           Container(
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -175,28 +163,12 @@ class LessonDetailContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Words to learn (${wordsToLearn.length}/$maxWordsAllowed)',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13 * textScaleFactor,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit,
-                        size: 18 * textScaleFactor,
-                        color: colorScheme.primary,
-                      ),
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Edit words',
-                      onPressed: isGeneratingLesson ? null : () => _showWordSelectionDialog(context),
-                    ),
-                  ],
+                Text(
+                  'Words to learn (${wordsToLearn.length}/$maxWordsAllowed)',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 13 * textScaleFactor,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Wrap(

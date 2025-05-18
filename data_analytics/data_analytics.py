@@ -7,8 +7,9 @@ import matplotlib.dates as mdates
 import seaborn as sns
 from matplotlib.colors import ListedColormap
 from enum import Enum
+import os
 
-# ['Solarize_Light2', '_classic_test_patch', '_mpl-gallery', '_mpl-gallery-nogrid', 'bmh', 'classic', 'dark_background', 'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn-v0_8', 'seaborn-v0_8-bright', 'seaborn-v0_8-colorblind', 'seaborn-v0_8-dark', 'seaborn-v0_8-dark-palette', 'seaborn-v0_8-darkgrid', 'seaborn-v0_8-deep', 'seaborn-v0_8-muted', 'seaborn-v0_8-notebook', 'seaborn-v0_8-paper', 'seaborn-v0_8-pastel', 'seaborn-v0_8-poster', 'seaborn-v0_8-talk', 'seaborn-v0_8-ticks', 'seaborn-v0_8-white', 'seaborn-v0_8-whitegrid', 'tableau-colorblind10']
+# ['Solarize_Light2', '_classic_test_patch', '_mpl-gallery', '_mpl-gallery-nogrid', 'bmh', 'classic', 'dark_background', 'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn-v0_8', 'seaborn-v0_8-bright'ß, 'seaborn-v0_8-colorblind', 'seaborn-v0_8-dark', 'seaborn-v0_8-dark-palette', 'seaborn-v0_8-darkgrid', 'seaborn-v0_8-deep', 'seaborn-v0_8-muted', 'seaborn-v0_8-notebook', 'seaborn-v0_8-paper', 'seaborn-v0_8-pastel', 'seaborn-v0_8-poster', 'seaborn-v0_8-talk', 'seaborn-v0_8-ticks', 'seaborn-v0_8-white', 'seaborn-v0_8-whitegrid', 'tableau-colorblind10']
 
 # plt.style.use('seaborn-v0_8') # Marginally better
 # plt.style.use('Solarize_Light2') # Stylish/pale yellow
@@ -21,8 +22,21 @@ class Style(Enum):
     CYBERPUNK = 1
     SKETCH = 2
 
+def filter_by_period(df, date_column, period_days):
+    if period_days is None:
+        return df
+    today = datetime.date.today()
+    cutoff = today - datetime.timedelta(days=period_days)
+    # Ensure date_column is datetime
+    df = df.copy()
+    df[date_column] = pd.to_datetime(df[date_column]).dt.date
+    return df[df[date_column] >= cutoff]
+
 # update_csvs()
-def generate_all_charts(style):
+def generate_all_charts(style, period_days=None):
+
+    # Ensure 'csv' directory exists before saving files
+    os.makedirs('csv', exist_ok=True)
 
     if style == Style.CYBERPUNK:
         import mplcyberpunk
@@ -31,11 +45,20 @@ def generate_all_charts(style):
     elif style == Style.SKETCH:
         plt.xkcd(scale=1, length=100, randomness=1)
         img_dir = 'img_sketch/'
+        os.makedirs(img_dir, exist_ok=True)
 
     # CSV to data frames
     df_users = pd.read_csv('users.csv')
     df_big_jsons = pd.read_csv('big_jsons.csv')
     df_analytics = pd.read_csv('analytics.csv')
+
+    # --- Filter by period if specified ---
+    if period_days is not None:
+        # Filter df_big_jsons by 'timestamp'
+        if 'timestamp' in df_big_jsons.columns:
+            df_big_jsons = filter_by_period(df_big_jsons, 'timestamp', period_days)
+        # Filter df_analytics by 'play' (creation_date extracted later)
+        # We'll filter after extracting 'creation_date' below
 
     # Remove developers' data
     dev_ids = [
@@ -67,7 +90,7 @@ def generate_all_charts(style):
     user_id_counts = df_big_jsons['user_ID'].value_counts()
     df_counts = user_id_counts.rename_axis('id').reset_index(name='# of Lessons')  # Convert to DataFrame
     df_users = pd.merge(df_users, df_counts, how='left', on='id')
-    df_users['# of Lessons'].fillna(0, inplace=True)
+    df_users['# of Lessons'] = df_users['# of Lessons'].fillna(0)  # <--- Fix chained assignment warning
     df_users.sort_values(by='# of Lessons', ascending=False, inplace=True)
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -167,6 +190,10 @@ def generate_all_charts(style):
     df_analytics['creation_date'] = df_analytics['play'].apply(return_creation_date)
 
     df_analytics['timestamps'] = df_analytics['play'].apply(return_timestamps_dates)
+
+    # --- After extracting creation_date from analytics, filter if needed ---
+    if period_days is not None:
+        df_analytics = filter_by_period(df_analytics, 'creation_date', period_days)
 
     print(df_analytics['timestamps'])
     df_analytics['timestamps'].to_csv('timestamps.csv', index=False)
@@ -412,36 +439,33 @@ def generate_all_charts(style):
     # Display top_10_relistened as a table with matplotlib
     plt.style.use('seaborn-v0_8') # bold
     fig, ax = plt.subplots(figsize=(13, 6))
-    # ax.table(cellText=top_10_relistened.values, colLabels=top_10_relistened.columns, loc='center')
-    # Create the table
-    table = ax.table(cellText=top_10_relistened.values, colLabels=top_10_relistened.columns, cellLoc='center', loc='center')
-
-    # Customize font sizes and styles
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)  # Set the font size for all cells
-
-    # Make the header bold and larger
-    # Make the header bold and larger
-    for key, cell in table.get_celld().items():
-        row, col = key
-        if row == 0:  # Header row
-            cell.set_text_props(weight='bold', fontsize=14)
-        cell.set_fontsize(12)
-
-    # Adjust cell sizes for better readability
-    table.scale(1.5, 1.5)  # Scale table size
-
-    # Make lines thicker
-    table.auto_set_column_width(col=list(range(len(top_10_relistened.columns))))  # Set column width automatically
-
-
-    ax.axis('off')
-    plt.savefig(img_dir+'top_10_relistened.png')
-    # plt.show()
-
+    if not top_10_relistened.empty:
+        table = ax.table(cellText=top_10_relistened.values, colLabels=top_10_relistened.columns, cellLoc='center', loc='center')
+        # Customize font sizes and styles
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)  # Set the font size for all cells
+        for key, cell in table.get_celld().items():
+            row, col = key
+            if row == 0:  # Header row
+                cell.set_text_props(weight='bold', fontsize=14)
+            cell.set_fontsize(12)
+        table.scale(1.5, 1.5)  # Scale table size
+        table.auto_set_column_width(col=list(range(len(top_10_relistened.columns))))  # Set column width automatically
+        ax.axis('off')
+        plt.savefig(img_dir+'top_10_relistened.png')
+        # plt.show()
+    else:
+        print("No data for top 10 re-listened files in the selected period. Skipping table plot.")
 
     df_data = df_users[['id', 'name', 'email', 'Favorite Files Count', '# of Lessons', 'Number of Unique Active Days']]
 
 
-generate_all_charts(Style.CYBERPUNK)
-generate_all_charts(Style.SKETCH)
+# --- Hardcode period selection here ---
+if __name__ == "__main__":
+    style = Style.SKETCH
+    period_days = None  # Use None for all time, or 30, 60, or 90 for last N days
+    generate_all_charts(style, 90)
+
+    style = Style.CYBERPUNK
+    period_days = None  # Use None for all time, or 30, 60, or 90 for last N days
+    generate_all_charts(style, 90)

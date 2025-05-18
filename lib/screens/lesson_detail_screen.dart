@@ -5,13 +5,14 @@ import 'package:parakeet/main.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/services/lesson_detail_service.dart';
 import 'package:parakeet/widgets/lesson_detail_screen/lesson_detail_content.dart';
+import 'package:parakeet/services/lesson_service.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String category;
   final List<String> allWords;
   final String title;
   final String topic;
-  final List<String> wordsToLearn;
+  final List<dynamic> wordsToLearn;
   final String languageLevel;
   final String length;
   final String nativeLanguage;
@@ -22,7 +23,6 @@ class LessonDetailScreen extends StatefulWidget {
 
   // Method to clear any static or shared resources when navigating to a new screen
   static void resetStaticState() {
-    print("LessonDetailScreen - resetStaticState called");
     _activeScreenIds.clear();
   }
 
@@ -50,7 +50,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   // State variables for regeneration
   late String _title;
   late String _topic;
-  late List<String> _wordsToLearn;
+  late List<dynamic> _wordsToLearn;
 
   // Maximum number of words that can be selected
   final int _maxWordsAllowed = 5;
@@ -67,7 +67,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Change Lesson?'),
-          content: const Text('This will create a lesson in same category with different title, topic, and words to learn. Continue?'),
+          content: const Text('This will create a lesson in same category with different title and topic. Continue?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -110,6 +110,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         targetLanguage: widget.targetLanguage,
         nativeLanguage: widget.nativeLanguage,
       );
+      List<dynamic> wordsToLearn = await LessonService.selectWordsFromCategory(widget.category, widget.allWords, widget.targetLanguage);
 
       if (result != null && mounted) {
         Navigator.pop(context); // Close loading dialog
@@ -119,7 +120,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           // Update the state with new values from the API response
           _title = result['title'] as String;
           _topic = result['topic'] as String;
-          _wordsToLearn = (result['words_to_learn'] as List).cast<String>();
+          _wordsToLearn = wordsToLearn;
         });
 
         // Show success message
@@ -215,14 +216,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   @override
   void initState() {
     super.initState();
-    print("LessonDetailScreen - initState() called");
 
     // Generate a unique ID for this instance
     final String instanceId = DateTime.now().millisecondsSinceEpoch.toString();
 
     // Add this instance to active screens
     LessonDetailScreen._activeScreenIds.add(instanceId);
-    print("LessonDetailScreen - Active screens: ${LessonDetailScreen._activeScreenIds.length}");
 
     // Initialize fields
     ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
@@ -233,13 +232,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     _topic = widget.topic;
     // Convert all words to lowercase
     _wordsToLearn = List<String>.from(widget.wordsToLearn.map((word) => word.toLowerCase()));
-    print('words_to_repeat: $_wordsToLearn');
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print("LessonDetailScreen - didChangeDependencies() called");
     // Reset state when this screen becomes active again
     setState(() {
       _isGeneratingLesson = false;
@@ -248,13 +245,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   @override
   void dispose() {
-    print("LessonDetailScreen - dispose() called");
     // Make sure to clear any state or resources when disposed
     _isGeneratingLesson = false;
 
     // Clear static resources for this widget
     if (LessonDetailScreen._activeScreenIds.length > 1) {
-      print("LessonDetailScreen - Warning: Multiple instances detected during disposal");
+      print("Warning: LessonDetailScreen - Multiple instances detected during disposal");
     }
 
     super.dispose();

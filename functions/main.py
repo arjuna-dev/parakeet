@@ -4,7 +4,7 @@ import firebase_functions.options as options
 import json
 import datetime
 import time
-from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson
+from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson, prompt_translate_keywords
 from utils.utilities import TTS_PROVIDERS
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
@@ -43,6 +43,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
             status=400,
         )
     requested_scenario = request_data.get("requested_scenario")
+    category = request_data.get("category")
     native_language = request_data.get("native_language")
     target_language = request_data.get("target_language")
     length = request_data.get("length")
@@ -76,11 +77,11 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         else:
             # If the document exists, check the call count and date
             if user_doc_snapshot.get('last_call_date') == today:
-                if user_doc_snapshot.get('call_count') >= 5:
-                    # If the call count for today is 5 or more, return False
+                if user_doc_snapshot.get('call_count') >= 10:
+                    # If the call count for today is 10 or more, return False
                     return False
                 else:
-                    # If the call count is less than 5, increment it
+                    # If the call count is less than 10, increment it
                     transaction.update(user_doc_ref, {'call_count': firestore.Increment(1)})
             else:
                 # If the last call was not made today, reset the count and date
@@ -122,10 +123,10 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                             mock=is_mock)
     first_API_calls.line_handler = first_API_calls.handle_line_1st_API
 
-    prompt = prompt_dialogue(requested_scenario, native_language, target_language, language_level, keywords, length)
+    prompt = prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length)
 
     if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
-        prompt = prompt_dialogue_w_transliteration(requested_scenario, native_language, target_language, language_level, keywords, length)
+        prompt = prompt_dialogue_w_transliteration(requested_scenario, category, native_language, target_language, language_level, keywords, length)
 
 
     if first_API_calls.mock == True:
@@ -272,25 +273,46 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
         request_data = req.get_json()
         print(request_data)
         document_id = request_data.get("document_id")
+        user_id = request_data.get("user_id")
     except Exception as e:
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
         )
     bucket_name = "conversations_audio_files"
+
+    # delete the script document to remove it from users lesson collection
+    db = firestore.client()
+    col_ref = db.collection('chatGPT_responses').document(document_id).collection(f'script-{user_id}')
+    for doc in col_ref.get():
+        doc.reference.delete()
+
+    # get all the word card audio file names and skip it from deletion
+    col_ref_word_card_audio_urls = db.collection('chatGPT_responses').document(document_id).collection('word_card_audio_urls')
+    docs = col_ref_word_card_audio_urls.get()
+    word_card_audio_files = []
+    if docs:
+        for doc in docs:
+            word_card_audio_files.append(document_id + '/' + doc.get("nativeChunkKey"))
+            word_card_audio_files.append(document_id + '/' + doc.get("targetChunkKey"))
+
+
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
 
     blobs = bucket.list_blobs(prefix=document_id + '/')
+    print(blobs)
+    print(word_card_audio_files)
 
     for blob in blobs:
         try:
-            blob.delete()
-            print(f"Blob {blob.name} deleted.")
+            if blob.name in word_card_audio_files:
+                print(f"Blob {blob.name} not deleted.")
+            else:
+                blob.delete()
+                print(f"Blob {blob.name} deleted.")
         except Exception as e:
             print(f"Blob {blob.name} not found.")
-    # delete the folder as well
-
 
     return https_fn.Response(status=200)
 
@@ -354,25 +376,19 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = req.get_json()
         category = request_data.get("category")
-        all_words = request_data.get("allWords")
+        selected_words = request_data.get("selectedWords")
         target_language = request_data.get("target_language")
         native_language = request_data.get("native_language")
 
-        print(category, all_words, target_language, native_language)
+        print(category, selected_words, target_language, native_language)
 
-        if not all(param is not None for param in [category, all_words, target_language, native_language]):
+        if not all(param is not None for param in [category, selected_words, target_language, native_language]):
             return https_fn.Response(
                 json.dumps({"error": "Missing required parameters"}),
                 status=400
             )
 
-        if not isinstance(all_words, list) or len(all_words) < 5:
-            return https_fn.Response(
-                json.dumps({"error": "allWords must be a list with at least 5 words"}),
-                status=400
-            )
-
-        prompt = prompt_generate_lesson_topic(category, all_words, target_language, native_language)
+        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language)
 
         response = chatGPT_API_call(prompt, use_stream=False)
 
@@ -397,6 +413,29 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
         cors_methods=["POST"]
     )
 )
+def translate_keywords(req: https_fn.Request) -> https_fn.Response:
+    try:
+        request_data = req.get_json()
+        keywords = request_data.get("keywords")
+        target_language = request_data.get("target_language")
+
+        prompt = prompt_translate_keywords(keywords, target_language)
+
+        response = chatGPT_API_call(prompt, use_stream=False)
+
+        result = json.loads(response.choices[0].message.content)
+
+        return https_fn.Response(
+            json.dumps(result),
+            status=200
+        )
+
+    except Exception as e:
+        print(f"Error in translate_keywords: {str(e)}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500
+        )
 
 def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
     try:
@@ -428,3 +467,6 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
             json.dumps({"error": str(e)}),
             status=500
         )
+
+
+
