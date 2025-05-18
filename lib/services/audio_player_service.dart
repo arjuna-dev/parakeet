@@ -11,7 +11,7 @@ import 'package:parakeet/widgets/audio_player_screen/position_data.dart';
 class AudioPlayerService {
   final String documentID;
   final String userID;
-  final bool hasPremium;
+  bool hasPremium = false;
 
   late AudioPlayer player;
   late ConcatenatingAudioSource playlist;
