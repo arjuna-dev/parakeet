@@ -6,8 +6,10 @@ import 'package:parakeet/widgets/onboarding_screen/native_language_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/nickname_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/target_language_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/language_level_step.dart';
+import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 import '../utils/native_language_list.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:flutter/foundation.dart';
 
 class OnboardingFormScreen extends StatefulWidget {
   const OnboardingFormScreen({super.key});
@@ -27,6 +29,8 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
   final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
+  final int totalPages = kIsWeb ? 4 : 5;
+  bool? _notificationsEnabled;
 
   @override
   void dispose() {
@@ -63,6 +67,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
       _nickname,
       _selectedTargetLanguage,
       _selectedLanguageLevel,
+      _notificationsEnabled,
     );
   }
 
@@ -90,7 +95,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                 const SizedBox(height: 24),
                 OnboardingProgressIndicator(
                   currentPage: _currentPage,
-                  totalPages: 4,
+                  totalPages: totalPages,
                 ),
                 const SizedBox(height: 24),
                 Expanded(
@@ -137,6 +142,15 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                           });
                         },
                       ),
+                      if (!kIsWeb)
+                        NotificationsPermissionsStep(
+                          onNotificationsEnabledChanged: (value) {
+                            setState(() {
+                              _notificationsEnabled = value;
+                            });
+                          },
+                          notificationsEnabled: _notificationsEnabled,
+                        ),
                     ],
                   ),
                 ),
