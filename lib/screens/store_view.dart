@@ -106,18 +106,50 @@ class _StoreViewState extends State<StoreView> {
     }
   }
 
-  bool _hasIntroductoryOffer(ProductDetails product) {
+  String? _getOriginalProductPriceForAndroid(ProductDetails product) {
     if (Platform.isAndroid) {
       final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
+      return googleProduct.productDetails.subscriptionOfferDetails?.first.pricingPhases.last.formattedPrice;
+    }
+    return null;
+  }
+
+  String? _getDiscountedPrice(ProductDetails product) {
+    if (Platform.isAndroid) {
+      final GooglePlayProductDetails googleProduct = product as GooglePlayProductDetails;
+      print("google product: ${googleProduct.rawPrice}");
+
       final offerDetails = googleProduct.productDetails.subscriptionOfferDetails;
 
-      // Check if there are any offers and the first phase is free
-      return offerDetails != null && offerDetails.isNotEmpty && offerDetails.first.pricingPhases.first.priceAmountMicros == 0;
+      if (offerDetails != null && offerDetails.isNotEmpty) {
+        print("offerDetailsAndroid: ${offerDetails.length}");
+        final phases = offerDetails.first.pricingPhases;
+        if (phases.length > 1) {
+          final discountedFormattedPrice = phases.first.formattedPrice;
+          final discountedRawPrice = phases.first.priceAmountMicros;
+          if (discountedFormattedPrice == "Free" || discountedRawPrice == 0) {
+            return "Free for ${phases.first.billingPeriod}";
+          }
+          return discountedFormattedPrice;
+        }
+      }
     } else if (Platform.isIOS) {
       final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
-      return iOSProduct.skProduct.introductoryPrice != null;
+      if (iOSProduct.skProduct.introductoryPrice != null) {
+        // Check if introductory price is a discount (not free and less than normal price)
+        final introPrice = double.parse(iOSProduct.skProduct.introductoryPrice!.price.toString());
+        final normalPrice = double.parse(iOSProduct.skProduct.price.toString());
+
+        if (introPrice > 0 && introPrice < normalPrice) {
+          // Format the price with currency symbol
+          return iOSProduct.skProduct.introductoryPrice!.priceLocale.currencySymbol + introPrice.toString();
+        }
+        if (introPrice == 0) {
+          return 'Free for ${iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.numberOfUnits} days';
+        }
+      }
     }
-    return false;
+    return null;
   }
 
   Future<void> _makePurchase(ProductDetails productDetails) async {
@@ -131,7 +163,7 @@ class _StoreViewState extends State<StoreView> {
 
     if (productDetails.id == "1m" || productDetails.id == "1year") {
       await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
-      if (_hasIntroductoryOffer(productDetails) && !_hasUsedTrial) {
+      if (!_hasUsedTrial) {
         // Update the user's trial status in Firestore
         final userId = FirebaseAuth.instance.currentUser?.uid;
         if (userId != null) {
@@ -155,96 +187,216 @@ class _StoreViewState extends State<StoreView> {
     return uniqueProducts;
   }
 
-  Widget _buildSubscriptionCard(ProductDetails productDetails) {
-    bool hasIntro = _hasIntroductoryOffer(productDetails);
+  List<Map<String, dynamic>> _getSubscriptionBenefits() {
+    return [
+      {'icon': Icons.category, 'text': 'Access to all premium categories'},
+      {'icon': Icons.auto_awesome, 'text': '10x Lessons creation every day'},
+      {'icon': Icons.music_note, 'text': 'Listen to your lesson without ads'},
+      {'icon': Icons.star, 'text': 'Priority access to latest features'},
+    ];
+  }
+
+  Widget _buildBenefitItem(IconData icon, String text) {
     final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: isSmallScreen ? 16 : 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 14,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionCard(ProductDetails productDetails) {
+    String? discountedPrice = _getDiscountedPrice(productDetails);
+    print("discountedPrice: $discountedPrice");
+    bool hasDiscountedPrice = discountedPrice != null;
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+    final benefits = _getSubscriptionBenefits();
+
+    // Define the subscription type label based on product ID
+    final String subscriptionType = productDetails.id == "1m" ? "Monthly" : "Annual";
+    final bool isAnnual = productDetails.id == "1year";
+
+    // Add savings label for annual subscription
+    final Widget? savingsLabel = isAnnual
+        ? Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: colorScheme.primary,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              "SAVE 50%",
+              style: TextStyle(
+                color: colorScheme.onPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: isSmallScreen ? 10 : 12,
+              ),
+            ),
+          )
+        : null;
 
     return Card(
       elevation: 2,
       margin: EdgeInsets.symmetric(
         horizontal: 16,
-        vertical: isSmallScreen ? 4 : 8,
+        vertical: isSmallScreen ? 8 : 12,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
+          color: isAnnual ? colorScheme.primary.withOpacity(0.4) : colorScheme.surfaceContainerHighest.withOpacity(0.2),
+          width: isAnnual ? 2 : 1,
         ),
       ),
       child: Column(
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 12 : 16,
-              vertical: isSmallScreen ? 8 : 12,
+          // Subscription Header
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 16 : 20,
+              vertical: isSmallScreen ? 12 : 16,
             ),
-            leading: Container(
-              width: isSmallScreen ? 40 : 48,
-              height: isSmallScreen ? 40 : 48,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                productDetails.id == "1year" ? Icons.star : Icons.star_half,
-                color: colorScheme.primary,
-                size: isSmallScreen ? 20 : 24,
+            decoration: BoxDecoration(
+              color: isAnnual ? colorScheme.primaryContainer.withOpacity(0.5) : colorScheme.surfaceContainerLow,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
             ),
-            title: Text(
-              productDetails.title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: isSmallScreen ? 15 : 16,
-              ),
-            ),
-            subtitle: Text(
-              productDetails.description,
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: isSmallScreen ? 12 : 13,
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    hasIntro && !_hasUsedTrial
-                        ? '30-day free trial'
-                        : productDetails.id == "1m"
-                            ? 'Monthly subscription'
-                            : 'Annual subscription',
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: isSmallScreen ? 13 : 14,
-                    ),
+                Container(
+                  width: isSmallScreen ? 40 : 44,
+                  height: isSmallScreen ? 40 : 44,
+                  decoration: BoxDecoration(
+                    color: isAnnual ? colorScheme.primary.withOpacity(0.2) : colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isAnnual ? Icons.star : Icons.star_half,
+                    color: colorScheme.primary,
+                    size: isSmallScreen ? 22 : 24,
                   ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 16 : 24,
-                      vertical: isSmallScreen ? 8 : 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                SizedBox(width: isSmallScreen ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "$subscriptionType Premium",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isSmallScreen ? 16 : 18,
+                            ),
+                          ),
+                          if (savingsLabel != null) ...[
+                            const SizedBox(width: 8),
+                            savingsLabel,
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                  onPressed: () => _makePurchase(productDetails),
-                  child: Text(
-                    hasIntro && !_hasUsedTrial ? 'Start Free Trial' : productDetails.price,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                      fontWeight: FontWeight.bold,
+                ),
+              ],
+            ),
+          ),
+
+          // Benefits List
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Benefits Section
+                ...benefits.map((benefit) => _buildBenefitItem(benefit['icon'], benefit['text'])),
+
+                SizedBox(height: isSmallScreen ? 16 : 20),
+
+                // Price Section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isAnnual ? colorScheme.primary : colorScheme.primaryContainer,
+                        foregroundColor: isAnnual ? colorScheme.onPrimary : colorScheme.primary,
+                        elevation: isAnnual ? 2 : 0,
+                        padding: EdgeInsets.symmetric(
+                          vertical: isSmallScreen ? 12 : 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => _makePurchase(productDetails),
+                      child: Column(
+                        children: [
+                          if (hasDiscountedPrice)
+                            Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    discountedPrice,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    // check the platform and return the correct price
+                                    Platform.isAndroid ? _getOriginalProductPriceForAndroid(productDetails)! : productDetails.price,
+                                    style: TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      fontSize: isSmallScreen ? 12 : 13,
+                                      color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (!hasDiscountedPrice)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                productDetails.price,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -258,54 +410,165 @@ class _StoreViewState extends State<StoreView> {
     final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
 
-    return Card(
-      elevation: 2,
+    return Container(
+      margin: EdgeInsets.only(
+        top: isSmallScreen ? 12 : 24,
+        bottom: isSmallScreen ? 16 : 24,
+        left: 16,
+        right: 16,
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: isSmallScreen ? 64 : 80,
+            height: isSmallScreen ? 64 : 80,
+            decoration: BoxDecoration(
+              color: _hasPremium ? colorScheme.primaryContainer : colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              _hasPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
+              size: isSmallScreen ? 36 : 44,
+              color: colorScheme.primary,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 16 : 20),
+          Text(
+            _hasPremium ? 'You\'re Premium!' : 'Upgrade to Premium',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 24 : 28,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 8 : 10),
+          Text(
+            _hasPremium ? 'Enjoy all premium features and benefits' : 'Choose the plan that works best for you',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 14 : 16,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRestoreButton() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
+    return Container(
       margin: EdgeInsets.symmetric(
         horizontal: 16,
         vertical: isSmallScreen ? 8 : 12,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.outlineVariant),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : 24,
+            vertical: isSmallScreen ? 12 : 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        onPressed: () => _inAppPurchase.restorePurchases(),
+        icon: Icon(
+          Icons.restore,
+          size: isSmallScreen ? 18 : 20,
+        ),
+        label: Text(
+          'Restore Purchases',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 14 : 16,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-        child: Column(
-          children: [
-            Container(
-              width: isSmallScreen ? 48 : 56,
-              height: isSmallScreen ? 48 : 56,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
+    );
+  }
+
+  Widget _buildFooterLinks() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isSmallScreen ? 12 : 16,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 8 : 12,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => _launchURL(Uri(
+                  scheme: "https",
+                  host: "gregarious-giant-4a5.notion.site",
+                  path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26",
+                )),
+                child: Text(
+                  'Terms of Service',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                  ),
+                ),
               ),
-              child: Icon(
-                _hasPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
-                size: isSmallScreen ? 28 : 32,
-                color: colorScheme.primary,
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
               ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 8 : 12,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
+                child: Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Subscription will automatically renew unless canceled',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 11 : 12,
+              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            Text(
-              _hasPremium ? 'Premium Member' : 'Upgrade to Premium',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 20 : 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: isSmallScreen ? 6 : 8),
-            Text(
-              _hasPremium ? 'Enjoy all premium features' : 'Get unlimited access to all features',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -320,147 +583,63 @@ class _StoreViewState extends State<StoreView> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          "Store",
+          "Premium",
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeader(),
-              if (_notice != null)
-                Padding(
-                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                  child: Text(
-                    _notice!,
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: isSmallScreen ? 14 : 16,
-                    ),
-                  ),
+        child: _loading
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: colorScheme.primary,
                 ),
-              if (_loading)
-                Padding(
-                  padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ),
-              if (!_hasPremium && _products.isNotEmpty) ..._getUniqueProducts().map(_buildSubscriptionCard),
-              if (!_hasPremium)
-                Card(
-                  elevation: 2,
-                  margin: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: isSmallScreen ? 4 : 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 12 : 16,
-                      vertical: isSmallScreen ? 8 : 12,
-                    ),
-                    leading: Container(
-                      width: isSmallScreen ? 40 : 48,
-                      height: isSmallScreen ? 40 : 48,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.restore,
-                        color: colorScheme.primary,
-                        size: isSmallScreen ? 20 : 24,
-                      ),
-                    ),
-                    title: Text(
-                      'Restore Purchases',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isSmallScreen ? 15 : 16,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Recover your previous purchases',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: isSmallScreen ? 12 : 13,
-                      ),
-                    ),
-                    onTap: () => _inAppPurchase.restorePurchases(),
-                  ),
-                ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: isSmallScreen ? 8 : 12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              )
+            : SingleChildScrollView(
+                child: Column(
                   children: [
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.primary,
+                    _buildHeader(),
+                    if (_notice != null)
+                      Padding(
                         padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 6 : 8,
+                          horizontal: 16,
+                          vertical: isSmallScreen ? 8 : 12,
                         ),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => _launchURL(Uri(
-                        scheme: "https",
-                        host: "gregarious-giant-4a5.notion.site",
-                        path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26",
-                      )),
-                      child: Text(
-                        'Terms and Conditions',
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
-                          fontSize: isSmallScreen ? 12 : 13,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      ' • ',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: isSmallScreen ? 12 : 13,
-                      ),
-                    ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.primary,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 6 : 8,
-                        ),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
-                      child: Text(
-                        'Privacy Policy',
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
-                          fontSize: isSmallScreen ? 12 : 13,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: colorScheme.errorContainer.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: colorScheme.error,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _notice!,
+                                  style: TextStyle(
+                                    color: colorScheme.onErrorContainer,
+                                    fontSize: isSmallScreen ? 14 : 15,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                    if (!_hasPremium && _products.isNotEmpty) ..._getUniqueProducts().map(_buildSubscriptionCard),
+                    if (!_hasPremium) _buildRestoreButton(),
+                    _buildFooterLinks(),
+                    SizedBox(height: isSmallScreen ? 16 : 24),
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
-            ],
-          ),
-        ),
       ),
     );
   }

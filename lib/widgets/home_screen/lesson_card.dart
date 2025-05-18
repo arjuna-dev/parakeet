@@ -21,104 +21,208 @@ class LessonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: 1,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 6 : 8),
+      child: Card(
+        elevation: 2,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 12 : 16,
-          vertical: isSmallScreen ? 8 : 12,
-        ),
-        title: Text(
-          audioFile.get('title'),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 15 : 16,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.translate, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    "${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} → ${audioFile.get('target_language')}",
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 13,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () async {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AudioPlayerScreen(
+                  documentID: audioFile.reference.parent.parent!.id,
+                  dialogue: audioFile.get('dialogue'),
+                  targetLanguage: audioFile.get('target_language'),
+                  nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
+                  languageLevel: audioFile.get('language_level'),
+                  userID: FirebaseAuth.instance.currentUser!.uid,
+                  title: audioFile.get('title'),
+                  scriptDocumentId: audioFile.id,
+                  generating: false,
+                  wordsToRepeat: audioFile.get('words_to_repeat'),
+                  numberOfTurns: 4,
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.stairs, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 4),
-                Text(
-                  "${audioFile.get('language_level')}",
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 13,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        leading: Container(
-          width: isSmallScreen ? 40 : 48,
-          height: isSmallScreen ? 40 : 48,
-          decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            leadingIcon,
-            color: colorScheme.primary,
-            size: isSmallScreen ? 24 : 28,
-          ),
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: colorScheme.primary,
-          size: isSmallScreen ? 24 : 28,
-        ),
-        onTap: () async {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AudioPlayerScreen(
-                documentID: audioFile.reference.parent.parent!.id,
-                dialogue: audioFile.get('dialogue'),
-                targetLanguage: audioFile.get('target_language'),
-                nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
-                languageLevel: audioFile.get('language_level'),
-                userID: FirebaseAuth.instance.currentUser!.uid,
-                title: audioFile.get('title'),
-                scriptDocumentId: audioFile.id,
-                generating: false,
-                wordsToRepeat: audioFile.get('words_to_repeat'),
               ),
-            ),
-          ).then((result) {
-            if (result == 'reload' && onReload != null) {
-              onReload!();
-            }
-          });
-        },
+            ).then((result) {
+              if (result == 'reload' && onReload != null) {
+                onReload!();
+              }
+            });
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with gradient background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colorScheme.primary.withOpacity(0.1),
+                      colorScheme.secondary.withOpacity(0.15),
+                    ],
+                  ),
+                ),
+                padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and tags column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            audioFile.get('title'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isSmallScreen ? 16 : 18,
+                              color: colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 12),
+                          // Tags row
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              // Language tag
+                              Chip(
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.zero,
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.translate, size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${(audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)'} → ${audioFile.get('target_language')}",
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 11 : 12,
+                                        color: colorScheme.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              // Level tag
+                              Chip(
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.zero,
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.stairs, size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      audioFile.get('language_level'),
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 11 : 12,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.7),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Icon container
+                    Container(
+                      width: isSmallScreen ? 36 : 40,
+                      height: isSmallScreen ? 36 : 40,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        leadingIcon,
+                        color: colorScheme.primary,
+                        size: isSmallScreen ? 20 : 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Footer with action
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AudioPlayerScreen(
+                              documentID: audioFile.reference.parent.parent!.id,
+                              dialogue: audioFile.get('dialogue'),
+                              targetLanguage: audioFile.get('target_language'),
+                              nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
+                              languageLevel: audioFile.get('language_level'),
+                              userID: FirebaseAuth.instance.currentUser!.uid,
+                              title: audioFile.get('title'),
+                              scriptDocumentId: audioFile.id,
+                              generating: false,
+                              wordsToRepeat: audioFile.get('words_to_repeat'),
+                              numberOfTurns: 4,
+                            ),
+                          ),
+                        ).then((result) {
+                          if (result == 'reload' && onReload != null) {
+                            onReload!();
+                          }
+                        });
+                      },
+                      icon: Icon(
+                        Icons.play_circle_outline,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                      label: const Text(
+                        'Start Lesson',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        side: BorderSide(
+                          color: colorScheme.primary.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -26,47 +26,91 @@ class ProfileHeader extends StatelessWidget {
     }
 
     return Card(
-      elevation: 2,
+      elevation: 3,
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 8 : 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
           width: 1,
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-        child: Column(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.surface,
+              colorScheme.surfaceContainerLowest.withOpacity(0.6),
+            ],
+          ),
+        ),
+        padding: EdgeInsets.all(isSmallScreen ? 18 : 24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: isSmallScreen ? 40 : 50,
-              backgroundColor: colorScheme.primaryContainer,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withOpacity(0.7),
+                    colorScheme.primary,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
               child: Text(
                 getInitial(),
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 32 : 40,
+                style: const TextStyle(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
+                  color: Colors.white,
                 ),
               ),
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            Text(
-              name.isNotEmpty ? name : email,
-              style: TextStyle(
-                fontSize: isSmallScreen ? 20 : 24,
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name.isNotEmpty ? name : 'User',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 20 : 22,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-            if (name.isNotEmpty)
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
           ],
         ),
       ),

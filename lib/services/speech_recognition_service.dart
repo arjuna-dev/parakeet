@@ -41,10 +41,6 @@ class SpeechRecognitionService {
 
   // Handle speech recognition callback
   void _handleSpeechCallback(String liveText, String finalText, bool isListening) {
-    print('Live Text: $liveText');
-    print('Final Text: $finalText');
-    print('Is Listening: $isListening');
-
     liveTextSpeechToText = liveText;
     onLiveTextChanged(liveText);
   }
@@ -87,8 +83,6 @@ class SpeechRecognitionService {
       );
 
       voskSpeechService = await vosk.initSpeechService(recognizer);
-      print("initSpeechService called");
-
       voskSpeechService!.onResult().forEach((result) {
         final String resultText = jsonDecode(result)['text'];
         print("result: $resultText");

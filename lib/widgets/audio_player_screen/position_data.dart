@@ -1,5 +1,5 @@
 class PositionData {
-  final Duration position;
+  Duration position;
   final Duration duration;
   Duration cumulativePosition;
 

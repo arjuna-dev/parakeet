@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/audio_player_service.dart';
 import 'package:parakeet/services/speech_recognition_service.dart';
 import 'package:parakeet/services/audio_generation_service.dart';
@@ -12,7 +11,7 @@ import 'package:parakeet/services/file_duration_update_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
-import 'package:parakeet/utils/script_generator.dart' as script_generator;
+import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
@@ -22,6 +21,7 @@ import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
+import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -35,10 +35,10 @@ class AudioPlayerScreen extends StatefulWidget {
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
   final bool generating;
+  final int numberOfTurns;
 
   // Static method to ensure proper cleanup of any shared resources
   static void cleanupSharedResources() {
-    print("AudioPlayerScreen - cleanupSharedResources called");
     // Force garbage collection of any shared services
     UpdateFirestoreService.forceCleanup();
     FileDurationUpdate.forceCleanup();
@@ -57,6 +57,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.wordsToRepeat,
     required this.scriptDocumentId,
     required this.generating,
+    required this.numberOfTurns,
   }) : super(key: key);
 
   @override
@@ -66,7 +67,7 @@ class AudioPlayerScreen extends StatefulWidget {
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Services
   late AudioPlayerService _audioPlayerService;
-  late SpeechRecognitionService _speechRecognitionService;
+  // late SpeechRecognitionService _speechRecognitionService;
   late AudioGenerationService _audioGenerationService;
   late AudioDurationService _audioDurationService;
   late PlaylistGenerator _playlistGenerator;
@@ -76,16 +77,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   // State variables
   final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
-  final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  // final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  List<dynamic>? _wordsToRepeat;
   bool _isDisposing = false;
   bool _showStreak = false;
   bool _hasNicknameAudio = false;
   bool _addressByNickname = true;
   bool _isSliderMoving = false;
   int _updateNumber = 0;
+  late bool _generating;
 
   // Data variables
+  late List<dynamic> _dialogue;
   List<dynamic> _script = [];
+  Map<String, dynamic> _scriptAndWordCards = {};
+  Map<String, DocumentReference> _allUsedWordsCardsRefsMap = {};
   String _currentTrack = '';
   Map<String, dynamic>? _latestSnapshot;
   Map<int, String> _filesToCompare = {};
@@ -95,6 +101,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize _generating with widget.generating
+    _generating = widget.generating;
+
+    // Make a mutable copy of the initial dialogue that we can update over time
+    _dialogue = List<dynamic>.from(widget.dialogue);
+
+    _wordsToRepeat = widget.wordsToRepeat;
 
     // Initialize services
     _audioPlayerService = AudioPlayerService(
@@ -103,15 +116,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       hasPremium: _hasPremium,
     );
 
-    _speechRecognitionService = SpeechRecognitionService(
-      targetLanguage: widget.targetLanguage,
-      nativeLanguage: widget.nativeLanguage,
-      onLiveTextChanged: (String text) {
-        if (mounted) {
-          setState(() {});
-        }
-      },
-    );
+    // _speechRecognitionService = SpeechRecognitionService(
+    //   targetLanguage: widget.targetLanguage,
+    //   nativeLanguage: widget.nativeLanguage,
+    //   onLiveTextChanged: (String text) {
+    //     if (mounted) {
+    //       setState(() {});
+    //     }
+    //   },
+    // );
 
     _audioGenerationService = AudioGenerationService(
       documentID: widget.documentID,
@@ -134,6 +147,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       documentID: widget.documentID,
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
       hasNicknameAudio: false, // Will be updated later
       addressByNickname: true, // Will be updated later
       wordsToRepeat: widget.wordsToRepeat,
@@ -148,38 +162,73 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.onTrackChanged = _handleTrackChange;
     _audioPlayerService.onLessonCompleted = _handleLessonCompletion;
 
-    // Initialize data
-    if (!widget.generating) {
-      _script = script_generator.createFirstScript(widget.dialogue);
-      _currentTrack = _script.isNotEmpty ? _script[0] : '';
-    }
-
-    // Load preferences and data
-    _loadAddressByNicknamePreference();
-    _updateHasNicknameAudio().then((_) {
-      // Update PlaylistGenerator with correct values after loading preferences
-      _updatePlaylistGenerator();
-      _initializePlaylist();
-    });
-
-    _checkPremiumStatus();
-    _getExistingBigJson();
-
     // Setup listeners
     _repetitionsMode.addListener(_updatePlaylistOnTheFly);
 
-    // If generating is true, create script and make second API call
-    if (widget.generating) {
-      _createScriptAndMakeSecondApiCall();
+    // Begin the sequential initialization process
+    _sequentialInitialization();
+  }
+
+  // Sequentially handle all initialization steps in the correct order
+  void _sequentialInitialization() async {
+    try {
+      // Step 1: Check premium status in parallel
+      _checkPremiumStatus();
+
+      // Step 2: Initialize playlist generator with the required values
+      _initializePlaylistGenerator();
+
+      // Step 3: Load preferences
+      await _loadAddressByNicknamePreference();
+
+      // Step 4: Update nickname audio status
+      await _updateHasNicknameAudio();
+
+      // Step 5: Load script based on mode
+      if (!widget.generating) {
+        await _getExistingBigJson();
+        // For non-generating mode, we need to wait for script creation
+        if (_existingBigJson != null) {
+          // Convert to a properly handled Future chain
+          _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
+            _existingBigJson!,
+            _dialogue,
+            _repetitionsMode.value,
+            widget.category ?? 'Custom Lesson',
+          );
+
+          _script = _scriptAndWordCards['script'] ?? [];
+          _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
+          _currentTrack = _script.isNotEmpty ? _script[0] : '';
+
+          if (mounted) {
+            setState(() {
+              _script = _scriptAndWordCards['script'] ?? [];
+              _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
+              _currentTrack = _script.isNotEmpty ? _script[0] : '';
+            });
+          } else {
+            return; // Exit if widget is no longer mounted
+          }
+        } else {
+          print("Error: _existingBigJson is null for non-generating mode");
+        }
+        await _initializePlaylist();
+      } else {
+        _createScriptAndMakeSecondApiCall();
+      }
+    } catch (e) {
+      print("Error in sequential initialization: $e");
     }
   }
 
   // Update PlaylistGenerator with current values
-  void _updatePlaylistGenerator() {
+  void _initializePlaylistGenerator() {
     _playlistGenerator = PlaylistGenerator(
       documentID: widget.documentID,
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
+      targetLanguage: widget.targetLanguage,
       hasNicknameAudio: _hasNicknameAudio,
       addressByNickname: _addressByNickname,
       wordsToRepeat: widget.wordsToRepeat,
@@ -200,19 +249,34 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize playlist
     await _audioPlayerService.initializePlaylist(audioSources);
 
-    // Calculate track durations
+    // Play first track only for non-generating mode
+    if (!widget.generating) {
+      await _audioPlayerService.playFirstTrack();
+    } else {
+      await _audioPlayerService.loadFirstTrack();
+    }
+    _audioPlayerService.playlistInitialized = true;
+    setState(() {});
+
+    //Calculate track durations
     List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
-    // Build files to compare map for speech recognition
-    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+    if (!widget.generating) {
+      _audioPlayerService.setFinalTotalDuration();
+      // Build files to compare map for speech recognition
+      _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+    }
   }
 
   // Update playlist from Firestore snapshot
   void _updatePlaylist(QuerySnapshot snapshot) async {
+    // If it is not generating return
+    if (!_generating) {
+      return;
+    }
     // Don't update if we're disposing or resources are already gone
     if (_isDisposing || _firestoreService == null) {
-      print("Skipping updatePlaylist because widget is disposing");
       return;
     }
 
@@ -228,12 +292,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      _script = script_generator.parseAndCreateScript(data["dialogue"] as List<dynamic>, widget.wordsToRepeat, data["dialogue"] as List<dynamic>, _repetitionsMode);
+      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, _dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
+
+      _script = scriptData['script'] ?? [];
+      _allUsedWordsCardsRefsMap = scriptData['allUsedWordsCardsRefsMap'] ?? [];
     } catch (e) {
       print("Error parsing and creating script: $e");
       return;
     }
-    print(_script);
 
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
 
@@ -247,11 +313,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Generate audio sources for new items
     List<AudioSource> newAudioSources = await _playlistGenerator.generateAudioSources(newScript);
 
-    // Add new tracks to playlist
+    // Update playlist
     await _audioPlayerService.addToPlaylist(newAudioSources);
+    // Calculate track durations
+    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    _audioPlayerService.setTrackDurations(trackDurations);
+
+    _audioPlayerService.setFinalTotalDuration();
 
     // Increment update number
     _updateNumber++;
+
+    // Check if we've reached the numberOfTurns and set _generating to false if so
+    if (_updateNumber >= widget.numberOfTurns) {
+      setState(() {
+        _generating = false;
+      });
+    }
   }
 
   // Save snapshot from Firestore
@@ -285,15 +363,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
-    // Set final total duration after a certain number of updates or if not generating
-    if ((_updateNumber >= 4 || !widget.generating) && !_isDisposing) {
-      print("Setting final total duration. Update number: $_updateNumber, generating: ${widget.generating}");
+    // Set final total duration after reaching numberOfTurns or if not generating
+    if ((_updateNumber >= widget.numberOfTurns || !widget.generating) && !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
     }
   }
 
   Future<void> _updatePlaylistOnTheFly() async {
-    if (_isDisposing || widget.generating) {
+    if (_isDisposing || _generating) {
       return;
     }
 
@@ -302,17 +379,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _audioPlayerService.isPlaying.value = false;
     }
 
+    await _getExistingBigJson();
+
     if (_existingBigJson == null) {
       print("Error: Required JSON data is null.");
       return;
     }
 
     // Generate script with repetition mode
-    _script = _playlistGenerator.generateScriptWithRepetitionMode(
-      _existingBigJson!["dialogue"] as List<dynamic>,
-      widget.dialogue,
+    _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
+      _existingBigJson!,
+      _dialogue,
       _repetitionsMode.value,
+      widget.category ?? 'Custom Lesson',
     );
+
+    _script = _scriptAndWordCards['script'] ?? [];
+    _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? {};
 
     // Build files to compare map
     _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
@@ -348,60 +431,60 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _currentTrack = newTrack;
       });
 
-      if (_speechRecognitionActive.value) {
-        _handleTrackChangeToCompareSpeech(index);
-      }
+      // if (_speechRecognitionActive.value) {
+      //   _handleTrackChangeToCompareSpeech(index);
+      // }
     }
   }
 
-  void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-    if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
+  // void _handleTrackChangeToCompareSpeech(int currentIndex) async {
+  //   if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
 
-    if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
-      final audioFileName = _filesToCompare[currentIndex];
-      if (audioFileName == null) {
-        print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
-        return;
-      }
+  //   if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
+  //     final audioFileName = _filesToCompare[currentIndex];
+  //     if (audioFileName == null) {
+  //       print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
+  //       return;
+  //     }
 
-      String targetPhrase;
-      try {
-        if (widget.generating && _latestSnapshot != null) {
-          targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
-        } else if (_existingBigJson != null) {
-          targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
-        } else {
-          print("Error: Required JSON data is null.");
-          return;
-        }
+  //     String targetPhrase;
+  //     try {
+  //       if (widget.generating && _latestSnapshot != null) {
+  //         targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
+  //       } else if (_existingBigJson != null) {
+  //         targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
+  //       } else {
+  //         print("Error: Required JSON data is null.");
+  //         return;
+  //       }
 
-        _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
+  //       _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
 
-        // Capture the current speech text
-        final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
+  //       // Capture the current speech text
+  //       final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
 
-        // Wait for user to speak and then compare
-        Future.delayed(const Duration(milliseconds: 4500), () async {
-          bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
+  //       // Wait for user to speak and then compare
+  //       Future.delayed(const Duration(milliseconds: 4500), () async {
+  //         bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
 
-          // Pause playback to provide feedback
-          if (_audioPlayerService.isPlaying.value) {
-            await _audioPlayerService.pause(analyticsOn: false);
-          }
+  //         // Pause playback to provide feedback
+  //         if (_audioPlayerService.isPlaying.value) {
+  //           await _audioPlayerService.pause(analyticsOn: false);
+  //         }
 
-          // Provide feedback
-          await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
+  //         // Provide feedback
+  //         await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
 
-          // Resume playback
-          if (!_isDisposing) {
-            _audioPlayerService.isPlaying.value = true;
-          }
-        });
-      } catch (e) {
-        print("Error in speech comparison: $e");
-      }
-    }
-  }
+  //         // Resume playback
+  //         if (!_isDisposing) {
+  //           _audioPlayerService.isPlaying.value = true;
+  //         }
+  //       });
+  //     } catch (e) {
+  //       print("Error in speech comparison: $e");
+  //     }
+  //   }
+  // }
 
   Future<void> _createScriptAndMakeSecondApiCall() async {
     try {
@@ -419,10 +502,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Get the complete dialogue from the latest snapshot
       List<dynamic> completeDialogue = _latestSnapshot!['dialogue'] ?? [];
+      _dialogue = completeDialogue;
+      if (mounted) {
+        setState(() {});
+      }
 
       // Ensure script is created with the complete dialogue
       if (_script.isEmpty) {
-        _script = _playlistGenerator.generateScript(completeDialogue);
+        _script = createFirstScript(completeDialogue);
         if (mounted) {
           setState(() {
             _currentTrack = _script.isNotEmpty ? _script[0] : '';
@@ -433,22 +520,29 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Exit if widget is no longer mounted
       if (!mounted || _isDisposing) return;
 
-      // Save script to Firestore
-      await _audioGenerationService.saveScriptToFirestore(_script, completeDialogue);
+      // wait until the the first api call is complete (last item in the _latestSnapshot)
+      while (!_latestSnapshot!.containsKey('voice_2_id')) {
+        await Future.delayed(const Duration(seconds: 1));
+      }
 
-      // Exit if widget is no longer mounted
-      if (!mounted || _isDisposing) return;
+      // Get keywords used in dialogue and set _wordsToRepeat to them
+      List<dynamic> keywordsUsedInDialogue = _latestSnapshot!['keywords_used'] ?? [];
+      keywordsUsedInDialogue = keywordsUsedInDialogue.map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+      setState(() {
+        _wordsToRepeat = keywordsUsedInDialogue;
+      });
+
+      // Save script to Firestore
+      await _audioGenerationService.saveScriptToFirestore(_script, keywordsUsedInDialogue, completeDialogue, widget.category ?? 'Custom Lesson');
 
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
       // Make the second API call
-      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!);
+      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!, keywordsUsedInDialogue);
 
       // Initialize playlist after a delay to allow audio files to be generated
-
       if (mounted && !_audioPlayerService.playlistInitialized) {
-        print("Fallback: Initializing playlist after timeout");
         _initializePlaylist();
       }
     } catch (e) {
@@ -457,9 +551,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _getExistingBigJson() async {
-    if (!widget.generating) {
-      _existingBigJson = await _audioGenerationService.getExistingBigJson();
-    }
+    _existingBigJson = await _audioGenerationService.getExistingBigJson();
   }
 
   Future<void> _updateHasNicknameAudio() async {
@@ -492,63 +584,68 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await _streakService.recordDailyActivity(userId);
-      if (mounted) {
-        setState(() {
-          _showStreak = true;
-        });
-      }
-
-      // Hide streak after 5 seconds
-      Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() {
-            _showStreak = false;
-          });
-        }
-      });
-    }
-  }
-
-  void _toggleSpeechRecognition(bool value) async {
-    if (value) {
-      bool isSupported = await _speechRecognitionService.initializeSpeechRecognition();
-      if (!isSupported) {
-        _showLanguageNotSupportedDialog();
-        return;
-      }
-    } else {
-      _speechRecognitionService.stopListening();
-    }
-
-    _speechRecognitionActive.value = value;
-    _speechRecognitionService.speechRecognitionActive = value;
-  }
-
-  void _showLanguageNotSupportedDialog() {
-    showDialog(
+    // show list of words that were used and ask user to review them
+    await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return LanguageNotSupportedDialog(
-          targetLanguage: widget.targetLanguage,
-          onDismiss: () {
-            setState(() {
-              _speechRecognitionActive.value = false;
-              _speechRecognitionService.isLanguageSupported = false;
-              _speechRecognitionService.speechRecognitionActive = false;
-            });
-          },
-        );
+        return ReviewWordsDialog(words: _allUsedWordsCardsRefsMap);
       },
     );
+
+    // Record streak after review is completed
+    await _streakService.recordDailyActivity(widget.userID);
+    if (mounted) {
+      setState(() {
+        _showStreak = true;
+      });
+    }
+
+    // Hide streak after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showStreak = false;
+        });
+      }
+    });
   }
+
+  // void _toggleSpeechRecognition(bool value) async {
+  //   if (value) {
+  //     bool isSupported = await _speechRecognitionService.initializeSpeechRecognition();
+  //     if (!isSupported) {
+  //       _showLanguageNotSupportedDialog();
+  //       return;
+  //     }
+  //   } else {
+  //     _speechRecognitionService.stopListening();
+  //   }
+
+  //   _speechRecognitionActive.value = value;
+  //   _speechRecognitionService.speechRecognitionActive = value;
+  // }
+
+  // void _showLanguageNotSupportedDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return LanguageNotSupportedDialog(
+  //         targetLanguage: widget.targetLanguage,
+  //         onDismiss: () {
+  //           setState(() {
+  //             _speechRecognitionActive.value = false;
+  //             _speechRecognitionService.isLanguageSupported = false;
+  //             _speechRecognitionService.speechRecognitionActive = false;
+  //           });
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
   void _onAllDialogueDisplayed() {
     if (_isDisposing) return;
 
-    print("All dialogue items have been displayed, initializing playlist");
     if (!_audioPlayerService.playlistInitialized) {
       _initializePlaylist();
     }
@@ -564,8 +661,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           canPop: false,
           onPopInvoked: (bool didPop) async {
             if (didPop) return;
-
-            print("AudioPlayerScreen - onPopInvoked() called with generating: ${widget.generating}");
 
             // Set disposing flag to prevent any async operations from using disposed resources
             _isDisposing = true;
@@ -607,43 +702,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
-                        SpeechRecognitionToggle(
-                          speechRecognitionService: _speechRecognitionService,
-                          isActive: _speechRecognitionActive,
-                          onToggle: _toggleSpeechRecognition,
-                        ),
+                        // SpeechRecognitionToggle(
+                        //   speechRecognitionService: _speechRecognitionService,
+                        //   isActive: _speechRecognitionActive,
+                        //   onToggle: _toggleSpeechRecognition,
+                        // ),
                         AnimatedDialogueList(
-                          dialogue: widget.dialogue,
+                          dialogue: _dialogue,
                           currentTrack: _currentTrack,
-                          wordsToRepeat: widget.wordsToRepeat,
+                          wordsToRepeat: _wordsToRepeat ?? [],
                           documentID: widget.documentID,
                           useStream: widget.generating,
                           generating: widget.generating,
                           onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
                         ),
-                        // Audio generation message
-                        if (widget.generating && !_audioPlayerService.playlistInitialized)
-                          Container(
-                            margin: const EdgeInsets.symmetric(vertical: 16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Generating audio files...",
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         PositionSlider(
+                          audioPlayerService: _audioPlayerService,
                           positionDataStream: _audioPlayerService.positionDataStream,
                           totalDuration: _audioPlayerService.totalDuration,
                           finalTotalDuration: _audioPlayerService.finalTotalDuration,
@@ -656,20 +730,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           onSliderChangeStart: () {
                             setState(() {
                               _isSliderMoving = true;
-                              _speechRecognitionService.isSliderMoving = true;
+                              // _speechRecognitionService.isSliderMoving = true;
                             });
                           },
                           onSliderChangeEnd: () {
                             setState(() {
                               _isSliderMoving = false;
-                              _speechRecognitionService.isSliderMoving = false;
+                              // _speechRecognitionService.isSliderMoving = false;
                             });
                           },
                         ),
                         AudioControls(
                           audioPlayerService: _audioPlayerService,
                           repetitionMode: _repetitionsMode,
-                          generating: widget.generating,
+                          generating: _generating,
                         ),
                       ],
                     ),
@@ -685,16 +759,145 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           Container(
             color: Colors.black54,
             child: Center(
-              child: StreakDisplay(),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Great work!',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Your learning streak has been updated',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        FutureBuilder<List<bool>>(
+                          future: _streakService.getLast7DaysActivity(widget.userID),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return const Center(
+                                child: SizedBox(
+                                  height: 40,
+                                  width: 40,
+                                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                                ),
+                              );
+                            }
+
+                            final activityList = snapshot.data!;
+                            return Column(
+                              children: [
+                                FutureBuilder<int>(
+                                  future: _streakService.getCurrentStreak(widget.userID),
+                                  builder: (context, streakSnapshot) {
+                                    final streak = streakSnapshot.data ?? 0;
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.local_fire_department,
+                                          color: Theme.of(context).colorScheme.primary,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '$streak day${streak == 1 ? '' : 's'} streak',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context).colorScheme.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  height: 60,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(7, (index) {
+                                      // Reverse the index to show oldest to newest
+                                      final reversedIndex = 6 - index;
+                                      final isActive = activityList[reversedIndex];
+                                      final date = DateTime.now().subtract(Duration(days: 6 - index));
+                                      final isToday = index == 6;
+
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
+                                                shape: BoxShape.circle,
+                                                border: isToday
+                                                    ? Border.all(
+                                                        color: Theme.of(context).colorScheme.primary,
+                                                        width: 2,
+                                                      )
+                                                    : null,
+                                              ),
+                                              child: isActive
+                                                  ? Icon(
+                                                      Icons.check,
+                                                      color: Theme.of(context).colorScheme.onPrimary,
+                                                      size: 14,
+                                                    )
+                                                  : null,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _getShortDayName(date),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
       ],
     ));
   }
 
+  String _getShortDayName(DateTime date) {
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[date.weekday - 1];
+  }
+
   @override
   void dispose() {
-    print("AudioPlayerScreen - dispose() called for documentID: ${widget.documentID}");
     _isDisposing = true;
 
     // Dispose of Firestore services
@@ -706,11 +909,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Dispose of services
     _audioPlayerService.dispose();
-    _speechRecognitionService.dispose();
+    // _speechRecognitionService.dispose();
 
     // Dispose of notifiers
     _repetitionsMode.dispose();
-    _speechRecognitionActive.dispose();
+    // _speechRecognitionActive.dispose();
 
     super.dispose();
   }

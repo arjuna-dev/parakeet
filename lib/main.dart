@@ -14,20 +14,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/create_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
-import 'screens/library_screen.dart';
+
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-import 'screens/nickname_popup.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/ad_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/onboarding_form_screen.dart';
 
-const String localShouldUpdateID = "bRj98tXx";
+const String localShouldUpdateID = "gWYwwwYH";
 const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
@@ -243,7 +242,6 @@ class ResponsiveScreenWrapper extends StatelessWidget {
 class _MyAppState extends State<MyApp> {
   late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
   late StreamSubscription<User?> _authSubscription;
-  bool _hasCheckedNicknameAudio = false;
   String? _initialRoute;
 
   @override
@@ -260,18 +258,11 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb) await checkForMandatoryUpdate();
       if (!kIsWeb) await checkForRecommendedUpdate();
       if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
-
-      // Check nickname audio for already logged-in users
-      if (FirebaseAuth.instance.currentUser != null && !_hasCheckedNicknameAudio) {
-        _hasCheckedNicknameAudio = true;
-        await _checkNicknameAudio(FirebaseAuth.instance.currentUser!.uid);
-      }
     });
 
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
-      print("Purchase stream started");
       IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
@@ -293,37 +284,8 @@ class _MyAppState extends State<MyApp> {
             return;
           }
         }
-
-        // Reset the flag for new logins and check nickname audio
-        _hasCheckedNicknameAudio = false;
-        _hasCheckedNicknameAudio = true;
-        await _checkNicknameAudio(user.uid);
       }
     });
-  }
-
-  Future<void> _checkNicknameAudio(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    bool addressByNickname = prefs.getBool('addressByNickname') ?? true;
-
-    if (!addressByNickname) {
-      return;
-    }
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    bool hasNicknameAudio = await urlExists(
-      'https://storage.googleapis.com/user_nicknames/${userId}_1_nickname.mp3?timestamp=$timestamp',
-    );
-
-    if (!hasNicknameAudio) {
-      showDialog(
-        context: navigatorKey.currentContext!,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const NicknamePopup();
-        },
-      );
-    }
   }
 
   @override
@@ -365,8 +327,19 @@ class _MyAppState extends State<MyApp> {
           WidgetBuilder builder;
           switch (settings.name) {
             case '/onboarding':
-              builder = (context) => const ResponsiveScreenWrapper(
-                    child: OnboardingScreen(),
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: WillPopScope(
+                      onWillPop: () async => false, // Prevent navigation back
+                      child: const OnboardingScreen(),
+                    ),
+                  );
+              break;
+            case '/onboarding_form':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: WillPopScope(
+                      onWillPop: () async => false, // Prevent navigation back
+                      child: const OnboardingFormScreen(),
+                    ),
                   );
               break;
             case '/create_lesson':
@@ -424,14 +397,6 @@ class _MyAppState extends State<MyApp> {
             case '/login':
               builder = (context) => const ResponsiveScreenWrapper(
                     child: AuthScreen(),
-                  );
-              break;
-            case '/library':
-              builder = (context) => ResponsiveScreenWrapper(
-                    child: ChangeNotifierProvider(
-                      create: (context) => HomeScreenModel(),
-                      child: const Library(),
-                    ),
                   );
               break;
             case '/profile':

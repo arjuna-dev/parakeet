@@ -10,6 +10,8 @@ import 'package:parakeet/screens/audio_player_screen.dart';
 
 class LessonService {
   static const int activeCreationAllowed = 20;
+  static const int freeAPILimit = 2;
+  static const int premiumAPILimit = 10;
 
   // Function to check premium status and API limits
   static Future<bool> checkPremiumAndAPILimits(BuildContext context) async {
@@ -18,15 +20,16 @@ class LessonService {
     final isPremium = userDoc.data()?['premium'] ?? false;
     final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
 
+    final apiCalls = await countAPIcallsByUser();
+    // Free user limit
     if (!isPremium) {
-      final apiCalls = await countAPIcallsByUser();
-      if (apiCalls >= 5) {
+      if (apiCalls >= freeAPILimit) {
         final shouldEnablePremium = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Generate up to 15 lessons per day'),
+              title: const Text('Generate up to 10x lessons per day'),
               content: const Text('You\'ve reached the free limit. Activate premium mode!!'),
               actions: [
                 TextButton(
@@ -42,7 +45,7 @@ class LessonService {
                       Navigator.pop(context, false);
                     }
                   },
-                  child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 30 days'),
+                  child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 14 days'),
                 ),
               ],
             );
@@ -54,25 +57,26 @@ class LessonService {
           return false;
         }
       }
+    } else {
+      // Premium user limit
+      if (apiCalls > premiumAPILimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please come back tomorrow.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return false;
+      }
     }
 
+    // Check if there are too many users in active creation
     var usersInActiveCreation = await countUsersInActiveCreation();
     if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
           duration: Duration(seconds: 5),
-        ),
-      );
-      return false;
-    }
-
-    var apiCallsByUser = await countAPIcallsByUser();
-    if (apiCallsByUser != -1 && apiCallsByUser >= getAPICallLimit(isPremium)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isPremium ? 'Unfortunately, you have reached the maximum number of creation for today 🙃. Please try again tomorrow.' : 'You\'ve reached the free limit. Upgrade to premium for more lessons!'),
-          duration: const Duration(seconds: 5),
         ),
       );
       return false;
@@ -122,11 +126,6 @@ class LessonService {
     }
   }
 
-  // Function to get API call limit based on premium status
-  static int getAPICallLimit(bool isPremium) {
-    return isPremium ? 15 : 5;
-  }
-
   // Function to create a category-based lesson
   static Future<void> createCategoryLesson(
     BuildContext context,
@@ -152,6 +151,7 @@ class LessonService {
     }
 
     try {
+      final selectedWords = await selectWordsFromCategory(category['name'], category['words'], targetLanguage);
       final response = await http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
         headers: <String, String>{
@@ -160,7 +160,7 @@ class LessonService {
         },
         body: jsonEncode(<String, dynamic>{
           "category": category['name'],
-          "allWords": category['words'],
+          "selectedWords": selectedWords,
           "target_language": targetLanguage,
           "native_language": nativeLanguage,
         }),
@@ -181,7 +181,7 @@ class LessonService {
               allWords: category['words'] as List<String>,
               title: result['title'] as String,
               topic: result['topic'] as String,
-              wordsToLearn: (result['words_to_learn'] as List).cast<String>(),
+              wordsToLearn: selectedWords,
               languageLevel: languageLevel,
               length: '4',
               nativeLanguage: nativeLanguage,
@@ -203,11 +203,59 @@ class LessonService {
     }
   }
 
+  // create a function to select 5 words from the category according to certain criteria
+  static Future<List<dynamic>> selectWordsFromCategory(String category, List<String> allWords, String targetLanguage) async {
+    // check if there are due words in the category stored in the firestore
+    final userId = FirebaseAuth.instance.currentUser!.uid.toString();
+    final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
+    // check each word in categoryDocs and see if it is due or overdue
+    var words = [];
+    final existingWordsCard = [];
+    final closestDueDateCard = [];
+    for (var doc in categoryDocs.docs) {
+      final dueDate = DateTime.parse(doc.data()['due']);
+      final lastReview = DateTime.parse(doc.data()['lastReview']);
+      final daysOverdue = DateTime.now().difference(dueDate).inDays;
+      final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
+
+      // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
+      if (daysSinceLastReview > 0) {
+        if (daysOverdue <= 0) {
+          words.add(doc.data()['word']);
+        } else {
+          closestDueDateCard.add(doc.data()['word']);
+        }
+        print('words: $words');
+        print('closestDueDateCard: $closestDueDateCard');
+      }
+      existingWordsCard.add(doc.data()['word']);
+    }
+    if (words.length > 5) {
+      words = words.sublist(0, 5);
+    }
+    if (words.length < 5) {
+      // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
+      final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
+      final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
+      // randomize the newWords list
+      newWords.shuffle();
+      if (newWords.isNotEmpty) {
+        words.addAll(newWords.sublist(0, 5 - words.length));
+      }
+      if (words.length < 5) {
+        // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
+        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
+        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
+      }
+    }
+    return words;
+  }
+
   // Function to create a custom lesson
   static Future<void> createCustomLesson(
     BuildContext context,
     String topic,
-    List<String> selectedWords,
+    List<dynamic> selectedWords,
     String nativeLanguage,
     String targetLanguage,
     String languageLevel,
@@ -259,6 +307,23 @@ class LessonService {
       final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+      final response = await http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "keywords": selectedWords,
+          "target_language": targetLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final List<dynamic> keywords = data['keywords'].map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+        selectedWords = keywords;
+      }
 
       // Make the API call
       http.post(
@@ -312,7 +377,8 @@ class LessonService {
                   targetLanguage: targetLanguage,
                   nativeLanguage: nativeLanguage,
                   languageLevel: languageLevel,
-                  wordsToRepeat: List<dynamic>.from(selectedWords),
+                  wordsToRepeat: List<String>.from(selectedWords),
+                  numberOfTurns: 4,
                 ),
               ),
             );

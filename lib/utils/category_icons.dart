@@ -43,7 +43,7 @@ class CategoryIcons {
         return Icons.movie;
       case 'At the Hair Salon':
         return Icons.content_cut;
-      case 'Custom Lessons':
+      case 'Custom Lesson':
         return Icons.create;
       default:
         return Icons.category;
