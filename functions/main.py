@@ -467,6 +467,3 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
             json.dumps({"error": str(e)}),
             status=500
         )
-
-
-
