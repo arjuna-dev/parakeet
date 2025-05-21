@@ -199,7 +199,7 @@ class _StoreViewState extends State<StoreView> {
               // Show error message
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Purchase failed: ${purchase.error}')),
+                  const SnackBar(content: Text('Purchase failed. Please try again.')),
                 );
               }
               subscription.cancel();
