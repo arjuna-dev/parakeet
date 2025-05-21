@@ -31,4 +31,4 @@ plugins {
 
 include ":app"
 include ":vosk_flutter"
-project(":vosk_flutter").projectDir = new File("vosk_flutter")
+project(":vosk_flutter").projectDir = new File(rootDir, "../third_party/vosk_flutter/android")
