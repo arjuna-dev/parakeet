@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -128,7 +129,18 @@ class _StoreViewState extends State<StoreView> {
           final discountedFormattedPrice = phases.first.formattedPrice;
           final discountedRawPrice = phases.first.priceAmountMicros;
           if (discountedFormattedPrice == "Free" || discountedRawPrice == 0) {
-            return "Free for ${phases.first.billingPeriod}";
+            final billingPeriod = phases.first.billingPeriod;
+            final billingPeriodNumber = phases.first.billingPeriod.replaceAll("P", "").replaceAll("D", "").replaceAll("W", "").replaceAll("M", "").replaceAll("Y", "");
+            // if billingPeriod has W, return "billingPeriodNumber days"
+            if (billingPeriod.contains("D")) {
+              return "Free for $billingPeriodNumber days";
+            } else if (billingPeriod.contains("W")) {
+              return "Free for $billingPeriodNumber weeks";
+            } else if (billingPeriod.contains("M")) {
+              return "Free for $billingPeriodNumber months";
+            } else if (billingPeriod.contains("Y")) {
+              return "Free for $billingPeriodNumber years";
+            }
           }
           return discountedFormattedPrice;
         }
@@ -162,14 +174,50 @@ class _StoreViewState extends State<StoreView> {
     }
 
     if (productDetails.id == "1m" || productDetails.id == "1year") {
-      await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
-      if (!_hasUsedTrial) {
-        // Update the user's trial status in Firestore
-        final userId = FirebaseAuth.instance.currentUser?.uid;
-        if (userId != null) {
-          await FirebaseFirestore.instance.collection('users').doc(userId).update({'hasUsedTrial': true});
-        }
-      }
+      // Create a stream subscription to listen for purchase updates
+      late StreamSubscription<List<PurchaseDetails>> subscription;
+      subscription = _inAppPurchase.purchaseStream.listen(
+        (List<PurchaseDetails> purchases) async {
+          for (final purchase in purchases) {
+            if (purchase.status == PurchaseStatus.purchased) {
+              // Purchase was successful
+              final userId = FirebaseAuth.instance.currentUser?.uid;
+              if (userId != null && !_hasUsedTrial) {
+                // Update the user's trial status in Firestore
+                await FirebaseFirestore.instance.collection('users').doc(userId).update({'hasUsedTrial': true});
+                setState(() {
+                  _hasUsedTrial = true;
+                });
+              }
+
+              // Complete the purchase
+              await _inAppPurchase.completePurchase(purchase);
+
+              // Cancel the subscription after successful processing
+              subscription.cancel();
+            } else if (purchase.status == PurchaseStatus.error) {
+              // Show error message
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Purchase failed. Please try again.')),
+                );
+              }
+              subscription.cancel();
+            }
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Purchase failed: $error')),
+            );
+          }
+          subscription.cancel();
+        },
+      );
+
+      // Initiate the purchase
+      await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
     }
   }
 

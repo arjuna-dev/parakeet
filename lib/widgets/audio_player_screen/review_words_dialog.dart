@@ -23,46 +23,50 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
     final colorScheme = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
+    final isReviewComplete = _currentWordIndex >= widget.words.keys.toList().length;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        children: [
-          // Semi-transparent background
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
+    return PopScope(
+      canPop: isReviewComplete,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: [
+            // Semi-transparent background
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: isReviewComplete ? () => Navigator.of(context).pop() : null,
+                child: Container(
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            // Dialog content
+            Center(
               child: Container(
-                color: Colors.black54,
+                margin: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 16 : 24,
+                  vertical: isSmallScreen ? 24 : 32,
+                ),
+                constraints: BoxConstraints(
+                  maxWidth: 500,
+                  maxHeight: screenSize.height * 0.8,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: isReviewComplete ? _buildCompletionView(colorScheme, isSmallScreen) : _buildReviewView(colorScheme, isSmallScreen),
               ),
             ),
-          ),
-          // Dialog content
-          Center(
-            child: Container(
-              margin: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 16 : 24,
-                vertical: isSmallScreen ? 24 : 32,
-              ),
-              constraints: BoxConstraints(
-                maxWidth: 500,
-                maxHeight: screenSize.height * 0.8,
-              ),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: _currentWordIndex >= widget.words.keys.toList().length ? _buildCompletionView(colorScheme, isSmallScreen) : _buildReviewView(colorScheme, isSmallScreen),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -143,7 +147,16 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+          Text(
+            'You must complete all reviews to continue',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 12 : 14,
+              color: colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
