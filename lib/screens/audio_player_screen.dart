@@ -172,8 +172,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Sequentially handle all initialization steps in the correct order
   void _sequentialInitialization() async {
     try {
-      // Step 1: Check premium status in parallel
-      _checkPremiumStatus();
+      // Step 1: Check premium status
+      await _checkPremiumStatus();
+      _audioPlayerService.hasPremium = _hasPremium;
 
       // Step 2: Initialize playlist generator with the required values
       _initializePlaylistGenerator();
