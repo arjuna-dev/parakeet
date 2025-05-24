@@ -221,7 +221,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return ResponsiveBreakpoints.of(context).largerThan(MOBILE)
+    return ResponsiveBreakpoints.of(context).largerThan(TABLET)
         ? Container(
             color: colorScheme.surfaceBright,
             child: Center(
