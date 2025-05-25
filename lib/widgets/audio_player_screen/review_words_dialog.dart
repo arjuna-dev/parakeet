@@ -22,7 +22,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.height < 700;
+    final isSmallScreen = screenSize.height < 750;
     final isReviewComplete = _currentWordIndex >= widget.words.keys.toList().length;
 
     return PopScope(
