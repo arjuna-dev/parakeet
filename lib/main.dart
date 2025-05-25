@@ -26,7 +26,7 @@ import 'package:parakeet/services/notification_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
 
-const String localShouldUpdateID = "bRj98tXx";
+const String localShouldUpdateID = "gWYwwwYH";
 const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
