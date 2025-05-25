@@ -26,6 +26,7 @@ import 'package:parakeet/services/notification_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
 
+const bool versionForTestFlight = true;
 const String localShouldUpdateID = "gWYwwwYH";
 const String localCouldUpdateID = "d*h&f%0a";
 
@@ -66,7 +67,7 @@ Future<void> checkForMandatoryUpdate() async {
     final String? firebaseShouldUpdateID = data['should_update_app_ID'] as String?;
     final String? updateMessage = data['should_update_app_message'] as String?;
 
-    if (firebaseShouldUpdateID == null || updateMessage == null) {
+    if (firebaseShouldUpdateID == null || updateMessage == null || versionForTestFlight) {
       // Optionally log or handle missing fields
       return;
     }
