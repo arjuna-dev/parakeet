@@ -8,9 +8,9 @@ class HomeScreenModel extends ChangeNotifier {
   List<DocumentSnapshot> favoriteAudioFiles = [];
   List<DocumentSnapshot> nowPlayingFiles = [];
   List<dynamic> favoriteAudioFileIds = [];
-  List<dynamic> nowPlayingIds = [];
+  List<String> nowPlayingIds = [];
   ValueNotifier<List<dynamic>> favoriteAudioFileIdsNotifier = ValueNotifier([]);
-  ValueNotifier<List<dynamic>> nowPlayingIdsNotifier = ValueNotifier([]);
+  ValueNotifier<List<String>> nowPlayingIdsNotifier = ValueNotifier([]);
   final user = FirebaseAuth.instance.currentUser;
 
   @override
@@ -45,7 +45,10 @@ class HomeScreenModel extends ChangeNotifier {
   Future<void> loadAudioFiles() async {
     final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
     final userDoc = await userDocRef.get();
-    if (userDoc.data()!.containsKey('favoriteAudioFiles')) {
+
+    // Check if document exists and has data before accessing it
+    final userData = userDoc.data();
+    if (userDoc.exists && userData != null && userData.containsKey('favoriteAudioFiles')) {
       favoriteAudioFileIds = userDoc.get('favoriteAudioFiles') as List<dynamic>? ?? [];
     }
 
@@ -68,12 +71,16 @@ class HomeScreenModel extends ChangeNotifier {
 
     if (nowPlayingIds.isNotEmpty) {
       nowPlayingFiles = await Future.wait(nowPlayingIds.map((id) async {
+        if (id.isEmpty) {
+          throw Exception('Empty document ID found in now playing list');
+        }
+
         final scriptCollectionRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(id).collection('script-${user!.uid}');
         final scriptDocs = await scriptCollectionRef.get();
         if (scriptDocs.docs.isNotEmpty) {
           return scriptDocs.docs.first;
         } else {
-          throw Exception('No document found in the scripts collection');
+          throw Exception('No document found in the scripts collection for ID: $id');
         }
       }));
     }

@@ -56,42 +56,62 @@ Future<void> main() async {
 }
 
 Future<void> checkForMandatoryUpdate() async {
-  final firestore = FirebaseFirestore.instance;
-  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
-  final docSnapshot = await docRef.get();
+    final docSnapshot = await docRef.get();
 
-  if (docSnapshot.exists) {
-    final data = docSnapshot.data() as Map<String, dynamic>;
-    final String firebaseShouldUpdateID = data['should_update_app_ID'];
-    final String updateMessage = data['should_update_app_message'];
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data();
+      if (data != null) {
+        final String? firebaseShouldUpdateID = data['should_update_app_ID'] as String?;
+        final String? updateMessage = data['should_update_app_message'] as String?;
 
-    if (firebaseShouldUpdateID != localShouldUpdateID) {
-      _showUpdateDialog(updateMessage, true);
+        if (firebaseShouldUpdateID != null && updateMessage != null && firebaseShouldUpdateID.isNotEmpty && updateMessage.isNotEmpty && firebaseShouldUpdateID != localShouldUpdateID) {
+          _showUpdateDialog(updateMessage, true);
+        }
+      }
     }
+  } catch (e) {
+    print('Error checking for mandatory update: $e');
+    // Silently fail - don't crash the app if update check fails
   }
 }
 
 Future<void> checkForRecommendedUpdate() async {
-  final firestore = FirebaseFirestore.instance;
-  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
-  final docSnapshot = await docRef.get();
+    final docSnapshot = await docRef.get();
 
-  if (docSnapshot.exists) {
-    final data = docSnapshot.data() as Map<String, dynamic>;
-    final String firebaseCouldUpdateID = data['could_update_app_ID'];
-    final String updateMessage = data['could_update_app_message'];
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data();
+      if (data != null) {
+        final String? firebaseCouldUpdateID = data['could_update_app_ID'] as String?;
+        final String? updateMessage = data['could_update_app_message'] as String?;
 
-    if (firebaseCouldUpdateID != localCouldUpdateID) {
-      _showUpdateDialog(updateMessage, false);
+        if (firebaseCouldUpdateID != null && updateMessage != null && firebaseCouldUpdateID.isNotEmpty && updateMessage.isNotEmpty && firebaseCouldUpdateID != localCouldUpdateID) {
+          _showUpdateDialog(updateMessage, false);
+        }
+      }
     }
+  } catch (e) {
+    print('Error checking for recommended update: $e');
+    // Silently fail - don't crash the app if update check fails
   }
 }
 
 void _showUpdateDialog(String message, bool brickApp) {
+  final context = navigatorKey.currentContext;
+  if (context == null) {
+    print('Cannot show update dialog: Navigator context is null');
+    return;
+  }
+
   showDialog(
-    context: navigatorKey.currentContext!,
+    context: context,
     barrierDismissible: false, // Prevent dialog dismissal
     builder: (BuildContext context) {
       return AlertDialog(
@@ -144,8 +164,14 @@ Future<void> requestTrackingPermission() async {
 
 // Method to display the custom explainer dialog
 Future<void> showCustomTrackingDialog() async {
+  final context = navigatorKey.currentContext;
+  if (context == null) {
+    print('Cannot show tracking dialog: Navigator context is null');
+    return;
+  }
+
   return showDialog<void>(
-    context: navigatorKey.currentContext!,
+    context: context,
     barrierDismissible: false, // User must explicitly interact with dialog
     builder: (BuildContext context) {
       return AlertDialog(
@@ -312,9 +338,9 @@ class _MyAppState extends State<MyApp> {
         builder: (context, child) => ResponsiveBreakpoints.builder(
               child: child!,
               breakpoints: [
-                const Breakpoint(start: 0, end: 450, name: MOBILE),
-                const Breakpoint(start: 451, end: 800, name: TABLET),
-                const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+                const Breakpoint(start: 0, end: 599, name: MOBILE),
+                const Breakpoint(start: 600, end: 1023, name: TABLET),
+                const Breakpoint(start: 1024, end: 1920, name: DESKTOP),
                 const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
               ],
             ),
