@@ -26,7 +26,7 @@ import 'package:parakeet/services/notification_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
 
-const String localShouldUpdateID = "gWYwwwYH";
+const String localShouldUpdateID = "bRj98tXx";
 const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
@@ -63,8 +63,13 @@ Future<void> checkForMandatoryUpdate() async {
 
   if (docSnapshot.exists) {
     final data = docSnapshot.data() as Map<String, dynamic>;
-    final String firebaseShouldUpdateID = data['should_update_app_ID'];
-    final String updateMessage = data['should_update_app_message'];
+    final String? firebaseShouldUpdateID = data['should_update_app_ID'] as String?;
+    final String? updateMessage = data['should_update_app_message'] as String?;
+
+    if (firebaseShouldUpdateID == null || updateMessage == null) {
+      // Optionally log or handle missing fields
+      return;
+    }
 
     if (firebaseShouldUpdateID != localShouldUpdateID) {
       _showUpdateDialog(updateMessage, true);
