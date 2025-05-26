@@ -279,6 +279,9 @@ class _MyAppState extends State<MyApp> {
     // Monitor authentication state changes
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
+        // Add a small delay to avoid race condition with auth_service._initializeUserDocument
+        await Future.delayed(const Duration(milliseconds: 500));
+
         // Check onboarding completion for newly logged-in users
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
