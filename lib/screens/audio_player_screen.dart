@@ -8,6 +8,7 @@ import 'package:parakeet/services/audio_duration_service.dart';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
+import 'package:parakeet/services/background_audio_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
@@ -16,6 +17,7 @@ import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
 import 'package:parakeet/widgets/audio_player_screen/speech_recognition_toggle.dart';
+import 'package:parakeet/widgets/audio_player_screen/background_audio_info.dart';
 import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -250,6 +252,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize playlist
     await _audioPlayerService.initializePlaylist(audioSources);
 
+    // Connect to background audio service
+    BackgroundAudioService.connectAudioPlayerService(_audioPlayerService, widget.title);
+
     // Play first track only for non-generating mode
     if (!widget.generating) {
       await _audioPlayerService.playFirstTrack();
@@ -267,6 +272,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _audioPlayerService.setFinalTotalDuration();
       // Build files to compare map for speech recognition
       _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+
+      // Update background audio service with final duration
+      BackgroundAudioService.updateLessonInfo(
+        widget.title,
+        _audioPlayerService.finalTotalDuration,
+        null, // You can add artwork URL here if available
+      );
     }
   }
 
@@ -708,6 +720,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         //   isActive: _speechRecognitionActive,
                         //   onToggle: _toggleSpeechRecognition,
                         // ),
+                        const BackgroundAudioInfo(),
                         AnimatedDialogueList(
                           dialogue: _dialogue,
                           currentTrack: _currentTrack,
@@ -901,18 +914,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void dispose() {
     _isDisposing = true;
 
-    // Dispose of Firestore services
+    // Dispose background audio service connection
+    BackgroundAudioService.audioHandler?.dispose();
+
+    // Cancel subscriptions
     _firestoreService?.dispose();
-    _firestoreService = null;
-
     _fileDurationUpdate?.dispose();
-    _fileDurationUpdate = null;
 
-    // Dispose of services
+    // Dispose audio player service
     _audioPlayerService.dispose();
-    // _speechRecognitionService.dispose();
 
-    // Dispose of notifiers
+    // Dispose value notifiers
     _repetitionsMode.dispose();
     // _speechRecognitionActive.dispose();
 
