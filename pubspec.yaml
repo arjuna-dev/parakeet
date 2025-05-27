@@ -128,6 +128,8 @@ flutter:
     - assets/images/context.png
     - assets/images/science.png
     - assets/images/ready.png
+    - assets/parakeet_icon.png
+    - assets/parakeet_icon_ios.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

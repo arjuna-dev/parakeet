@@ -40,34 +40,53 @@ class ParakeetAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
         processingState: processingState,
         playing: isPlaying,
         speed: _audioPlayerService!.playbackSpeed.value,
-        queueIndex: _audioPlayerService!.player.currentIndex,
+        queueIndex: 0, // Always use index 0 for the combined track
       ));
     });
 
     // Listen to position changes
     _positionSubscription = _audioPlayerService!.player.positionStream.listen((position) {
+      // Convert the current position to the overall position
+      final currentIndex = _audioPlayerService!.player.currentIndex ?? 0;
+      final cumulativePosition = _audioPlayerService!.cumulativeDurationUpTo(currentIndex) + position;
+
       playbackState.add(playbackState.value.copyWith(
-        updatePosition: position,
+        updatePosition: cumulativePosition,
       ));
     });
 
     // Listen to duration changes
     _durationSubscription = _audioPlayerService!.player.durationStream.listen((duration) {
       if (duration != null) {
-        final currentMediaItem = mediaItem.value;
-        if (currentMediaItem != null) {
-          mediaItem.add(currentMediaItem.copyWith(duration: duration));
-        }
+        // Update the total duration of the combined track
+        _updateCombinedMediaItemDuration();
       }
     });
 
     // Listen to current index changes
     _currentIndexSubscription = _audioPlayerService!.player.currentIndexStream.listen((index) {
-      if (index != null && index < queue.value.length) {
-        mediaItem.add(queue.value[index]);
-        playbackState.add(playbackState.value.copyWith(queueIndex: index));
+      // We don't need to update the queue index since we're treating it as one track
+      // But we should update the position
+      if (index != null) {
+        final position = _audioPlayerService!.player.position;
+        final cumulativePosition = _audioPlayerService!.cumulativeDurationUpTo(index) + position;
+
+        playbackState.add(playbackState.value.copyWith(
+          updatePosition: cumulativePosition,
+        ));
       }
     });
+  }
+
+  // Update the media item with the combined total duration
+  void _updateCombinedMediaItemDuration() {
+    if (_audioPlayerService == null) return;
+
+    final currentMediaItem = mediaItem.value;
+    if (currentMediaItem != null) {
+      final totalDuration = _audioPlayerService!.totalDuration;
+      mediaItem.add(currentMediaItem.copyWith(duration: totalDuration));
+    }
   }
 
   AudioProcessingState _mapProcessingState(ProcessingState state) {
@@ -86,13 +105,17 @@ class ParakeetAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   }
 
   // Update the current media item and queue
-  void setCurrentMediaItem(String title, String? artist, Duration? duration, String? artUri) {
+  void setCurrentMediaItem(String title, String? artist, Duration? duration, String? artUri, String? category) {
+    // If no duration is provided, use the total duration from the audio player service
+    final totalDuration = duration ?? _audioPlayerService?.totalDuration ?? Duration.zero;
+
     final newMediaItem = MediaItem(
       id: 'parakeet_lesson',
       album: 'Parakeet Language Learning',
+      genre: category,
       title: title,
       artist: artist ?? 'Parakeet',
-      duration: duration,
+      duration: totalDuration,
       artUri: artUri != null ? Uri.parse(artUri) : null,
     );
 
