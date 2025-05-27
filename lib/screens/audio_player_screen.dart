@@ -14,7 +14,6 @@ import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
-import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
@@ -668,9 +667,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
             // Clean up any shared resources
             AudioPlayerScreen.cleanupSharedResources();
-
-            // Reset any LessonDetailScreen state before navigating
-            LessonDetailScreen.resetStaticState();
 
             if (widget.generating) {
               // Navigate to home screen and clear stack

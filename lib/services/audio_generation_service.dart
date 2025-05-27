@@ -48,7 +48,7 @@ class AudioGenerationService {
             // Store the latest snapshot for later use
             latestSnapshot = data;
 
-            // Get the expected length from the lesson_detail_screen
+            // Get the expected length from the lesson configuration
             String expectedLengthStr = data['length'] ?? '0';
             int expectedLength = int.tryParse(expectedLengthStr) ?? 0;
 
