@@ -20,8 +20,8 @@ class BackgroundAudioInfo extends StatelessWidget {
         }
 
         return Container(
-          padding: const EdgeInsets.all(8.0),
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.all(5.0),
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(8.0),
@@ -50,9 +50,9 @@ class BackgroundAudioInfo extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (mediaItem.artist != null)
+                    if (mediaItem.genre != null)
                       Text(
-                        mediaItem.artist!,
+                        mediaItem.genre!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
@@ -61,19 +61,6 @@ class BackgroundAudioInfo extends StatelessWidget {
                       ),
                   ],
                 ),
-              ),
-              StreamBuilder<PlaybackState>(
-                stream: BackgroundAudioService.audioHandler?.playbackState,
-                builder: (context, playbackSnapshot) {
-                  final playbackState = playbackSnapshot.data;
-                  final isPlaying = playbackState?.playing ?? false;
-
-                  return Icon(
-                    isPlaying ? Icons.play_circle_filled : Icons.pause_circle_filled,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  );
-                },
               ),
             ],
           ),

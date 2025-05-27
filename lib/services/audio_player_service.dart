@@ -328,9 +328,8 @@ class AudioPlayerService {
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
         Duration totalPosition = cumulativeDuration + position;
 
-        if (hasIndexChanged) return null;
         if (position < duration) {
-          return PositionData(position, duration, totalPosition);
+          return PositionData(position, totalDuration, totalPosition);
         }
         return null;
       },

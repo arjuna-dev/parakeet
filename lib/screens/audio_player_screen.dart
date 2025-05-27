@@ -253,7 +253,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await _audioPlayerService.initializePlaylist(audioSources);
 
     // Connect to background audio service
-    BackgroundAudioService.connectAudioPlayerService(_audioPlayerService, widget.title);
+    BackgroundAudioService.connectAudioPlayerService(_audioPlayerService, widget.title, widget.category);
 
     // Play first track only for non-generating mode
     if (!widget.generating) {
@@ -278,6 +278,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         widget.title,
         _audioPlayerService.finalTotalDuration,
         null, // You can add artwork URL here if available
+        widget.category,
       );
     }
   }
@@ -704,7 +705,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             builder: (context, snapshot) {
               int savedPosition = snapshot.data ?? 0;
               return Scaffold(
-                appBar: AppBar(title: Text(widget.title)),
+                appBar: AppBar(
+                  title: const BackgroundAudioInfo(),
+                ),
                 body: Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFF1E1E2E),
@@ -720,7 +723,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         //   isActive: _speechRecognitionActive,
                         //   onToggle: _toggleSpeechRecognition,
                         // ),
-                        const BackgroundAudioInfo(),
                         AnimatedDialogueList(
                           dialogue: _dialogue,
                           currentTrack: _currentTrack,

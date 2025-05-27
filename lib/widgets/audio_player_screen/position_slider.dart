@@ -96,10 +96,10 @@ class PositionSlider extends StatelessWidget {
                 }
               },
               onChangeStart: (value) {
-                onSliderChangeStart(); // Pf506
+                onSliderChangeStart();
               },
               onChangeEnd: (value) {
-                onSliderChangeEnd(); // Pf506
+                onSliderChangeEnd();
               },
             ),
             Text(
