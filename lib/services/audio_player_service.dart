@@ -172,18 +172,18 @@ class AudioPlayerService {
     player.play();
 
     // Show ad for non-premium users every time they start playing
-    // Skip showing ads on web platform
-    if (!kIsWeb && !hasPremium && !hasShownInitialAd) {
-      hasShownInitialAd = true; // Prevent showing ad multiple times in same session
-      await AdService.showInterstitialAd(
-        onAdShown: () async {
-          isPlaying.value = false;
-        },
-        onAdDismissed: () async {
-          isPlaying.value = true;
-        },
-      );
-    }
+    // Skip showing ads on all platforms
+    // if (!kIsWeb && !hasPremium && !hasShownInitialAd) {
+    //   hasShownInitialAd = true; // Prevent showing ad multiple times in same session
+    //   await AdService.showInterstitialAd(
+    //     onAdShown: () async {
+    //       isPlaying.value = false;
+    //     },
+    //     onAdDismissed: () async {
+    //       isPlaying.value = true;
+    //     },
+    //   );
+    // }
 
     analyticsManager.storeAnalytics(documentID, 'play');
   }

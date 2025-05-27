@@ -35,11 +35,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Only initialize MobileAds on mobile platforms
-  if (!kIsWeb) {
-    MobileAds.instance.initialize();
-    // Initialize AdService to preload first ad
-    await AdService.initialize();
-  }
+  // if (!kIsWeb) {
+  //   MobileAds.instance.initialize();
+  //   // Initialize AdService to preload first ad
+  //   await AdService.initialize();
+  // }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
