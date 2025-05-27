@@ -33,7 +33,6 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   final HomeScreenModel _model = HomeScreenModel();
   Map<String, bool> _localFavorites = {};
   List<DocumentSnapshot> _customLessons = [];
-  bool _isCreatingCustomLesson = false;
   bool _isSuggestingRandom = false;
   bool _isLoadingLessons = true;
   bool _showWordInput = false;
@@ -56,17 +55,21 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   }
 
   void _updateButtonState() {
-    setState(() {
-      // This will trigger a rebuild and update the button state
-    });
+    if (mounted) {
+      setState(() {
+        // This will trigger a rebuild and update the button state
+      });
+    }
   }
 
   bool get _canCreateLesson {
-    return _topicController.text.trim().isNotEmpty && _selectedWords.isNotEmpty && !_isCreatingCustomLesson;
+    return _topicController.text.trim().isNotEmpty && _selectedWords.isNotEmpty;
   }
 
   Future<void> _loadCustomLessons() async {
-    setState(() => _isLoadingLessons = true);
+    if (mounted) {
+      setState(() => _isLoadingLessons = true);
+    }
     try {
       await _model.loadAudioFiles();
 
@@ -89,16 +92,20 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
         initialFavorites[key] = _model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
       }
 
-      setState(() {
-        _customLessons = filteredData.toList();
-        // Sort by timestamp (newest first)
-        _customLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
-        _localFavorites = initialFavorites;
-        _isLoadingLessons = false;
-      });
+      if (mounted) {
+        setState(() {
+          _customLessons = filteredData.toList();
+          // Sort by timestamp (newest first)
+          _customLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+          _localFavorites = initialFavorites;
+          _isLoadingLessons = false;
+        });
+      }
     } catch (e) {
       print('Error loading custom lessons: $e');
-      setState(() => _isLoadingLessons = false);
+      if (mounted) {
+        setState(() => _isLoadingLessons = false);
+      }
     }
   }
 
@@ -106,17 +113,21 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     if (word.trim().isEmpty) return;
 
     final normalizedWord = word.trim().toLowerCase();
-    setState(() {
-      if (_selectedWords.length < LessonConstants.maxWordsAllowed && !_selectedWords.contains(normalizedWord)) {
-        _selectedWords.add(normalizedWord);
-      }
-    });
+    if (mounted) {
+      setState(() {
+        if (_selectedWords.length < LessonConstants.maxWordsAllowed && !_selectedWords.contains(normalizedWord)) {
+          _selectedWords.add(normalizedWord);
+        }
+      });
+    }
   }
 
   void _removeWord(String word) {
-    setState(() {
-      _selectedWords.remove(word);
-    });
+    if (mounted) {
+      setState(() {
+        _selectedWords.remove(word);
+      });
+    }
   }
 
   void _addWordFromInput() {
@@ -131,9 +142,11 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   }
 
   void _hideWordInput() {
-    setState(() {
-      _showWordInput = false;
-    });
+    if (mounted) {
+      setState(() {
+        _showWordInput = false;
+      });
+    }
     _wordController.clear();
     _wordFocusNode.unfocus();
   }
@@ -145,33 +158,47 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   }
 
   Future<void> _createCustomLesson() async {
-    await LessonService.createCustomLesson(
-      context,
-      _topicController.text.trim(),
-      _selectedWords,
-      widget.nativeLanguage,
-      widget.targetLanguage,
-      widget.languageLevel,
-      (bool value) {
-        setState(() {
-          _isCreatingCustomLesson = value;
-        });
-      },
-    );
+    try {
+      await LessonService.createCustomLesson(
+        context,
+        _topicController.text.trim(),
+        _selectedWords,
+        widget.nativeLanguage,
+        widget.targetLanguage,
+        widget.languageLevel,
+        (bool value) {
+          // No need to update UI state since the service handles loading
+        },
+      );
 
-    // Reset form if successful
-    if (!_isCreatingCustomLesson) {
-      _topicController.clear();
-      _selectedWords.clear();
-      // Reload lessons to show the newly created one
-      _loadCustomLessons();
+      // Reset form if successful
+      if (mounted) {
+        setState(() {
+          _topicController.clear();
+          _selectedWords.clear();
+        });
+        // Reload lessons to show the newly created one
+        _loadCustomLessons();
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create lesson: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _suggestRandomLesson() async {
-    setState(() {
-      _isSuggestingRandom = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isSuggestingRandom = true;
+      });
+    }
 
     try {
       final result = await LessonService.suggestRandomLesson(
@@ -179,37 +206,43 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
         widget.nativeLanguage,
       );
 
-      setState(() {
-        // Clear existing data
-        _topicController.text = result['topic'] as String;
-        _selectedWords.clear();
+      if (mounted) {
+        setState(() {
+          // Clear existing data
+          _topicController.text = result['topic'] as String;
+          _selectedWords.clear();
 
-        // Add new words
-        final wordsToLearn = (result['words_to_learn'] as List).cast<String>();
-        for (var word in wordsToLearn) {
-          if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
-            _selectedWords.add(word);
+          // Add new words
+          final wordsToLearn = (result['words_to_learn'] as List).cast<String>();
+          for (var word in wordsToLearn) {
+            if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
+              _selectedWords.add(word);
+            }
           }
-        }
-      });
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to get random suggestion: ${e.toString()}'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get random suggestion: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isSuggestingRandom = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSuggestingRandom = false;
+        });
+      }
     }
   }
 
   Future<void> _refreshCustomLessons() async {
-    setState(() {
+    if (mounted) {
       _loadCustomLessons();
-    });
+    }
   }
 
   @override
@@ -353,9 +386,11 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                 onPressed: _selectedWords.length >= LessonConstants.maxWordsAllowed
                                     ? null
                                     : () {
-                                        setState(() {
-                                          _showWordInput = true;
-                                        });
+                                        if (mounted) {
+                                          setState(() {
+                                            _showWordInput = true;
+                                          });
+                                        }
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           _wordFocusNode.requestFocus();
                                         });
@@ -473,31 +508,13 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: _isCreatingCustomLesson
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Creating...'),
-                            ],
-                          )
-                        : Text(
-                            'Create Custom Lesson',
-                            style: TextStyle(
-                              fontSize: widget.isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    child: Text(
+                      'Create Custom Lesson',
+                      style: TextStyle(
+                        fontSize: widget.isSmallScreen ? 16 : 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -555,7 +572,9 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                         model: _model,
                                         localFavorites: _localFavorites,
                                         updateFavorites: (favorites) {
-                                          setState(() => _localFavorites = favorites);
+                                          if (mounted) {
+                                            setState(() => _localFavorites = favorites);
+                                          }
                                         },
                                         onDeleteComplete: () {
                                           _refreshCustomLessons();

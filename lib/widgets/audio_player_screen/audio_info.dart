@@ -44,7 +44,7 @@ class AudioInfo extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  category ?? 'Unknown Category',
+                  category ?? 'Custom Lesson',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
