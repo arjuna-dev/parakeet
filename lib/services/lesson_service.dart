@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/activate_free_trial.dart';
-import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 
 class LessonService {
@@ -124,131 +123,6 @@ class LessonService {
       print('Error fetching api_call counts from user collection: $e');
       return -1;
     }
-  }
-
-  // Function to create a category-based lesson
-  static Future<void> createCategoryLesson(
-    BuildContext context,
-    Map<String, dynamic> category,
-    String nativeLanguage,
-    String targetLanguage,
-    String languageLevel,
-  ) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-
-    final canProceed = await checkPremiumAndAPILimits(context);
-    if (!canProceed) {
-      Navigator.pop(context); // Close loading dialog
-      return;
-    }
-
-    try {
-      final selectedWords = await selectWordsFromCategory(category['name'], category['words'], targetLanguage);
-      final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: jsonEncode(<String, dynamic>{
-          "category": category['name'],
-          "selectedWords": selectedWords,
-          "target_language": targetLanguage,
-          "native_language": nativeLanguage,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body) as Map<String, dynamic>;
-        Navigator.pop(context);
-
-        // Reset any static state in LessonDetailScreen before navigation
-        LessonDetailScreen.resetStaticState();
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LessonDetailScreen(
-              category: category['name'] as String,
-              allWords: category['words'] as List<String>,
-              title: result['title'] as String,
-              topic: result['topic'] as String,
-              wordsToLearn: selectedWords,
-              languageLevel: languageLevel,
-              length: '4',
-              nativeLanguage: nativeLanguage,
-              targetLanguage: targetLanguage,
-            ),
-          ),
-        );
-      } else {
-        throw Exception('Failed to generate lesson topic');
-      }
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  // create a function to select 5 words from the category according to certain criteria
-  static Future<List<dynamic>> selectWordsFromCategory(String category, List<String> allWords, String targetLanguage) async {
-    // check if there are due words in the category stored in the firestore
-    final userId = FirebaseAuth.instance.currentUser!.uid.toString();
-    final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
-    // check each word in categoryDocs and see if it is due or overdue
-    var words = [];
-    final existingWordsCard = [];
-    final closestDueDateCard = [];
-    for (var doc in categoryDocs.docs) {
-      final dueDate = DateTime.parse(doc.data()['due']);
-      final lastReview = DateTime.parse(doc.data()['lastReview']);
-      final daysOverdue = DateTime.now().difference(dueDate).inDays;
-      final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
-
-      // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
-      if (daysSinceLastReview > 0) {
-        if (daysOverdue <= 0) {
-          words.add(doc.data()['word']);
-        } else {
-          closestDueDateCard.add(doc.data()['word']);
-        }
-        print('words: $words');
-        print('closestDueDateCard: $closestDueDateCard');
-      }
-      existingWordsCard.add(doc.data()['word']);
-    }
-    if (words.length > 5) {
-      words = words.sublist(0, 5);
-    }
-    if (words.length < 5) {
-      // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
-      final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
-      final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
-      // randomize the newWords list
-      newWords.shuffle();
-      if (newWords.isNotEmpty) {
-        words.addAll(newWords.sublist(0, 5 - words.length));
-      }
-      if (words.length < 5) {
-        // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
-        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
-        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
-      }
-    }
-    return words;
   }
 
   // Function to create a custom lesson
@@ -431,5 +305,53 @@ class LessonService {
     } catch (e) {
       throw Exception('Failed to get random suggestion: ${e.toString()}');
     }
+  }
+
+  // create a function to select 5 words from the category according to certain criteria
+  static Future<List<dynamic>> selectWordsFromCategory(String category, List<String> allWords, String targetLanguage) async {
+    // check if there are due words in the category stored in the firestore
+    final userId = FirebaseAuth.instance.currentUser!.uid.toString();
+    final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
+    // check each word in categoryDocs and see if it is due or overdue
+    var words = [];
+    final existingWordsCard = [];
+    final closestDueDateCard = [];
+    for (var doc in categoryDocs.docs) {
+      final dueDate = DateTime.parse(doc.data()['due']);
+      final lastReview = DateTime.parse(doc.data()['lastReview']);
+      final daysOverdue = DateTime.now().difference(dueDate).inDays;
+      final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
+
+      // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
+      if (daysSinceLastReview > 0) {
+        if (daysOverdue <= 0) {
+          words.add(doc.data()['word']);
+        } else {
+          closestDueDateCard.add(doc.data()['word']);
+        }
+        print('words: $words');
+        print('closestDueDateCard: $closestDueDateCard');
+      }
+      existingWordsCard.add(doc.data()['word']);
+    }
+    if (words.length > 5) {
+      words = words.sublist(0, 5);
+    }
+    if (words.length < 5) {
+      // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
+      final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
+      final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
+      // randomize the newWords list
+      newWords.shuffle();
+      if (newWords.isNotEmpty) {
+        words.addAll(newWords.sublist(0, 5 - words.length));
+      }
+      if (words.length < 5) {
+        // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
+        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
+        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
+      }
+    }
+    return words;
   }
 }
