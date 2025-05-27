@@ -38,6 +38,7 @@ class LessonCard extends StatelessWidget {
                 builder: (context) => AudioPlayerScreen(
                   documentID: audioFile.reference.parent.parent!.id,
                   dialogue: audioFile.get('dialogue'),
+                  category: (audioFile.data() as Map<String, dynamic>?)?.containsKey('category') == true ? audioFile.get('category') : 'Custom Lesson',
                   targetLanguage: audioFile.get('target_language'),
                   nativeLanguage: (audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? audioFile.get('native_language') : 'English (US)',
                   languageLevel: audioFile.get('language_level'),

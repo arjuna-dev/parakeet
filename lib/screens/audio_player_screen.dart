@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/audio_player_service.dart';
-import 'package:parakeet/services/speech_recognition_service.dart';
 import 'package:parakeet/services/audio_generation_service.dart';
 import 'package:parakeet/services/audio_duration_service.dart';
 import 'package:parakeet/services/streak_service.dart';
@@ -16,14 +15,12 @@ import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
-import 'package:parakeet/widgets/audio_player_screen/speech_recognition_toggle.dart';
-import 'package:parakeet/widgets/audio_player_screen/background_audio_info.dart';
-import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
+import 'package:parakeet/widgets/audio_player_screen/audio_info.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -706,7 +703,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               int savedPosition = snapshot.data ?? 0;
               return Scaffold(
                 appBar: AppBar(
-                  title: const BackgroundAudioInfo(),
+                  title: AudioInfo(title: widget.title, category: widget.category),
                 ),
                 body: Container(
                   decoration: const BoxDecoration(
