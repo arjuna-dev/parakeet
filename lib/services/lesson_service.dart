@@ -58,7 +58,7 @@ class LessonService {
       }
     } else {
       // Premium user limit
-      if (apiCalls > premiumAPILimit) {
+      if (apiCalls >= premiumAPILimit) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please come back tomorrow.'),
@@ -163,8 +163,33 @@ class LessonService {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
+        return Dialog(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Creating your lesson...',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait while we generate a personalized lesson for you',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
