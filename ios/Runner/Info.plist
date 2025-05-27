@@ -48,8 +48,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-  <key>GADApplicationIdentifier</key>
-  <string>ca-app-pub-8442868776505925~3804609176</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-8442868776505925~3804609176</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

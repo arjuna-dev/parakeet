@@ -283,9 +283,13 @@ class _NicknamePopupState extends State<NicknamePopup> {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
     final width = MediaQuery.of(context).size.width;
-    final dialogWidth = width < 350 ? width * 0.85 : 320.0;
+    final height = MediaQuery.of(context).size.height;
 
-    return AlertDialog(
+    // Improved sizing logic with better constraints
+    final dialogWidth = width < 350 ? width * 0.9 : (width < 500 ? 320.0 : 350.0);
+    final maxDialogHeight = height * 0.8; // Max 80% of screen height
+
+    return Dialog(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
@@ -295,212 +299,255 @@ class _NicknamePopupState extends State<NicknamePopup> {
           width: 1,
         ),
       ),
-      title: Text(
-        _currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!",
-        style: TextStyle(
-          fontSize: isSmallScreen ? 20 : 24,
-          fontWeight: FontWeight.bold,
-          color: colorScheme.onSurface,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: maxDialogHeight,
+          maxWidth: dialogWidth,
         ),
-      ),
-      contentPadding: const EdgeInsets.all(16),
-      content: SizedBox(
-        width: dialogWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                  width: 1,
+            // Title section
+            Padding(
+              padding: EdgeInsets.fromLTRB(24, 24, 24, isSmallScreen ? 12 : 16),
+              child: Text(
+                _currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!",
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
                 ),
-              ),
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _nicknameController,
-                    maxLength: 25,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
-                      labelStyle: TextStyle(
-                        fontSize: isSmallScreen ? 12 : 14,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: isSmallScreen ? 8 : 12,
-                      ),
-                      counterStyle: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 8 : 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 8 : 12,
-                      vertical: isSmallScreen ? 4 : 8,
-                    ),
-                    child: width < 280
-                        ? Column(
-                            children: [
-                              Center(
-                                child: Switch(
-                                  value: _useName,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _useName = value;
-                                    });
-                                    _saveUseNamePreference(value);
-                                  },
-                                ),
-                              ),
-                              Center(
-                                child: Text(
-                                  'Address me by name',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 13 : 14,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Switch(
-                                value: _useName,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _useName = value;
-                                  });
-                                  _saveUseNamePreference(value);
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Address me by name',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 13 : 14,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ],
+                textAlign: TextAlign.center,
               ),
             ),
-            if (_isLoading)
-              Container(
-                margin: const EdgeInsets.only(top: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: CircularProgressIndicator(
-                  color: colorScheme.primary,
+
+            // Scrollable content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: _nicknameController,
+                            maxLength: 25,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
+                              labelStyle: TextStyle(
+                                fontSize: isSmallScreen ? 12 : 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              filled: true,
+                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: isSmallScreen ? 8 : 12,
+                              ),
+                              counterStyle: TextStyle(
+                                fontSize: isSmallScreen ? 10 : 12,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 8 : 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 12,
+                              vertical: isSmallScreen ? 4 : 8,
+                            ),
+                            child: width < 280
+                                ? Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Switch(
+                                        value: _useName,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _useName = value;
+                                          });
+                                          _saveUseNamePreference(value);
+                                        },
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Address me by name',
+                                        style: TextStyle(
+                                          fontSize: isSmallScreen ? 12 : 13,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Switch(
+                                        value: _useName,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _useName = value;
+                                          });
+                                          _saveUseNamePreference(value);
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          'Address me by name',
+                                          style: TextStyle(
+                                            fontSize: isSmallScreen ? 12 : 13,
+                                            color: colorScheme.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isLoading)
+                      Container(
+                        margin: EdgeInsets.only(top: isSmallScreen ? 12 : 16),
+                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: SizedBox(
+                          height: isSmallScreen ? 20 : 24,
+                          width: isSmallScreen ? 20 : 24,
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
+            ),
+
+            // Actions section
+            Padding(
+              padding: EdgeInsets.fromLTRB(24, isSmallScreen ? 12 : 16, 24, 24),
+              child: width < 280
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: isSmallScreen ? 40 : 44,
+                          child: FilledButton(
+                            onPressed: _isSubmitEnabled && !_isLoading ? _handleGenerate : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Save',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 13 : 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isSmallScreen ? 6 : 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: isSmallScreen ? 40 : 44,
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.of(context).pop();
+                                  },
+                            style: TextButton.styleFrom(
+                              foregroundColor: colorScheme.onSurfaceVariant,
+                            ),
+                            child: Text(
+                              'Close',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 13 : 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  Navigator.of(context).pop();
+                                },
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.onSurfaceVariant,
+                          ),
+                          child: Text(
+                            'Close',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 13 : 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: _isSubmitEnabled && !_isLoading ? _handleGenerate : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Save',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 13 : 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
-      actionsPadding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-      actions: width < 250
-          ? [
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _isSubmitEnabled ? _handleGenerate : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Save',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.onSurfaceVariant,
-                  ),
-                  child: Text(
-                    'Close',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                    ),
-                  ),
-                ),
-              ),
-            ]
-          : [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.onSurfaceVariant,
-                ),
-                child: Text(
-                  'Close',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 13 : 14,
-                  ),
-                ),
-              ),
-              FilledButton(
-                onPressed: _isSubmitEnabled ? _handleGenerate : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Save',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 13 : 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
     );
   }
 }

@@ -9,6 +9,10 @@ import 'package:parakeet/widgets/library_screen/lesson_item.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/services/word_stats_service.dart';
+import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:parakeet/utils/constants.dart';
 
 // Global variable to track active toast
 OverlayEntry? _activeToastEntry;
@@ -42,6 +46,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   bool _wordsExpanded = false;
   WordStats? _wordStats;
   String _currentTargetLanguage = '';
+  bool _isGeneratingLesson = false;
 
   @override
   void initState() {
@@ -144,14 +149,171 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     }
   }
 
-  void _handleCreateNewLesson() {
-    LessonService.createCategoryLesson(
-      context,
-      widget.category,
-      widget.nativeLanguage,
-      widget.targetLanguage,
-      widget.languageLevel,
+  Future<void> _handleCreateNewLesson() async {
+    setState(() {
+      _isGeneratingLesson = true;
+    });
+
+    // Show enhanced loading dialog with progress
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Creating your lesson...',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait while we generate a personalized lesson for you',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
+
+    final canProceed = await LessonService.checkPremiumAndAPILimits(context);
+    if (!canProceed) {
+      Navigator.pop(context); // Close loading dialog
+      setState(() {
+        _isGeneratingLesson = false;
+      });
+      return;
+    }
+
+    try {
+      // Step 1: Select words and generate lesson topic
+      final selectedWords = await LessonService.selectWordsFromCategory(widget.category['name'], widget.category['words'], widget.targetLanguage);
+
+      final response = await http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "category": widget.category['name'],
+          "selectedWords": selectedWords,
+          "target_language": widget.targetLanguage,
+          "native_language": widget.nativeLanguage,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to generate lesson topic');
+      }
+
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      final String title = result['title'] as String;
+      final String topic = result['topic'] as String;
+
+      // Step 2: Start the lesson directly (integrated lesson starting logic)
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+      final String documentId = docRef.id;
+      final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+      final TTSProvider ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
+
+      // Make the first API call
+      http.post(
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "requested_scenario": topic,
+          "category": widget.category['name'],
+          "keywords": selectedWords,
+          "native_language": widget.nativeLanguage,
+          "target_language": widget.targetLanguage,
+          "length": '4',
+          "user_ID": userId,
+          "language_level": widget.languageLevel,
+          "document_id": documentId,
+          "tts_provider": ttsProvider.value.toString(),
+        }),
+      );
+
+      int counter = 0;
+      bool docExists = false;
+      Map<String, dynamic> firstDialogue = {};
+
+      while (!docExists && counter < 15) {
+        counter++;
+        await Future.delayed(const Duration(seconds: 1));
+        final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
+        if (snapshot.docs.isNotEmpty) {
+          docExists = true;
+          final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
+          firstDialogue = data;
+
+          if (firstDialogue.isNotEmpty) {
+            // Create an empty script document ID
+            DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
+            // Navigate directly to AudioPlayerScreen
+            Navigator.pop(context); // Close loading dialog
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AudioPlayerScreen(
+                  category: widget.category['name'],
+                  dialogue: firstDialogue["dialogue"] ?? [],
+                  title: title,
+                  documentID: documentId,
+                  userID: userId,
+                  scriptDocumentId: scriptDocRef.id,
+                  generating: true,
+                  targetLanguage: widget.targetLanguage,
+                  nativeLanguage: widget.nativeLanguage,
+                  languageLevel: widget.languageLevel,
+                  wordsToRepeat: selectedWords,
+                  numberOfTurns: 4,
+                ),
+              ),
+            );
+          } else {
+            throw Exception('Proper data not received from API');
+          }
+        }
+      }
+
+      if (!docExists) {
+        throw Exception('Failed to find the response in firestore within 15 seconds');
+      }
+    } catch (e) {
+      print(e);
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isGeneratingLesson = false;
+      });
+    }
   }
 
   @override
@@ -569,7 +731,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: FilledButton.icon(
-              onPressed: _handleCreateNewLesson,
+              onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
               icon: const Icon(Icons.add),
               label: const Text('Create New Lesson'),
               style: FilledButton.styleFrom(

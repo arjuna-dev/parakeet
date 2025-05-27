@@ -2,12 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/audio_player_service.dart';
-import 'package:parakeet/services/speech_recognition_service.dart';
 import 'package:parakeet/services/audio_generation_service.dart';
 import 'package:parakeet/services/audio_duration_service.dart';
-import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/services/update_firestore_service.dart';
 import 'package:parakeet/services/file_duration_update_service.dart';
+import 'package:parakeet/services/background_audio_service.dart';
 import 'package:parakeet/utils/audio_url_builder.dart';
 import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
@@ -15,13 +14,11 @@ import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
-import 'package:parakeet/widgets/audio_player_screen/speech_recognition_toggle.dart';
-import 'package:parakeet/widgets/profile_screen/streak_display.dart';
-import 'package:parakeet/screens/lesson_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
+import 'package:parakeet/widgets/audio_player_screen/audio_info.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -71,7 +68,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late AudioGenerationService _audioGenerationService;
   late AudioDurationService _audioDurationService;
   late PlaylistGenerator _playlistGenerator;
-  final StreakService _streakService = StreakService();
   UpdateFirestoreService? _firestoreService;
   FileDurationUpdate? _fileDurationUpdate;
 
@@ -80,7 +76,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
   List<dynamic>? _wordsToRepeat;
   bool _isDisposing = false;
-  bool _showStreak = false;
   bool _hasNicknameAudio = false;
   bool _addressByNickname = true;
   bool _isSliderMoving = false;
@@ -250,6 +245,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Initialize playlist
     await _audioPlayerService.initializePlaylist(audioSources);
 
+    // Connect to background audio service
+    BackgroundAudioService.connectAudioPlayerService(_audioPlayerService, widget.title, widget.category);
+
     // Play first track only for non-generating mode
     if (!widget.generating) {
       await _audioPlayerService.playFirstTrack();
@@ -267,6 +265,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _audioPlayerService.setFinalTotalDuration();
       // Build files to compare map for speech recognition
       _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+
+      // Update background audio service with final duration
+      BackgroundAudioService.updateLessonInfo(
+        widget.title,
+        _audioPlayerService.finalTotalDuration,
+        null, // You can add artwork URL here if available
+        widget.category,
+      );
     }
   }
 
@@ -589,26 +595,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ReviewWordsDialog(words: _allUsedWordsCardsRefsMap);
+        return ReviewWordsDialog(
+          words: _allUsedWordsCardsRefsMap,
+          userID: widget.userID,
+        );
       },
     );
-
-    // Record streak after review is completed
-    await _streakService.recordDailyActivity(widget.userID);
-    if (mounted) {
-      setState(() {
-        _showStreak = true;
-      });
-    }
-
-    // Hide streak after 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _showStreak = false;
-        });
-      }
-    });
   }
 
   // void _toggleSpeechRecognition(bool value) async {
@@ -676,9 +668,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             // Clean up any shared resources
             AudioPlayerScreen.cleanupSharedResources();
 
-            // Reset any LessonDetailScreen state before navigating
-            LessonDetailScreen.resetStaticState();
-
             if (widget.generating) {
               // Navigate to home screen and clear stack
               navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
@@ -692,7 +681,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             builder: (context, snapshot) {
               int savedPosition = snapshot.data ?? 0;
               return Scaffold(
-                appBar: AppBar(title: Text(widget.title)),
+                appBar: AppBar(
+                  title: AudioInfo(title: widget.title, category: widget.category),
+                ),
                 body: Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFF1E1E2E),
@@ -754,165 +745,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             },
           ),
         ),
-
-        // Streak overlay
-        if (_showStreak)
-          Container(
-            color: Colors.black54,
-            child: Center(
-              child: Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Great work!',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Your learning streak has been updated',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        FutureBuilder<List<bool>>(
-                          future: _streakService.getLast7DaysActivity(widget.userID),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
-                              return const Center(
-                                child: SizedBox(
-                                  height: 40,
-                                  width: 40,
-                                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                                ),
-                              );
-                            }
-
-                            final activityList = snapshot.data!;
-                            return Column(
-                              children: [
-                                FutureBuilder<int>(
-                                  future: _streakService.getCurrentStreak(widget.userID),
-                                  builder: (context, streakSnapshot) {
-                                    final streak = streakSnapshot.data ?? 0;
-                                    return Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.local_fire_department,
-                                          color: Theme.of(context).colorScheme.primary,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '$streak day${streak == 1 ? '' : 's'} streak',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context).colorScheme.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  height: 60,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(7, (index) {
-                                      // Reverse the index to show oldest to newest
-                                      final reversedIndex = 6 - index;
-                                      final isActive = activityList[reversedIndex];
-                                      final date = DateTime.now().subtract(Duration(days: 6 - index));
-                                      final isToday = index == 6;
-
-                                      return Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 24,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                                shape: BoxShape.circle,
-                                                border: isToday
-                                                    ? Border.all(
-                                                        color: Theme.of(context).colorScheme.primary,
-                                                        width: 2,
-                                                      )
-                                                    : null,
-                                              ),
-                                              child: isActive
-                                                  ? Icon(
-                                                      Icons.check,
-                                                      color: Theme.of(context).colorScheme.onPrimary,
-                                                      size: 14,
-                                                    )
-                                                  : null,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _getShortDayName(date),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     ));
-  }
-
-  String _getShortDayName(DateTime date) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[date.weekday - 1];
   }
 
   @override
   void dispose() {
     _isDisposing = true;
 
-    // Dispose of Firestore services
+    // Dispose background audio service connection
+    BackgroundAudioService.audioHandler?.dispose();
+
+    // Cancel subscriptions
     _firestoreService?.dispose();
-    _firestoreService = null;
-
     _fileDurationUpdate?.dispose();
-    _fileDurationUpdate = null;
 
-    // Dispose of services
+    // Dispose audio player service
     _audioPlayerService.dispose();
-    // _speechRecognitionService.dispose();
 
-    // Dispose of notifiers
+    // Dispose value notifiers
     _repetitionsMode.dispose();
     // _speechRecognitionActive.dispose();
 
