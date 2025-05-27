@@ -23,6 +23,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/ad_service.dart';
 import 'package:parakeet/services/notification_service.dart';
+import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
 
@@ -34,16 +35,19 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Only initialize MobileAds on mobile platforms
-  if (!kIsWeb) {
-    MobileAds.instance.initialize();
-    // Initialize AdService to preload first ad
-    await AdService.initialize();
-  }
+  // if (!kIsWeb) {
+  //   MobileAds.instance.initialize();
+  //   // Initialize AdService to preload first ad
+  //   await AdService.initialize();
+  // }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await NotificationService().initialize();
+
+  // Initialize background audio service
+  await BackgroundAudioService.initialize();
 
   runApp(
     MultiProvider(

@@ -41,6 +41,7 @@ dependencies:
   http: ^1.2.2
   google_sign_in: ^6.2.1
   just_audio: ^0.9.37
+  audio_service: ^0.18.18
   rxdart: ^0.27.7
   firebase_storage: ^11.7.5
   provider: ^6.1.2
@@ -127,6 +128,8 @@ flutter:
     - assets/images/context.png
     - assets/images/science.png
     - assets/images/ready.png
+    - assets/parakeet_icon.png
+    - assets/parakeet_icon_ios.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
