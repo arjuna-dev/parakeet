@@ -254,6 +254,8 @@ class _MyAppState extends State<MyApp> {
   late StreamSubscription<User?> _authSubscription;
   String? _initialRoute;
 
+  bool _navigatingToOnboarding = false;
+
   @override
   void initState() {
     super.initState();
@@ -286,12 +288,17 @@ class _MyAppState extends State<MyApp> {
         // Add a small delay to avoid race condition with auth_service._initializeUserDocument
         await Future.delayed(const Duration(milliseconds: 500));
 
+        if (_navigatingToOnboarding) return;
+
         // Check onboarding completion for newly logged-in users
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
           final userData = userDoc.data();
           if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
             if (mounted) {
+              setState(() {
+                _navigatingToOnboarding = true;
+              });
               Navigator.pushReplacementNamed(context, '/onboarding');
             }
             return;
