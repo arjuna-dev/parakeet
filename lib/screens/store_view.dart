@@ -151,14 +151,50 @@ class _StoreViewState extends State<StoreView> {
         // Check if introductory price is a discount (not free and less than normal price)
         final introPrice = double.parse(iOSProduct.skProduct.introductoryPrice!.price.toString());
         final normalPrice = double.parse(iOSProduct.skProduct.price.toString());
+        final symbol = iOSProduct.skProduct.priceLocale.currencySymbol;
+
+        String period = '';
+        switch (product.id) {
+          case "1m":
+            period = 'month';
+            break;
+          case "1year":
+            period = 'year';
+            break;
+          default:
+            period = 'period';
+        }
 
         if (introPrice > 0 && introPrice < normalPrice) {
           // Format the price with currency symbol
-          return iOSProduct.skProduct.introductoryPrice!.priceLocale.currencySymbol + introPrice.toString();
+          return '$symbol${introPrice.toString()}/$period';
         }
         if (introPrice == 0) {
-          return 'Free for ${iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.numberOfUnits} days';
+          final units = iOSProduct.skProduct.introductoryPrice!.subscriptionPeriod.numberOfUnits;
+          return 'Free for $units days';
         }
+      }
+    }
+    return null;
+  }
+
+  String? _getRenewalText(ProductDetails product) {
+    if (Platform.isIOS) {
+      final AppStoreProductDetails iOSProduct = product as AppStoreProductDetails;
+      if (iOSProduct.skProduct.introductoryPrice != null) {
+        String period = '';
+        switch (product.id) {
+          case "1m":
+            period = 'month';
+            break;
+          case "1year":
+            period = 'year';
+            break;
+          default:
+            period = 'period';
+        }
+
+        return '• renews at ${product.price}/$period • Cancel anytime';
       }
     }
     return null;
@@ -274,8 +310,10 @@ class _StoreViewState extends State<StoreView> {
 
   Widget _buildSubscriptionCard(ProductDetails productDetails) {
     String? discountedPrice = _getDiscountedPrice(productDetails);
+    String? renewalText = _getRenewalText(productDetails);
     print("discountedPrice: $discountedPrice");
     bool hasDiscountedPrice = discountedPrice != null;
+    bool hasRenewalText = renewalText != null;
 
     final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
@@ -406,16 +444,38 @@ class _StoreViewState extends State<StoreView> {
                       ),
                       onPressed: () => _makePurchase(productDetails),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (hasDiscountedPrice)
                             Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
                                     discountedPrice,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: isSmallScreen ? 14 : 16,
+                                    ),
                                   ),
                                 ),
+                                if (hasRenewalText)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      renewalText,
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 10 : 11,
+                                        color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
@@ -426,6 +486,7 @@ class _StoreViewState extends State<StoreView> {
                                       fontSize: isSmallScreen ? 12 : 13,
                                       color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ],
@@ -439,6 +500,7 @@ class _StoreViewState extends State<StoreView> {
                                   fontSize: isSmallScreen ? 14 : 15,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                         ],
