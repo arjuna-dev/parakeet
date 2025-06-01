@@ -10,9 +10,15 @@ import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/screens/category_detail_screen.dart' show WordProgressBar, showCenteredToast;
+import 'package:parakeet/utils/language_categories.dart';
 
 class WordManagementScreen extends StatefulWidget {
-  const WordManagementScreen({Key? key}) : super(key: key);
+  final String? nativeLanguage;
+
+  const WordManagementScreen({
+    Key? key,
+    this.nativeLanguage,
+  }) : super(key: key);
 
   @override
   State<WordManagementScreen> createState() => _WordManagementScreenState();
@@ -24,6 +30,11 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   late bool _isLoadingDue;
   late String _userId;
   late String _targetLanguage;
+  late String _nativeLanguage;
+
+  // Categories for both languages
+  late List<Map<String, dynamic>> _targetLanguageCategories;
+  late List<Map<String, dynamic>> _nativeLanguageCategories;
 
   final List<WordCard> _allWordsFull = [];
   final List<WordCard> _dueWordsFull = [];
@@ -33,6 +44,9 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   int _duePage = 0;
   static const int _pageSize = 20;
 
+  // Track which tab is selected to show/hide the Review button
+  int _currentTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +54,15 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     _isLoadingAll = true;
     _isLoadingDue = true;
     _initializeData();
+
+    // Add listener to update state when tab changes
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+      }
+    });
   }
 
   Future<void> _initializeData() async {
@@ -48,6 +71,12 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     _userId = user.uid;
     final userData = await ProfileService.fetchUserData();
     _targetLanguage = userData['target_language'] as String? ?? '';
+    _nativeLanguage = widget.nativeLanguage ?? userData['native_language'] as String? ?? 'English (US)';
+
+    // Load categories for both languages
+    _targetLanguageCategories = getCategoriesForLanguage(_targetLanguage);
+    _nativeLanguageCategories = getCategoriesForLanguage(_nativeLanguage);
+
     await _loadAllWords();
     await _loadDueWords();
   }
@@ -184,6 +213,39 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     });
   }
 
+  // Method to find word translation by looking up the category and index
+  String findWordTranslation(String word) {
+    // Find the category and index of the word in target language
+    for (final targetCategory in _targetLanguageCategories) {
+      final List<dynamic> words = targetCategory['words'];
+      final int wordIndex = words.indexWhere((w) => w.toLowerCase() == word.toLowerCase());
+
+      if (wordIndex != -1) {
+        // Found the word, now find matching category in native language
+        final String categoryName = targetCategory['name'];
+
+        // Find the matching category in native language categories with Map<String, Object> return type
+        // This is important for type safety with FirestoreObject compatibility
+        final Map<String, Object> emptyCategory = <String, Object>{'words': <Object>[]};
+        final matchingNativeCategory = _nativeLanguageCategories.firstWhere((natCat) => natCat['name'] == categoryName, orElse: () => emptyCategory);
+
+        // Get the translation at the same index if available
+        final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
+        if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
+          return "${nativeWords[wordIndex]}";
+        }
+      }
+    }
+
+    // If word not found in any category or matching translation not found
+    return word;
+  }
+
+  // Helper method to show translated word in toast
+  void _showTranslatedWordToast(BuildContext context, String word) {
+    showCenteredToast(context, findWordTranslation(word));
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -224,17 +286,289 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          TabContentView(
-            isSmallScreen: isSmallScreen,
-            child: _buildAllWordsTab(isSmallScreen, colorScheme),
+          // Tab content in an Expanded widget to take available space
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                TabContentView(
+                  isSmallScreen: isSmallScreen,
+                  child: _buildAllWordsTab(isSmallScreen, colorScheme),
+                ),
+                TabContentView(
+                  isSmallScreen: isSmallScreen,
+                  child: _buildDueWordsTab(isSmallScreen, colorScheme),
+                ),
+              ],
+            ),
           ),
-          TabContentView(
-            isSmallScreen: isSmallScreen,
-            child: _buildDueWordsTab(isSmallScreen, colorScheme),
-          ),
+          // Review button outside the TabContentView when on Due Words tab
+          if (_currentTabIndex == 1 && !_isLoadingDue && _dueWordsFull.isNotEmpty)
+            SizedBox(
+              width: double.infinity, // Makes the button take full width
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12), // Added more vertical padding
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  minimumSize: const Size(double.infinity, 0), // Ensures button expands horizontally
+                ),
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (BuildContext context) {
+                      final colorScheme = Theme.of(context).colorScheme;
+                      return SafeArea(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, -2),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              // Modal header
+                              Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'Review Options',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Audio Review Option
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primary.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.headset,
+                                            size: 24,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Audio Review',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: colorScheme.onSurface,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'A simple review of the words you need to review with audio support',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: colorScheme.onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // New Lesson Option
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.pushReplacementNamed(context, '/create_lesson');
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primary.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.school,
+                                            size: 24,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'New Lesson',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: colorScheme.onSurface,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Create a new lesson with more context, new words and review overdue words',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: colorScheme.onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Card Review Option
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => ReviewWordsDialog(
+                                      words: _dueWordsRefs,
+                                      userID: _userId,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primary.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.style,
+                                            size: 24,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Card Review',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: colorScheme.onSurface,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'A simple visual review where you test and rate your memory',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: colorScheme.onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                child: const Text('Review'),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: const BottomMenuBar(currentRoute: '/word_management'),
@@ -363,7 +697,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final isLearned = scheduledDays >= 80;
                             final isMastered = scheduledDays >= 100;
                             return InkWell(
-                              onTap: () => showCenteredToast(context, card.word),
+                              onTap: () => _showTranslatedWordToast(context, card.word),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 decoration: BoxDecoration(
@@ -590,7 +924,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final isLearned = scheduledDays >= 80;
                             final isMastered = scheduledDays >= 100;
                             return InkWell(
-                              onTap: () => showCenteredToast(context, card.word),
+                              onTap: () => _showTranslatedWordToast(context, card.word),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 decoration: BoxDecoration(
@@ -722,270 +1056,10 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             ),
           ),
         ),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 0),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
-              ),
-            ),
-            onPressed: displayed.isEmpty
-                ? null
-                : () {
-                    showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (BuildContext context) {
-                        final colorScheme = Theme.of(context).colorScheme;
-                        return SafeArea(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(20),
-                                topRight: Radius.circular(20),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, -2),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                // Modal header
-                                Container(
-                                  width: 40,
-                                  height: 4,
-                                  margin: const EdgeInsets.symmetric(vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text(
-                                    'Review Options',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Audio Review Option
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: colorScheme.primary.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.primary.withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.headset,
-                                              size: 24,
-                                              color: colorScheme.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Audio Review',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: colorScheme.onSurface,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'A simple review of the words you need to review with audio support',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: colorScheme.onSurfaceVariant,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // New Lesson Option
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                    Navigator.pushReplacementNamed(context, '/create_lesson');
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: colorScheme.primary.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.primary.withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.school,
-                                              size: 24,
-                                              color: colorScheme.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'New Lesson',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: colorScheme.onSurface,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Create a new lesson with more context, new words and review overdue words',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: colorScheme.onSurfaceVariant,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Card Review Option
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => ReviewWordsDialog(
-                                        words: _dueWordsRefs,
-                                        userID: _userId,
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: colorScheme.primary.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.primary.withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.style,
-                                              size: 24,
-                                              color: colorScheme.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Card Review',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: colorScheme.onSurface,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'A simple visual review where you test and rate your memory',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: colorScheme.onSurfaceVariant,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-            child: const Text('Review'),
-          ),
-        ),
+        // SizedBox(
+        //   width: double.infinity,
+        //   child:
+        // ),
       ],
     );
   }
