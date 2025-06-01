@@ -26,6 +26,7 @@ import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
+import 'screens/word_management_screen.dart';
 
 const bool versionForTestFlight = true;
 const String localShouldUpdateID = "gWYwwwYH";
@@ -412,6 +413,11 @@ class _MyAppState extends State<MyApp> {
                       create: (context) => HomeScreenModel(),
                       child: const Home(),
                     ),
+                  );
+              break;
+            case '/word_management':
+              builder = (context) => const ResponsiveScreenWrapper(
+                    child: WordManagementScreen(),
                   );
               break;
             case '/login':
