@@ -35,6 +35,15 @@ class BottomMenuBar extends StatelessWidget {
             color: currentRoute == '/create_lesson' ? colorScheme.primary : null,
           ),
           IconButton(
+            icon: const Icon(Icons.list, size: 24),
+            onPressed: () {
+              if (currentRoute != '/word_management') {
+                Navigator.pushReplacementNamed(context, '/word_management');
+              }
+            },
+            color: currentRoute == '/word_management' ? colorScheme.primary : null,
+          ),
+          IconButton(
             icon: const Icon(Icons.person, size: 24),
             onPressed: () {
               if (currentRoute != '/profile') {
