@@ -66,11 +66,56 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     }
     final maps = await getDocsAndRefsMaps(refs);
     final docs = maps['docs'] as List<Map<String, dynamic>>;
-    docs.sort((a, b) => (a['word'] as String).compareTo(b['word'] as String));
+
+    // Convert to WordCard objects first for easier sorting
+    final wordCards = docs.map(WordCard.fromFirestore).toList(); // Sort words by learning status and then alphabetically within each group
+    wordCards.sort((a, b) {
+      // Get status flags for word A
+      final scheduledDaysA = a.card.scheduledDays.toDouble();
+      final learningA = a.card.reps > 0;
+      final isMasteredA = scheduledDaysA >= 100;
+
+      // Get status flags for word B
+      final scheduledDaysB = b.card.scheduledDays.toDouble();
+      final learningB = b.card.reps > 0;
+      final isMasteredB = scheduledDaysB >= 100;
+
+      // Assign category values for sorting priority:
+      // 0: Learning (has reps but not mastered)
+      // 1: Not Started (no reps)
+      // 2: Mastered
+      int categoryA;
+      int categoryB;
+
+      if (learningA && !isMasteredA) {
+        categoryA = 0; // Learning
+      } else if (!learningA) {
+        categoryA = 1; // Not started
+      } else {
+        categoryA = 2; // Mastered
+      }
+
+      if (learningB && !isMasteredB) {
+        categoryB = 0; // Learning
+      } else if (!learningB) {
+        categoryB = 1; // Not started
+      } else {
+        categoryB = 2; // Mastered
+      }
+
+      // Sort by category first
+      if (categoryA != categoryB) {
+        return categoryA.compareTo(categoryB);
+      }
+
+      // Same status, sort alphabetically
+      return a.word.compareTo(b.word);
+    });
+
     setState(() {
       _allWordsFull
         ..clear()
-        ..addAll(docs.map(WordCard.fromFirestore));
+        ..addAll(wordCards);
       _isLoadingAll = false;
     });
   }
@@ -81,11 +126,57 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     final maps = await getDocsAndRefsMaps(refs);
     final docs = maps['docs'] as List<Map<String, dynamic>>;
     final refsMap = maps['refsMap'] as Map<String, DocumentReference>;
-    docs.sort((a, b) => (a['word'] as String).compareTo(b['word'] as String));
+
+    // Convert to WordCard objects first for easier sorting
+    final wordCards = docs.map(WordCard.fromFirestore).toList();
+
+    // Sort words by learning status and then alphabetically within each group
+    wordCards.sort((a, b) {
+      // Get status flags for word A
+      final scheduledDaysA = a.card.scheduledDays.toDouble();
+      final learningA = a.card.reps > 0;
+      final isLearnedA = scheduledDaysA >= 80;
+      final isMasteredA = scheduledDaysA >= 100;
+
+      // Get status flags for word B
+      final scheduledDaysB = b.card.scheduledDays.toDouble();
+      final learningB = b.card.reps > 0;
+      final isLearnedB = scheduledDaysB >= 80;
+      final isMasteredB = scheduledDaysB >= 100;
+
+      // Define categories for sorting
+      int categoryA = 0;
+      int categoryB = 0;
+
+      // Category 0: Learning (has reps but not mastered)
+      // Category 1: Not Started (no reps)
+      // Category 2: Mastered
+
+      if (learningA && !isMasteredA)
+        categoryA = 0;
+      else if (!learningA)
+        categoryA = 1;
+      else if (isMasteredA) categoryA = 2;
+
+      if (learningB && !isMasteredB)
+        categoryB = 0;
+      else if (!learningB)
+        categoryB = 1;
+      else if (isMasteredB) categoryB = 2;
+
+      // Sort by category first
+      if (categoryA != categoryB) {
+        return categoryA.compareTo(categoryB);
+      }
+
+      // Same status, sort alphabetically
+      return a.word.compareTo(b.word);
+    });
+
     setState(() {
       _dueWordsFull
         ..clear()
-        ..addAll(docs.map(WordCard.fromFirestore));
+        ..addAll(wordCards);
       _dueWordsRefs
         ..clear()
         ..addAll(refsMap);
@@ -197,12 +288,17 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(
-            'These are words you have started learning.',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: isSmallScreen ? 14 : 16,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'These are words you have started learning.',
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: isSmallScreen ? 14 : 16,
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -419,12 +515,17 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(
-            'These are words due for review based on our advanced FSRS algorithm.',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: isSmallScreen ? 14 : 16,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'These are words due for review based on our advanced FSRS algorithm.',
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: isSmallScreen ? 14 : 16,
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
