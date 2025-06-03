@@ -34,11 +34,12 @@ Future<void> showMarkAsMasteredModal({
   );
   print('[showMarkAsMasteredModal] matching type: \\${matching.runtimeType}');
 
-  final isAlreadyMastered = matching.isNotEmpty && (matching['scheduledDays'] == -1 || (matching['scheduledDays'] is double && (matching['scheduledDays'] as double) == -1.0));
+  final isAlreadyMastered = matching.isNotEmpty && (matching['scheduledDays'] == -1 || matching['scheduledDays'] == -1.0 || (matching['scheduledDays'] is num && (matching['scheduledDays'] as num) >= 100));
 
   final title = isAlreadyMastered ? 'Unmark as Mastered' : 'Mark as Mastered';
-  final message =
-      isAlreadyMastered ? 'Do you want to unmark this word as mastered? It will return to your learning queue.' : 'Do you want to mark this word as mastered? You will not learn this word anymore in the future.';
+  final message = isAlreadyMastered
+      ? 'Do you want to unmark this word as mastered? It will return to your learning queue and you will lose all progress!'
+      : 'Do you want to mark this word as mastered? You will not learn this word anymore in the future.';
   final buttonText = isAlreadyMastered ? 'Unmark as Mastered' : 'Mark as Mastered';
   final buttonIcon = isAlreadyMastered ? Icons.undo : Icons.flag;
   final iconColor = isAlreadyMastered ? Colors.amber : Colors.green;
