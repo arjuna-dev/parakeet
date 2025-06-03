@@ -572,8 +572,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     final isLearned = scheduledDays >= 80 && scheduledDays != -1;
                                     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
 
-
-
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
                                       onLongPress: () => showMarkAsMasteredModal(
