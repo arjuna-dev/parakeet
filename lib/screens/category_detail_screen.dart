@@ -568,11 +568,79 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     // Compute stability based on matched data
                                     final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
                                     final learning = matching.isEmpty ? false : matching['reps'] > 0;
-                                    final isLearned = scheduledDays >= 80;
-                                    final isMastered = scheduledDays >= 100;
+                                    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
+                                    final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+
+                                    // Move the function definition above this usage to avoid forward reference error
+                                    void showMarkAsMasteredModal(BuildContext context, String word) async {
+                                      final colorScheme = Theme.of(context).colorScheme;
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                            title: const Row(
+                                              children: [
+                                                Icon(Icons.flag, color: Colors.green, size: 28),
+                                                SizedBox(width: 8),
+                                                Expanded(child: Text('Mark as Mastered')),
+                                              ],
+                                            ),
+                                            content: const Text(
+                                              'Do you want to mark this word as mastered? You will not learn this word anymore in the future.',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton.icon(
+                                                icon: const Icon(Icons.flag),
+                                                label: const Text('Mark as Mastered'),
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: colorScheme.primary,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                ),
+                                                onPressed: () async {
+                                                  try {
+                                                    final userId = FirebaseAuth.instance.currentUser!.uid;
+                                                    final wordsCol = FirebaseFirestore.instance
+                                                        .collection('users')
+                                                        .doc(userId)
+                                                        .collection('${widget.targetLanguage}_words')
+                                                        .doc(widget.category['name'])
+                                                        .collection(widget.category['name']);
+                                                    final snap = await wordsCol.where('word', isEqualTo: word.toLowerCase()).get();
+                                                    if (snap.docs.isNotEmpty) {
+                                                      final ref = snap.docs.first.reference;
+                                                      final doc = await ref.get();
+                                                      if (doc.exists) {
+                                                        final data = doc.data() as Map<String, dynamic>;
+                                                        data['scheduledDays'] = -1;
+                                                        await ref.set(data, SetOptions(merge: true));
+                                                        await _loadLearningWords();
+                                                        await _loadWordStats();
+                                                      }
+                                                    }
+                                                    if (mounted) Navigator.of(context).pop();
+                                                  } catch (e) {
+                                                    if (mounted) Navigator.of(context).pop();
+                                                    showCenteredToast(context, 'Failed to mark as mastered');
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    }
 
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
+                                      onLongPress: () => showMarkAsMasteredModal(context, word),
                                       borderRadius: BorderRadius.circular(8),
                                       child: Container(
                                         decoration: BoxDecoration(

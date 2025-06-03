@@ -281,8 +281,8 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             fontSize: isSmallScreen ? 14 : 16,
           ),
           tabs: const [
-            Tab(text: 'All Words'),
             Tab(text: 'Due Words'),
+            Tab(text: 'All Words'),
           ],
         ),
       ),
@@ -295,17 +295,17 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
               children: [
                 TabContentView(
                   isSmallScreen: isSmallScreen,
-                  child: _buildAllWordsTab(isSmallScreen, colorScheme),
+                  child: _buildDueWordsTab(isSmallScreen, colorScheme),
                 ),
                 TabContentView(
                   isSmallScreen: isSmallScreen,
-                  child: _buildDueWordsTab(isSmallScreen, colorScheme),
+                  child: _buildAllWordsTab(isSmallScreen, colorScheme),
                 ),
               ],
             ),
           ),
           // Review button outside the TabContentView when on Due Words tab
-          if (_currentTabIndex == 1 && !_isLoadingDue && _dueWordsFull.isNotEmpty)
+          if (_currentTabIndex == 0 && !_isLoadingDue && _dueWordsFull.isNotEmpty)
             SizedBox(
               width: double.infinity, // Makes the button take full width
               child: FilledButton(
@@ -580,34 +580,36 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
       return const Center(child: CircularProgressIndicator());
     }
     if (_allWordsFull.isEmpty) {
-      return EmptyStateView(
-        icon: Icons.list,
-        message: 'You haven’t practiced any words yet!',
-        additionalWidget: RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: isSmallScreen ? 14 : 16,
-            ),
-            children: [
-              TextSpan(
-                text: 'Create a lesson',
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () {
-                    Navigator.pushReplacementNamed(context, '/create_lesson');
-                  },
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: isSmallScreen ? 16 : 18,
               ),
-              const TextSpan(text: ' to start learning words!'),
-            ],
+              children: [
+                const TextSpan(text: "Nothing to see here yet! Head to the ", style: TextStyle(fontStyle: FontStyle.italic)),
+                TextSpan(
+                  text: 'create lesson tab',
+                  style: TextStyle(
+                    decoration: TextDecoration.underline,
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      Navigator.pushReplacementNamed(context, '/create_lesson');
+                    },
+                ),
+                const TextSpan(text: ' to start your learning journey!', style: TextStyle(fontStyle: FontStyle.italic)),
+              ],
+            ),
           ),
         ),
-        isSmallScreen: isSmallScreen,
       );
     }
     final displayed = _allWordsFull.take((_allPage + 1) * _pageSize).toList();
@@ -667,17 +669,18 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
-                        child: Text(
-                          'Tap any word to see its translation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white70,
-                            fontStyle: FontStyle.italic,
+                      if (displayed.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
+                          child: Text(
+                            'Tap any word to see its translation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
-                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         child: GridView.builder(
@@ -839,6 +842,39 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     }
     final displayed = _dueWordsFull.take((_duePage + 1) * _pageSize).toList();
     const int crossAxisCount = 2;
+    if (_dueWordsFull.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: isSmallScreen ? 16 : 18,
+              ),
+              children: [
+                const TextSpan(text: 'You are up to speed with your learning! To continue on your journey ', style: TextStyle(fontStyle: FontStyle.italic)),
+                TextSpan(
+                  text: 'create a new lesson',
+                  style: TextStyle(
+                    decoration: TextDecoration.underline,
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    //make italics
+                    fontStyle: FontStyle.italic,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      Navigator.pushReplacementNamed(context, '/create_lesson');
+                    },
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Column(
       children: [
         Container(
@@ -894,17 +930,18 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
-                        child: Text(
-                          'Tap any word to see its translation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white70,
-                            fontStyle: FontStyle.italic,
+                      if (displayed.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
+                          child: Text(
+                            'Tap any word to see its translation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
-                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         child: GridView.builder(
