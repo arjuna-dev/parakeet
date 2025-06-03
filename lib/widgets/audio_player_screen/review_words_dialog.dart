@@ -19,6 +19,8 @@ class ReviewWordsDialog extends StatefulWidget {
 }
 
 class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProviderStateMixin {
+  void _logWordsInfo() {}
+
   int _currentWordIndex = 0;
   final StreakService _streakService = StreakService();
   bool _streakRecorded = false;
@@ -34,6 +36,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
 
   @override
   void initState() {
+    _logWordsInfo();
     super.initState();
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -90,7 +93,11 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   }
 
   void _updateProgress() {
-    final progress = _currentWordIndex / widget.words.keys.toList().length;
+    final total = widget.words.keys.toList().length;
+    double progress = 0.0;
+    if (total > 0) {
+      progress = _currentWordIndex / total;
+    }
     _progressController.animateTo(progress);
   }
 
@@ -134,61 +141,84 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
 
     return PopScope(
       canPop: isReviewComplete,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.7),
-              ],
-            ),
-          ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          // Only close if not review complete (otherwise let the "Continue Learning" button handle navigation)
+          if (!isReviewComplete) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: Material(
+          type: MaterialType.transparency,
           child: Stack(
             children: [
+              // Background gradient
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
               // Animated background particles (subtle)
               ...List.generate(6, (index) => _buildFloatingParticle(index, colorScheme)),
 
-              // Main dialog content
+              // Main dialog content with close button
               Center(
                 child: AnimatedBuilder(
                   animation: _scaleAnimation,
                   builder: (context, child) {
                     return Transform.scale(
                       scale: _scaleAnimation.value,
-                      child: Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isTablet ? 48 : (isSmallScreen ? 20 : 32),
-                          vertical: isSmallScreen ? 40 : 60,
-                        ),
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet ? 600 : 450,
-                          maxHeight: screenSize.height * (isSmallScreen ? 0.85 : 0.8),
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                              spreadRadius: 4,
+                      child: Stack(
+                        children: [
+                          Container(
+                            margin: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 48 : (isSmallScreen ? 20 : 32),
+                              vertical: isSmallScreen ? 40 : 60,
                             ),
-                            BoxShadow(
-                              color: colorScheme.primary.withOpacity(0.1),
-                              blurRadius: 40,
-                              offset: const Offset(0, 16),
+                            constraints: BoxConstraints(
+                              maxWidth: isTablet ? 600 : 450,
+                              maxHeight: screenSize.height * (isSmallScreen ? 0.85 : 0.8),
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: isReviewComplete ? _buildCompletionView(colorScheme, isSmallScreen, isTablet) : _buildReviewView(colorScheme, isSmallScreen, isTablet),
-                        ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                  spreadRadius: 4,
+                                ),
+                                BoxShadow(
+                                  color: colorScheme.primary.withOpacity(0.1),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 16),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(28),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Main dialog content
+                                  Expanded(
+                                    child: isReviewComplete ? _buildCompletionView(colorScheme, isSmallScreen, isTablet) : _buildReviewView(colorScheme, isSmallScreen, isTablet),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -558,7 +588,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   Widget _buildReviewView(ColorScheme colorScheme, bool isSmallScreen, bool isTablet) {
     return Column(
       children: [
-        // Header with progress
+        // Header with progress and X button
         Container(
           padding: EdgeInsets.all(isTablet ? 32 : (isSmallScreen ? 20 : 24)),
           decoration: BoxDecoration(
@@ -571,6 +601,40 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
           ),
           child: Column(
             children: [
+              // X button (only show if not review complete)
+              if (_currentWordIndex < widget.words.keys.toList().length)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.all(isTablet ? 10 : (isSmallScreen ? 6 : 8)),
+                          child: Icon(
+                            Icons.close,
+                            size: isTablet ? 28 : (isSmallScreen ? 20 : 24),
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               // Progress indicator
               Row(
                 children: [
