@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
+import 'package:parakeet/utils/mark_as_mastered_modal.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/services/lesson_service.dart';
@@ -571,225 +572,21 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     final isLearned = scheduledDays >= 80 && scheduledDays != -1;
                                     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
 
-                                    // Move the function definition above this usage to avoid forward reference error
-                                    void showMarkAsMasteredModal(BuildContext context, String word) async {
-                                      // Check if the word is already mastered to show the appropriate action
-                                      final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
 
-                                      final isAlreadyMastered = matching.isNotEmpty && (matching['scheduledDays'] == -1 || (matching['scheduledDays'] is double && matching['scheduledDays'] as double == -1.0));
-
-                                      final title = isAlreadyMastered ? 'Unmark as Mastered' : 'Mark as Mastered';
-                                      final message = isAlreadyMastered
-                                          ? 'Do you want to unmark this word as mastered? It will return to your learning queue.'
-                                          : 'Do you want to mark this word as mastered? You will not learn this word anymore in the future.';
-                                      final buttonText = isAlreadyMastered ? 'Unmark as Mastered' : 'Mark as Mastered';
-                                      final buttonIcon = isAlreadyMastered ? Icons.undo : Icons.flag;
-                                      final iconColor = isAlreadyMastered ? Colors.amber : Colors.green;
-
-                                      final colorScheme = Theme.of(context).colorScheme;
-
-                                      // Use StatefulBuilder to manage loading state inside the dialog
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (BuildContext dialogContext) {
-                                          bool isLoading = false;
-
-                                          return StatefulBuilder(builder: (BuildContext context, StateSetter setDialogState) {
-                                            return AlertDialog(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                              title: Row(
-                                                children: [
-                                                  Icon(buttonIcon, color: iconColor, size: 28),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(child: Text(title)),
-                                                ],
-                                              ),
-                                              content: isLoading
-                                                  ? const SizedBox(
-                                                      height: 100,
-                                                      child: Center(
-                                                        child: Column(
-                                                          mainAxisAlignment: MainAxisAlignment.center,
-                                                          children: [
-                                                            CircularProgressIndicator(),
-                                                            SizedBox(height: 16),
-                                                            Text('Processing...', style: TextStyle(fontStyle: FontStyle.italic)),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    )
-                                                  : Text(message, style: const TextStyle(fontSize: 16)),
-                                              actions: isLoading
-                                                  ? []
-                                                  : [
-                                                      TextButton(
-                                                        onPressed: () => Navigator.of(dialogContext).pop(),
-                                                        child: const Text('Cancel'),
-                                                      ),
-                                                      FilledButton.icon(
-                                                        icon: Icon(buttonIcon),
-                                                        label: Text(buttonText),
-                                                        style: FilledButton.styleFrom(
-                                                          backgroundColor: colorScheme.primary,
-                                                          foregroundColor: Colors.white,
-                                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                        ),
-                                                        onPressed: () async {
-                                                          // Set loading state
-                                                          setDialogState(() => isLoading = true);
-
-                                                          try {
-                                                            final userId = FirebaseAuth.instance.currentUser!.uid;
-                                                            final wordsCol = FirebaseFirestore.instance
-                                                                .collection('users')
-                                                                .doc(userId)
-                                                                .collection('${widget.targetLanguage}_words')
-                                                                .doc(widget.category['name'])
-                                                                .collection(widget.category['name']);
-
-                                                            final snap = await wordsCol.where('word', isEqualTo: word.toLowerCase()).get();
-
-                                                            // Set the new scheduledDays value based on the action
-                                                            final newScheduledDays = isAlreadyMastered ? 0.0 : -1.0;
-                                                            DocumentReference? ref;
-
-                                                            if (snap.docs.isNotEmpty) {
-                                                              // Word exists in Firestore, update it
-                                                              ref = snap.docs.first.reference;
-                                                              final doc = await ref.get();
-                                                              if (doc.exists) {
-                                                                final data = doc.data() as Map<String, dynamic>;
-                                                                data['scheduledDays'] = newScheduledDays;
-                                                                await ref.set(data, SetOptions(merge: true));
-                                                              }
-                                                            } else if (!isAlreadyMastered) {
-                                                              // Word doesn't exist and we're marking as mastered, create it
-                                                              // Use the word itself as the document ID
-                                                              ref = wordsCol.doc(word.toLowerCase());
-                                                              await ref.set({
-                                                                'word': word.toLowerCase(),
-                                                                'scheduledDays': newScheduledDays,
-                                                                'stability': 0.0,
-                                                                'difficulty': 0.0,
-                                                                'reps': 1,
-                                                                'lapses': 0,
-                                                                'lastReview': DateTime.now().millisecondsSinceEpoch,
-                                                                'due': 0,
-                                                              });
-                                                            } else {
-                                                              // Cannot unmark a non-existent word
-                                                              if (mounted) {
-                                                                Navigator.of(dialogContext).pop();
-                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                  const SnackBar(
-                                                                    content: Text('Word not found in learning records'),
-                                                                    behavior: SnackBarBehavior.floating,
-                                                                    shape: RoundedRectangleBorder(
-                                                                      borderRadius: BorderRadius.only(
-                                                                        topLeft: Radius.circular(10),
-                                                                        topRight: Radius.circular(10),
-                                                                      ),
-                                                                    ),
-                                                                    margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                                                  ),
-                                                                );
-                                                              }
-                                                              return;
-                                                            }
-
-                                                            // Retry mechanism: check scheduledDays value up to 10 times
-                                                            bool confirmed = false;
-                                                            int retries = 0;
-
-                                                            while (!confirmed && retries < 10 && ref != null) {
-                                                              await Future.delayed(const Duration(milliseconds: 500));
-                                                              final checkDoc = await ref.get();
-
-                                                              if (checkDoc.exists) {
-                                                                final checkData = checkDoc.data() as Map<String, dynamic>;
-                                                                if (checkData['scheduledDays'] == newScheduledDays) {
-                                                                  confirmed = true;
-                                                                  break;
-                                                                }
-                                                              }
-                                                              retries++;
-                                                            }
-
-                                                            if (confirmed) {
-                                                              if (mounted) {
-                                                                // Update local state
-                                                                setState(() {
-                                                                  final idx = _learningWords.indexWhere((element) => element['word'] == word.toLowerCase());
-                                                                  if (idx != -1) {
-                                                                    _learningWords[idx]['scheduledDays'] = newScheduledDays;
-                                                                  } else if (!isAlreadyMastered) {
-                                                                    // If not present and we're mastering, add it
-                                                                    _learningWords.add({'word': word.toLowerCase(), 'scheduledDays': newScheduledDays, 'reps': 1});
-                                                                  }
-                                                                });
-
-                                                                await _loadWordStats();
-                                                                Navigator.of(dialogContext).pop();
-
-                                                                // Show success message with SnackBar
-                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                  SnackBar(
-                                                                    content: Text(isAlreadyMastered ? 'Word returned to learning queue' : 'Word marked as mastered!'),
-                                                                    // backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                                                    // behavior: SnackBarBehavior.floating,
-                                                                    shape: const RoundedRectangleBorder(
-                                                                      borderRadius: BorderRadius.only(
-                                                                        topLeft: Radius.circular(10),
-                                                                        topRight: Radius.circular(10),
-                                                                      ),
-                                                                    ),
-                                                                    // margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                                                  ),
-                                                                );
-                                                              }
-                                                            } else {
-                                                              if (mounted) {
-                                                                Navigator.of(dialogContext).pop();
-                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                  SnackBar(
-                                                                    content: const Text('Server update failed. Please try again later.'),
-                                                                    backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                                                                    behavior: SnackBarBehavior.floating,
-                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                                                  ),
-                                                                );
-                                                              }
-                                                            }
-                                                          } catch (e) {
-                                                            if (mounted) {
-                                                              Navigator.of(dialogContext).pop();
-                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                SnackBar(
-                                                                  content: const Text('An error occurred. Please try again.'),
-                                                                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                                                                  behavior: SnackBarBehavior.floating,
-                                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                                                ),
-                                                              );
-                                                              print('Error in mastering word: $e');
-                                                            }
-                                                          }
-                                                        },
-                                                      ),
-                                                    ],
-                                            );
-                                          });
-                                        },
-                                      );
-                                    }
 
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
-                                      onLongPress: () => showMarkAsMasteredModal(context, word),
+                                      onLongPress: () => showMarkAsMasteredModal(
+                                        context: context,
+                                        word: word,
+                                        categoryName: widget.category['name'],
+                                        targetLanguage: widget.targetLanguage,
+                                        learningWords: _learningWords,
+                                        updateLearningWords: (updated) => setState(() => _learningWords
+                                          ..clear()
+                                          ..addAll(updated)),
+                                        loadWordStats: _loadWordStats,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                       child: Container(
                                         decoration: BoxDecoration(
