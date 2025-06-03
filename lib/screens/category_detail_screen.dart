@@ -523,55 +523,76 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                     mainAxisSpacing: 8,
                                   ),
                                   itemCount: () {
-                                    // Calculate item count based on sorted words
                                     final allWords = (widget.category['words'] as List).toList();
                                     final sortedWords = allWords.map((word) {
                                       final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
                                       final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+                                      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+                                      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+                                      final isLearning = !isMastered && reps > 0;
+                                      final isNotStarted = !isMastered && reps == 0;
+                                      int priority;
+                                      if (isLearning) {
+                                        priority = 0;
+                                      } else if (isNotStarted) {
+                                        priority = 1;
+                                      } else {
+                                        priority = 2; // Mastered
+                                      }
                                       return {
                                         'word': word.toString(),
+                                        'priority': priority,
                                         'score': scheduledDays,
+                                        'index': allWords.indexOf(word),
                                       };
                                     }).toList()
-                                      ..sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
-
+                                      ..sort((a, b) {
+                                        final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
+                                        if (cmp != 0) return cmp;
+                                        // If same priority, sort by score descending
+                                        return (b['score'] as double).compareTo(a['score'] as double);
+                                      });
                                     return _wordsExpanded ? sortedWords.length : min(4, sortedWords.length);
                                   }(),
                                   itemBuilder: (context, index) {
-                                    // Get all words first
                                     final allWords = (widget.category['words'] as List).toList();
-
-                                    // Create a list of all word data with scores for sorting
-                                    final List<Map<String, dynamic>> allWordsWithScores = allWords.map((word) {
+                                    final List<Map<String, dynamic>> allWordsWithPriority = allWords.map((word) {
                                       final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
                                       final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+                                      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+                                      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+                                      final isLearning = !isMastered && reps > 0;
+                                      final isNotStarted = !isMastered && reps == 0;
+                                      int priority;
+                                      if (isLearning) {
+                                        priority = 0;
+                                      } else if (isNotStarted) {
+                                        priority = 1;
+                                      } else {
+                                        priority = 2; // Mastered
+                                      }
                                       return {
                                         'word': word.toString(),
+                                        'priority': priority,
                                         'score': scheduledDays,
-                                        'index': allWords.indexOf(word), // Keep original index to match with native word
+                                        'index': allWords.indexOf(word),
                                       };
                                     }).toList();
-
-                                    // Sort all words by score (descending)
-                                    allWordsWithScores.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
-
-                                    // Then limit to display count
-                                    final displayWords = allWordsWithScores.take(_wordsExpanded ? allWordsWithScores.length : 4).toList();
-
-                                    // Use the sorted and limited data
+                                    allWordsWithPriority.sort((a, b) {
+                                      final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
+                                      if (cmp != 0) return cmp;
+                                      return (b['score'] as double).compareTo(a['score'] as double);
+                                    });
+                                    final displayWords = allWordsWithPriority.take(_wordsExpanded ? allWordsWithPriority.length : 4).toList();
                                     final word = displayWords[index]['word'] as String;
                                     final originalIndex = displayWords[index]['index'] as int;
                                     final nativeWord = (widget.nativeCategory['words'] as List)[originalIndex].toString();
-
-                                    // Find matching word data for score calculation
                                     final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
-
-                                    // Compute stability based on matched data
                                     final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-                                    final learning = matching.isEmpty ? false : matching['reps'] > 0;
+                                    final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+                                    final learning = !((scheduledDays >= 100 || scheduledDays == -1)) && reps > 0;
                                     final isLearned = scheduledDays >= 80 && scheduledDays != -1;
                                     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-
                                     return InkWell(
                                       onTap: () => showCenteredToast(context, nativeWord),
                                       onLongPress: () => showMarkAsMasteredModal(
