@@ -9,6 +9,7 @@ import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/screens/category_detail_screen.dart' show WordProgressBar, showCenteredToast;
+import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
 import 'package:parakeet/utils/language_categories.dart';
 
 class WordManagementScreen extends StatefulWidget {
@@ -186,13 +187,13 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         // Get status flags for word A
         final scheduledDaysA = a.card.scheduledDays.toDouble();
         final learningA = a.card.reps > 0;
-        final isLearnedA = scheduledDaysA >= 80;
+        // final isLearnedA = scheduledDaysA >= 80;
         final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
 
         // Get status flags for word B
         final scheduledDaysB = b.card.scheduledDays.toDouble();
         final learningB = b.card.reps > 0;
-        final isLearnedB = scheduledDaysB >= 80;
+        // final isLearnedB = scheduledDaysB >= 80;
         final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
 
         // Define categories for sorting
@@ -252,26 +253,52 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         // Found the word, now find matching category in native language
         final String categoryName = targetCategory['name'];
 
-        // Find the matching category in native language categories with Map<String, Object> return type
-        // This is important for type safety with FirestoreObject compatibility
-        final Map<String, Object> emptyCategory = <String, Object>{'words': <Object>[]};
-        final matchingNativeCategory = _nativeLanguageCategories.firstWhere((natCat) => natCat['name'] == categoryName, orElse: () => emptyCategory);
+        // LOGGING: Print types and values
+        print('[findWordTranslation] categoryName: $categoryName');
+        print('[findWordTranslation] _nativeLanguageCategories type: ${_nativeLanguageCategories.runtimeType}');
+        print('[findWordTranslation] _nativeLanguageCategories: $_nativeLanguageCategories');
+
+        final matchingNativeCategory = _nativeLanguageCategories.firstWhere(
+          (natCat) {
+            print('[findWordTranslation] natCat: $natCat, type: ${natCat.runtimeType}');
+            return natCat['name'] == categoryName;
+          },
+          orElse: () {
+            print('[findWordTranslation] orElse triggered! Returning <String, dynamic>{{"words": <dynamic>[]}}');
+            return <String, dynamic>{'words': <dynamic>[]};
+          },
+        );
+
+        print('[findWordTranslation] matchingNativeCategory: $matchingNativeCategory, type: ${matchingNativeCategory.runtimeType}');
 
         // Get the translation at the same index if available
         final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
+        print('[findWordTranslation] nativeWords: $nativeWords, type: ${nativeWords.runtimeType}');
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
+          print('[findWordTranslation] Returning translation: ${nativeWords[wordIndex]}');
           return "${nativeWords[wordIndex]}";
         }
       }
     }
 
     // If word not found in any category or matching translation not found
+    print('[findWordTranslation] No translation found, returning original word: $word');
     return word;
   }
 
   // Helper method to show translated word in toast
   void _showTranslatedWordToast(BuildContext context, String word) {
     showCenteredToast(context, findWordTranslation(word));
+  }
+
+  String? _findCategoryName(String word) {
+    for (final targetCategory in _targetLanguageCategories) {
+      final List<dynamic> words = targetCategory['words'];
+      if (words.any((w) => w.toLowerCase() == word.toLowerCase())) {
+        return targetCategory['name'] as String;
+      }
+    }
+    return null;
   }
 
   @override
@@ -729,6 +756,27 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final isMastered = scheduledDays >= 100 || scheduledDays == -1;
                             return InkWell(
                               onTap: () => _showTranslatedWordToast(context, card.word),
+                              onLongPress: () {
+                                final categoryName = _findCategoryName(card.word);
+                                if (categoryName != null) {
+                                  showMarkAsMasteredModal(
+                                    context: context,
+                                    word: card.word,
+                                    categoryName: categoryName,
+                                    targetLanguage: _targetLanguage,
+                                    learningWords: List<Map<String, dynamic>>.from(_allWordsFull.map((c) => <String, dynamic>{
+                                          'word': c.word.toLowerCase(),
+                                          'scheduledDays': c.card.scheduledDays.toDouble(),
+                                          'reps': c.card.reps,
+                                        })),
+                                    updateLearningWords: (_) {},
+                                    loadWordStats: () async {
+                                      await _loadAllWords();
+                                      await _loadDueWords();
+                                    },
+                                  );
+                                }
+                              },
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 decoration: BoxDecoration(
@@ -990,6 +1038,30 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final isMastered = scheduledDays >= 100 || scheduledDays == -1;
                             return InkWell(
                               onTap: () => _showTranslatedWordToast(context, card.word),
+                              onLongPress: () {
+                                final categoryName = _findCategoryName(card.word);
+                                if (categoryName != null) {
+                                  showMarkAsMasteredModal(
+                                      context: context,
+                                      word: card.word,
+                                      categoryName: categoryName,
+                                      targetLanguage: _targetLanguage,
+                                      updateLearningWords: (_) {},
+                                      loadWordStats: () async {
+                                        await _loadAllWords();
+                                        await _loadDueWords();
+                                      },
+                                      learningWords: List<Map<String, dynamic>>.from(
+                                        _allWordsFull
+                                            .map((c) => <String, dynamic>{
+                                                  'word': c.word.toLowerCase(),
+                                                  'scheduledDays': c.card.scheduledDays.toDouble(),
+                                                  'reps': c.card.reps,
+                                                })
+                                            .toList(),
+                                      ));
+                                }
+                              },
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 decoration: BoxDecoration(

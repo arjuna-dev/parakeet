@@ -11,6 +11,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// [learningWords] - The current list of learning words (mutable)
 /// [updateLearningWords] - Callback to update the learning words list in the parent
 /// [loadWordStats] - Callback to reload word stats in the parent
+
 Future<void> showMarkAsMasteredModal({
   required BuildContext context,
   required String word,
@@ -20,12 +21,20 @@ Future<void> showMarkAsMasteredModal({
   required void Function(List<Map<String, dynamic>>) updateLearningWords,
   required Future<void> Function() loadWordStats,
 }) async {
+  print('[showMarkAsMasteredModal] learningWords type: \\${learningWords.runtimeType}');
+  if (learningWords.isNotEmpty) {
+    print('[showMarkAsMasteredModal] learningWords[0] type: \\${learningWords[0].runtimeType}');
+  }
   final matching = learningWords.firstWhere(
     (element) => element['word'] == word.toLowerCase(),
-    orElse: () => {},
+    orElse: () {
+      print('[showMarkAsMasteredModal] orElse triggered, returning <String, dynamic>{}');
+      return <String, dynamic>{};
+    },
   );
+  print('[showMarkAsMasteredModal] matching type: \\${matching.runtimeType}');
 
-  final isAlreadyMastered = matching.isNotEmpty && (matching['scheduledDays'] == -1 || (matching['scheduledDays'] is double && matching['scheduledDays'] as double == -1.0));
+  final isAlreadyMastered = matching.isNotEmpty && (matching['scheduledDays'] == -1 || (matching['scheduledDays'] is double && (matching['scheduledDays'] as double) == -1.0));
 
   final title = isAlreadyMastered ? 'Unmark as Mastered' : 'Mark as Mastered';
   final message =
@@ -130,7 +139,7 @@ Future<void> showMarkAsMasteredModal({
                         // Retry mechanism: check scheduledDays value up to 10 times
                         bool confirmed = false;
                         int retries = 0;
-                        while (!confirmed && retries < 10 && ref != null) {
+                        while (!confirmed && retries < 10) {
                           await Future.delayed(const Duration(milliseconds: 500));
                           final checkDoc = await ref.get();
                           if (checkDoc.exists) {
