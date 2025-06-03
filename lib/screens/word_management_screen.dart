@@ -764,7 +764,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                   color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: isLearned ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
+                                    color: isLearned || isMastered ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
                                     width: 1,
                                   ),
                                 ),
@@ -831,7 +831,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                     WordProgressBar(score: scheduledDays),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${scheduledDays.toInt()} days until next review',
+                                      scheduledDays == -1 ? 'Manually marked as mastered' : '${scheduledDays.toInt()} days until next review',
                                       style: const TextStyle(
                                         fontSize: 11,
                                         color: Colors.white70,
