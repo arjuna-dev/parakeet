@@ -499,12 +499,23 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
                               // Subtitle about tapping for translation
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                                 child: Text(
                                   'Tap any word to see its translation',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.white.withOpacity(0.7),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                                child: Text(
+                                  'Long-press to display word options',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white70,
                                     fontStyle: FontStyle.italic,
                                   ),
                                 ),
