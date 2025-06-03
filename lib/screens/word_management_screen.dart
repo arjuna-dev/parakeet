@@ -406,6 +406,12 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                               InkWell(
                                 onTap: () {
                                   Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Audio Review coming soon!'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
