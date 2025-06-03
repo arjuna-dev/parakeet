@@ -19,6 +19,8 @@ class ReviewWordsDialog extends StatefulWidget {
 }
 
 class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProviderStateMixin {
+  void _logWordsInfo() {}
+
   int _currentWordIndex = 0;
   final StreakService _streakService = StreakService();
   bool _streakRecorded = false;
@@ -34,6 +36,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
 
   @override
   void initState() {
+    _logWordsInfo();
     super.initState();
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -90,7 +93,11 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   }
 
   void _updateProgress() {
-    final progress = _currentWordIndex / widget.words.keys.toList().length;
+    final total = widget.words.keys.toList().length;
+    double progress = 0.0;
+    if (total > 0) {
+      progress = _currentWordIndex / total;
+    }
     _progressController.animateTo(progress);
   }
 

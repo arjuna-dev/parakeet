@@ -25,6 +25,7 @@ class WordManagementScreen extends StatefulWidget {
 }
 
 class _WordManagementScreenState extends State<WordManagementScreen> with SingleTickerProviderStateMixin {
+  late Map<String, DocumentReference> _allRefsMap;
   late TabController _tabController;
   late bool _isLoadingAll;
   late bool _isLoadingDue;
@@ -111,6 +112,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
       }
       final maps = await getDocsAndRefsMaps(refs);
       final docs = maps['docs'] as List<Map<String, dynamic>>;
+      _allRefsMap = maps['refsMap'] as Map<String, DocumentReference>;
 
       // Convert to WordCard objects first for easier sorting
       final wordCards = docs.map(WordCard.fromFirestore).toList(); // Sort words by learning status and then alphabetically within each group
@@ -208,11 +210,22 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         return a.word.compareTo(b.word);
       });
 
+      final refsMap = _allRefsMap;
+      // Build a map of only due words and their references
+      final dueWordsRefs = <String, DocumentReference>{};
+      for (final wordCard in dueWords) {
+        final ref = refsMap[wordCard.word];
+        if (ref != null) {
+          dueWordsRefs[wordCard.word] = ref;
+        }
+      }
       setState(() {
         _dueWordsFull
           ..clear()
           ..addAll(dueWords);
-        _dueWordsRefs.clear(); // Not used anymore, but clear for safety
+        _dueWordsRefs
+          ..clear()
+          ..addAll(dueWordsRefs);
         _isLoadingDue = false;
       });
     } catch (e, stack) {
