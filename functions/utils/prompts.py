@@ -1,9 +1,11 @@
+import random
+
 def prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length):
    keywords_instruction = ""
    if category == 'Custom Lesson':
-      keywords_instruction = f"All the words in {keywords} list should be used in the dialogue."
+      keywords_instruction = f"All the words in {keywords} list should be used in the dialogue if possible."
    else:
-      keywords_instruction = "IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue."
+      keywords_instruction = "IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue in their exact form without declination."
 
    return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the the following content:
 
@@ -534,7 +536,15 @@ Expected JSON output:
 '''
 
 def prompt_generate_lesson_topic(category, selected_words, target_language, native_language):
+  # Generate a boolean variable that is 50% chances false
+  funky_topic = random.choice([True, False])
+  extra_instructions = ""
+
+  if funky_topic:
+    extra_instructions = "Because we will be generating many such lessons try to think outside the box and come up with a topic that is not too common, but still relevant to the category."
+
   return f'''Generate a language lesson topic that fits the category '{category}' that can be taught with the words in {selected_words}.
+        {extra_instructions}
         The topic should be fun, engaging and practical for language learning.
         Return the response in this exact JSON format:
         {{
