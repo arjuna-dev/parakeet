@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/utils/script_generator.dart' show get5MostOverdueWordsRefs, getDocsAndRefsMaps;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
-import 'package:parakeet/widgets/home_screen/empty_state_view.dart';
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
@@ -66,151 +65,180 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   }
 
   Future<void> _initializeData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    _userId = user.uid;
-    final userData = await ProfileService.fetchUserData();
-    _targetLanguage = userData['target_language'] as String? ?? '';
-    _nativeLanguage = widget.nativeLanguage ?? userData['native_language'] as String? ?? 'English (US)';
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        debugPrint('WordManagementScreen: No Firebase user found.');
+        setState(() {
+          _isLoadingAll = false;
+          _isLoadingDue = false;
+        });
+        return;
+      }
+      _userId = user.uid;
+      final userData = await ProfileService.fetchUserData();
+      _targetLanguage = userData['target_language'] as String? ?? '';
+      _nativeLanguage = widget.nativeLanguage ?? userData['native_language'] as String? ?? 'English (US)';
 
-    // Load categories for both languages
-    _targetLanguageCategories = getCategoriesForLanguage(_targetLanguage);
-    _nativeLanguageCategories = getCategoriesForLanguage(_nativeLanguage);
+      // Load categories for both languages
+      _targetLanguageCategories = getCategoriesForLanguage(_targetLanguage);
+      _nativeLanguageCategories = getCategoriesForLanguage(_nativeLanguage);
 
-    await _loadAllWords();
-    await _loadDueWords();
+      await _loadAllWords();
+      await _loadDueWords();
+    } catch (e, stack) {
+      debugPrint('WordManagementScreen: Error in _initializeData: \n$e\n$stack');
+      setState(() {
+        _isLoadingAll = false;
+        _isLoadingDue = false;
+      });
+    }
   }
 
   Future<void> _loadAllWords() async {
     setState(() => _isLoadingAll = true);
-    final categoriesRef = FirebaseFirestore.instance.collection('users').doc(_userId).collection('${_targetLanguage}_words');
-    final categories = await categoriesRef.get();
-    final refs = <DocumentReference>[];
-    for (var cat in categories.docs) {
-      final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
-      final snap = await wordsCol.get();
-      for (var doc in snap.docs) {
-        refs.add(doc.reference);
+    try {
+      final categoriesRef = FirebaseFirestore.instance.collection('users').doc(_userId).collection('${_targetLanguage}_words');
+      final categories = await categoriesRef.get();
+      final refs = <DocumentReference>[];
+      for (var cat in categories.docs) {
+        final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
+        final snap = await wordsCol.get();
+        for (var doc in snap.docs) {
+          refs.add(doc.reference);
+        }
       }
+      final maps = await getDocsAndRefsMaps(refs);
+      final docs = maps['docs'] as List<Map<String, dynamic>>;
+
+      // Convert to WordCard objects first for easier sorting
+      final wordCards = docs.map(WordCard.fromFirestore).toList(); // Sort words by learning status and then alphabetically within each group
+      wordCards.sort((a, b) {
+        // Get status flags for word A
+        final scheduledDaysA = a.card.scheduledDays.toDouble();
+        final learningA = a.card.reps > 0;
+        final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
+
+        // Get status flags for word B
+        final scheduledDaysB = b.card.scheduledDays.toDouble();
+        final learningB = b.card.reps > 0;
+        final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
+
+        // Assign category values for sorting priority:
+        // 0: Learning (has reps but not mastered)
+        // 1: Not Started (no reps)
+        // 2: Mastered
+        int categoryA;
+        int categoryB;
+
+        if (learningA && !isMasteredA) {
+          categoryA = 0; // Learning
+        } else if (!learningA) {
+          categoryA = 1; // Not started
+        } else {
+          categoryA = 2; // Mastered
+        }
+
+        if (learningB && !isMasteredB) {
+          categoryB = 0; // Learning
+        } else if (!learningB) {
+          categoryB = 1; // Not started
+        } else {
+          categoryB = 2; // Mastered
+        }
+
+        // Sort by category first
+        if (categoryA != categoryB) {
+          return categoryA.compareTo(categoryB);
+        }
+
+        // Same status, sort alphabetically
+        return a.word.compareTo(b.word);
+      });
+
+      setState(() {
+        _allWordsFull
+          ..clear()
+          ..addAll(wordCards);
+        _isLoadingAll = false;
+      });
+    } catch (e, stack) {
+      debugPrint('WordManagementScreen: Error in _loadAllWords: \n$e\n$stack');
+      setState(() {
+        _isLoadingAll = false;
+      });
     }
-    final maps = await getDocsAndRefsMaps(refs);
-    final docs = maps['docs'] as List<Map<String, dynamic>>;
-
-    // Convert to WordCard objects first for easier sorting
-    final wordCards = docs.map(WordCard.fromFirestore).toList(); // Sort words by learning status and then alphabetically within each group
-    wordCards.sort((a, b) {
-      // Get status flags for word A
-      final scheduledDaysA = a.card.scheduledDays.toDouble();
-      final learningA = a.card.reps > 0;
-      final isMasteredA = scheduledDaysA >= 100;
-
-      // Get status flags for word B
-      final scheduledDaysB = b.card.scheduledDays.toDouble();
-      final learningB = b.card.reps > 0;
-      final isMasteredB = scheduledDaysB >= 100;
-
-      // Assign category values for sorting priority:
-      // 0: Learning (has reps but not mastered)
-      // 1: Not Started (no reps)
-      // 2: Mastered
-      int categoryA;
-      int categoryB;
-
-      if (learningA && !isMasteredA) {
-        categoryA = 0; // Learning
-      } else if (!learningA) {
-        categoryA = 1; // Not started
-      } else {
-        categoryA = 2; // Mastered
-      }
-
-      if (learningB && !isMasteredB) {
-        categoryB = 0; // Learning
-      } else if (!learningB) {
-        categoryB = 1; // Not started
-      } else {
-        categoryB = 2; // Mastered
-      }
-
-      // Sort by category first
-      if (categoryA != categoryB) {
-        return categoryA.compareTo(categoryB);
-      }
-
-      // Same status, sort alphabetically
-      return a.word.compareTo(b.word);
-    });
-
-    setState(() {
-      _allWordsFull
-        ..clear()
-        ..addAll(wordCards);
-      _isLoadingAll = false;
-    });
   }
 
   Future<void> _loadDueWords() async {
     setState(() => _isLoadingDue = true);
-    final refs = await get5MostOverdueWordsRefs(_userId, _targetLanguage, []);
-    final maps = await getDocsAndRefsMaps(refs);
-    final docs = maps['docs'] as List<Map<String, dynamic>>;
-    final refsMap = maps['refsMap'] as Map<String, DocumentReference>;
+    try {
+      final refs = await get5MostOverdueWordsRefs(_userId, _targetLanguage, []);
+      final maps = await getDocsAndRefsMaps(refs);
+      final docs = maps['docs'] as List<Map<String, dynamic>>;
+      final refsMap = maps['refsMap'] as Map<String, DocumentReference>;
 
-    // Convert to WordCard objects first for easier sorting
-    final wordCards = docs.map(WordCard.fromFirestore).toList();
+      // Convert to WordCard objects first for easier sorting
+      final wordCards = docs.map(WordCard.fromFirestore).toList();
 
-    // Sort words by learning status and then alphabetically within each group
-    wordCards.sort((a, b) {
-      // Get status flags for word A
-      final scheduledDaysA = a.card.scheduledDays.toDouble();
-      final learningA = a.card.reps > 0;
-      final isLearnedA = scheduledDaysA >= 80;
-      final isMasteredA = scheduledDaysA >= 100;
+      // Sort words by learning status and then alphabetically within each group
+      wordCards.sort((a, b) {
+        // Get status flags for word A
+        final scheduledDaysA = a.card.scheduledDays.toDouble();
+        final learningA = a.card.reps > 0;
+        final isLearnedA = scheduledDaysA >= 80;
+        final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
 
-      // Get status flags for word B
-      final scheduledDaysB = b.card.scheduledDays.toDouble();
-      final learningB = b.card.reps > 0;
-      final isLearnedB = scheduledDaysB >= 80;
-      final isMasteredB = scheduledDaysB >= 100;
+        // Get status flags for word B
+        final scheduledDaysB = b.card.scheduledDays.toDouble();
+        final learningB = b.card.reps > 0;
+        final isLearnedB = scheduledDaysB >= 80;
+        final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
 
-      // Define categories for sorting
-      int categoryA = 0;
-      int categoryB = 0;
+        // Define categories for sorting
+        int categoryA = 0;
+        int categoryB = 0;
 
-      // Category 0: Learning (has reps but not mastered)
-      // Category 1: Not Started (no reps)
-      // Category 2: Mastered
+        // Category 0: Learning (has reps but not mastered)
+        // Category 1: Not Started (no reps)
+        // Category 2: Mastered
 
-      if (learningA && !isMasteredA)
-        categoryA = 0;
-      else if (!learningA)
-        categoryA = 1;
-      else if (isMasteredA) categoryA = 2;
+        if (learningA && !isMasteredA)
+          categoryA = 0;
+        else if (!learningA)
+          categoryA = 1;
+        else if (isMasteredA) categoryA = 2;
 
-      if (learningB && !isMasteredB)
-        categoryB = 0;
-      else if (!learningB)
-        categoryB = 1;
-      else if (isMasteredB) categoryB = 2;
+        if (learningB && !isMasteredB)
+          categoryB = 0;
+        else if (!learningB)
+          categoryB = 1;
+        else if (isMasteredB) categoryB = 2;
 
-      // Sort by category first
-      if (categoryA != categoryB) {
-        return categoryA.compareTo(categoryB);
-      }
+        // Sort by category first
+        if (categoryA != categoryB) {
+          return categoryA.compareTo(categoryB);
+        }
 
-      // Same status, sort alphabetically
-      return a.word.compareTo(b.word);
-    });
+        // Same status, sort alphabetically
+        return a.word.compareTo(b.word);
+      });
 
-    setState(() {
-      _dueWordsFull
-        ..clear()
-        ..addAll(wordCards);
-      _dueWordsRefs
-        ..clear()
-        ..addAll(refsMap);
-      _isLoadingDue = false;
-    });
+      setState(() {
+        _dueWordsFull
+          ..clear()
+          ..addAll(wordCards);
+        _dueWordsRefs
+          ..clear()
+          ..addAll(refsMap);
+        _isLoadingDue = false;
+      });
+    } catch (e, stack) {
+      debugPrint('WordManagementScreen: Error in _loadDueWords: \n$e\n$stack');
+      setState(() {
+        _isLoadingDue = false;
+      });
+    }
   }
 
   // Method to find word translation by looking up the category and index
@@ -698,7 +726,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final scheduledDays = card.card.scheduledDays.toDouble();
                             final learning = card.card.reps > 0;
                             final isLearned = scheduledDays >= 80;
-                            final isMastered = scheduledDays >= 100;
+                            final isMastered = scheduledDays >= 100 || scheduledDays == -1;
                             return InkWell(
                               onTap: () => _showTranslatedWordToast(context, card.word),
                               borderRadius: BorderRadius.circular(8),
@@ -959,7 +987,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             final scheduledDays = card.card.scheduledDays.toDouble();
                             final learning = card.card.reps > 0;
                             final isLearned = scheduledDays >= 80;
-                            final isMastered = scheduledDays >= 100;
+                            final isMastered = scheduledDays >= 100 || scheduledDays == -1;
                             return InkWell(
                               onTap: () => _showTranslatedWordToast(context, card.word),
                               borderRadius: BorderRadius.circular(8),
@@ -1093,10 +1121,6 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             ),
           ),
         ),
-        // SizedBox(
-        //   width: double.infinity,
-        //   child:
-        // ),
       ],
     );
   }
