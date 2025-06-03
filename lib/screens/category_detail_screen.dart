@@ -1000,6 +1000,7 @@ void showCenteredToast(BuildContext context, String message) {
     builder: (context) => Center(
       child: Material(
         color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
         child: AnimatedOpacity(
           opacity: 1.0,
           duration: const Duration(milliseconds: 500),
