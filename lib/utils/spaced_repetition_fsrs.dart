@@ -43,17 +43,35 @@ class WordCard {
   }
 
   static WordCard fromFirestore(Map<String, dynamic> cardData) {
-    print("in fromFirestore, cardData: $cardData");
+    // Defensive conversion for int/double fields
+    int parseInt(dynamic value) {
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    double parseDouble(dynamic value) {
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    final dueRaw = cardData['due'];
+    final lastReviewRaw = cardData['lastReview'];
+    final due = dueRaw is String ? DateTime.parse(dueRaw) : (dueRaw is DateTime ? dueRaw : DateTime.now());
+    final lastReview = lastReviewRaw is String ? DateTime.parse(lastReviewRaw) : (lastReviewRaw is DateTime ? lastReviewRaw : DateTime.now());
     final card = fsrs.Card.def(
-      DateTime.parse(cardData['due'] as String),
-      DateTime.parse(cardData['lastReview'] as String),
-      (cardData['stability'] ?? 0).toDouble(),
-      (cardData['difficulty'] ?? 0).toDouble(),
-      cardData['elapsedDays'] ?? 0,
-      cardData['scheduledDays'] ?? 0,
-      cardData['reps'] ?? 0,
-      cardData['lapses'] ?? 0,
-      fsrs.State.values[cardData['state'] ?? 0],
+      due,
+      lastReview,
+      parseDouble(cardData['stability'] ?? 0),
+      parseDouble(cardData['difficulty'] ?? 0),
+      parseInt(cardData['elapsedDays'] ?? 0),
+      parseInt(cardData['scheduledDays'] ?? 0),
+      parseInt(cardData['reps'] ?? 0),
+      parseInt(cardData['lapses'] ?? 0),
+      fsrs.State.values[cardData['state'] is int ? cardData['state'] : int.tryParse(cardData['state']?.toString() ?? '0') ?? 0],
     );
     return WordCard(
       word: cardData['word'] as String,
