@@ -407,7 +407,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                 onTap: () {
                                   Navigator.of(context).pop();
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
+                                    const SnackBar(
                                       content: Text('Audio Review coming soon!'),
                                       duration: Duration(seconds: 2),
                                     ),
