@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/profile_service.dart';
-import 'package:parakeet/utils/script_generator.dart' show get5MostOverdueWordsRefs, getDocsAndRefsMaps;
+import 'package:parakeet/utils/script_generator.dart' show getDocsAndRefsMaps;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
@@ -174,35 +174,21 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   Future<void> _loadDueWords() async {
     setState(() => _isLoadingDue = true);
     try {
-      final refs = await get5MostOverdueWordsRefs(_userId, _targetLanguage, []);
-      final maps = await getDocsAndRefsMaps(refs);
-      final docs = maps['docs'] as List<Map<String, dynamic>>;
-      final refsMap = maps['refsMap'] as Map<String, DocumentReference>;
+      // Filter _allWordsFull for words where scheduledDays == 0
+      final dueWords = _allWordsFull.where((wordCard) => wordCard.card.scheduledDays == 0).toList();
 
-      // Convert to WordCard objects first for easier sorting
-      final wordCards = docs.map(WordCard.fromFirestore).toList();
-
-      // Sort words by learning status and then alphabetically within each group
-      wordCards.sort((a, b) {
-        // Get status flags for word A
+      // Optionally, sort as before (by learning status and alphabetically)
+      dueWords.sort((a, b) {
         final scheduledDaysA = a.card.scheduledDays.toDouble();
         final learningA = a.card.reps > 0;
-        // final isLearnedA = scheduledDaysA >= 80;
         final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
 
-        // Get status flags for word B
         final scheduledDaysB = b.card.scheduledDays.toDouble();
         final learningB = b.card.reps > 0;
-        // final isLearnedB = scheduledDaysB >= 80;
         final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
 
-        // Define categories for sorting
         int categoryA = 0;
         int categoryB = 0;
-
-        // Category 0: Learning (has reps but not mastered)
-        // Category 1: Not Started (no reps)
-        // Category 2: Mastered
 
         if (learningA && !isMasteredA)
           categoryA = 0;
@@ -216,22 +202,17 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
           categoryB = 1;
         else if (isMasteredB) categoryB = 2;
 
-        // Sort by category first
         if (categoryA != categoryB) {
           return categoryA.compareTo(categoryB);
         }
-
-        // Same status, sort alphabetically
         return a.word.compareTo(b.word);
       });
 
       setState(() {
         _dueWordsFull
           ..clear()
-          ..addAll(wordCards);
-        _dueWordsRefs
-          ..clear()
-          ..addAll(refsMap);
+          ..addAll(dueWords);
+        _dueWordsRefs.clear(); // Not used anymore, but clear for safety
         _isLoadingDue = false;
       });
     } catch (e, stack) {
