@@ -711,7 +711,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (displayed.isNotEmpty)
+                      if (displayed.isNotEmpty) ...[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                           child: Text(
@@ -723,6 +723,18 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             ),
                           ),
                         ),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Text(
+                            'Long-press to display word options',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         child: GridView.builder(
@@ -993,7 +1005,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (displayed.isNotEmpty)
+                      if (displayed.isNotEmpty) ...[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                           child: Text(
@@ -1005,6 +1017,18 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                             ),
                           ),
                         ),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Text(
+                            'Long-press to display word options',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         child: GridView.builder(
