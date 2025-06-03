@@ -88,7 +88,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
 
-      final wordsData = snapshot.docs.map((doc) => doc.data()).toList();
+      final wordsData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
       if (mounted) {
         setState(() {
           _learningWords.addAll(wordsData);
