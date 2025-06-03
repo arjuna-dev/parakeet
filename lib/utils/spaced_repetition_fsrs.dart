@@ -43,7 +43,6 @@ class WordCard {
   }
 
   static WordCard fromFirestore(Map<String, dynamic> cardData) {
-    print("in fromFirestore, cardData: $cardData");
     // Defensive conversion for int/double fields
     int parseInt(dynamic value) {
       if (value is int) return value;
