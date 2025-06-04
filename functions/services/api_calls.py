@@ -244,37 +244,61 @@ class APICalls:
         compiled_response = ""
         end_of_line = False
         current_line = []
+        print("chatGPT_response: ", chatGPT_response)
+        # Use as context manager - this is the new way to handle streaming
+        with chatGPT_response as stream:
+            for event in stream:
+                if event.type == "content.delta":
+                    chunk_number += 1
+                    # Handle delta content correctly based on actual structure
+                    # In the new API, the delta might be directly a string
+                    a_chunk = event.delta if isinstance(event.delta, str) else ""
+                    
+                    compiled_response += a_chunk
+                    try:
+                        rectified_JSON = parser.parse(compiled_response)
+                    except Exception as e:
+                        print("json not parsed: ", e)
+                        continue
+                    if not rectified_JSON:
+                        continue
+        
+                    if "\n" in a_chunk:
+                        current_line.append(a_chunk)
+                        end_of_line = True
+        
+                    if end_of_line == False:
+                        current_line.append(a_chunk)
+        
+                    if end_of_line == True:
+                        current_line_text = "".join(current_line)
+                        self.line_handler(current_line_text, rectified_JSON)
+                        end_of_line = False
+                        current_line = []
+                    
+                elif event.type == "content.done":
+                    print("Content generation complete")
+                    
+                elif event.type == "error":
+                    print("Error in stream:", event.error)
+                    
+            # Get the final complete response
+            final_completion = stream.get_final_completion()
 
-        for chunk in chatGPT_response:
-            is_finished = chunk.choices[0].finish_reason
-            if is_finished is not None:
-                print("is finished reason: ", is_finished)
-                break
-
-            a_chunk = chunk.choices[0].delta.content
-
-            compiled_response += a_chunk
-            try:
-                rectified_JSON = parser.parse(compiled_response)
-            except Exception as e:
-                print("json not parsed: ", e)
-                continue
-            if not rectified_JSON:
-                continue
-
-            if "\n" in a_chunk:
-                current_line.append(a_chunk)
-                end_of_line = True
-
-            if end_of_line == False:
-                current_line.append(a_chunk)
-
-            if end_of_line == True:
-                current_line_text  = "".join(current_line)
-                self.line_handler(current_line_text, rectified_JSON)
-                end_of_line = False
-                current_line = []
-        return rectified_JSON
+            # Try different ways to access the final content
+            if hasattr(final_completion, 'choices') and final_completion.choices:
+                if hasattr(final_completion.choices[0].message, 'content'):
+                    final_content = final_completion.choices[0].message.content
+                elif hasattr(final_completion.choices[0].message, 'parsed'):
+                    # For structured outputs, the response might be in 'parsed'
+                    final_content = final_completion.choices[0].message.parsed
+                else:
+                    final_content = str(final_completion.choices[0].message)
+            else:
+                final_content = str(final_completion)
+                
+            final_json = parser.parse(final_content)
+            return final_json
 
     def extract_and_classify_enclosed_words(self, input_string):
         parts = input_string.split('||')
