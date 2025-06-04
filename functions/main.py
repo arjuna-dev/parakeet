@@ -156,7 +156,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
 )
 def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     try:
-        request_data = SecondAPIRequest.parse_obj(req.get_json()).dict()
+        request_data = SecondAPIRequest.model_validate(req.get_json()).model_dump()
         print(type(request_data))
     except Exception as e:
         second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)

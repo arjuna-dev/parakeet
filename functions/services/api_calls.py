@@ -249,7 +249,6 @@ class APICalls:
         with chatGPT_response as stream:
             for event in stream:
                 if event.type == "content.delta":
-                    chunk_number += 1
                     # Handle delta content correctly based on actual structure
                     # In the new API, the delta might be directly a string
                     a_chunk = event.delta if isinstance(event.delta, str) else ""

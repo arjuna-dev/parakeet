@@ -125,9 +125,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
-      print('snapshot: ${snapshot.docs.map((doc) => doc.data())}');
       final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name'] && doc.data()['target_language'] == widget.targetLanguage);
-      print('filteredData: ${filteredData.map((doc) => doc.data())}');
 
       // Initialize _localFavorites map with current favorite state
       Map<String, bool> initialFavorites = {};
@@ -205,7 +203,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final selectedWords = await LessonService.selectWordsFromCategory(widget.category['name'], widget.category['words'], widget.targetLanguage);
 
       final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
+        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
+        Uri.parse('http://127.0.0.1:8082'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -235,7 +234,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
       // Make the first API call
       http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        Uri.parse('http://127.0.0.1:8081'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
