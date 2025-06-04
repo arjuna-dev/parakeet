@@ -2,7 +2,7 @@
 
 ---
 
-
+## Cloud Functions
 ##### Deploy all functions in codebase:
 
 ```bash
@@ -44,7 +44,7 @@ gcloud functions deploy handle_kofi_donation \
 ```
 functions-framework --target second_API_calls --debug
 ```
-
+## Android
 ##### Create Android installer file
 ```
 flutter build apk --release
