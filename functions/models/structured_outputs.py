@@ -17,9 +17,18 @@ class DialogueTurn(BaseModel):
     speaker: str
     gender: str
 
+
+# Flat Speaker model to avoid nested additionalProperties in JSON Schema
+class Speaker(BaseModel):
+    id: str    # e.g. "speaker_1"
+    name: str
+    gender: str
+
+
+# `speakers` is now a flat list to keep the JSON‑Schema validator happy
 class DialogueStructure(BaseModel):
     title: str
-    speakers: Dict[str, Dict[str, str]]
+    speakers: List[Speaker]
     dialogue: List[DialogueTurn]
     keywords_used: List[str]
 
