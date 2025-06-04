@@ -11,6 +11,7 @@ class GPT_MODEL(Enum):
     GPT_4_TURBO = "gpt-4-turbo" # Supports vision and JSON mode. This points to GPT_4_TURBO_V as of today
     GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
     GPT_4o = "gpt-4o"
+    GPT_4o_mini = "gpt-4o-mini"
 
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1
