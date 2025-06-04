@@ -15,7 +15,7 @@ from services.api_calls import APICalls
 from google.cloud import storage
 from google.cloud import texttospeech
 from utils.google_tts.google_tts_voices import google_tts_voices
-
+from models.structured_outputs import DialogueStructure, BigJsonStructure, LessonTopic, TranslatedKeywords, CustomLesson
 
 import os
 
@@ -132,7 +132,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     if first_API_calls.mock == True:
         chatGPT_response = mock_response_first_API
     else:
-        chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+        chatGPT_response = chatGPT_API_call(prompt, use_stream=True, pydantic_model=DialogueStructure)
 
     final_response = first_API_calls.process_response(chatGPT_response)
 
@@ -233,7 +233,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     if second_API_calls.mock == True:
         chatGPT_response = mock_response_second_API
     else:
-        chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+        chatGPT_response = chatGPT_API_call(prompt, use_stream=True, pydantic_model=BigJsonStructure)
 
     final_response = second_API_calls.process_response(chatGPT_response)
 
@@ -390,7 +390,7 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False)
+        response = chatGPT_API_call(prompt, use_stream=False, pydantic_model=LessonTopic)
 
         # Since we're not using streaming, we need to get the content directly
         result = json.loads(response.choices[0].message.content)
@@ -421,7 +421,7 @@ def translate_keywords(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_translate_keywords(keywords, target_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False)
+        response = chatGPT_API_call(prompt, use_stream=False, pydantic_model=TranslatedKeywords)
 
         result = json.loads(response.choices[0].message.content)
 
@@ -452,7 +452,7 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_suggest_custom_lesson(target_language, native_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False)
+        response = chatGPT_API_call(prompt, use_stream=False, pydantic_model=CustomLesson)
 
         result = json.loads(response.choices[0].message.content)
 
