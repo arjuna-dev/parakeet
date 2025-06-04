@@ -39,7 +39,7 @@ def chatGPT_API_call(prompt, use_stream, pydantic_model):
     if use_stream:
         # Use the stream helper with the pydantic model for structured streaming
         completion = client.beta.chat.completions.stream(
-            model=GPT_MODEL.GPT_4o_mini.value,
+            model=GPT_MODEL.GPT_41_nano.value,
             messages=messages,
             max_tokens=4096,
             response_format=pydantic_model
@@ -47,7 +47,7 @@ def chatGPT_API_call(prompt, use_stream, pydantic_model):
     else:
         # For non-streaming, use the parse method with direct pydantic model
         completion = client.beta.chat.completions.parse(
-            model=GPT_MODEL.GPT_4o_mini.value,
+            model=GPT_MODEL.GPT_41_nano.value,
             messages=messages,
             response_format=pydantic_model
         )
