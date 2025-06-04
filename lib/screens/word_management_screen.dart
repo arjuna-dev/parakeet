@@ -257,10 +257,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             print('[findWordTranslation] natCat: $natCat, type: ${natCat.runtimeType}');
             return natCat['name'] == categoryName;
           },
-          orElse: () {
-            print('[findWordTranslation] orElse triggered! Returning <String, dynamic>{{"words": <dynamic>[]}}');
-            return <String, dynamic>{'words': <dynamic>[]};
-          },
+          orElse: () => <String, Object>{'words': <Object>[]},
         );
 
         print('[findWordTranslation] matchingNativeCategory: $matchingNativeCategory, type: ${matchingNativeCategory.runtimeType}');
