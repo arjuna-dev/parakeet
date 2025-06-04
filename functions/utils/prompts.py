@@ -36,30 +36,30 @@ Request:
 
 Expected output in JSON format:
 ###
-{
+{{
     "title": "Understanding Viveka Chudamani",
-    "speakers": {
-        "speaker_1":{ "name": "Mateo", "gender": "m" },
-        "speaker_2": { "name": "Shankaracharya", "gender": "m" }
-        },
+    "speakers": {{
+        "speaker_1":{{ "name": "Mateo", "gender": "m" }},
+        "speaker_2": {{ "name": "Shankaracharya", "gender": "m" }}
+        }},
     "dialogue": [
-        {
+        {{
             "target_language": "\u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
             "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
             "gender": "m"
-        },
-        {
+        }},
+        {{
             "target_language": "Viveka es la capacidad de discriminar entre lo real y lo no real.",
             "native_language": "Viveka is the ability to discriminate between the real and the unreal.",
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "m"
-        }
+        }}
     ],
     "keywords_used": ["discriminar", "contexto", "exactamente"]
-}
+}}
 ###
 
 Puedes habalar y traducir en cualquier idioma, este es un ejemplo de alemán e inglés.
