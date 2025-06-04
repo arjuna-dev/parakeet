@@ -247,33 +247,20 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         // Found the word, now find matching category in native language
         final String categoryName = targetCategory['name'];
 
-        // LOGGING: Print types and values
-        print('[findWordTranslation] categoryName: $categoryName');
-        print('[findWordTranslation] _nativeLanguageCategories type: ${_nativeLanguageCategories.runtimeType}');
-        print('[findWordTranslation] _nativeLanguageCategories: $_nativeLanguageCategories');
-
         final matchingNativeCategory = _nativeLanguageCategories.firstWhere(
           (natCat) {
-            print('[findWordTranslation] natCat: $natCat, type: ${natCat.runtimeType}');
             return natCat['name'] == categoryName;
           },
           orElse: () => <String, Object>{'words': <Object>[]},
         );
-
-        print('[findWordTranslation] matchingNativeCategory: $matchingNativeCategory, type: ${matchingNativeCategory.runtimeType}');
-
         // Get the translation at the same index if available
         final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
-        print('[findWordTranslation] nativeWords: $nativeWords, type: ${nativeWords.runtimeType}');
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
-          print('[findWordTranslation] Returning translation: ${nativeWords[wordIndex]}');
           return "${nativeWords[wordIndex]}";
         }
       }
     }
-
     // If word not found in any category or matching translation not found
-    print('[findWordTranslation] No translation found, returning original word: $word');
     return word;
   }
 
