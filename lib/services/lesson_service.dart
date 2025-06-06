@@ -207,8 +207,7 @@ class LessonService {
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
       final response = await http.post(
-        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
-        Uri.parse('http://127.0.0.1:8083'),
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -227,8 +226,7 @@ class LessonService {
 
       // Make the API call
       http.post(
-        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
-        Uri.parse('http://127.0.0.1:8081'),
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -313,8 +311,7 @@ class LessonService {
   ) async {
     try {
       final response = await http.post(
-        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
-        Uri.parse('http://127.0.0.1:8084'),
+        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
