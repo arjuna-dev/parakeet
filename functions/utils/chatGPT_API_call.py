@@ -18,7 +18,7 @@ def chatGPT_API_call(prompt, use_stream):
 
     # Create the chat completion
     completion = client.chat.completions.create(
-        model=GPT_MODEL.GPT_4o_mini.value,
+        model=GPT_MODEL.GPT_41_nano.value,
         stream=use_stream,
         max_tokens=4096,
         messages=[
