@@ -159,7 +159,6 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         request_data = SecondAPIRequest.model_validate(req.get_json()).model_dump()
         print(type(request_data))
     except Exception as e:
-        second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
@@ -208,7 +207,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         voice_1 = voice_1_id
         voice_2 = voice_2_id
 
-    second_API_calls = APICalls(native_language,
+    Second_API_calls = APICalls(native_language,
                                 tts_provider,
                                 document_id,
                                 document,
@@ -220,7 +219,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 voice_2,
                                 mock=is_mock
                                 )
-    second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
+    Second_API_calls.line_handler = Second_API_calls.handle_line_2nd_API
 
 
     if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
@@ -230,12 +229,12 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
 
     prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
-    if second_API_calls.mock == True:
+    if Second_API_calls.mock == True:
         chatGPT_response = mock_response_second_API
     else:
         chatGPT_response = chatGPT_API_call(prompt, use_stream=True, pydantic_model=BigJsonStructure)
 
-    final_response = second_API_calls.process_response(chatGPT_response)
+    final_response = Second_API_calls.process_response(chatGPT_response)
 
     final_response["user_ID"] = user_ID
     final_response["document_id"] = document_id
@@ -247,12 +246,12 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     print("final_response: ", final_response)
-    second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
+    Second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
-    second_API_calls.executor.shutdown(wait=True)
+    Second_API_calls.executor.shutdown(wait=True)
 
     # remove user ID from active_creation db in the firebase
-    second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
+    Second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
 
     return https_fn.Response(
         final_response,
