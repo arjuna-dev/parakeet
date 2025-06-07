@@ -244,7 +244,6 @@ class APICalls:
         compiled_response = ""
         end_of_line = False
         current_line = []
-        print("chatGPT_response: ", chatGPT_response)
         # Use as context manager - this is the new way to handle streaming
         with chatGPT_response as stream:
             for event in stream:

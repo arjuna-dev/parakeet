@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -207,7 +208,8 @@ class LessonService {
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
       final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        Uri.parse('http://127.0.0.1:8083'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -226,7 +228,8 @@ class LessonService {
 
       // Make the API call
       http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        Uri.parse('http://127.0.0.1:8081'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -311,7 +314,8 @@ class LessonService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
+        // Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
+        Uri.parse('http://127.0.0.1:8084'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -342,6 +346,7 @@ class LessonService {
     final existingWordsCard = [];
     final closestDueDateCard = [];
     for (var doc in categoryDocs.docs) {
+      print("doc.data(): ${doc.data()}");
       final dueDate = DateTime.parse(doc.data()['due']);
       final lastReview = DateTime.parse(doc.data()['lastReview']);
       final daysOverdue = DateTime.now().difference(dueDate).inDays;
@@ -352,7 +357,7 @@ class LessonService {
         if (daysOverdue <= 0) {
           words.add(doc.data()['word']);
         } else {
-          closestDueDateCard.add(doc.data()['word']);
+          closestDueDateCard.add({'word': doc.data()['word'], 'due': doc.data()['due']});
         }
       }
       existingWordsCard.add(doc.data()['word']);
@@ -371,8 +376,8 @@ class LessonService {
       }
       if (words.length < 5) {
         // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
-        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
-        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
+        closestDueDateCard.sort((a, b) => DateTime.parse(a['due']).compareTo(DateTime.parse(b['due'])));
+        words.addAll(closestDueDateCard.sublist(0, math.min(closestDueDateCard.length, 5 - words.length)).map((item) => item['word']).toList());
       }
     }
     return words;
