@@ -61,8 +61,6 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     except:
         keywords = ""
 
-    print(keywords)
-
     db = firestore.client()
     # Reference to the user's document in the 'users' collection
     user_doc_ref = db.collection('users').document(user_ID).collection('api_call_count').document('first_API_calls')
@@ -129,6 +127,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
         prompt = prompt_dialogue_w_transliteration(requested_scenario, category, native_language, target_language, language_level, keywords, length)
 
 
+    print("Prompt for first API call:", prompt)
     if first_API_calls.mock == True:
         chatGPT_response = mock_response_first_API
     else:
@@ -144,6 +143,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["voice_2_id"] = first_API_calls.voice_2_id
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
+    print("Final response:", final_response)
 
     return final_response
 
