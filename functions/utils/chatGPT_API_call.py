@@ -12,13 +12,13 @@ else:
 
 assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
 
-def chatGPT_API_call(prompt, use_stream):
+def chatGPT_API_call(prompt, use_stream, model=GPT_MODEL.GPT_4o.value):
 
     client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
     # Create the chat completion
     completion = client.chat.completions.create(
-        model=GPT_MODEL.GPT_4o.value,
+        model=model,
         stream=use_stream,
         max_tokens=4096,
         messages=[

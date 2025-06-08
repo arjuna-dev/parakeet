@@ -5,7 +5,7 @@ import json
 import datetime
 import time
 from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson, prompt_translate_keywords
-from utils.utilities import TTS_PROVIDERS
+from utils.utilities import TTS_PROVIDERS, GPT_MODEL
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice, google_synthesize_text
@@ -390,7 +390,7 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False)
+        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_4_1_nano.value)
 
         # Since we're not using streaming, we need to get the content directly
         result = json.loads(response.choices[0].message.content)
@@ -452,7 +452,7 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_suggest_custom_lesson(target_language, native_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False)
+        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_4_1_nano.value)
 
         result = json.loads(response.choices[0].message.content)
 
