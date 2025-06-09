@@ -90,7 +90,7 @@ class _PositionSliderState extends State<PositionSlider> {
               ],
             ),
           );
-        } else if (widget.audioPlayerService.playlistInitialized == true && positionData == null) {
+        } else if (widget.audioPlayerService.playlistInitialized == true && !widget.isPlaying && (_lastKnownPosition.inMilliseconds == 0 || widget.savedPosition == 0)) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
             padding: const EdgeInsets.all(12),
@@ -102,7 +102,7 @@ class _PositionSliderState extends State<PositionSlider> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Successfully loaded. Play it now!",
+                  "Lesson is ready. Play now!",
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.bold,
