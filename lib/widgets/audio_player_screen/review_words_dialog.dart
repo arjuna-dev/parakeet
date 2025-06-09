@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +25,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   int _currentWordIndex = 0;
   final StreakService _streakService = StreakService();
   bool _streakRecorded = false;
+  fsrs.Rating? _pressedButton;
 
   late AnimationController _slideController;
   late AnimationController _scaleController;
@@ -854,62 +856,91 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   }
 
   Widget _buildReviewButton(_ReviewButtonData data, ColorScheme colorScheme, bool isSmallScreen, bool isTablet) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      constraints: BoxConstraints(
-        minHeight: isTablet ? 80 : (isSmallScreen ? 56 : 68),
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: data.gradient),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: data.gradient.first.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => _handleReview(data.rating),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 20 : (isSmallScreen ? 12 : 16),
-              vertical: isTablet ? 20 : (isSmallScreen ? 12 : 16),
+    final isPressed = _pressedButton == data.rating;
+
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 150),
+      tween: Tween(begin: 1.0, end: isPressed ? 0.95 : 1.0),
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            constraints: BoxConstraints(
+              minHeight: isTablet ? 80 : (isSmallScreen ? 56 : 68),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  data.icon,
-                  size: isTablet ? 28 : (isSmallScreen ? 20 : 24),
-                  color: Colors.white,
-                ),
-                SizedBox(width: isSmallScreen ? 8 : 10),
-                Flexible(
-                  child: Text(
-                    data.label,
-                    style: TextStyle(
-                      fontSize: isTablet ? 19 : (isSmallScreen ? 15 : 17),
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: data.gradient),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: data.gradient.first.withOpacity(isPressed ? 0.5 : 0.3),
+                  blurRadius: isPressed ? 12 : 8,
+                  offset: Offset(0, isPressed ? 2 : 4),
                 ),
               ],
             ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTapDown: (_) {
+                  setState(() {
+                    _pressedButton = data.rating;
+                  });
+                },
+                onTapUp: (_) {
+                  setState(() {
+                    _pressedButton = null;
+                  });
+                },
+                onTapCancel: () {
+                  setState(() {
+                    _pressedButton = null;
+                  });
+                },
+                onTap: () => _handleReview(data.rating),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 20 : (isSmallScreen ? 12 : 16),
+                    vertical: isTablet ? 20 : (isSmallScreen ? 12 : 16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        data.icon,
+                        size: isTablet ? 28 : (isSmallScreen ? 20 : 24),
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: isSmallScreen ? 8 : 10),
+                      Flexible(
+                        child: Text(
+                          data.label,
+                          style: TextStyle(
+                            fontSize: isTablet ? 19 : (isSmallScreen ? 15 : 17),
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Future<void> _handleReview(fsrs.Rating rating) async {
+    // Provide haptic feedback
+    HapticFeedback.mediumImpact();
+
     // Reset animations for next word
     _slideController.reset();
 
