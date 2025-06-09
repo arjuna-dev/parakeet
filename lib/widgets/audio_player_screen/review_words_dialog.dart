@@ -772,25 +772,25 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   Widget _buildReviewButtons(ColorScheme colorScheme, bool isSmallScreen, bool isTablet) {
     final buttons = [
       _ReviewButtonData(
-        label: 'Forgot',
+        label: 'Forgot Completely',
         icon: Icons.close,
         gradient: [Colors.red.shade400, Colors.red.shade600],
         rating: fsrs.Rating.again,
       ),
       _ReviewButtonData(
-        label: 'Hard',
+        label: 'Hard to Remember',
         icon: Icons.trending_down,
         gradient: [Colors.orange.shade400, Colors.orange.shade600],
         rating: fsrs.Rating.hard,
       ),
       _ReviewButtonData(
-        label: 'Good',
+        label: 'Remembered with Effort',
         icon: Icons.check,
         gradient: [colorScheme.primary, colorScheme.secondary],
         rating: fsrs.Rating.good,
       ),
       _ReviewButtonData(
-        label: 'Easy',
+        label: 'Easy Recall',
         icon: Icons.trending_up,
         gradient: [Colors.green.shade400, Colors.green.shade600],
         rating: fsrs.Rating.easy,
