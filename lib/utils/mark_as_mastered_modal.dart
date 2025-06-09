@@ -84,7 +84,7 @@ Future<void> showMarkAsMasteredModal({
                     child: const Text('Cancel'),
                   ),
                   FilledButton.icon(
-                    icon: Icon(buttonIcon),
+                    icon: Icon(buttonIcon, color: isAlreadyMastered ? Colors.white : Colors.green),
                     label: Text(buttonText),
                     style: FilledButton.styleFrom(
                       backgroundColor: colorScheme.primary,

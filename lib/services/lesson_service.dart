@@ -52,7 +52,6 @@ class LessonService {
         );
 
         if (shouldEnablePremium != true) {
-          Navigator.pushReplacementNamed(context, '/create_lesson');
           return false;
         }
       }
@@ -224,6 +223,9 @@ class LessonService {
         selectedWords = keywords;
       }
 
+      // Create an empty script document ID
+      DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
       // Make the API call
       http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
@@ -244,52 +246,26 @@ class LessonService {
         }),
       );
 
-      int counter = 0;
-      bool docExists = false;
-      Map<String, dynamic> firstDialogue = {};
-
-      while (!docExists && counter < 15) {
-        counter++;
-        await Future.delayed(const Duration(seconds: 1));
-        final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
-        if (snapshot.docs.isNotEmpty) {
-          docExists = true;
-          final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
-          firstDialogue = data;
-
-          if (firstDialogue.isNotEmpty) {
-            // Create an empty script document ID
-            DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
-
-            // Navigate directly to AudioPlayerScreen
-            Navigator.pop(context); // Close loading dialog
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AudioPlayerScreen(
-                  dialogue: firstDialogue["dialogue"] ?? [],
-                  title: firstDialogue["title"] ?? topic,
-                  documentID: documentId,
-                  userID: userId,
-                  scriptDocumentId: scriptDocRef.id,
-                  generating: true,
-                  targetLanguage: targetLanguage,
-                  nativeLanguage: nativeLanguage,
-                  languageLevel: languageLevel,
-                  wordsToRepeat: List<String>.from(selectedWords),
-                  numberOfTurns: 4,
-                ),
-              ),
-            );
-          } else {
-            throw Exception('Proper data not received from API');
-          }
-        }
-      }
-
-      if (!docExists) {
-        throw Exception('Failed to find the response in firestore within 15 seconds');
-      }
+      // Navigate directly to AudioPlayerScreen
+      Navigator.pop(context); // Close loading dialog
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AudioPlayerScreen(
+            dialogue: const [],
+            title: topic,
+            documentID: documentId,
+            userID: userId,
+            scriptDocumentId: scriptDocRef.id,
+            generating: true,
+            targetLanguage: targetLanguage,
+            nativeLanguage: nativeLanguage,
+            languageLevel: languageLevel,
+            wordsToRepeat: List<String>.from(selectedWords),
+            numberOfTurns: 4,
+          ),
+        ),
+      );
     } catch (e) {
       print(e);
       Navigator.pop(context); // Close loading dialog
@@ -338,9 +314,10 @@ class LessonService {
     final userId = FirebaseAuth.instance.currentUser!.uid.toString();
     final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
     // check each word in categoryDocs and see if it is due or overdue
-    var words = [];
-    final existingWordsCard = [];
-    final closestDueDateCard = [];
+    var words = <String>[];
+    final existingWordsCard = <String>[];
+    final closestDueDateCard = <Map<String, dynamic>>[];
+
     for (var doc in categoryDocs.docs) {
       final dueDate = DateTime.parse(doc.data()['due']);
       final lastReview = DateTime.parse(doc.data()['lastReview']);
@@ -352,16 +329,22 @@ class LessonService {
         if (daysOverdue <= 0) {
           words.add(doc.data()['word']);
         } else {
-          closestDueDateCard.add(doc.data()['word']);
+          closestDueDateCard.add({
+            'word': doc.data()['word'],
+            'due_date': doc.data()['due'],
+            'daysOverdue': daysOverdue,
+          });
         }
         print('words: $words');
         print('closestDueDateCard: $closestDueDateCard');
       }
       existingWordsCard.add(doc.data()['word']);
     }
+
     if (words.length > 5) {
       words = words.sublist(0, 5);
     }
+
     if (words.length < 5) {
       // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
       final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
@@ -369,12 +352,19 @@ class LessonService {
       // randomize the newWords list
       newWords.shuffle();
       if (newWords.isNotEmpty) {
-        words.addAll(newWords.sublist(0, 5 - words.length));
+        final wordsNeeded = 5 - words.length;
+        final wordsToAdd = newWords.length >= wordsNeeded ? newWords.sublist(0, wordsNeeded) : newWords;
+        words.addAll(wordsToAdd);
       }
+
       if (words.length < 5) {
         // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
-        closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
-        words.addAll(closestDueDateCard.sublist(0, 5 - words.length));
+        if (closestDueDateCard.isNotEmpty) {
+          closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
+          final wordsNeeded = 5 - words.length;
+          final wordsToAdd = closestDueDateCard.length >= wordsNeeded ? closestDueDateCard.sublist(0, wordsNeeded) : closestDueDateCard;
+          words.addAll(wordsToAdd.map((item) => item['word'] as String));
+        }
       }
     }
     return words;
