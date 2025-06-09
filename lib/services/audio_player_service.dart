@@ -305,6 +305,14 @@ class AudioPlayerService {
     return trackDurations.take(currentIndex).fold(Duration.zero, (total, d) => total + d);
   }
 
+  // Get current position synchronously for immediate UI updates
+  Duration getCurrentPosition() {
+    final currentIndex = player.currentIndex ?? 0;
+    final currentPosition = player.position;
+    final cumulativeDuration = cumulativeDurationUpTo(currentIndex);
+    return cumulativeDuration + currentPosition;
+  }
+
   // Find track index for a specific position
   int findTrackIndexForPosition(double milliseconds) {
     int cumulative = 0;
@@ -318,22 +326,33 @@ class AudioPlayerService {
   // Position data stream for the slider
   Stream<PositionData> get positionDataStream {
     int lastIndex = -1;
-    return Rx.combineLatest3<Duration, Duration, int, PositionData?>(
-      player.positionStream.where((_) => isPlaying.value),
+
+    // Create a periodic stream that emits every 50ms for smoother updates
+    final periodicStream = Stream.periodic(const Duration(milliseconds: 50));
+
+    return Rx.combineLatest4<Duration, Duration, int, dynamic, PositionData?>(
+      // Use a more frequent position stream and don't filter by playing state
+      // This allows smooth updates even when paused for dragging
+      player.positionStream,
       player.durationStream.whereType<Duration>(),
       player.currentIndexStream.whereType<int>().startWith(0),
-      (position, duration, index) {
+      periodicStream.startWith(null), // Add periodic updates for smoother animation
+      (position, duration, index, _) {
         bool hasIndexChanged = index != lastIndex;
         lastIndex = index;
         Duration cumulativeDuration = cumulativeDurationUpTo(index);
         Duration totalPosition = cumulativeDuration + position;
 
-        if (position < duration) {
+        if (position <= duration) {
           return PositionData(position, totalDuration, totalPosition);
         }
         return null;
       },
-    ).where((positionData) => positionData != null).cast<PositionData>().distinct((prev, current) => prev.position == current.position);
+    )
+        .where((positionData) => positionData != null)
+        .cast<PositionData>()
+        // Use a less restrictive distinct to allow more frequent updates for smoother animation
+        .distinct((prev, current) => (prev.cumulativePosition.inMilliseconds ~/ 50) == (current.cumulativePosition.inMilliseconds ~/ 50));
   }
 
   // Set track durations

@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/services/audio_player_service.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_data.dart';
 
-class PositionSlider extends StatelessWidget {
+class PositionSlider extends StatefulWidget {
   final AudioPlayerService audioPlayerService;
   final Stream<PositionData> positionDataStream;
   final Duration totalDuration;
@@ -14,8 +15,8 @@ class PositionSlider extends StatelessWidget {
   final AudioPlayer player;
   final Function(int) cumulativeDurationUpTo;
   final Future<void> Function({bool analyticsOn}) pause;
-  final VoidCallback onSliderChangeStart; // Pf506
-  final VoidCallback onSliderChangeEnd; // Pf506
+  final VoidCallback onSliderChangeStart;
+  final VoidCallback onSliderChangeEnd;
 
   const PositionSlider({
     Key? key,
@@ -29,17 +30,46 @@ class PositionSlider extends StatelessWidget {
     required this.player,
     required this.cumulativeDurationUpTo,
     required this.pause,
-    required this.onSliderChangeStart, // Pf506
-    required this.onSliderChangeEnd, // Pf506
+    required this.onSliderChangeStart,
+    required this.onSliderChangeEnd,
   }) : super(key: key);
+
+  @override
+  State<PositionSlider> createState() => _PositionSliderState();
+}
+
+class _PositionSliderState extends State<PositionSlider> {
+  bool _isDragging = false;
+  double _dragValue = 0.0;
+  Timer? _updateTimer;
+  Duration _lastKnownPosition = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start a timer for smooth position updates
+    _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (mounted && !_isDragging && widget.isPlaying) {
+        setState(() {
+          _lastKnownPosition = widget.audioPlayerService.getCurrentPosition();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<PositionData>(
-      stream: positionDataStream,
+      stream: widget.positionDataStream,
       builder: (context, snapshot) {
         final positionData = snapshot.data;
-        if (audioPlayerService.playlistInitialized == false && positionData == null) {
+        if (widget.audioPlayerService.playlistInitialized == false && positionData == null) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
             padding: const EdgeInsets.all(12),
@@ -60,7 +90,7 @@ class PositionSlider extends StatelessWidget {
               ],
             ),
           );
-        } else if (audioPlayerService.playlistInitialized == true && positionData == null) {
+        } else if (widget.audioPlayerService.playlistInitialized == true && positionData == null) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
             padding: const EdgeInsets.all(12),
@@ -82,30 +112,60 @@ class PositionSlider extends StatelessWidget {
             ),
           );
         }
+
+        // Use drag value when dragging, otherwise use stream data or saved position
+        double currentValue;
+        Duration currentPosition;
+
+        if (_isDragging) {
+          currentValue = _dragValue;
+          currentPosition = Duration(milliseconds: _dragValue.toInt());
+        } else if (widget.isPlaying) {
+          // Use the most recent position from timer updates for smoother display
+          currentPosition = _lastKnownPosition;
+          currentValue = currentPosition.inMilliseconds.clamp(0, widget.totalDuration.inMilliseconds).toDouble();
+        } else {
+          currentValue = widget.savedPosition.clamp(0, widget.totalDuration.inMilliseconds).toDouble();
+          currentPosition = Duration(milliseconds: widget.savedPosition);
+        }
+
         return Column(
           children: [
             Slider(
               min: 0.0,
-              max: totalDuration.inMilliseconds.toDouble(),
-              value: isPlaying ? positionData!.cumulativePosition.inMilliseconds.clamp(0, totalDuration.inMilliseconds).toDouble() : savedPosition.clamp(0, totalDuration.inMilliseconds).toDouble(),
+              max: widget.totalDuration.inMilliseconds.toDouble(),
+              value: currentValue,
               onChanged: (value) {
-                final trackIndex = findTrackIndexForPosition(value);
-                player.seek(Duration(milliseconds: (value.toInt() - cumulativeDurationUpTo(trackIndex).inMilliseconds).toInt()), index: trackIndex);
-                if (!isPlaying) {
-                  pause(analyticsOn: false);
-                }
+                setState(() {
+                  _dragValue = value;
+                });
               },
               onChangeStart: (value) {
-                onSliderChangeStart();
+                setState(() {
+                  _isDragging = true;
+                  _dragValue = value;
+                });
+                widget.onSliderChangeStart();
               },
               onChangeEnd: (value) {
-                onSliderChangeEnd();
+                final trackIndex = widget.findTrackIndexForPosition(value);
+                final seekPosition = Duration(milliseconds: (value.toInt() - widget.cumulativeDurationUpTo(trackIndex).inMilliseconds).toInt());
+
+                widget.player.seek(seekPosition, index: trackIndex);
+
+                if (!widget.isPlaying) {
+                  widget.pause(analyticsOn: false);
+                }
+
+                setState(() {
+                  _isDragging = false;
+                  _lastKnownPosition = Duration(milliseconds: value.toInt());
+                });
+                widget.onSliderChangeEnd();
               },
             ),
             Text(
-              finalTotalDuration == Duration.zero
-                  ? formatDuration(isPlaying ? positionData!.cumulativePosition : Duration(milliseconds: savedPosition))
-                  : "${formatDuration(isPlaying ? positionData!.cumulativePosition : Duration(milliseconds: savedPosition))} / ${formatDuration(finalTotalDuration)}",
+              widget.finalTotalDuration == Duration.zero ? formatDuration(currentPosition) : "${formatDuration(currentPosition)} / ${formatDuration(widget.finalTotalDuration)}",
             ),
           ],
         );
