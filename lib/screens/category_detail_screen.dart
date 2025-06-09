@@ -104,6 +104,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final stats = await WordStatsService.getCategoryWordStats(
         widget.category['name'],
         widget.targetLanguage,
+        widget.category['words'] ?? [],
       );
 
       if (mounted) {
@@ -486,7 +487,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Words to be learned',
+                                      'Category Words',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
