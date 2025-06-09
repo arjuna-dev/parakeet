@@ -20,15 +20,13 @@ import 'package:flutter/foundation.dart';
 import 'theme/theme.dart';
 import 'utils/constants.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'services/ad_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
 import 'screens/word_management_screen.dart';
 
-const bool versionForTestFlight = true;
+const bool versionForTestFlight = false;
 const String localShouldUpdateID = "gWYwwwYH";
 const String localCouldUpdateID = "d*h&f%0a";
 
