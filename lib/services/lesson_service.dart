@@ -52,7 +52,6 @@ class LessonService {
         );
 
         if (shouldEnablePremium != true) {
-          Navigator.pushReplacementNamed(context, '/create_lesson');
           return false;
         }
       }
@@ -224,6 +223,9 @@ class LessonService {
         selectedWords = keywords;
       }
 
+      // Create an empty script document ID
+      DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
       // Make the API call
       http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
@@ -244,52 +246,26 @@ class LessonService {
         }),
       );
 
-      int counter = 0;
-      bool docExists = false;
-      Map<String, dynamic> firstDialogue = {};
-
-      while (!docExists && counter < 15) {
-        counter++;
-        await Future.delayed(const Duration(seconds: 1));
-        final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
-        if (snapshot.docs.isNotEmpty) {
-          docExists = true;
-          final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
-          firstDialogue = data;
-
-          if (firstDialogue.isNotEmpty) {
-            // Create an empty script document ID
-            DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
-
-            // Navigate directly to AudioPlayerScreen
-            Navigator.pop(context); // Close loading dialog
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AudioPlayerScreen(
-                  dialogue: firstDialogue["dialogue"] ?? [],
-                  title: firstDialogue["title"] ?? topic,
-                  documentID: documentId,
-                  userID: userId,
-                  scriptDocumentId: scriptDocRef.id,
-                  generating: true,
-                  targetLanguage: targetLanguage,
-                  nativeLanguage: nativeLanguage,
-                  languageLevel: languageLevel,
-                  wordsToRepeat: List<String>.from(selectedWords),
-                  numberOfTurns: 4,
-                ),
-              ),
-            );
-          } else {
-            throw Exception('Proper data not received from API');
-          }
-        }
-      }
-
-      if (!docExists) {
-        throw Exception('Failed to find the response in firestore within 15 seconds');
-      }
+      // Navigate directly to AudioPlayerScreen
+      Navigator.pop(context); // Close loading dialog
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AudioPlayerScreen(
+            dialogue: const [],
+            title: topic,
+            documentID: documentId,
+            userID: userId,
+            scriptDocumentId: scriptDocRef.id,
+            generating: true,
+            targetLanguage: targetLanguage,
+            nativeLanguage: nativeLanguage,
+            languageLevel: languageLevel,
+            wordsToRepeat: List<String>.from(selectedWords),
+            numberOfTurns: 4,
+          ),
+        ),
+      );
     } catch (e) {
       print(e);
       Navigator.pop(context); // Close loading dialog

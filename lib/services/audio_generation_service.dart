@@ -23,6 +23,49 @@ class AudioGenerationService {
     required this.scriptDocumentId,
   });
 
+  /// Waits for the first dialogue part to appear (15 second timeout)
+  Future<Map<String, dynamic>?> waitForFirstDialogue() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    int attempts = 0;
+    const maxAttempts = 8; // 8 * 2 seconds = 16 seconds (slightly over 15 for safety)
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      try {
+        // Get the latest dialogue from Firestore
+        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(documentID).collection('only_target_sentences').limit(1).get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+
+          // Check if dialogue exists and has at least one entry
+          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
+            List<dynamic> dialogueData = data['dialogue'];
+
+            // Check if the first dialogue entry is valid
+            if (dialogueData.isNotEmpty) {
+              var firstEntry = dialogueData[0];
+              if (firstEntry is Map && firstEntry.containsKey('target_language') && firstEntry.containsKey('native_language') && firstEntry['target_language'] != null && firstEntry['native_language'] != null) {
+                print('First dialogue part found after $attempts attempts');
+                return data;
+              }
+            }
+          }
+        }
+
+        // Wait before checking again
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        print('Error checking first dialogue: $e');
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    print('Warning: First dialogue part not found within 15 seconds');
+    return null;
+  }
+
   /// Waits for the dialogue to be fully generated
   Future<Map<String, dynamic>?> waitForCompleteDialogue() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
