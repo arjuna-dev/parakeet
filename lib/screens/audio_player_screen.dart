@@ -495,7 +495,28 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<void> _createScriptAndMakeSecondApiCall() async {
     try {
-      // Wait for dialogue to be fully generated
+      // First, wait for the first dialogue part to appear (15 second timeout)
+      Map<String, dynamic>? firstDialogueData = await _audioGenerationService.waitForFirstDialogue();
+
+      // If widget is no longer mounted, exit early
+      if (!mounted || _isDisposing) return;
+
+      // If we don't get the first dialogue within 15 seconds, show error and redirect
+      if (firstDialogueData == null) {
+        _showTimeoutErrorAndRedirect();
+        return;
+      }
+
+      // Update dialogue with the first part that appeared
+      if (firstDialogueData['dialogue'] != null) {
+        List<dynamic> partialDialogue = firstDialogueData['dialogue'];
+        _dialogue = partialDialogue;
+        if (mounted) {
+          setState(() {});
+        }
+      }
+
+      // Now wait for the complete dialogue to be generated
       _latestSnapshot = await _audioGenerationService.waitForCompleteDialogue();
 
       // If widget is no longer mounted, exit early
@@ -588,6 +609,29 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _hasPremium = userDoc.data()?['premium'] ?? false;
       });
     }
+  }
+
+  void _showTimeoutErrorAndRedirect() {
+    if (!mounted) return;
+
+    // Show error message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Oops, something went wrong! Please try again.',
+          style: TextStyle(color: Colors.white),
+        ),
+        duration: Duration(seconds: 3),
+        backgroundColor: Colors.purple,
+      ),
+    );
+
+    // Redirect to create lesson screen after a short delay
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/create_lesson', (route) => false);
+      }
+    });
   }
 
   Future<void> _handleLessonCompletion() async {
