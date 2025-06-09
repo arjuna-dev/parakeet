@@ -73,9 +73,16 @@ class _CategoryListState extends State<CategoryList> {
       _loadingStats.add(categoryName);
     });
 
+    // Find the category to get its words
+    final category = widget.categories.firstWhere(
+      (cat) => cat['name'] == categoryName,
+      orElse: () => <String, Object>{'words': <Object>[]},
+    );
+
     final stats = await WordStatsService.getCategoryWordStats(
       categoryName,
       widget.targetLanguage,
+      category['words'] ?? [],
     );
 
     setState(() {
