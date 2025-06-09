@@ -104,6 +104,10 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
       final categories = await categoriesRef.get();
       final refs = <DocumentReference>[];
       for (var cat in categories.docs) {
+        // Skip Custom Lesson words
+        if (cat.id.toLowerCase() == 'custom lesson') {
+          continue;
+        }
         final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
         final snap = await wordsCol.get();
         for (var doc in snap.docs) {
@@ -413,7 +417,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                 child: Container(
                                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: colorScheme.primary.withOpacity(0.2),
@@ -476,7 +480,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                 child: Container(
                                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: colorScheme.primary.withOpacity(0.2),
@@ -545,7 +549,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                                 child: Container(
                                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: colorScheme.primary.withOpacity(0.2),

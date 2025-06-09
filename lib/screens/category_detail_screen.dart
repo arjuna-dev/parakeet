@@ -104,6 +104,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final stats = await WordStatsService.getCategoryWordStats(
         widget.category['name'],
         widget.targetLanguage,
+        widget.category['words'] ?? [],
       );
 
       if (mounted) {
@@ -226,14 +227,17 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final String title = result['title'] as String;
       final String topic = result['topic'] as String;
 
-      // Step 2: Start the lesson directly (integrated lesson starting logic)
+      // Step 2: Start the lesson generation and navigate immediately
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
       final TTSProvider ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
 
-      // Make the first API call
+      // Create an empty script document ID
+      DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+
+      // Start the API call (don't wait for it)
       http.post(
         Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
         headers: <String, String>{
@@ -254,53 +258,27 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         }),
       );
 
-      int counter = 0;
-      bool docExists = false;
-      Map<String, dynamic> firstDialogue = {};
-
-      while (!docExists && counter < 15) {
-        counter++;
-        await Future.delayed(const Duration(seconds: 1));
-        final QuerySnapshot snapshot = await docRef.collection('only_target_sentences').get();
-        if (snapshot.docs.isNotEmpty) {
-          docExists = true;
-          final Map<String, dynamic> data = snapshot.docs.first.data() as Map<String, dynamic>;
-          firstDialogue = data;
-
-          if (firstDialogue.isNotEmpty) {
-            // Create an empty script document ID
-            DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
-
-            // Navigate directly to AudioPlayerScreen
-            Navigator.pop(context); // Close loading dialog
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AudioPlayerScreen(
-                  category: widget.category['name'],
-                  dialogue: firstDialogue["dialogue"] ?? [],
-                  title: title,
-                  documentID: documentId,
-                  userID: userId,
-                  scriptDocumentId: scriptDocRef.id,
-                  generating: true,
-                  targetLanguage: widget.targetLanguage,
-                  nativeLanguage: widget.nativeLanguage,
-                  languageLevel: widget.languageLevel,
-                  wordsToRepeat: selectedWords,
-                  numberOfTurns: 4,
-                ),
-              ),
-            );
-          } else {
-            throw Exception('Proper data not received from API');
-          }
-        }
-      }
-
-      if (!docExists) {
-        throw Exception('Failed to find the response in firestore within 15 seconds');
-      }
+      // Navigate immediately to AudioPlayerScreen - let it handle the loading state
+      Navigator.pop(context); // Close loading dialog
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AudioPlayerScreen(
+            category: widget.category['name'],
+            dialogue: const [], // Start with empty dialogue, AudioPlayerScreen will load it
+            title: title,
+            documentID: documentId,
+            userID: userId,
+            scriptDocumentId: scriptDocRef.id,
+            generating: true,
+            targetLanguage: widget.targetLanguage,
+            nativeLanguage: widget.nativeLanguage,
+            languageLevel: widget.languageLevel,
+            wordsToRepeat: selectedWords,
+            numberOfTurns: 4,
+          ),
+        ),
+      );
     } catch (e) {
       print(e);
       Navigator.pop(context); // Close loading dialog
@@ -486,7 +464,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Words to be learned',
+                                      'Category Words',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,

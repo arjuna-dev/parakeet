@@ -19,10 +19,14 @@ class WordStatsService {
   static Future<WordStats> getCategoryWordStats(
     String categoryName,
     String targetLanguage,
+    List<dynamic> categoryWords,
   ) async {
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(categoryName).collection(categoryName).get();
+
+      // Convert category words to lowercase for comparison
+      final categoryWordsLowercase = categoryWords.map((word) => word.toString().toLowerCase()).toSet();
 
       int learning = 0;
       int learned = 0;
@@ -30,14 +34,19 @@ class WordStatsService {
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        final double scheduledDays = data['scheduledDays'] is int ? (data['scheduledDays'] as int).toDouble() : (data['scheduledDays'] as double? ?? 0.0);
+        final String wordInDoc = data['word']?.toString().toLowerCase() ?? '';
 
-        if (scheduledDays >= 100) {
-          mastered++;
-        } else if (scheduledDays >= 80) {
-          learned++;
-        } else if (scheduledDays >= 0) {
-          learning++;
+        // Only count words that are actually part of this category's word list
+        if (categoryWordsLowercase.contains(wordInDoc)) {
+          final double scheduledDays = data['scheduledDays'] is int ? (data['scheduledDays'] as int).toDouble() : (data['scheduledDays'] as double? ?? 0.0);
+
+          if (scheduledDays >= 100 || scheduledDays == -1) {
+            mastered++;
+          } else if (scheduledDays >= 80) {
+            learned++;
+          } else if (scheduledDays >= 0) {
+            learning++;
+          }
         }
       }
 
@@ -45,7 +54,7 @@ class WordStatsService {
         learning: learning,
         learned: learned,
         mastered: mastered,
-        total: snapshot.docs.length,
+        total: learning + learned + mastered,
       );
     } catch (e) {
       print('Error getting category word stats: $e');
