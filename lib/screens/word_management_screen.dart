@@ -6,7 +6,7 @@ import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/utils/script_generator.dart' show getDocsAndRefsMaps;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
-import 'package:parakeet/Navigation/bottom_menu_bar.dart';
+
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredToast;
 import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
@@ -24,45 +24,8 @@ class WordManagementScreen extends StatefulWidget {
   State<WordManagementScreen> createState() => _WordManagementScreenState();
 }
 
-class WordProgressBar extends StatelessWidget {
-  final double score;
-
-  const WordProgressBar({
-    Key? key,
-    required this.score,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final progress = (score / 100).clamp(0.0, 1.0);
-
-    Color progressColor;
-    if (score >= 100 || score == -1) {
-      progressColor = Colors.green;
-    } else if (score >= 80) {
-      progressColor = Colors.blue;
-    } else if (score > 0) {
-      progressColor = Colors.orange;
-    } else {
-      progressColor = colorScheme.onSurfaceVariant;
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: LinearProgressIndicator(
-        value: progress,
-        minHeight: 4,
-        backgroundColor: Colors.white.withOpacity(0.3),
-        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-      ),
-    );
-  }
-}
-
-class _WordManagementScreenState extends State<WordManagementScreen> with SingleTickerProviderStateMixin {
+class _WordManagementScreenState extends State<WordManagementScreen> {
   late Map<String, DocumentReference> _allRefsMap;
-  late TabController _tabController;
   late bool _isLoadingAll;
   late bool _isLoadingDue;
   late String _userId;
@@ -77,29 +40,12 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   final List<WordCard> _dueWordsFull = [];
   final Map<String, DocumentReference> _dueWordsRefs = {};
 
-  int _allPage = 0;
-  int _duePage = 0;
-  static const int _pageSize = 20;
-
-  // Track which tab is selected to show/hide the Review button
-  int _currentTabIndex = 0;
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _isLoadingAll = true;
     _isLoadingDue = true;
     _initializeData();
-
-    // Add listener to update state when tab changes
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {
-          _currentTabIndex = _tabController.index;
-        });
-      }
-    });
   }
 
   Future<void> _initializeData() async {
@@ -216,8 +162,24 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
   Future<void> _loadDueWords() async {
     setState(() => _isLoadingDue = true);
     try {
-      // Filter _allWordsFull for words where scheduledDays == 0
-      final dueWords = _allWordsFull.where((wordCard) => wordCard.card.scheduledDays == 0).toList();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      // Filter _allWordsFull for words where scheduledDays == 0 AND not reviewed today
+      final dueWords = _allWordsFull.where((wordCard) {
+        // Must be due (scheduledDays == 0)
+        if (wordCard.card.scheduledDays != 0) return false;
+
+        // Check if lastReview was today
+        final lastReviewDate = DateTime(
+          wordCard.card.lastReview.year,
+          wordCard.card.lastReview.month,
+          wordCard.card.lastReview.day,
+        );
+
+        // Exclude if reviewed today
+        return !lastReviewDate.isAtSameMomentAs(today);
+      }).toList();
 
       // Optionally, sort as before (by learning status and alphabetically)
       dueWords.sort((a, b) {
@@ -309,6 +271,105 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     showCenteredToast(context, findWordTranslation(word));
   }
 
+  // Helper method to show translation in a modal sheet
+  void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Target language word
+                Text(
+                  word,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Arrow or divider
+                Icon(
+                  Icons.arrow_downward_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Native language translation
+                Text(
+                  nativeWord,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Got it',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   String? _findCategoryName(String word) {
     for (final targetCategory in _targetLanguageCategories) {
       final List<dynamic> words = targetCategory['words'];
@@ -319,10 +380,88 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     return null;
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Widget _buildWordItem(WordCard card, ColorScheme colorScheme) {
+    final scheduledDays = card.card.scheduledDays.toDouble();
+
+    String reviewText;
+    if (scheduledDays == 0) {
+      reviewText = 'Ready for review';
+    } else if (scheduledDays == -1) {
+      reviewText = 'Mastered';
+    } else {
+      reviewText = '${scheduledDays.toInt()} days';
+    }
+
+    return InkWell(
+      onTap: () => _showTranslationSheet(context, card.word, findWordTranslation(card.word)),
+      onLongPress: () {
+        final categoryName = _findCategoryName(card.word);
+        if (categoryName != null) {
+          showMarkAsMasteredModal(
+            context: context,
+            word: card.word,
+            categoryName: categoryName,
+            targetLanguage: _targetLanguage,
+            learningWords: List<Map<String, dynamic>>.from(_allWordsFull.map((c) => <String, dynamic>{
+                  'word': c.word.toLowerCase(),
+                  'scheduledDays': c.card.scheduledDays.toDouble(),
+                  'reps': c.card.reps,
+                })),
+            updateLearningWords: (_) {},
+            loadWordStats: () async {
+              await _loadAllWords();
+              await _loadDueWords();
+            },
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Word
+            Expanded(
+              child: Text(
+                card.word,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Review Time
+            SizedBox(
+              width: 100,
+              child: Text(
+                reviewText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: scheduledDays == 0
+                      ? colorScheme.primary
+                      : scheduledDays == -1
+                          ? Colors.green
+                          : colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -336,614 +475,393 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Word Management',
+          'Vocabulary Review',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: colorScheme.primary,
-          indicatorWeight: 3,
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant,
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 14 : 16,
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.normal,
-            fontSize: isSmallScreen ? 14 : 16,
-          ),
-          tabs: const [
-            Tab(text: 'Due Words'),
-            Tab(text: 'All Words'),
-          ],
-        ),
       ),
-      body: Column(
-        children: [
-          // Tab content in an Expanded widget to take available space
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                TabContentView(
-                  isSmallScreen: isSmallScreen,
-                  child: _buildDueWordsTab(isSmallScreen, colorScheme),
-                ),
-                TabContentView(
-                  isSmallScreen: isSmallScreen,
-                  child: _buildAllWordsTab(isSmallScreen, colorScheme),
-                ),
-              ],
-            ),
-          ),
-          // Review button outside the TabContentView when on Due Words tab
-          if (_currentTabIndex == 0 && !_isLoadingDue && _dueWordsFull.isNotEmpty)
-            SizedBox(
-              width: double.infinity, // Makes the button take full width
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12), // Added more vertical padding
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  minimumSize: const Size(double.infinity, 0), // Ensures button expands horizontally
-                ),
-                onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (BuildContext context) {
-                      final colorScheme = Theme.of(context).colorScheme;
-                      return SafeArea(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.surface,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(20),
-                              topRight: Radius.circular(20),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, -2),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              // Modal header
-                              Container(
-                                width: 40,
-                                height: 4,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Text(
-                                  'Review Options',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+      body: TabContentView(
+        isSmallScreen: isSmallScreen,
+        child: _buildDueWordsTab(isSmallScreen, colorScheme),
+      ),
 
-                              // Audio Review Option
-                              InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Audio Review coming soon!'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: colorScheme.primary.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.primary.withOpacity(0.2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.headset,
-                                            size: 24,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Audio Review',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: colorScheme.onSurface,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'A simple review of the words you need to review with audio support',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onSurfaceVariant,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // New Lesson Option
-                              InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  Navigator.pushReplacementNamed(context, '/create_lesson');
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: colorScheme.primary.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.primary.withOpacity(0.2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.school,
-                                            size: 24,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'New Lesson',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: colorScheme.onSurface,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Create a new lesson with more context, new words and review overdue words',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onSurfaceVariant,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // Card Review Option
-                              InkWell(
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => ReviewWordsDialog(
-                                      words: _dueWordsRefs,
-                                      userID: _userId,
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: colorScheme.primary.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.primary.withOpacity(0.2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.style,
-                                            size: 24,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Card Review',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: colorScheme.onSurface,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'A simple visual review where you test and rate your memory',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onSurfaceVariant,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-                child: const Text('Review'),
+      // Floating Action Button for Review
+      floatingActionButton: !_isLoadingDue && _dueWordsFull.isNotEmpty
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 20, right: 4),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showReviewOptions(context),
+                backgroundColor: colorScheme.primary,
+                foregroundColor: Colors.white,
+                elevation: 8,
+                icon: const Icon(Icons.quiz_rounded, size: 22),
+                label: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Review Words',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '${_dueWordsFull.length} ready',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 11,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-        ],
-      ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  Widget _buildAllWordsTab(bool isSmallScreen, ColorScheme colorScheme) {
-    if (_isLoadingAll) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_allWordsFull.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: isSmallScreen ? 16 : 18,
+  void _showReviewOptions(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              children: [
-                const TextSpan(text: "Nothing to see here yet! Head to the ", style: TextStyle(fontStyle: FontStyle.italic)),
-                TextSpan(
-                  text: 'create lesson tab',
-                  style: TextStyle(
-                    decoration: TextDecoration.underline,
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () {
-                      Navigator.pushReplacementNamed(context, '/create_lesson');
-                    },
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
-                const TextSpan(text: ' to start your learning journey!', style: TextStyle(fontStyle: FontStyle.italic)),
               ],
             ),
-          ),
-        ),
-      );
-    }
-    final displayed = _allWordsFull.take((_allPage + 1) * _pageSize).toList();
-    const int crossAxisCount = 2;
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'These are words you have started learning.',
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: isSmallScreen ? 14 : 16,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // Modal header
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.all(0),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.quiz_rounded,
+                          color: colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Review Options',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              '${_dueWordsFull.length} words ready for review',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Card Review Option (Primary)
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showDialog(
+                      context: context,
+                      builder: (context) => ReviewWordsDialog(
+                        words: _dueWordsRefs,
+                        userID: _userId,
+                        onReviewCompleted: () async {
+                          // Refresh the word lists after review is completed
+                          await _loadAllWords();
+                          await _loadDueWords();
+                        },
+                      ),
+                    );
+                  },
                   child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: RadialGradient(
-                        center: const Alignment(0.5, -0.5),
-                        radius: 1.2,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                         colors: [
-                          colorScheme.primary.withOpacity(0.3),
-                          Colors.transparent,
+                          colorScheme.primary.withOpacity(0.1),
+                          colorScheme.primary.withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.style_rounded,
+                              size: 28,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Card Review',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Recommended',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Visual flashcard review where you test and rate your memory',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: colorScheme.primary,
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (displayed.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
-                          child: Text(
-                            'Tap any word to see its translation',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                              fontStyle: FontStyle.italic,
+
+                // New Lesson Option
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.pushReplacementNamed(context, '/create_lesson');
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.school_rounded,
+                              size: 28,
+                              color: colorScheme.primary,
                             ),
                           ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text(
-                            'Long-press to display word options',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            childAspectRatio: 1.2, // Making cards even taller
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                          ),
-                          itemCount: displayed.length,
-                          itemBuilder: (context, index) {
-                            final card = displayed[index];
-                            final scheduledDays = card.card.scheduledDays.toDouble();
-                            final learning = card.card.reps > 0;
-                            final isLearned = scheduledDays >= 80;
-                            final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-                            return InkWell(
-                              onTap: () => _showTranslatedWordToast(context, card.word),
-                              onLongPress: () {
-                                final categoryName = _findCategoryName(card.word);
-                                if (categoryName != null) {
-                                  showMarkAsMasteredModal(
-                                    context: context,
-                                    word: card.word,
-                                    categoryName: categoryName,
-                                    targetLanguage: _targetLanguage,
-                                    learningWords: List<Map<String, dynamic>>.from(_allWordsFull.map((c) => <String, dynamic>{
-                                          'word': c.word.toLowerCase(),
-                                          'scheduledDays': c.card.scheduledDays.toDouble(),
-                                          'reps': c.card.reps,
-                                        })),
-                                    updateLearningWords: (_) {},
-                                    loadWordStats: () async {
-                                      await _loadAllWords();
-                                      await _loadDueWords();
-                                    },
-                                  );
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isLearned || isMastered ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
-                                    width: 1,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'New Lesson',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Increased vertical padding
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min, // Using mainAxisSize.min instead of center alignment
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            card.word,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.white,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (isMastered) ...[
-                                          const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.star,
-                                            size: 14,
-                                            color: Color.fromARGB(255, 136, 225, 139),
-                                          ),
-                                        ] else if (isLearned) ...[
-                                          const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.check_circle,
-                                            size: 14,
-                                            color: Color.fromARGB(255, 136, 225, 139),
-                                          ),
-                                        ]
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      () {
-                                        if (isMastered) return 'Mastered';
-                                        if (isLearned) return 'Learned';
-                                        if (learning) return 'Learning';
-                                        return 'Not started';
-                                      }(),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: () {
-                                          if (isMastered) {
-                                            return const Color.fromARGB(255, 136, 225, 139);
-                                          }
-                                          if (isLearned) {
-                                            return const Color.fromARGB(255, 136, 225, 139).withOpacity(0.8);
-                                          }
-                                          if (learning) {
-                                            return Colors.amber;
-                                          }
-                                          return Colors.white.withOpacity(0.6);
-                                        }(),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    WordProgressBar(score: scheduledDays),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      scheduledDays == -1 ? 'Manually marked as mastered' : '${scheduledDays.toInt()} days until next review',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Create a lesson with context, new words, and review overdue words',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ],
                       ),
-                      if (displayed.length < _allWordsFull.length)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-                          child: Center(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _allPage++;
-                                });
-                              },
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
+                    ),
+                  ),
+                ),
+
+                // Audio Review Option (Coming Soon)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurfaceVariant.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.headset_rounded,
+                            size: 28,
+                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
                                   Text(
-                                    'Show More',
+                                    'Audio Review',
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                                     ),
                                   ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.expand_more,
-                                    size: 16,
-                                    color: Colors.white,
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.onSurfaceVariant.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Coming Soon',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Audio-based review with pronunciation practice',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -951,8 +869,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
     if (_isLoadingDue) {
       return const Center(child: CircularProgressIndicator());
     }
-    final displayed = _dueWordsFull.take((_duePage + 1) * _pageSize).toList();
-    const int crossAxisCount = 2;
+
     if (_dueWordsFull.isEmpty) {
       return Center(
         child: Padding(
@@ -972,7 +889,6 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
                     decoration: TextDecoration.underline,
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
-                    //make italics
                     fontStyle: FontStyle.italic,
                   ),
                   recognizer: TapGestureRecognizer()
@@ -986,6 +902,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
         ),
       );
     }
+
     return Column(
       children: [
         Container(
@@ -1009,231 +926,84 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             ],
           ),
         ),
+
+        // Column Headers
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 0),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Word',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 100,
+                child: Text(
+                  'Next Review',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+
         Expanded(
           child: Container(
-            margin: const EdgeInsets.all(1),
+            margin: const EdgeInsets.all(0),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
               border: Border.all(
                 color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
                 width: 1,
               ),
             ),
-            child: Stack(
+            child: Column(
               children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: RadialGradient(
-                        center: const Alignment(0.5, -0.5),
-                        radius: 1.2,
-                        colors: [
-                          colorScheme.primary.withOpacity(0.3),
-                          Colors.transparent,
-                        ],
+                if (_dueWordsFull.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+                    child: Text(
+                      'Tap any word to see its translation • Long press for options',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
-                ),
-                SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (displayed.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
-                          child: Text(
-                            'Tap any word to see its translation',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text(
-                            'Long-press to display word options',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            childAspectRatio: 1.2, // Making cards even taller
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                          ),
-                          itemCount: displayed.length,
-                          itemBuilder: (context, index) {
-                            final card = displayed[index];
-                            final scheduledDays = card.card.scheduledDays.toDouble();
-                            final learning = card.card.reps > 0;
-                            final isLearned = scheduledDays >= 80;
-                            final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-                            return InkWell(
-                              onTap: () => _showTranslatedWordToast(context, card.word),
-                              onLongPress: () {
-                                final categoryName = _findCategoryName(card.word);
-                                if (categoryName != null) {
-                                  showMarkAsMasteredModal(
-                                      context: context,
-                                      word: card.word,
-                                      categoryName: categoryName,
-                                      targetLanguage: _targetLanguage,
-                                      updateLearningWords: (_) {},
-                                      loadWordStats: () async {
-                                        await _loadAllWords();
-                                        await _loadDueWords();
-                                      },
-                                      learningWords: List<Map<String, dynamic>>.from(
-                                        _allWordsFull
-                                            .map((c) => <String, dynamic>{
-                                                  'word': c.word.toLowerCase(),
-                                                  'scheduledDays': c.card.scheduledDays.toDouble(),
-                                                  'reps': c.card.reps,
-                                                })
-                                            .toList(),
-                                      ));
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isLearned ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
-                                    width: 1,
-                                  ),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Increased vertical padding
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min, // Using mainAxisSize.min instead of center alignment
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            card.word,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.white,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (isMastered) ...[
-                                          const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.star,
-                                            size: 14,
-                                            color: Color.fromARGB(255, 136, 225, 139),
-                                          ),
-                                        ] else if (isLearned) ...[
-                                          const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.check_circle,
-                                            size: 14,
-                                            color: Color.fromARGB(255, 136, 225, 139),
-                                          ),
-                                        ]
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      () {
-                                        if (isMastered) return 'Mastered';
-                                        if (isLearned) return 'Learned';
-                                        if (learning) return 'Learning';
-                                        return 'Not started';
-                                      }(),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: () {
-                                          if (isMastered) {
-                                            return const Color.fromARGB(255, 136, 225, 139);
-                                          }
-                                          if (isLearned) {
-                                            return const Color.fromARGB(255, 136, 225, 139).withOpacity(0.8);
-                                          }
-                                          if (learning) {
-                                            return Colors.amber;
-                                          }
-                                          return Colors.white.withOpacity(0.6);
-                                        }(),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    WordProgressBar(score: scheduledDays),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${scheduledDays.toInt()} days until next review',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      if (displayed.length < _dueWordsFull.length)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-                          child: Center(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _duePage++;
-                                });
-                              },
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Show More',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.expand_more,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+                ],
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 100),
+                    itemCount: _dueWordsFull.length,
+                    itemBuilder: (context, index) {
+                      final card = _dueWordsFull[index];
+                      return _buildWordItem(card, colorScheme);
+                    },
                   ),
                 ),
               ],

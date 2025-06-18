@@ -26,6 +26,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   final List<DocumentSnapshot> _customLessons = [];
   int _generationsRemaining = 0;
   bool _isPremium = false;
+  bool _showAllLessons = false;
 
   @override
   void initState() {
@@ -354,33 +355,47 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            ...(_customLessons.take(10).map((lesson) => LessonCard(
-                                  audioFile: lesson,
-                                  onReload: _loadCustomLessons,
-                                  isSmallScreen: isSmallScreen,
-                                ))),
+                            ...(_showAllLessons
+                                ? _customLessons.map((lesson) => LessonCard(
+                                      audioFile: lesson,
+                                      onReload: _loadCustomLessons,
+                                      isSmallScreen: isSmallScreen,
+                                    ))
+                                : _customLessons.take(10).map((lesson) => LessonCard(
+                                      audioFile: lesson,
+                                      onReload: _loadCustomLessons,
+                                      isSmallScreen: isSmallScreen,
+                                    ))),
                             if (_customLessons.length > 10)
                               Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: TextButton.icon(
+                                  padding: const EdgeInsets.only(top: 12, bottom: 16),
+                                  child: OutlinedButton.icon(
                                     onPressed: () {
-                                      // TODO: Implement show all lessons modal
+                                      setState(() {
+                                        _showAllLessons = !_showAllLessons;
+                                      });
                                     },
                                     icon: Icon(
-                                      Icons.expand_more,
+                                      _showAllLessons ? Icons.expand_less : Icons.expand_more,
                                       color: colorScheme.primary,
+                                      size: 18,
                                     ),
                                     label: Text(
-                                      'View All ${_customLessons.length} Lessons',
-                                      style: TextStyle(
-                                        color: colorScheme.primary,
+                                      _showAllLessons ? 'Show Less' : 'View All ${_customLessons.length} Lessons',
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                    style: TextButton.styleFrom(
+                                    style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                      side: BorderSide(
+                                        color: colorScheme.primary,
+                                        width: 1.5,
+                                      ),
+                                      backgroundColor: Colors.transparent,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
