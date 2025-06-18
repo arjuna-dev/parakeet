@@ -7,11 +7,17 @@ class HomeScreenModel extends ChangeNotifier {
   bool _isDisposed = false;
   List<DocumentSnapshot> favoriteAudioFiles = [];
   List<DocumentSnapshot> nowPlayingFiles = [];
+  List<DocumentSnapshot> allLessons = [];
+  List<DocumentSnapshot> filteredLessons = [];
   List<dynamic> favoriteAudioFileIds = [];
   List<dynamic> nowPlayingIds = [];
   ValueNotifier<List<dynamic>> favoriteAudioFileIdsNotifier = ValueNotifier([]);
   ValueNotifier<List<dynamic>> nowPlayingIdsNotifier = ValueNotifier([]);
   final user = FirebaseAuth.instance.currentUser;
+
+  // Category filtering
+  String? selectedCategory;
+  List<String> availableCategories = [];
 
   @override
   void dispose() {
@@ -58,6 +64,59 @@ class HomeScreenModel extends ChangeNotifier {
     }));
 
     safeNotifyListeners();
+  }
+
+  Future<void> loadAllLessons() async {
+    final userId = user!.uid;
+    final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+
+    // Sort by timestamp (newest first)
+    allLessons = snapshot.docs.toList();
+    allLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+
+    // Extract unique categories
+    _extractCategories();
+
+    // Apply current filter
+    _applyFilter();
+
+    safeNotifyListeners();
+  }
+
+  void _extractCategories() {
+    Set<String> categories = {};
+    for (var lesson in allLessons) {
+      final data = lesson.data() as Map<String, dynamic>?;
+      if (data?.containsKey('category') == true && lesson.get('category') != null && lesson.get('category').toString().trim().isNotEmpty) {
+        categories.add(lesson.get('category'));
+      } else {
+        categories.add('Custom Lesson');
+      }
+    }
+    availableCategories = categories.toList()..sort();
+  }
+
+  void setSelectedCategory(String? category) {
+    selectedCategory = category;
+    _applyFilter();
+    safeNotifyListeners();
+  }
+
+  void _applyFilter() {
+    if (selectedCategory == null || selectedCategory == 'All Categories') {
+      filteredLessons = List.from(allLessons);
+    } else {
+      filteredLessons = allLessons.where((lesson) {
+        final data = lesson.data() as Map<String, dynamic>?;
+        String lessonCategory;
+        if (data?.containsKey('category') == true && lesson.get('category') != null && lesson.get('category').toString().trim().isNotEmpty) {
+          lessonCategory = lesson.get('category');
+        } else {
+          lessonCategory = 'Custom Lesson';
+        }
+        return lessonCategory == selectedCategory;
+      }).toList();
+    }
   }
 
   Future<void> loadNowPlayingFromPreference() async {

@@ -6,11 +6,10 @@ import 'package:parakeet/utils/mark_as_mastered_modal.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/services/lesson_service.dart';
-import 'package:parakeet/widgets/library_screen/lesson_item.dart';
-import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/services/word_stats_service.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/widgets/home_screen/lesson_card.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:parakeet/utils/constants.dart';
@@ -39,23 +38,25 @@ class CategoryDetailScreen extends StatefulWidget {
 }
 
 class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
-  final HomeScreenModel _model = HomeScreenModel();
-  Map<String, bool> _localFavorites = {};
-  List<DocumentSnapshot> _categoryLessons = [];
   final List<Map<String, dynamic>> _learningWords = [];
+  final List<DocumentSnapshot> _categoryLessons = [];
   bool _isLoading = true;
-  bool _wordsExpanded = false;
+  bool _isLoadingLessons = true;
+  final bool _wordsExpanded = false;
   WordStats? _wordStats;
   String _currentTargetLanguage = '';
   bool _isGeneratingLesson = false;
+  int _generationsRemaining = 0;
+  bool _isPremium = false;
 
   @override
   void initState() {
     super.initState();
     _currentTargetLanguage = widget.targetLanguage;
-    _loadFavorites();
     _loadLearningWords();
     _loadWordStats();
+    _loadCategoryLessons();
+    _loadGenerationsRemaining();
   }
 
   @override
@@ -66,24 +67,50 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     if (widget.targetLanguage != _currentTargetLanguage) {
       _currentTargetLanguage = widget.targetLanguage;
       _learningWords.clear();
+      _categoryLessons.clear();
       _wordStats = null;
       _loadLearningWords();
       _loadWordStats();
-      _refreshCategoryLessons(); // Refresh lessons when target language changes
+      _loadCategoryLessons();
+      _loadGenerationsRemaining();
     }
   }
 
-  Future<void> _loadFavorites() async {
+  Future<void> _loadCategoryLessons() async {
+    setState(() => _isLoadingLessons = true);
     try {
-      await _model.loadAudioFiles();
-      _loadCategoryLessons();
+      final userId = FirebaseAuth.instance.currentUser!.uid;
+      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+
+      final categoryLessons = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        String lessonCategory;
+        if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
+          lessonCategory = doc.get('category');
+        } else {
+          lessonCategory = 'Custom Lesson';
+        }
+        return lessonCategory == widget.category['name'];
+      }).toList();
+
+      // Sort by timestamp (newest first)
+      categoryLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+
+      if (mounted) {
+        setState(() {
+          _categoryLessons.clear();
+          _categoryLessons.addAll(categoryLessons);
+          _isLoadingLessons = false;
+        });
+      }
     } catch (e) {
-      print('Error loading favorites: $e');
-      _loadCategoryLessons();
+      print('Error loading category lessons: $e');
+      setState(() => _isLoadingLessons = false);
     }
   }
 
   Future<void> _loadLearningWords() async {
+    setState(() => _isLoading = true);
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
@@ -92,10 +119,12 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       if (mounted) {
         setState(() {
           _learningWords.addAll(wordsData);
+          _isLoading = false;
         });
       }
     } catch (e) {
       print('Error loading learning words: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -117,38 +146,136 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     }
   }
 
-  Future<void> _refreshCategoryLessons() async {
-    await _loadCategoryLessons();
+  Future<void> _loadGenerationsRemaining() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        // Check premium status
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final isPremium = userDoc.data()?['premium'] ?? false;
+
+        // Get API calls used today
+        final apiCallsUsed = await LessonService.countAPIcallsByUser();
+
+        if (mounted) {
+          setState(() {
+            _isPremium = isPremium;
+            int limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
+            _generationsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading generations remaining: $e');
+    }
   }
 
-  Future<void> _loadCategoryLessons() async {
-    setState(() => _isLoading = true);
-    try {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
-      print('snapshot: ${snapshot.docs.map((doc) => doc.data())}');
-      final filteredData = snapshot.docs.where((doc) => doc.data()['category'] == widget.category['name'] && doc.data()['target_language'] == widget.targetLanguage);
-      print('filteredData: ${filteredData.map((doc) => doc.data())}');
+  void _showWordsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Modal header
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
 
-      // Initialize _localFavorites map with current favorite state
-      Map<String, bool> initialFavorites = {};
-      for (var doc in filteredData) {
-        String parentId = doc.reference.parent.parent!.id;
-        String docId = doc.reference.id;
-        String key = '$parentId-$docId';
+                  // Title
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(
+                          LessonConstants.getCategoryIcon(widget.category['name']),
+                          color: _getCategoryColor(widget.category['name']),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Practise Words',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
 
-        initialFavorites[key] = _model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
-      }
+                  const SizedBox(height: 8),
 
-      setState(() {
-        _categoryLessons = filteredData.toList();
-        _localFavorites = initialFavorites;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading category lessons: $e');
-      setState(() => _isLoading = false);
-    }
+                  // Instructions
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Tap any word to see translation • Long press for options',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Words List
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: (widget.category['words'] as List).length,
+                      itemBuilder: (context, index) {
+                        final word = (widget.category['words'] as List)[index].toString();
+                        final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                        return _buildSimpleWordItem(word, nativeWord);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleCreateNewLesson() async {
@@ -156,45 +283,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       _isGeneratingLesson = true;
     });
 
-    // Show enhanced loading dialog with progress
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Creating your lesson...',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please wait while we generate a personalized lesson for you',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
     final canProceed = await LessonService.checkPremiumAndAPILimits(context);
     if (!canProceed) {
-      Navigator.pop(context); // Close loading dialog
       setState(() {
         _isGeneratingLesson = false;
       });
@@ -259,7 +349,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       );
 
       // Navigate immediately to AudioPlayerScreen - let it handle the loading state
-      Navigator.pop(context); // Close loading dialog
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -281,7 +370,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       );
     } catch (e) {
       print(e);
-      Navigator.pop(context); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
@@ -292,6 +380,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       setState(() {
         _isGeneratingLesson = false;
       });
+      // Refresh the generations count after attempting to create a lesson
+      _loadGenerationsRemaining();
     }
   }
 
@@ -303,664 +393,936 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
     return ResponsiveScreenWrapper(
       child: Scaffold(
+        backgroundColor: colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
             widget.category['name'],
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
             ),
           ),
+          centerTitle: true,
         ),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: colorScheme.primary,
+                ),
+              )
             : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Category Info Section
+                    const SizedBox(height: 8),
+
+                    // Hero Section with Category Overview
                     Container(
-                      margin: const EdgeInsets.all(16),
-                      height: _wordStats != null ? 170 : 90,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                            _getCategoryColor(widget.category['name']).withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
                           width: 1,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: Stack(
+                      child: Column(
                         children: [
-                          // Gradient overlay for visual effect
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: RadialGradient(
-                                  center: const Alignment(1.2, 0.5),
-                                  radius: 1.2,
-                                  colors: [
-                                    _getCategoryColor(widget.category['name']).withOpacity(0.5),
-                                    Colors.transparent,
-                                  ],
-                                ),
-                              ),
+                          // Category Icon
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              LessonConstants.getCategoryIcon(widget.category['name']),
+                              color: _getCategoryColor(widget.category['name']),
+                              size: 48,
                             ),
                           ),
 
-                          // Category icon
-                          Positioned(
-                            right: 16,
-                            top: 0,
-                            bottom: 0,
-                            child: Center(
-                              child: Icon(
-                                LessonConstants.getCategoryIcon(widget.category['name']),
+                          const SizedBox(height: 16),
+
+                          // Category Title
+                          Text(
+                            widget.category['name'],
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: colorScheme.onSurface,
+                              height: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Progress Stats
+                          if (_wordStats != null) ...[
+                            const SizedBox(height: 20),
+                            _buildModernProgressSection(),
+                          ],
+
+                          const SizedBox(height: 20),
+
+                          // View Words Button
+                          OutlinedButton(
+                            onPressed: () => _showWordsModal(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _getCategoryColor(widget.category['name']),
+                              side: BorderSide(
                                 color: _getCategoryColor(widget.category['name']),
-                                size: isSmallScreen ? 38 : 48,
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.visibility_rounded,
+                                  size: 18,
+                                  color: _getCategoryColor(widget.category['name']),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'View All Words (${(widget.category['words'] as List).length})',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
 
-                          // Category info with stats
-                          Positioned(
-                            left: 16,
-                            top: 0,
-                            bottom: 0,
-                            right: 70, // Leave space for the icon
-                            child: Center(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  // Title and lesson count
-                                  Text(
-                                    '${_categoryLessons.length} ${_categoryLessons.length == 1 ? 'lesson' : 'lessons'}',
+                    const SizedBox(height: 32),
+
+                    // Generated Lessons Section
+                    if (!_isLoadingLessons && _categoryLessons.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Section Header
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: _getCategoryColor(widget.category['name']),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Generated Lessons',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_categoryLessons.length}',
                                     style: TextStyle(
-                                      fontSize: isSmallScreen ? 16 : 18,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _getCategoryColor(widget.category['name']),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Lessons List
+                            ...(_categoryLessons.take(3).map((lesson) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: LessonCard(
+                                    audioFile: lesson,
+                                    onReload: _loadCategoryLessons,
+                                    isSmallScreen: isSmallScreen,
+                                    showCategoryBadge: false,
+                                  ),
+                                ))),
+
+                            // Show More Button
+                            if (_categoryLessons.length > 3)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: TextButton.icon(
+                                    onPressed: () => _showAllLessonsModal(context),
+                                    icon: const Icon(
+                                      Icons.expand_more,
                                       color: Colors.white,
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${(widget.category['words'] as List).length} words available',
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 13 : 14,
-                                      color: Colors.white.withOpacity(0.8),
-                                    ),
-                                  ),
-
-                                  // Add word stats display
-                                  if (_wordStats != null) ...[
-                                    const SizedBox(height: 16),
-                                    // Constrain width but allow full height for the stats
-                                    ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        minWidth: 150,
-                                        maxWidth: 250,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Fixed width container
-                                          SizedBox(
-                                            width: 200,
-                                            child: _buildProgressBar(context, _wordStats!),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          _buildLegend(context, _wordStats!),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Listing of words to learn in this category (fixed size with expand button)
-                    Container(
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Gradient overlay for visual effect
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: RadialGradient(
-                                  center: const Alignment(0.5, -0.5),
-                                  radius: 1.2,
-                                  colors: [
-                                    colorScheme.primary.withOpacity(0.3),
-                                    Colors.transparent,
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Header
-                              const Padding(
-                                padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Category Words',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                    label: Text(
+                                      'View All ${_categoryLessons.length} Lessons',
+                                      style: const TextStyle(
                                         color: Colors.white,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-
-                              // Subtitle about tapping for translation
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                                child: Text(
-                                  'Tap any word to see its translation',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white.withOpacity(0.7),
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                                child: Text(
-                                  'Long-press to display word options',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white70,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-
-                              // Words grid - more compact
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                                child: GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    childAspectRatio: 2,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                  ),
-                                  itemCount: () {
-                                    final allWords = (widget.category['words'] as List).toList();
-                                    final sortedWords = allWords.map((word) {
-                                      final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
-                                      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-                                      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
-                                      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-                                      final isLearning = !isMastered && reps > 0;
-                                      final isNotStarted = !isMastered && reps == 0;
-                                      int priority;
-                                      if (isLearning) {
-                                        priority = 0;
-                                      } else if (isNotStarted) {
-                                        priority = 1;
-                                      } else {
-                                        priority = 2; // Mastered
-                                      }
-                                      return {
-                                        'word': word.toString(),
-                                        'priority': priority,
-                                        'score': scheduledDays,
-                                        'index': allWords.indexOf(word),
-                                      };
-                                    }).toList()
-                                      ..sort((a, b) {
-                                        final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
-                                        if (cmp != 0) return cmp;
-                                        // If same priority, sort by score descending
-                                        return (b['score'] as double).compareTo(a['score'] as double);
-                                      });
-                                    return _wordsExpanded ? sortedWords.length : min(4, sortedWords.length);
-                                  }(),
-                                  itemBuilder: (context, index) {
-                                    final allWords = (widget.category['words'] as List).toList();
-                                    final List<Map<String, dynamic>> allWordsWithPriority = allWords.map((word) {
-                                      final matching = _learningWords.firstWhere((element) => element['word'] == word.toString().toLowerCase(), orElse: () => {});
-                                      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-                                      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
-                                      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-                                      final isLearning = !isMastered && reps > 0;
-                                      final isNotStarted = !isMastered && reps == 0;
-                                      int priority;
-                                      if (isLearning) {
-                                        priority = 0;
-                                      } else if (isNotStarted) {
-                                        priority = 1;
-                                      } else {
-                                        priority = 2; // Mastered
-                                      }
-                                      return {
-                                        'word': word.toString(),
-                                        'priority': priority,
-                                        'score': scheduledDays,
-                                        'index': allWords.indexOf(word),
-                                      };
-                                    }).toList();
-                                    allWordsWithPriority.sort((a, b) {
-                                      final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
-                                      if (cmp != 0) return cmp;
-                                      return (b['score'] as double).compareTo(a['score'] as double);
-                                    });
-                                    final displayWords = allWordsWithPriority.take(_wordsExpanded ? allWordsWithPriority.length : 4).toList();
-                                    final word = displayWords[index]['word'] as String;
-                                    final originalIndex = displayWords[index]['index'] as int;
-                                    final nativeWord = (widget.nativeCategory['words'] as List)[originalIndex].toString();
-                                    final matching = _learningWords.firstWhere((element) => element['word'] == word.toLowerCase(), orElse: () => {});
-                                    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-                                    final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
-                                    final learning = !((scheduledDays >= 100 || scheduledDays == -1)) && reps > 0;
-                                    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
-                                    final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-                                    return InkWell(
-                                      onTap: () => showCenteredToast(context, nativeWord),
-                                      onLongPress: () => showMarkAsMasteredModal(
-                                        context: context,
-                                        word: word,
-                                        categoryName: widget.category['name'],
-                                        targetLanguage: widget.targetLanguage,
-                                        learningWords: _learningWords,
-                                        updateLearningWords: (updated) => setState(() => _learningWords
-                                          ..clear()
-                                          ..addAll(updated)),
-                                        loadWordStats: _loadWordStats,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: isLearned ? const Color.fromARGB(255, 136, 225, 139).withOpacity(0.5) : Colors.transparent,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    word,
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.white,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                if (isMastered) ...[
-                                                  const SizedBox(width: 4),
-                                                  const Icon(
-                                                    Icons.star,
-                                                    size: 14,
-                                                    color: Color.fromARGB(255, 136, 225, 139),
-                                                  ),
-                                                ] else if (isLearned) ...[
-                                                  const SizedBox(width: 4),
-                                                  const Icon(
-                                                    Icons.check_circle,
-                                                    size: 14,
-                                                    color: Color.fromARGB(255, 136, 225, 139),
-                                                  ),
-                                                ]
-                                              ],
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              () {
-                                                if (isMastered) return 'Mastered';
-                                                if (isLearned) return 'Learned';
-                                                if (learning) return 'Learning';
-                                                return 'Not started';
-                                              }(),
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: () {
-                                                  if (isMastered) return const Color.fromARGB(255, 136, 225, 139);
-                                                  if (isLearned) return const Color.fromARGB(255, 136, 225, 139).withOpacity(0.8);
-                                                  if (learning) return Colors.amber;
-                                                  return Colors.white.withOpacity(0.6);
-                                                }(),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            WordProgressBar(score: scheduledDays),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                              // See more/less button at the end
-                              if ((widget.category['words'] as List).length > 5)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-                                  child: Center(
-                                    child: TextButton(
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _wordsExpanded = !_wordsExpanded;
-                                        });
-                                      },
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            _wordsExpanded ? "See less" : "See more",
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Icon(
-                                            _wordsExpanded ? Icons.expand_less : Icons.expand_more,
-                                            size: 16,
-                                            color: Colors.white,
-                                          ),
-                                        ],
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                      backgroundColor: _getCategoryColor(widget.category['name']),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Words Being Learned Section
-
-                    // Existing Lessons Section
-                    if (_categoryLessons.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Saved Lessons',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      ..._categoryLessons.map((doc) => LessonItem(
-                            document: doc,
-                            category: widget.category['name'],
-                            isSmallScreen: isSmallScreen,
-                            model: _model,
-                            localFavorites: _localFavorites,
-                            updateFavorites: (favorites) {
-                              setState(() => _localFavorites = favorites);
-                            },
-                            onDeleteComplete: () {
-                              setState(() {
-                                _refreshCategoryLessons();
-                              });
-                            },
-                          )),
-                    ],
-                    const SizedBox(height: 80),
+
+                    const SizedBox(height: 100), // Space for bottom button
                   ],
                 ),
               ),
-        bottomSheet: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: FilledButton.icon(
-              onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
-              icon: const Icon(Icons.add),
-              label: const Text('Create New Lesson'),
-              style: FilledButton.styleFrom(
-                minimumSize: Size(double.infinity, isSmallScreen ? 40 : 48),
-              ),
+
+        // Generate Button positioned on the right
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 20, right: 4),
+          child: FloatingActionButton.extended(
+            onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
+            backgroundColor: _getCategoryColor(widget.category['name']),
+            foregroundColor: Colors.white,
+            elevation: 8,
+            icon: _isGeneratingLesson
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.auto_awesome_rounded, size: 22),
+            label: _isGeneratingLesson
+                ? const Text(
+                    'Generating...',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Generate Lesson',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        '$_generationsRemaining remaining',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
         ),
-        bottomNavigationBar: const BottomMenuBar(currentRoute: '/create_lesson'),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
+  }
+
+  Widget _buildModernProgressSection() {
+    if (_wordStats == null) return const SizedBox.shrink();
+
+    final totalWords = (widget.category['words'] as List).length;
+    final masteredPercentage = totalWords > 0 ? (_wordStats!.mastered / totalWords * 100).round() : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _getCategoryColor(widget.category['name']).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Progress Ring
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildProgressStat('Mastered', _wordStats!.mastered, Theme.of(context).colorScheme.onSurface),
+              _buildProgressStat('Learning', _wordStats!.learning, Theme.of(context).colorScheme.onSurfaceVariant),
+              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning - _wordStats!.learned, Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7)),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: masteredPercentage / 100,
+              minHeight: 8,
+              backgroundColor: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(_getCategoryColor(widget.category['name'])),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            '$masteredPercentage% Complete',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressStat(String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernWordsGrid() {
+    final allWords = (widget.category['words'] as List).toList();
+    final sortedWords = _getSortedWords(allWords);
+    final displayWords = _wordsExpanded ? sortedWords : sortedWords.take(6).toList();
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: displayWords.length,
+      itemBuilder: (context, index) {
+        final wordData = displayWords[index];
+        final word = wordData['word'] as String;
+        final originalIndex = wordData['index'] as int;
+        final nativeWord = (widget.nativeCategory['words'] as List)[originalIndex].toString();
+
+        return _buildModernWordCard(word, nativeWord);
+      },
+    );
+  }
+
+  Widget _buildSimpleWordItem(String word, String nativeWord) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final matching = _learningWords.firstWhere(
+      (element) => element['word'] == word.toLowerCase(),
+      orElse: () => {},
+    );
+
+    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+    final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+
+    final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
+    final isLearning = !isMastered && !isLearned && reps > 0;
+
+    // Calculate progress percentage
+    double progressValue;
+    Color progressColor;
+
+    if (isMastered) {
+      progressValue = 1.0;
+      progressColor = Colors.green;
+    } else if (isLearned) {
+      progressValue = 0.8;
+      progressColor = Colors.blue;
+    } else if (isLearning) {
+      progressValue = scheduledDays / 100;
+      progressColor = Colors.orange;
+    } else {
+      progressValue = 0.0;
+      progressColor = colorScheme.onSurfaceVariant.withOpacity(0.3);
+    }
+
+    return InkWell(
+      onTap: () => _showTranslationSheet(context, word, nativeWord),
+      onLongPress: () => showMarkAsMasteredModal(
+        context: context,
+        word: word,
+        categoryName: widget.category['name'],
+        targetLanguage: widget.targetLanguage,
+        learningWords: _learningWords,
+        updateLearningWords: (updated) => setState(() => _learningWords
+          ..clear()
+          ..addAll(updated)),
+        loadWordStats: _loadWordStats,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Word
+            Expanded(
+              child: Text(
+                word,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Circular Progress Indicator
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Background circle
+                  CircularProgressIndicator(
+                    value: 1.0,
+                    strokeWidth: 3,
+                    backgroundColor: colorScheme.onSurfaceVariant.withOpacity(0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      colorScheme.onSurfaceVariant.withOpacity(0.1),
+                    ),
+                  ),
+                  // Progress circle
+                  CircularProgressIndicator(
+                    value: progressValue,
+                    strokeWidth: 3,
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  ),
+                  // Center icon or percentage
+                  Text(
+                    isMastered ? '100%' : '${(progressValue * 100).round()}%',
+                    style: TextStyle(
+                      fontSize: isMastered ? 8 : 9,
+                      fontWeight: isMastered ? FontWeight.w700 : FontWeight.w600,
+                      color: progressColor,
+                      height: 1.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernWordCard(String word, String nativeWord) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final matching = _learningWords.firstWhere(
+      (element) => element['word'] == word.toLowerCase(),
+      orElse: () => {},
+    );
+
+    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+    final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+
+    final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
+    final isLearning = !isMastered && !isLearned && reps > 0;
+
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+
+    if (isMastered) {
+      statusColor = Colors.green;
+      statusText = 'Mastered';
+      statusIcon = Icons.star_rounded;
+    } else if (isLearned) {
+      statusColor = Colors.blue;
+      statusText = 'Learned';
+      statusIcon = Icons.check_circle_rounded;
+    } else if (isLearning) {
+      statusColor = Colors.orange;
+      statusText = 'Learning';
+      statusIcon = Icons.school_rounded;
+    } else {
+      statusColor = colorScheme.onSurfaceVariant;
+      statusText = 'New';
+      statusIcon = Icons.circle_outlined;
+    }
+
+    return InkWell(
+      onTap: () => showCenteredToast(context, nativeWord),
+      onLongPress: () => showMarkAsMasteredModal(
+        context: context,
+        word: word,
+        categoryName: widget.category['name'],
+        targetLanguage: widget.targetLanguage,
+        learningWords: _learningWords,
+        updateLearningWords: (updated) => setState(() => _learningWords
+          ..clear()
+          ..addAll(updated)),
+        loadWordStats: _loadWordStats,
+      ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: statusColor.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Word and Status
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    word,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(
+                  statusIcon,
+                  size: 16,
+                  color: statusColor,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Status and Progress
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+                if (!isMastered)
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: scheduledDays / 100,
+                        minHeight: 4,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getSortedWords(List allWords) {
+    return allWords.map((word) {
+      final matching = _learningWords.firstWhere(
+        (element) => element['word'] == word.toString().toLowerCase(),
+        orElse: () => {},
+      );
+      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
+
+      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
+      final isLearned = scheduledDays >= 80 && scheduledDays != -1;
+      final isLearning = !isMastered && !isLearned && reps > 0;
+
+      int priority;
+      if (isLearning) {
+        priority = 0; // Show learning words first
+      } else if (!isMastered && !isLearned) {
+        priority = 1; // Then new words
+      } else if (isLearned) {
+        priority = 2; // Then learned words
+      } else {
+        priority = 3; // Mastered words last
+      }
+
+      return {
+        'word': word.toString(),
+        'priority': priority,
+        'score': scheduledDays,
+        'index': allWords.indexOf(word),
+      };
+    }).toList()
+      ..sort((a, b) {
+        final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
+        if (cmp != 0) return cmp;
+        return (b['score'] as double).compareTo(a['score'] as double);
+      });
+  }
+
+  void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Target language word
+                Text(
+                  word,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: _getCategoryColor(widget.category['name']),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Arrow or divider
+                Icon(
+                  Icons.arrow_downward_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Native language translation
+                Text(
+                  nativeWord,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _getCategoryColor(widget.category['name']),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Got it',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAllLessonsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Modal header
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+
+                  // Title
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          color: _getCategoryColor(widget.category['name']),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${widget.category['name']} Lessons',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Lessons List
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      itemCount: _categoryLessons.length,
+                      itemBuilder: (context, index) {
+                        return LessonCard(
+                          audioFile: _categoryLessons[index],
+                          onReload: _loadCategoryLessons,
+                          isSmallScreen: MediaQuery.of(context).size.height < 700,
+                          showCategoryBadge: false,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   // Helper method to generate colors based on category name
   Color _getCategoryColor(String categoryName) {
     switch (categoryName.toLowerCase()) {
       case 'at the coffee shop':
-        return Colors.brown;
-      case 'in the library':
-        return Colors.blue;
+        return const Color(0xFF5D4037);
       case 'weather talk':
-        return Colors.indigo;
+        return const Color(0xFF303F9F);
+      case 'in the supermarket':
+        return const Color(0xFF388E3C);
+      case 'asking for directions':
+        return const Color(0xFF1976D2);
       case 'making small talk':
-        return Colors.teal;
+        return const Color(0xFF00695C);
+      case 'at the airport':
+        return const Color(0xFF455A64);
+      case 'at the restaurant':
+        return const Color(0xFFD84315);
+      case 'at the hotel':
+        return const Color(0xFF4E342E);
+      case 'at the doctor\'s office':
+        return const Color(0xFFC62828);
+      case 'public transportation':
+        return const Color(0xFF7B1FA2);
+      case 'shopping for clothes':
+        return const Color(0xFFC2185B);
+      case 'at the gym':
+        return const Color(0xFFEF6C00);
+      case 'at the bank':
+        return const Color(0xFF512DA8);
+      case 'at the post office':
+        return const Color(0xFF00838F);
+      case 'at the pharmacy':
+        return const Color(0xFF0097A7);
+      case 'at the park':
+        return const Color(0xFF689F38);
+      case 'at the beach':
+        return const Color(0xFF0288D1);
+      case 'at the library':
+        return const Color(0xFF3949AB);
+      case 'at the cinema':
+        return const Color(0xFF5E35B1);
+      case 'at the hair salon':
+        return const Color(0xFFAD1457);
+      case 'custom lesson':
+        return const Color(0xFF546E7A);
       default:
-        // Generate a color based on the first letter of the category name
         final int hashCode = categoryName.toLowerCase().hashCode;
-        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.8);
+        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.6);
     }
-  }
-
-  Widget _buildProgressBar(BuildContext context, WordStats stats) {
-    // Get total words from category, not just from learning status
-    final totalAvailableWords = (widget.category['words'] as List).length;
-    const barHeight = 12.0;
-
-    // Handle edge case of no words
-    if (totalAvailableWords == 0) {
-      return SizedBox(
-        height: barHeight,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-        ),
-      );
-    }
-
-    // Calculate proportions based on total available words
-    final masteredWidth = totalAvailableWords > 0 ? stats.mastered / totalAvailableWords : 0.0;
-    final learnedWidth = totalAvailableWords > 0 ? stats.learned / totalAvailableWords : 0.0;
-    final learningWidth = totalAvailableWords > 0 ? stats.learning / totalAvailableWords : 0.0;
-
-    return SizedBox(
-      height: barHeight,
-      child: LayoutBuilder(builder: (context, constraints) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            children: [
-              // Mastered (green)
-              if (masteredWidth > 0)
-                SizedBox(
-                  width: constraints.maxWidth * masteredWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(6),
-                        bottomLeft: const Radius.circular(6),
-                        topRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                      ),
-                    ),
-                  ),
-                ),
-              // Learned (blue)
-              if (learnedWidth > 0)
-                SizedBox(
-                  width: constraints.maxWidth * learnedWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        topRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                      ),
-                    ),
-                  ),
-                ),
-              // Learning (amber)
-              if (learningWidth > 0)
-                SizedBox(
-                  width: constraints.maxWidth * learningWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        topRight: const Radius.circular(6),
-                        bottomRight: const Radius.circular(6),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildLegend(BuildContext context, WordStats stats) {
-    // Get total words from category
-    final totalAvailableWords = (widget.category['words'] as List).length;
-
-    // Always include all three states
-    final List<Widget> legendItems = [
-      _buildLegendItem(context, stats.mastered, totalAvailableWords, 'Mastered', Colors.green),
-      _buildLegendItem(context, stats.learned, totalAvailableWords, 'Learned', Colors.blue),
-      _buildLegendItem(context, stats.learning, totalAvailableWords, 'Learning', Colors.amber),
-    ];
-
-    // Split items into rows of 2
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            legendItems[0],
-            const SizedBox(width: 16),
-            legendItems[1],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            legendItems[2],
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(BuildContext context, int count, int total, String label, Color color) {
-    // Calculate percentage - avoid division by zero
-    final percentage = total > 0 ? (count / total * 100).round() : 0;
-
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$percentage% $label',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.9),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class WordProgressBar extends StatelessWidget {
-  final dynamic score;
-  final int learnedScore = 100;
-  const WordProgressBar({required this.score, super.key});
-
-  double get progress {
-    // Convert score to double safely
-    final doubleScore = score is int ? score.toDouble() : (score is double ? score : 0.0);
-    return (doubleScore.clamp(0, learnedScore)) / learnedScore;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Convert score to double safely
-    final doubleScore = score is int ? score.toDouble() : (score is double ? score : 0.0);
-    final progressColor = doubleScore >= 100 ? const Color.fromARGB(255, 136, 225, 139) : colorScheme.primary;
-    return FractionallySizedBox(
-      widthFactor: 0.5,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: progress,
-          minHeight: 5,
-          backgroundColor: colorScheme.surfaceContainerHighest,
-          valueColor: AlwaysStoppedAnimation<Color?>(progressColor),
-        ),
-      ),
-    );
   }
 }
 

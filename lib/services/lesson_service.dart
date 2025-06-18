@@ -157,45 +157,8 @@ class LessonService {
 
     setIsCreatingCustomLesson(true);
 
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Creating your lesson...',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please wait while we generate a personalized lesson for you',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
     final canProceed = await checkPremiumAndAPILimits(context);
     if (!canProceed) {
-      Navigator.pop(context); // Close loading dialog
       setIsCreatingCustomLesson(false);
       return;
     }
@@ -247,7 +210,6 @@ class LessonService {
       );
 
       // Navigate directly to AudioPlayerScreen
-      Navigator.pop(context); // Close loading dialog
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -268,7 +230,6 @@ class LessonService {
       );
     } catch (e) {
       print(e);
-      Navigator.pop(context); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
