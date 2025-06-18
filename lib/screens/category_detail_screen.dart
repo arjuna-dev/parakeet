@@ -256,6 +256,47 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
                   const SizedBox(height: 20),
 
+                  // Column Headers
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Word',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          SizedBox(
+                            width: 64,
+                            child: Text(
+                              'Mastery',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
                   // Words List
                   Expanded(
                     child: ListView.builder(
@@ -558,7 +599,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                 ),
                                 const Spacer(),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
@@ -566,7 +607,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   child: Text(
                                     '${_categoryLessons.length}',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                       color: _getCategoryColor(widget.category['name']),
                                     ),
@@ -592,23 +633,29 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             if (_categoryLessons.length > 3)
                               Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: TextButton.icon(
+                                  padding: const EdgeInsets.only(top: 12, bottom: 16),
+                                  child: OutlinedButton.icon(
                                     onPressed: () => _showAllLessonsModal(context),
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.expand_more,
-                                      color: Colors.white,
+                                      color: _getCategoryColor(widget.category['name']),
+                                      size: 18,
                                     ),
                                     label: Text(
                                       'View All ${_categoryLessons.length} Lessons',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                    style: TextButton.styleFrom(
+                                    style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      backgroundColor: _getCategoryColor(widget.category['name']),
+                                      side: BorderSide(
+                                        color: _getCategoryColor(widget.category['name']),
+                                        width: 1.5,
+                                      ),
+                                      backgroundColor: Colors.transparent,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -620,7 +667,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         ),
                       ),
 
-                    const SizedBox(height: 100), // Space for bottom button
+                    const SizedBox(height: 120), // Space for floating action button
                   ],
                 ),
               ),

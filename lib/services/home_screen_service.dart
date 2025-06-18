@@ -99,9 +99,75 @@ class _AllLessonsListWidget extends StatefulWidget {
 }
 
 class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      widget.model.setSearchQuery(_searchController.text);
+      setState(() {}); // Trigger rebuild to update clear button visibility
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  String _getEmptyStateMessage() {
+    final hasSearch = widget.model.searchQuery.isNotEmpty;
+    final hasCategory = widget.model.selectedCategory != null;
+
+    if (hasSearch && hasCategory) {
+      return 'No lessons found for "${widget.model.selectedCategory}" with "${widget.model.searchQuery}" 🔍';
+    } else if (hasSearch) {
+      return 'No lessons found for "${widget.model.searchQuery}" 🔍';
+    } else if (hasCategory) {
+      return 'No lessons found for "${widget.model.selectedCategory}" 🔍';
+    } else {
+      return 'No lessons created yet 📚';
+    }
+  }
+
+  String _getAdditionalWidgetPrefix() {
+    final hasSearch = widget.model.searchQuery.isNotEmpty;
+    final hasCategory = widget.model.selectedCategory != null;
+
+    if (hasSearch && hasCategory) {
+      return 'Try changing your search or category, or ';
+    } else if (hasSearch) {
+      return 'Try a different search term or ';
+    } else if (hasCategory) {
+      return 'Try selecting a different category or ';
+    } else {
+      return '';
+    }
+  }
+
+  String _getAdditionalWidgetLinkText() {
+    final hasSearch = widget.model.searchQuery.isNotEmpty;
+    final hasCategory = widget.model.selectedCategory != null;
+
+    if (hasSearch || hasCategory) {
+      return 'create a new lesson';
+    } else {
+      return 'Create your first lesson';
+    }
+  }
+
+  String _getAdditionalWidgetSuffix() {
+    final hasSearch = widget.model.searchQuery.isNotEmpty;
+    final hasCategory = widget.model.selectedCategory != null;
+
+    if (hasSearch || hasCategory) {
+      return '!';
+    } else {
+      return ' to get started!';
+    }
   }
 
   Color _getCategoryColor(String categoryName) {
@@ -162,11 +228,68 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
 
     return Column(
       children: [
+        // Search Bar
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: 'Search lessons, words, or content...',
+              hintStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(
+                        Icons.clear_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 18,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        _searchFocusNode.unfocus();
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: colorScheme.primary.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              isDense: true,
+            ),
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 14,
+            ),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) {
+              _searchFocusNode.unfocus();
+            },
+          ),
+        ),
+
         // Category Filter
         if (widget.model.availableCategories.isNotEmpty)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
@@ -179,10 +302,10 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
               children: [
                 Icon(
                   Icons.filter_list_rounded,
-                  size: 20,
+                  size: 18,
                   color: colorScheme.primary,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -191,7 +314,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                         'All Categories',
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -214,7 +337,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                               Text(
                                 'All Categories',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   color: colorScheme.onSurface,
                                 ),
@@ -238,7 +361,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                                   child: Text(
                                     category,
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                       color: colorScheme.onSurface,
                                     ),
@@ -264,8 +387,8 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
         Expanded(
           child: widget.model.filteredLessons.isEmpty
               ? EmptyStateView(
-                  icon: widget.model.selectedCategory != null ? Icons.search_off_rounded : Icons.school_outlined,
-                  message: widget.model.selectedCategory != null ? 'No lessons found for "${widget.model.selectedCategory}" 🔍' : 'No lessons created yet 📚',
+                  icon: (widget.model.searchQuery.isNotEmpty || widget.model.selectedCategory != null) ? Icons.search_off_rounded : Icons.school_outlined,
+                  message: _getEmptyStateMessage(),
                   additionalWidget: RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(
@@ -275,10 +398,10 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                       ),
                       children: <TextSpan>[
                         TextSpan(
-                          text: widget.model.selectedCategory != null ? 'Try selecting a different category or ' : '',
+                          text: _getAdditionalWidgetPrefix(),
                         ),
                         TextSpan(
-                          text: widget.model.selectedCategory != null ? 'create a new lesson' : 'Create your first lesson',
+                          text: _getAdditionalWidgetLinkText(),
                           style: TextStyle(
                             decoration: TextDecoration.underline,
                             color: colorScheme.primary,
@@ -290,7 +413,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                             },
                         ),
                         TextSpan(
-                          text: widget.model.selectedCategory != null ? '!' : ' to get started!',
+                          text: _getAdditionalWidgetSuffix(),
                         ),
                       ],
                     ),

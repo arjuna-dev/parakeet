@@ -19,6 +19,9 @@ class HomeScreenModel extends ChangeNotifier {
   String? selectedCategory;
   List<String> availableCategories = [];
 
+  // Search functionality
+  String searchQuery = '';
+
   @override
   void dispose() {
     _isDisposed = true;
@@ -102,11 +105,24 @@ class HomeScreenModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
+  void setSearchQuery(String query) {
+    searchQuery = query;
+    _applyFilter();
+    safeNotifyListeners();
+  }
+
+  void clearSearch() {
+    searchQuery = '';
+    _applyFilter();
+    safeNotifyListeners();
+  }
+
   void _applyFilter() {
-    if (selectedCategory == null || selectedCategory == 'All Categories') {
-      filteredLessons = List.from(allLessons);
-    } else {
-      filteredLessons = allLessons.where((lesson) {
+    List<DocumentSnapshot> lessonsToFilter = List.from(allLessons);
+
+    // Apply category filter first
+    if (selectedCategory != null && selectedCategory != 'All Categories') {
+      lessonsToFilter = lessonsToFilter.where((lesson) {
         final data = lesson.data() as Map<String, dynamic>?;
         String lessonCategory;
         if (data?.containsKey('category') == true && lesson.get('category') != null && lesson.get('category').toString().trim().isNotEmpty) {
@@ -117,6 +133,55 @@ class HomeScreenModel extends ChangeNotifier {
         return lessonCategory == selectedCategory;
       }).toList();
     }
+
+    // Apply search filter
+    if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
+      lessonsToFilter = lessonsToFilter.where((lesson) {
+        final data = lesson.data() as Map<String, dynamic>?;
+        if (data == null) return false;
+
+        // Search in title
+        final title = data['title']?.toString().toLowerCase() ?? '';
+        if (title.contains(query)) return true;
+
+        // Search in category
+        final category = data['category']?.toString().toLowerCase() ?? 'custom lesson';
+        if (category.contains(query)) return true;
+
+        // Search in target language
+        final targetLanguage = data['target_language']?.toString().toLowerCase() ?? '';
+        if (targetLanguage.contains(query)) return true;
+
+        // Search in native language
+        final nativeLanguage = data['native_language']?.toString().toLowerCase() ?? '';
+        if (nativeLanguage.contains(query)) return true;
+
+        // Search in words to repeat
+        final wordsToRepeat = data['words_to_repeat'] as List<dynamic>?;
+        if (wordsToRepeat != null) {
+          for (var word in wordsToRepeat) {
+            if (word.toString().toLowerCase().contains(query)) return true;
+          }
+        }
+
+        // Search in dialogue content
+        final dialogue = data['dialogue'] as List<dynamic>?;
+        if (dialogue != null) {
+          for (var turn in dialogue) {
+            if (turn is Map<String, dynamic>) {
+              final speakerText = turn['speaker']?.toString().toLowerCase() ?? '';
+              final text = turn['text']?.toString().toLowerCase() ?? '';
+              if (speakerText.contains(query) || text.contains(query)) return true;
+            }
+          }
+        }
+
+        return false;
+      }).toList();
+    }
+
+    filteredLessons = lessonsToFilter;
   }
 
   Future<void> loadNowPlayingFromPreference() async {

@@ -280,26 +280,65 @@ class LessonService {
     final closestDueDateCard = <Map<String, dynamic>>[];
 
     for (var doc in categoryDocs.docs) {
-      final dueDate = DateTime.parse(doc.data()['due']);
-      final lastReview = DateTime.parse(doc.data()['lastReview']);
+      // Handle both string and int formats for date fields
+      DateTime dueDate;
+      DateTime lastReview;
+
+      final docData = doc.data();
+      final dueField = docData['due'];
+      if (dueField is String) {
+        try {
+          dueDate = DateTime.parse(dueField);
+        } catch (e) {
+          continue; // Skip this document if due date can't be parsed
+        }
+      } else if (dueField is int) {
+        if (dueField == 0) {
+          // Handle legacy case where due was set to 0 - treat as far future for mastered words
+          dueDate = DateTime.now().add(const Duration(days: 365));
+        } else {
+          dueDate = DateTime.fromMillisecondsSinceEpoch(dueField);
+        }
+      } else {
+        continue; // Skip this document if due date format is unexpected
+      }
+
+      final lastReviewField = docData['lastReview'];
+      if (lastReviewField is String) {
+        try {
+          lastReview = DateTime.parse(lastReviewField);
+        } catch (e) {
+          continue; // Skip this document if lastReview date can't be parsed
+        }
+      } else if (lastReviewField is int) {
+        lastReview = DateTime.fromMillisecondsSinceEpoch(lastReviewField);
+      } else {
+        continue; // Skip this document if lastReview format is unexpected
+      }
+
       final daysOverdue = DateTime.now().difference(dueDate).inDays;
       final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
 
       // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
+      final wordField = docData['word'];
+      if (wordField == null || wordField is! String) {
+        continue; // Skip this document if word field is missing or not a string
+      }
+
       if (daysSinceLastReview > 0) {
         if (daysOverdue <= 0) {
-          words.add(doc.data()['word']);
+          words.add(wordField);
         } else {
           closestDueDateCard.add({
-            'word': doc.data()['word'],
-            'due_date': doc.data()['due'],
+            'word': wordField,
+            'due_date': docData['due'],
             'daysOverdue': daysOverdue,
           });
         }
         print('words: $words');
         print('closestDueDateCard: $closestDueDateCard');
       }
-      existingWordsCard.add(doc.data()['word']);
+      existingWordsCard.add(wordField);
     }
 
     if (words.length > 5) {
