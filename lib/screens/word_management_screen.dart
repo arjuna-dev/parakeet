@@ -8,7 +8,7 @@ import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
-import 'package:parakeet/screens/category_detail_screen.dart' show WordProgressBar, showCenteredToast;
+import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredToast;
 import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
 import 'package:parakeet/utils/language_categories.dart';
 
@@ -22,6 +22,42 @@ class WordManagementScreen extends StatefulWidget {
 
   @override
   State<WordManagementScreen> createState() => _WordManagementScreenState();
+}
+
+class WordProgressBar extends StatelessWidget {
+  final double score;
+
+  const WordProgressBar({
+    Key? key,
+    required this.score,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final progress = (score / 100).clamp(0.0, 1.0);
+
+    Color progressColor;
+    if (score >= 100 || score == -1) {
+      progressColor = Colors.green;
+    } else if (score >= 80) {
+      progressColor = Colors.blue;
+    } else if (score > 0) {
+      progressColor = Colors.orange;
+    } else {
+      progressColor = colorScheme.onSurfaceVariant;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: progress,
+        minHeight: 4,
+        backgroundColor: Colors.white.withOpacity(0.3),
+        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+      ),
+    );
+  }
 }
 
 class _WordManagementScreenState extends State<WordManagementScreen> with SingleTickerProviderStateMixin {
@@ -614,7 +650,6 @@ class _WordManagementScreenState extends State<WordManagementScreen> with Single
             ),
         ],
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: '/word_management'),
     );
   }
 
