@@ -626,10 +626,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       ),
     );
 
-    // Redirect to create lesson screen after a short delay
+    // Go back to previous screen after a short delay
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/create_lesson', (route) => false);
+        Navigator.of(context).pop();
       }
     });
   }
@@ -712,13 +712,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             // Clean up any shared resources
             AudioPlayerScreen.cleanupSharedResources();
 
-            if (widget.generating) {
-              // Navigate to home screen and clear stack
-              navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
-            } else {
-              // Normal navigation if not generating
-              navigator.pop('reload');
-            }
+            // Always go back to previous screen (CategoryDetailScreen or other)
+            navigator.pop('reload');
           },
           child: FutureBuilder<int>(
             future: _audioPlayerService.getSavedPosition(),
@@ -780,6 +775,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           audioPlayerService: _audioPlayerService,
                           repetitionMode: _repetitionsMode,
                           generating: _generating,
+                          hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
+                          onReviewWords: _handleLessonCompletion,
                         ),
                       ],
                     ),

@@ -390,7 +390,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       );
 
       // Navigate immediately to AudioPlayerScreen - let it handle the loading state
-      Navigator.push(
+      final navigationResult = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => AudioPlayerScreen(
@@ -409,6 +409,11 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           ),
         ),
       );
+
+      // Refresh lessons when returning from AudioPlayerScreen
+      if (navigationResult == 'reload') {
+        _loadCategoryLessons();
+      }
     } catch (e) {
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
