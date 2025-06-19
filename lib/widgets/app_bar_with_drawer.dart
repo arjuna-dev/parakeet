@@ -58,10 +58,13 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // Filter for words where scheduledDays == 0 AND not reviewed today
+      // Filter for words where due date is today or in the past AND not reviewed today
       final dueWords = allWords.where((wordCard) {
-        // Must be due (scheduledDays == 0)
-        if (wordCard.card.scheduledDays != 0) return false;
+        // Check if the word is due (due date <= now)
+        final dueDate = wordCard.card.due;
+        final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
+
+        if (!isOverdue) return false;
 
         // Check if lastReview was today
         final lastReviewDate = DateTime(

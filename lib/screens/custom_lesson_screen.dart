@@ -219,7 +219,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
-                        'Create Custom Lesson',
+                        'Generate Custom Lesson',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -450,7 +450,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                       ),
                     ),
                     Text(
-                      '$_generationsRemaining remaining',
+                      '$_generationsRemaining remaining today',
                       style: TextStyle(
                         fontWeight: FontWeight.w400,
                         fontSize: 10,

@@ -715,7 +715,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         ),
                       ),
                       Text(
-                        '$_generationsRemaining remaining',
+                        '$_generationsRemaining remaining today',
                         style: TextStyle(
                           fontWeight: FontWeight.w400,
                           fontSize: 10,
