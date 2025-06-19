@@ -89,7 +89,7 @@ class AudioControls extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                   ),
                   label: Text(
-                    'Review',
+                    'Vocabulary Review',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.primary.withOpacity(0.8),

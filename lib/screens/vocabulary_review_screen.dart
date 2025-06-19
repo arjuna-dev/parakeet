@@ -12,19 +12,19 @@ import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredT
 import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
 import 'package:parakeet/utils/language_categories.dart';
 
-class WordManagementScreen extends StatefulWidget {
+class VocabularyReviewScreen extends StatefulWidget {
   final String? nativeLanguage;
 
-  const WordManagementScreen({
+  const VocabularyReviewScreen({
     Key? key,
     this.nativeLanguage,
   }) : super(key: key);
 
   @override
-  State<WordManagementScreen> createState() => _WordManagementScreenState();
+  State<VocabularyReviewScreen> createState() => _VocabularyReviewScreenState();
 }
 
-class _WordManagementScreenState extends State<WordManagementScreen> {
+class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
   late Map<String, DocumentReference> _allRefsMap;
   late bool _isLoadingAll;
   late bool _isLoadingDue;
@@ -165,10 +165,13 @@ class _WordManagementScreenState extends State<WordManagementScreen> {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // Filter _allWordsFull for words where scheduledDays == 0 AND not reviewed today
+      // Filter _allWordsFull for words where due date is today or in the past AND not reviewed today
       final dueWords = _allWordsFull.where((wordCard) {
-        // Must be due (scheduledDays == 0)
-        if (wordCard.card.scheduledDays != 0) return false;
+        // Check if the word is due (due date <= now)
+        final dueDate = wordCard.card.due;
+        final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
+
+        if (!isOverdue) return false;
 
         // Check if lastReview was today
         final lastReviewDate = DateTime(
@@ -382,14 +385,18 @@ class _WordManagementScreenState extends State<WordManagementScreen> {
 
   Widget _buildWordItem(WordCard card, ColorScheme colorScheme) {
     final scheduledDays = card.card.scheduledDays.toDouble();
+    final now = DateTime.now();
+    final dueDate = card.card.due;
+    final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
 
     String reviewText;
-    if (scheduledDays == 0) {
+    if (isOverdue) {
       reviewText = 'Ready for review';
     } else if (scheduledDays == -1) {
       reviewText = 'Mastered';
     } else {
-      reviewText = '${scheduledDays.toInt()} days';
+      final daysUntilDue = dueDate.difference(now).inDays;
+      reviewText = '$daysUntilDue days';
     }
 
     return InkWell(
@@ -449,7 +456,7 @@ class _WordManagementScreenState extends State<WordManagementScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: scheduledDays == 0
+                  color: isOverdue
                       ? colorScheme.primary
                       : scheduledDays == -1
                           ? Colors.green

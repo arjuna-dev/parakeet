@@ -26,7 +26,7 @@ import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
-import 'screens/word_management_screen.dart';
+import 'screens/vocabulary_review_screen.dart';
 import 'screens/all_words_screen.dart';
 
 const bool versionForTestFlight = false;
@@ -424,7 +424,7 @@ class _MyAppState extends State<MyApp> {
               break;
             case '/vocabulary_review':
               builder = (context) => const ResponsiveScreenWrapper(
-                    child: WordManagementScreen(),
+                    child: VocabularyReviewScreen(),
                   );
               break;
             case '/all_words':

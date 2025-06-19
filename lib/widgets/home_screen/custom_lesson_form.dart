@@ -452,7 +452,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                     ),
                   ),
                   child: Text(
-                    'Create Custom Lesson',
+                    'Generate Lesson',
                     style: TextStyle(
                       fontSize: widget.isSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.bold,

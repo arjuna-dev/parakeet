@@ -70,7 +70,7 @@ class BottomMenuBar extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add),
-            label: 'Create',
+            label: 'Generate',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.create),
