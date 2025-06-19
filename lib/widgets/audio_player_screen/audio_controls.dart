@@ -6,12 +6,16 @@ class AudioControls extends StatelessWidget {
   final AudioPlayerService audioPlayerService;
   final ValueNotifier<RepetitionMode> repetitionMode;
   final bool generating;
+  final bool hasWordsToReview;
+  final VoidCallback? onReviewWords;
 
   const AudioControls({
     Key? key,
     required this.audioPlayerService,
     required this.repetitionMode,
     required this.generating,
+    this.hasWordsToReview = false,
+    this.onReviewWords,
   }) : super(key: key);
 
   @override
@@ -65,6 +69,40 @@ class AudioControls extends StatelessWidget {
               ],
             ),
           ),
+          // Review Words Button (centered below)
+          if (hasWordsToReview && !generating)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    // Pause audio before opening review
+                    if (audioPlayerService.isPlaying.value) {
+                      audioPlayerService.isPlaying.value = false;
+                    }
+                    // Call the review function
+                    onReviewWords?.call();
+                  },
+                  icon: Icon(
+                    Icons.quiz_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  ),
+                  label: Text(
+                    'Review',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -91,6 +129,7 @@ class RepetitionModeSelector extends StatelessWidget {
           Text(
             'Repetitions',
             style: TextStyle(
+              fontSize: 14,
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
@@ -109,7 +148,10 @@ class RepetitionModeSelector extends StatelessWidget {
             builder: (context, mode, child) {
               return Row(
                 children: [
-                  const Text('Normal Repetitions'),
+                  const Text(
+                    'Normal Repetitions',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   if (mode == RepetitionMode.normal)
                     const Padding(
                       padding: EdgeInsets.only(left: 8.0),
@@ -127,7 +169,10 @@ class RepetitionModeSelector extends StatelessWidget {
             builder: (context, mode, child) {
               return Row(
                 children: [
-                  const Text('Less Repetitions'),
+                  const Text(
+                    'Less Repetitions',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   if (mode == RepetitionMode.less)
                     const Padding(
                       padding: EdgeInsets.only(left: 8.0),
@@ -190,13 +235,13 @@ class SpeedSelector extends StatelessWidget {
                 size: 20,
               ),
               items: const [
-                DropdownMenuItem(value: 0.7, child: Text('0.7x')),
-                DropdownMenuItem(value: 0.8, child: Text('0.8x')),
-                DropdownMenuItem(value: 0.9, child: Text('0.9x')),
-                DropdownMenuItem(value: 1.0, child: Text('1.0x')),
-                DropdownMenuItem(value: 1.25, child: Text('1.25x')),
-                DropdownMenuItem(value: 1.5, child: Text('1.5x')),
-                DropdownMenuItem(value: 2.0, child: Text('2.0x')),
+                DropdownMenuItem(value: 0.7, child: Text('0.7x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 0.8, child: Text('0.8x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 0.9, child: Text('0.9x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 1.0, child: Text('1.0x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 1.25, child: Text('1.25x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 1.5, child: Text('1.5x', style: TextStyle(fontSize: 14))),
+                DropdownMenuItem(value: 2.0, child: Text('2.0x', style: TextStyle(fontSize: 14))),
               ],
               onChanged: (double? newValue) {
                 if (newValue != null) {

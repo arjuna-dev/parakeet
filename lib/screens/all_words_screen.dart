@@ -576,7 +576,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
               SizedBox(
                 width: 70,
                 child: Text(
-                  'Progress',
+                  'Mastery',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
