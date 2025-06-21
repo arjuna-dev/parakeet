@@ -610,47 +610,57 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               },
                               child: Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(6),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Theme.of(context).colorScheme.primary,
+                                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.upgrade,
-                                      size: 14,
+                                      Icons.star_rounded,
+                                      size: 16,
                                       color: Theme.of(context).colorScheme.onPrimary,
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      'Upgrade for more',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(context).colorScheme.onPrimary,
+                                    Flexible(
+                                      child: Text(
+                                        'Upgrade',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Theme.of(context).colorScheme.onPrimary,
+                                          letterSpacing: 0.2,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 6),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
+                                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
                                         '10x',
                                         style: TextStyle(
                                           fontSize: 10,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w800,
                                           color: Theme.of(context).colorScheme.onPrimary,
                                         ),
                                       ),
