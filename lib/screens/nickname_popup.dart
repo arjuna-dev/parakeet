@@ -28,6 +28,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
   int? _usedGreetingIndex;
   StreamSubscription? _playerStateSubscription;
 
+  // Track initial values to detect changes
+  String _initialNickname = '';
+  bool _initialUseName = true;
+
   @override
   void initState() {
     super.initState();
@@ -42,8 +46,11 @@ class _NicknamePopupState extends State<NicknamePopup> {
       final String? nickname = await fetchCurrentNickname();
       setState(() {
         _currentNickname = nickname;
+        _initialNickname = nickname ?? '';
+        _nicknameController.text = nickname ?? '';
         _isLoading = false; // Loading complete
       });
+      _checkForChanges(); // Check if save button should be enabled
     } catch (error) {
       // Handle error (optional)
       setState(() {
@@ -81,16 +88,43 @@ class _NicknamePopupState extends State<NicknamePopup> {
   }
 
   void _onTextChanged() {
-    setState(() {
-      _isSubmitEnabled = _nicknameController.text.isNotEmpty;
-    });
+    _checkForChanges(); // Check if anything has changed
   }
 
   Future<void> _loadUseNamePreference() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _useName = prefs.getBool('addressByNickname') ?? true;
+      _initialUseName = _useName;
     });
+    _checkForChanges(); // Check if save button should be enabled
+  }
+
+  // Check if any values have changed from their initial state
+  void _checkForChanges() {
+    final currentNickname = _nicknameController.text.trim();
+    final hasChanges = currentNickname != _initialNickname || _useName != _initialUseName;
+
+    setState(() {
+      _isSubmitEnabled = hasChanges;
+    });
+  }
+
+  // Get appropriate button text based on what has changed
+  String _getButtonText() {
+    final currentNickname = _nicknameController.text.trim();
+    final nicknameChanged = currentNickname != _initialNickname;
+    final preferenceChanged = _useName != _initialUseName;
+
+    if (nicknameChanged && preferenceChanged) {
+      return 'Save Changes';
+    } else if (nicknameChanged) {
+      return 'Save Nickname';
+    } else if (preferenceChanged) {
+      return 'Save Preference';
+    } else {
+      return 'Save';
+    }
   }
 
   Future<void> _saveUseNamePreference(bool value) async {
@@ -138,17 +172,30 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _handleGenerate() async {
     String nicknameText = _nicknameController.text.trim();
-    if (nicknameText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Hmmm, it seems like you haven't entered a nickname yet! 🧐"),
-        ),
-      );
-      return;
-    }
+
     setState(() {
       _isLoading = true;
     });
+
+    // Always save the "Address me by name" preference when Save is clicked
+    await _saveUseNamePreference(_useName);
+
+    // If no nickname is entered, just save the preference and close
+    if (nicknameText.isEmpty) {
+      // Update initial values to reflect saved state
+      _initialUseName = _useName;
+      setState(() {
+        _isLoading = false;
+      });
+      _checkForChanges(); // This will disable the save button since nothing has changed
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Settings saved!"),
+        ),
+      );
+      Navigator.of(context).pop();
+      return;
+    }
 
     final canProceed = await _checkAndUpdateCallCount();
     if (!canProceed) {
@@ -178,6 +225,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
         _currentNickname = nicknameText;
         _isLoading = false;
       });
+
+      // Update initial values to reflect saved state
+      _initialNickname = nicknameText;
+      _initialUseName = _useName;
 
       // Cancel any existing subscription
       _playerStateSubscription?.cancel();
@@ -341,6 +392,16 @@ class _NicknamePopupState extends State<NicknamePopup> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Label for nickname input
+                          Text(
+                            'Nickname',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           TextField(
                             controller: _nicknameController,
                             maxLength: 25,
@@ -348,19 +409,35 @@ class _NicknamePopupState extends State<NicknamePopup> {
                               fontSize: isSmallScreen ? 14 : 16,
                             ),
                             decoration: InputDecoration(
-                              labelText: _currentNickname != null ? 'Want to change your name?' : "What should we call you?",
-                              labelStyle: TextStyle(
+                              hintText: "What should we call you?",
+                              hintStyle: TextStyle(
                                 fontSize: isSmallScreen ? 12 : 14,
-                                color: colorScheme.onSurfaceVariant,
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                               ),
                               filled: true,
                               fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: colorScheme.outline.withOpacity(0.2),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: colorScheme.outline.withOpacity(0.2),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: colorScheme.primary,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: isSmallScreen ? 8 : 12,
+                                horizontal: 16,
+                                vertical: isSmallScreen ? 12 : 16,
                               ),
                               counterStyle: TextStyle(
                                 fontSize: isSmallScreen ? 10 : 12,
@@ -368,15 +445,28 @@ class _NicknamePopupState extends State<NicknamePopup> {
                               ),
                             ),
                           ),
-                          SizedBox(height: isSmallScreen ? 8 : 12),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
+                          // Label for address by name setting
+                          Text(
+                            'Preferences',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: colorScheme.outline.withOpacity(0.2),
+                              ),
                             ),
                             padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 8 : 12,
-                              vertical: isSmallScreen ? 4 : 8,
+                              horizontal: isSmallScreen ? 12 : 16,
+                              vertical: isSmallScreen ? 8 : 12,
                             ),
                             child: width < 280
                                 ? Column(
@@ -388,7 +478,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                           setState(() {
                                             _useName = value;
                                           });
-                                          _saveUseNamePreference(value);
+                                          _checkForChanges(); // Check if anything has changed
                                         },
                                       ),
                                       const SizedBox(height: 4),
@@ -411,7 +501,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                           setState(() {
                                             _useName = value;
                                           });
-                                          _saveUseNamePreference(value);
+                                          _checkForChanges(); // Check if anything has changed
                                         },
                                       ),
                                       const SizedBox(width: 8),
@@ -473,7 +563,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                               ),
                             ),
                             child: Text(
-                              'Save',
+                              _getButtonText(),
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 13 : 14,
                                 fontWeight: FontWeight.bold,
@@ -535,7 +625,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                             ),
                           ),
                           child: Text(
-                            'Save',
+                            _getButtonText(),
                             style: TextStyle(
                               fontSize: isSmallScreen ? 13 : 14,
                               fontWeight: FontWeight.bold,
