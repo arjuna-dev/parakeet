@@ -11,6 +11,7 @@ class TypingAnimationBubble extends StatefulWidget {
   final VoidCallback? onAnimationComplete;
   final Duration typingSpeed;
   final Duration initialDelay;
+  final Duration? breakdownStartTime;
 
   const TypingAnimationBubble({
     Key? key,
@@ -23,6 +24,7 @@ class TypingAnimationBubble extends StatefulWidget {
     this.onAnimationComplete,
     this.typingSpeed = const Duration(milliseconds: 50),
     this.initialDelay = Duration.zero,
+    this.breakdownStartTime,
   }) : super(key: key);
 
   @override
@@ -41,7 +43,6 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
   late AnimationController _highlightController;
   late Animation<double> _bounceAnimation;
   late Animation<double> _highlightAnimation;
-  final DateTime _timestamp = DateTime.now();
 
   @override
   void initState() {
@@ -259,21 +260,34 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                         child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
                       ),
 
-                // Timestamp
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: 4,
-                    left: widget.isUser ? 0 : 12,
-                    right: widget.isUser ? 12 : 0,
-                  ),
-                  child: Text(
-                    _formatTime(_timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[500],
+                // Timestamp - show breakdown start time
+                if (widget.breakdownStartTime != null && widget.breakdownStartTime! > Duration.zero)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 6,
+                      left: widget.isUser ? 0 : 12,
+                      right: widget.isUser ? 12 : 0,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'Breakdown: ${_formatDuration(widget.breakdownStartTime!)}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -399,9 +413,9 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
     );
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }

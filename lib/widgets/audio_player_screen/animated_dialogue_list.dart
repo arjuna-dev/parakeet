@@ -11,6 +11,8 @@ class AnimatedDialogueList extends StatefulWidget {
   final bool useStream;
   final Function? onAllDialogueDisplayed;
   final bool generating;
+  final List<dynamic>? script; // Add script parameter
+  final List<Duration>? trackDurations; // Add track durations parameter
 
   const AnimatedDialogueList({
     Key? key,
@@ -21,6 +23,8 @@ class AnimatedDialogueList extends StatefulWidget {
     this.useStream = false,
     this.onAllDialogueDisplayed,
     this.generating = false,
+    this.script, // Add script parameter
+    this.trackDurations, // Add track durations parameter
   }) : super(key: key);
 
   @override
@@ -44,6 +48,58 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
   // Flag to track if we've already notified the parent
   bool _hasNotifiedAllDisplayed = false;
+
+  // Calculate when a dialogue's breakdown starts in the audio timeline
+  Duration _calculateDialogueBreakdownStartTime(int dialogueIndex) {
+    if (widget.script == null || widget.trackDurations == null) {
+      return Duration.zero;
+    }
+
+    final script = widget.script!;
+    final trackDurations = widget.trackDurations!;
+
+    Duration cumulativeTime = Duration.zero;
+    bool passedOutroSection = false;
+
+    for (int i = 0; i < script.length && i < trackDurations.length; i++) {
+      String scriptItem = script[i].toString();
+
+      // Look for the outro section that indicates breakdown is starting
+      if (scriptItem == "narrator_navigation_phrases_18" || // "You just listened to the full conversation"
+          scriptItem == "narrator_navigation_phrases_19") {
+        // "Now, let's go through the dialog"
+        passedOutroSection = true;
+        cumulativeTime += trackDurations[i];
+        continue;
+      }
+
+      // After the outro section, look for breakdown patterns for our specific dialogue
+      if (passedOutroSection) {
+        // Look for the first navigation phrase that indicates this dialogue's breakdown starts
+        if (scriptItem == "narrator_navigation_phrases_20" || // "For now just listen" (first dialogue)
+            scriptItem == "narrator_navigation_phrases_21") {
+          // "Now listen to the next sentence just listen" (subsequent dialogues)
+
+          // Check if the next dialogue-related item is our target dialogue
+          for (int j = i + 1; j < script.length; j++) {
+            String nextItem = script[j].toString();
+            if (nextItem == "dialogue_${dialogueIndex}_target_language") {
+              return cumulativeTime;
+            }
+            // If we hit another dialogue first, this isn't our breakdown
+            if (nextItem.startsWith("dialogue_") && nextItem.endsWith("_target_language")) {
+              break;
+            }
+          }
+        }
+      }
+
+      // Add this track's duration to cumulative time
+      cumulativeTime += trackDurations[i];
+    }
+
+    return Duration.zero;
+  }
 
   @override
   void initState() {
@@ -471,6 +527,14 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       // Alternate between user and non-user bubbles based on index
       final bool isUserMessage = isEven; // Even indices are user messages, odd are non-user
 
+      // Calculate breakdown start time for this dialogue
+      final Duration breakdownStartTime = _calculateDialogueBreakdownStartTime(index);
+
+      // Debug: print breakdown time for first few dialogues
+      if (index < 3) {
+        print("Dialogue $index breakdown starts at: ${breakdownStartTime.inMinutes}:${(breakdownStartTime.inSeconds % 60).toString().padLeft(2, '0')}");
+      }
+
       // Single bubble with target language and native language as subtitle
       return TypingAnimationBubble(
         key: ValueKey('dialogue_$index'),
@@ -483,6 +547,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         animate: widget.generating && isCurrentlyAnimating && !hasBeenAnimated && dialogueTarget.trim().isNotEmpty && isFullyGenerated,
         initialDelay: initialDelay,
         typingSpeed: const Duration(milliseconds: 30),
+        breakdownStartTime: breakdownStartTime, // Pass the breakdown start time
         onAnimationComplete: () {
           // Only handle animation completion if we're generating content
           if (widget.generating) {

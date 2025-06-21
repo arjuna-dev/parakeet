@@ -786,6 +786,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           useStream: widget.generating,
                           generating: widget.generating,
                           onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
+                          script: _script,
+                          trackDurations: _audioPlayerService.trackDurations,
                         ),
                         PositionSlider(
                           audioPlayerService: _audioPlayerService,
