@@ -242,7 +242,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
   }
 
   // Method to find word translation by looking up the category and index
-  String findWordTranslation(String word) {
+  String? findWordTranslation(String word) {
     // Find the category and index of the word in target language
     for (final targetCategory in _targetLanguageCategories) {
       final List<dynamic> words = targetCategory['words'];
@@ -261,17 +261,26 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
         // Get the translation at the same index if available
         final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
-          return "${nativeWords[wordIndex]}";
+          final translation = "${nativeWords[wordIndex]}";
+          // Only return translation if it's different from the original word
+          if (translation.toLowerCase() != word.toLowerCase()) {
+            return translation;
+          }
         }
       }
     }
     // If word not found in any category or matching translation not found
-    return word;
+    return null;
   }
 
   // Helper method to show translated word in toast
   void _showTranslatedWordToast(BuildContext context, String word) {
-    showCenteredToast(context, findWordTranslation(word));
+    final translation = findWordTranslation(word);
+    if (translation != null) {
+      showCenteredToast(context, translation);
+    } else {
+      showCenteredToast(context, word); // Show original word if no translation
+    }
   }
 
   // Helper method to show translation in a modal sheet
@@ -388,6 +397,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
     final now = DateTime.now();
     final dueDate = card.card.due;
     final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
+    final translation = findWordTranslation(card.word);
+    final hasTranslation = translation != null;
 
     String reviewText;
     if (isOverdue) {
@@ -400,7 +411,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
     }
 
     return InkWell(
-      onTap: () => _showTranslationSheet(context, card.word, findWordTranslation(card.word)),
+      onTap: hasTranslation ? () => _showTranslationSheet(context, card.word, translation) : null,
       onLongPress: () {
         final categoryName = _findCategoryName(card.word);
         if (categoryName != null) {
@@ -993,14 +1004,26 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                 if (_dueWordsFull.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-                    child: Text(
-                      'Tap any word to see its translation • Long press for options',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+                    child: () {
+                      // Check if any displayed words have translations
+                      final hasAnyTranslations = _dueWordsFull.any((card) => findWordTranslation(card.word) != null);
+
+                      String instructionText;
+                      if (hasAnyTranslations) {
+                        instructionText = 'Tap any word to see its translation • Long press for options';
+                      } else {
+                        instructionText = 'Long press any word for options';
+                      }
+
+                      return Text(
+                        instructionText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      );
+                    }(),
                   ),
                 ],
                 Expanded(

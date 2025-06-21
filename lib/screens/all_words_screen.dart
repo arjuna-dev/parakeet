@@ -333,16 +333,29 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
 
   Widget _buildWordItem(WordCard card, ColorScheme colorScheme) {
     final scheduledDays = card.card.scheduledDays.toDouble();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDate = card.card.due;
+    final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
     final translation = findWordTranslation(card.word);
     final hasTranslation = translation != null;
 
+    // Check if lastReview was today
+    final lastReviewDate = DateTime(
+      card.card.lastReview.year,
+      card.card.lastReview.month,
+      card.card.lastReview.day,
+    );
+    final reviewedToday = lastReviewDate.isAtSameMomentAs(today);
+
     String reviewText;
-    if (scheduledDays == 0) {
+    if (isOverdue && !reviewedToday) {
       reviewText = 'Ready for review';
     } else if (scheduledDays == -1) {
       reviewText = 'Mastered';
     } else {
-      reviewText = '${scheduledDays.toInt()} days';
+      final daysUntilDue = dueDate.difference(now).inDays;
+      reviewText = '$daysUntilDue days';
     }
 
     return InkWell(
@@ -401,7 +414,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: scheduledDays == 0
+                  color: (isOverdue && !reviewedToday)
                       ? colorScheme.primary
                       : scheduledDays == -1
                           ? Colors.green
