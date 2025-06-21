@@ -39,6 +39,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
   final List<WordCard> _allWordsFull = [];
   final List<WordCard> _dueWordsFull = [];
   final Map<String, DocumentReference> _dueWordsRefs = {};
+  int _totalDueWordsCount = 0; // Track total words available for review
 
   @override
   void initState() {
@@ -224,13 +225,26 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
           dueWordsRefs[wordCard.word] = ref;
         }
       }
+      // Store total count before limiting
+      _totalDueWordsCount = dueWords.length;
+
+      // Limit to maximum 20 words for review
+      final limitedDueWords = dueWords.take(20).toList();
+      final limitedDueWordsRefs = <String, DocumentReference>{};
+      for (final wordCard in limitedDueWords) {
+        final ref = refsMap[wordCard.word];
+        if (ref != null) {
+          limitedDueWordsRefs[wordCard.word] = ref;
+        }
+      }
+
       setState(() {
         _dueWordsFull
           ..clear()
-          ..addAll(dueWords);
+          ..addAll(limitedDueWords);
         _dueWordsRefs
           ..clear()
-          ..addAll(dueWordsRefs);
+          ..addAll(limitedDueWordsRefs);
         _isLoadingDue = false;
       });
     } catch (e, stack) {
@@ -524,7 +538,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                       ),
                     ),
                     Text(
-                      '${_dueWordsFull.length} ready',
+                      _totalDueWordsCount > 20 ? '${_dueWordsFull.length} of $_totalDueWordsCount ready' : '${_dueWordsFull.length} ready',
                       style: TextStyle(
                         fontWeight: FontWeight.w400,
                         fontSize: 11,
@@ -611,7 +625,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                               ),
                             ),
                             Text(
-                              '${_dueWordsFull.length} words ready for review',
+                              _totalDueWordsCount > 20 ? '${_dueWordsFull.length} of $_totalDueWordsCount words ready for review' : '${_dueWordsFull.length} words ready for review',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: colorScheme.onSurfaceVariant,
@@ -941,6 +955,40 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                   fontSize: isSmallScreen ? 14 : 16,
                 ),
               ),
+              if (_totalDueWordsCount > 20) ...[
+                SizedBox(height: isSmallScreen ? 8 : 12),
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Showing 20 words at a time to optimize your learning. Complete this session to access more words.',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

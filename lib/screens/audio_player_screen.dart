@@ -171,14 +171,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await _checkPremiumStatus();
       _audioPlayerService.hasPremium = _hasPremium;
 
-      // Step 2: Initialize playlist generator with the required values
-      _initializePlaylistGenerator();
-
-      // Step 3: Load preferences
+      // Step 2: Load preferences first
       await _loadAddressByNicknamePreference();
 
-      // Step 4: Update nickname audio status
+      // Step 3: Update nickname audio status
       await _updateHasNicknameAudio();
+
+      // Step 4: Initialize playlist generator with the correct values
+      _initializePlaylistGenerator();
 
       // Step 5: Load script based on mode
       if (!widget.generating) {
