@@ -12,6 +12,7 @@ class TypingAnimationBubble extends StatefulWidget {
   final Duration typingSpeed;
   final Duration initialDelay;
   final Duration? breakdownStartTime;
+  final Function(Duration)? onSeekToTime;
 
   const TypingAnimationBubble({
     Key? key,
@@ -25,6 +26,7 @@ class TypingAnimationBubble extends StatefulWidget {
     this.typingSpeed = const Duration(milliseconds: 50),
     this.initialDelay = Duration.zero,
     this.breakdownStartTime,
+    this.onSeekToTime,
   }) : super(key: key);
 
   @override
@@ -268,22 +270,40 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                       left: widget.isUser ? 0 : 12,
                       right: widget.isUser ? 12 : 0,
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.blue.withOpacity(0.5),
-                          width: 1,
+                    child: GestureDetector(
+                      onTap: () {
+                        if (widget.onSeekToTime != null) {
+                          widget.onSeekToTime!(widget.breakdownStartTime!);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.5),
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        'Breakdown: ${_formatDuration(widget.breakdownStartTime!)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w500,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 14,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Play: ${_formatDuration(widget.breakdownStartTime!)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

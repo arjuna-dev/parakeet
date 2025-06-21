@@ -728,6 +728,44 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  void _seekToTime(Duration targetTime) async {
+    if (_isDisposing) return;
+
+    // If the player is paused, start playing first
+    if (!_audioPlayerService.isPlaying.value) {
+      _audioPlayerService.isPlaying.value = true;
+      // Wait a brief moment for the player to start playing
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    // Find which track index contains this time
+    final trackIndex = _audioPlayerService.findTrackIndexForPosition(targetTime.inMilliseconds.toDouble());
+
+    // Calculate the position within that track
+    final cumulativeDurationUpToTrack = _audioPlayerService.cumulativeDurationUpTo(trackIndex);
+    final positionInTrack = targetTime - cumulativeDurationUpToTrack;
+
+    // Ensure the position is not negative
+    final seekPosition = positionInTrack.isNegative ? Duration.zero : positionInTrack;
+
+    try {
+      // Seek to the specific position
+      await _audioPlayerService.player.seek(seekPosition, index: trackIndex);
+    } catch (e) {
+      print('Error seeking to time: $e');
+      // If seeking fails, try alternative approach
+      try {
+        // First seek to the track index
+        await _audioPlayerService.player.seek(Duration.zero, index: trackIndex);
+        // Wait briefly then seek to the position
+        await Future.delayed(const Duration(milliseconds: 100));
+        await _audioPlayerService.player.seek(seekPosition);
+      } catch (e2) {
+        print('Alternative seek also failed: $e2');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
@@ -788,6 +826,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
                           script: _script,
                           trackDurations: _audioPlayerService.trackDurations,
+                          onSeekToTime: _seekToTime,
                         ),
                         PositionSlider(
                           audioPlayerService: _audioPlayerService,
