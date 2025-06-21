@@ -68,6 +68,12 @@ Future<List<DocumentReference>> get5MostOverdueWordsRefs(String userId, String t
   // Loop through all categories
   for (var categoryDoc in categoriesSnapshot.docs) {
     final category = categoryDoc.id;
+
+    // Skip Custom Lesson words
+    if (category.toLowerCase() == 'custom lesson') {
+      continue;
+    }
+
     final wordsCollectionRef = categoriesRef.doc(category).collection(category);
 
     // Query overdue words in a category (removed scheduledDays filter to avoid multiple inequality filters)
@@ -76,8 +82,8 @@ Future<List<DocumentReference>> get5MostOverdueWordsRefs(String userId, String t
     // Add each overdue word with its due date and reference
     for (var doc in querySnapshot.docs) {
       final data = doc.data();
-      // Add only if the word is not in the selected words list and has valid scheduledDays
-      if (data.containsKey('due') && data.containsKey('word') && data.containsKey('scheduledDays') && data['scheduledDays'] >= 0 && !selectedWords.contains(data['word'])) {
+      // Add only if the word is not in the selected words list and has valid scheduledDays and has been repeated at least once
+      if (data.containsKey('due') && data.containsKey('word') && data.containsKey('scheduledDays') && data['scheduledDays'] >= 0 && !selectedWords.contains(data['word']) && data['reps'] > 0) {
         try {
           final dueDate = DateTime.parse(data['due']);
           final daysOverdue = now.difference(dueDate).inDays;

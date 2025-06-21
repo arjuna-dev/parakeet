@@ -23,7 +23,7 @@ class CategoryItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          height: 150,
+          height: 120,
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(16),
