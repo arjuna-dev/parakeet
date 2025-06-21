@@ -13,6 +13,7 @@ class AnimatedDialogueList extends StatefulWidget {
   final bool generating;
   final List<dynamic>? script; // Add script parameter
   final List<Duration>? trackDurations; // Add track durations parameter
+  final Function(Duration)? onSeekToTime; // Add callback for seeking to specific time
 
   const AnimatedDialogueList({
     Key? key,
@@ -25,6 +26,7 @@ class AnimatedDialogueList extends StatefulWidget {
     this.generating = false,
     this.script, // Add script parameter
     this.trackDurations, // Add track durations parameter
+    this.onSeekToTime, // Add callback for seeking to specific time
   }) : super(key: key);
 
   @override
@@ -548,6 +550,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         initialDelay: initialDelay,
         typingSpeed: const Duration(milliseconds: 30),
         breakdownStartTime: breakdownStartTime, // Pass the breakdown start time
+        onSeekToTime: widget.onSeekToTime, // Pass the seek callback
         onAnimationComplete: () {
           // Only handle animation completion if we're generating content
           if (widget.generating) {
