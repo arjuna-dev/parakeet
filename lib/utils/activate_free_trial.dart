@@ -89,6 +89,11 @@ Future<bool> activateFreeTrial(BuildContext context, String userId) async {
       const Duration(minutes: 2),
       onTimeout: () {
         subscription.cancel();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Purchase timed out. Please try again.')),
+          );
+        }
         return false;
       },
     );

@@ -25,7 +25,7 @@ class LessonService {
       if (apiCalls >= freeAPILimit) {
         final shouldEnablePremium = await showDialog<bool>(
           context: context,
-          barrierDismissible: false,
+          barrierDismissible: true,
           builder: (BuildContext context) {
             final colorScheme = Theme.of(context).colorScheme;
             return Dialog(
@@ -174,11 +174,15 @@ class LessonService {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () async {
-                                final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
-                                if (success) {
-                                  Navigator.pop(context, true);
-                                } else {
-                                  Navigator.pop(context, false);
+                                try {
+                                  final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
+                                  if (context.mounted) {
+                                    Navigator.pop(context, success);
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    Navigator.pop(context, false);
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -245,6 +249,7 @@ class LessonService {
           },
         );
 
+        // If dialog was dismissed or user chose not to upgrade
         if (shouldEnablePremium != true) {
           return false;
         }
@@ -357,6 +362,12 @@ class LessonService {
       return;
     }
 
+    // Check if context is still valid after the premium check
+    if (!context.mounted) {
+      setIsCreatingCustomLesson(false);
+      return;
+    }
+
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
@@ -403,33 +414,38 @@ class LessonService {
         }),
       );
 
-      // Navigate directly to AudioPlayerScreen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AudioPlayerScreen(
-            dialogue: const [],
-            title: topic,
-            documentID: documentId,
-            userID: userId,
-            scriptDocumentId: scriptDocRef.id,
-            generating: true,
-            targetLanguage: targetLanguage,
-            nativeLanguage: nativeLanguage,
-            languageLevel: languageLevel,
-            wordsToRepeat: List<String>.from(selectedWords),
-            numberOfTurns: 4,
+      // Check if context is still valid before navigation
+      if (context.mounted) {
+        // Navigate directly to AudioPlayerScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AudioPlayerScreen(
+              dialogue: const [],
+              title: topic,
+              documentID: documentId,
+              userID: userId,
+              scriptDocumentId: scriptDocRef.id,
+              generating: true,
+              targetLanguage: targetLanguage,
+              nativeLanguage: nativeLanguage,
+              languageLevel: languageLevel,
+              wordsToRepeat: List<String>.from(selectedWords),
+              numberOfTurns: 4,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       setIsCreatingCustomLesson(false);
     }
