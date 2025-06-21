@@ -153,7 +153,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
   }
 
   // Method to find word translation by looking up the category and index
-  String findWordTranslation(String word) {
+  String? findWordTranslation(String word) {
     // Find the category and index of the word in target language
     for (final targetCategory in _targetLanguageCategories) {
       final List<dynamic> words = targetCategory['words'];
@@ -172,12 +172,16 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
         // Get the translation at the same index if available
         final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
-          return "${nativeWords[wordIndex]}";
+          final translation = "${nativeWords[wordIndex]}";
+          // Only return translation if it's different from the original word
+          if (translation.toLowerCase() != word.toLowerCase()) {
+            return translation;
+          }
         }
       }
     }
     // If word not found in any category or matching translation not found
-    return word;
+    return null;
   }
 
   // Helper method to show translation in a modal sheet
@@ -329,6 +333,8 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
 
   Widget _buildWordItem(WordCard card, ColorScheme colorScheme) {
     final scheduledDays = card.card.scheduledDays.toDouble();
+    final translation = findWordTranslation(card.word);
+    final hasTranslation = translation != null;
 
     String reviewText;
     if (scheduledDays == 0) {
@@ -340,7 +346,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
     }
 
     return InkWell(
-      onTap: () => _showTranslationSheet(context, card.word, findWordTranslation(card.word)),
+      onTap: hasTranslation ? () => _showTranslationSheet(context, card.word, translation) : null,
       onLongPress: () {
         final categoryName = _findCategoryName(card.word);
         if (categoryName != null) {
@@ -608,64 +614,80 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                 if (displayed.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-                    child: Text(
-                      'Tap any word to see its translation • Long press for options',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+                    child: () {
+                      // Check if any displayed words have translations
+                      final hasAnyTranslations = displayed.any((card) => findWordTranslation(card.word) != null);
+
+                      String instructionText;
+                      if (hasAnyTranslations) {
+                        instructionText = 'Tap any word to see its translation • Long press for options';
+                      } else {
+                        instructionText = 'Long press any word for options';
+                      }
+
+                      return Text(
+                        instructionText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      );
+                    }(),
                   ),
                 ],
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    itemCount: displayed.length,
+                    itemCount: displayed.length + (displayed.length < _allWordsFull.length ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // If this is the last item and there are more words to show, display the "Show More" button
+                      if (index == displayed.length && displayed.length < _allWordsFull.length) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+                          child: Center(
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _allPage++;
+                                });
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Show More',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.expand_more,
+                                    size: 16,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      // Otherwise, display the word item
                       final card = displayed[index];
                       return _buildWordItem(card, colorScheme);
                     },
                   ),
                 ),
-                if (displayed.length < _allWordsFull.length)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-                    child: Center(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _allPage++;
-                          });
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Show More',
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.expand_more,
-                              size: 16,
-                              color: colorScheme.onSurface,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
