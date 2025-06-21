@@ -323,6 +323,17 @@ class AudioPlayerService {
     return trackDurations.length - 1;
   }
 
+  // Get current track index based on position for better synchronization
+  int getCurrentTrackIndex() {
+    final currentIndex = player.currentIndex ?? 0;
+    final currentPosition = player.position;
+    final cumulativeDuration = cumulativeDurationUpTo(currentIndex);
+    final totalPosition = cumulativeDuration + currentPosition;
+
+    // Use position-based tracking for more accurate results
+    return findTrackIndexForPosition(totalPosition.inMilliseconds.toDouble());
+  }
+
   // Position data stream for the slider
   Stream<PositionData> get positionDataStream {
     int lastIndex = -1;

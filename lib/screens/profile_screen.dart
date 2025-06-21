@@ -7,7 +7,6 @@ import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/services/lesson_service.dart';
-import 'package:parakeet/widgets/profile_screen/streak_display.dart';
 import 'package:parakeet/widgets/profile_screen/profile_header.dart';
 import 'package:parakeet/widgets/profile_screen/profile_menu_item.dart';
 import 'package:parakeet/widgets/profile_screen/delete_account_button.dart';
@@ -412,32 +411,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Separate streak display card
-            Card(
-              elevation: 2,
-              margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 14 : 16,
-                  vertical: isSmallScreen ? 12 : 14,
-                ),
-                child: StreakDisplay(),
-              ),
-            ),
-
-            ProfileMenuItem(
-              icon: Icons.translate,
-              title: 'Language Settings',
-              subtitle: 'Native: $_nativeLanguage • Target: $_targetLanguage • Level: $_languageLevel',
-              onTap: _showLanguageSelectionDialog,
-            ),
             ProfileMenuItem(
               icon: Icons.edit,
               title: 'Edit Nickname',
@@ -453,12 +426,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _fetchUserData();
                 });
               },
-            ),
-            ProfileMenuItem(
-              icon: Icons.shopping_bag,
-              title: 'Store',
-              subtitle: 'View available packages and offers',
-              onTap: _handleStoreNavigation,
             ),
             ProfileMenuItem(
               icon: Icons.help_outline,
@@ -482,23 +449,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: _showTimePickerDialog,
               onClear: _reminderTime != null ? _cancelReminder : null,
             ),
-            const Divider(),
-            ProfileMenuItem(
-              icon: Icons.logout,
-              title: 'Logout',
-              subtitle: 'Sign out of your account',
-              onTap: () async {
-                await _authService.signOut();
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-              },
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 40),
             DeleteAccountButton(onDelete: _deleteAccount),
             const SizedBox(height: 32),
           ],
         ),
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: "/profile"),
     );
   }
 }

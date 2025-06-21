@@ -157,6 +157,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.onTrackChanged = _handleTrackChange;
     _audioPlayerService.onLessonCompleted = _handleLessonCompletion;
 
+    // Setup position-based track monitoring for better synchronization
+    _setupPositionBasedTrackMonitoring();
+
     // Setup listeners
     _repetitionsMode.addListener(_updatePlaylistOnTheFly);
 
@@ -171,14 +174,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       await _checkPremiumStatus();
       _audioPlayerService.hasPremium = _hasPremium;
 
-      // Step 2: Initialize playlist generator with the required values
-      _initializePlaylistGenerator();
-
-      // Step 3: Load preferences
+      // Step 2: Load preferences first
       await _loadAddressByNicknamePreference();
 
-      // Step 4: Update nickname audio status
+      // Step 3: Update nickname audio status
       await _updateHasNicknameAudio();
+
+      // Step 4: Initialize playlist generator with the correct values
+      _initializePlaylistGenerator();
 
       // Step 5: Load script based on mode
       if (!widget.generating) {
@@ -428,6 +431,43 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  // Setup position-based track monitoring for better synchronization
+  void _setupPositionBasedTrackMonitoring() {
+    // Monitor position changes more frequently for better track synchronization
+    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      if (_isDisposing) {
+        timer.cancel();
+        return;
+      }
+
+      if (!mounted || _script.isEmpty || _audioPlayerService.trackDurations.isEmpty) {
+        return;
+      }
+
+      try {
+        // Get the current track index based on position
+        final positionBasedIndex = _audioPlayerService.getCurrentTrackIndex();
+
+        // Only update if the track actually changed and is valid
+        if (positionBasedIndex >= 0 && positionBasedIndex < _script.length) {
+          final newTrack = _script[positionBasedIndex];
+
+          // Only trigger update if track actually changed
+          if (newTrack != _currentTrack) {
+            if (mounted) {
+              setState(() {
+                _currentTrack = newTrack;
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Silently handle errors to avoid disrupting playback
+        print("Position-based track monitoring error: $e");
+      }
+    });
+  }
+
   void _handleTrackChange(int index) {
     if (_isDisposing) return;
 
@@ -626,10 +666,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       ),
     );
 
-    // Redirect to create lesson screen after a short delay
+    // Go back to previous screen after a short delay
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/create_lesson', (route) => false);
+        Navigator.of(context).pop();
       }
     });
   }
@@ -688,6 +728,44 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
+  void _seekToTime(Duration targetTime) async {
+    if (_isDisposing) return;
+
+    // If the player is paused, start playing first
+    if (!_audioPlayerService.isPlaying.value) {
+      _audioPlayerService.isPlaying.value = true;
+      // Wait a brief moment for the player to start playing
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    // Find which track index contains this time
+    final trackIndex = _audioPlayerService.findTrackIndexForPosition(targetTime.inMilliseconds.toDouble());
+
+    // Calculate the position within that track
+    final cumulativeDurationUpToTrack = _audioPlayerService.cumulativeDurationUpTo(trackIndex);
+    final positionInTrack = targetTime - cumulativeDurationUpToTrack;
+
+    // Ensure the position is not negative
+    final seekPosition = positionInTrack.isNegative ? Duration.zero : positionInTrack;
+
+    try {
+      // Seek to the specific position
+      await _audioPlayerService.player.seek(seekPosition, index: trackIndex);
+    } catch (e) {
+      print('Error seeking to time: $e');
+      // If seeking fails, try alternative approach
+      try {
+        // First seek to the track index
+        await _audioPlayerService.player.seek(Duration.zero, index: trackIndex);
+        // Wait briefly then seek to the position
+        await Future.delayed(const Duration(milliseconds: 100));
+        await _audioPlayerService.player.seek(seekPosition);
+      } catch (e2) {
+        print('Alternative seek also failed: $e2');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveScreenWrapper(
@@ -712,13 +790,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             // Clean up any shared resources
             AudioPlayerScreen.cleanupSharedResources();
 
-            if (widget.generating) {
-              // Navigate to home screen and clear stack
-              navigator.pushNamedAndRemoveUntil('/create_lesson', (route) => false);
-            } else {
-              // Normal navigation if not generating
-              navigator.pop('reload');
-            }
+            // Always go back to previous screen (CategoryDetailScreen or other)
+            navigator.pop('reload');
           },
           child: FutureBuilder<int>(
             future: _audioPlayerService.getSavedPosition(),
@@ -751,6 +824,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           useStream: widget.generating,
                           generating: widget.generating,
                           onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
+                          script: _script,
+                          trackDurations: _audioPlayerService.trackDurations,
+                          onSeekToTime: _seekToTime,
                         ),
                         PositionSlider(
                           audioPlayerService: _audioPlayerService,
@@ -780,6 +856,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           audioPlayerService: _audioPlayerService,
                           repetitionMode: _repetitionsMode,
                           generating: _generating,
+                          hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
+                          onReviewWords: _handleLessonCompletion,
                         ),
                       ],
                     ),

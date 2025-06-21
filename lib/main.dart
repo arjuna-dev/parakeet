@@ -12,8 +12,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/create_lesson_screen.dart';
+import 'screens/custom_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
@@ -24,7 +26,8 @@ import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
-import 'screens/word_management_screen.dart';
+import 'screens/vocabulary_review_screen.dart';
+import 'screens/all_words_screen.dart';
 
 const bool versionForTestFlight = false;
 const String localShouldUpdateID = "gWYwwwYH";
@@ -314,6 +317,49 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  Widget _buildAuthenticatedMainNavigation(int initialIndex) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scaffold(
+          body: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
+              if (snapshot.connectionState == ConnectionState.active) {
+                if (snapshot.hasData) {
+                  return FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance.collection('users').doc(snapshot.data!.uid).get(),
+                    builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                      if (userSnapshot.connectionState == ConnectionState.done) {
+                        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                          if (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false) {
+                            // Redirect to onboarding if not completed
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              Navigator.pushReplacementNamed(context, '/onboarding');
+                            });
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          return MainNavigationScreen(initialIndex: initialIndex);
+                        }
+                      }
+                      return const Center(child: CircularProgressIndicator());
+                    },
+                  );
+                } else {
+                  return const AuthScreen();
+                }
+              } else if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else {
+                return const Center(child: Text('Failed to load'));
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -363,59 +409,27 @@ class _MyAppState extends State<MyApp> {
               break;
             case '/create_lesson':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Scaffold(
-                          body: StreamBuilder<User?>(
-                            stream: FirebaseAuth.instance.authStateChanges(),
-                            builder: (BuildContext context, AsyncSnapshot<User?> snapshot) {
-                              if (snapshot.connectionState == ConnectionState.active) {
-                                if (snapshot.hasData) {
-                                  return FutureBuilder<DocumentSnapshot>(
-                                    future: FirebaseFirestore.instance.collection('users').doc(snapshot.data!.uid).get(),
-                                    builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> userSnapshot) {
-                                      if (userSnapshot.connectionState == ConnectionState.done) {
-                                        if (userSnapshot.hasData && userSnapshot.data!.exists) {
-                                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                                          if (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false) {
-                                            // Redirect to onboarding if not completed
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                                              Navigator.pushReplacementNamed(context, '/onboarding');
-                                            });
-                                            return const Center(child: CircularProgressIndicator());
-                                          }
-                                          return const CreateLesson(title: 'Create New Lesson');
-                                        }
-                                      }
-                                      return const Center(child: CircularProgressIndicator());
-                                    },
-                                  );
-                                } else {
-                                  return const AuthScreen();
-                                }
-                              } else if (snapshot.connectionState == ConnectionState.waiting) {
-                                return const Center(child: CircularProgressIndicator());
-                              } else {
-                                return const Center(child: Text('Failed to load'));
-                              }
-                            },
-                          ),
-                        );
-                      },
-                    ),
+                    child: _buildAuthenticatedMainNavigation(1),
+                  );
+              break;
+            case '/custom_lesson':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: _buildAuthenticatedMainNavigation(2),
                   );
               break;
             case '/favorite':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: ChangeNotifierProvider(
-                      create: (context) => HomeScreenModel(),
-                      child: const Home(),
-                    ),
+                    child: _buildAuthenticatedMainNavigation(0),
                   );
               break;
-            case '/word_management':
+            case '/vocabulary_review':
               builder = (context) => const ResponsiveScreenWrapper(
-                    child: WordManagementScreen(),
+                    child: VocabularyReviewScreen(),
+                  );
+              break;
+            case '/all_words':
+              builder = (context) => const ResponsiveScreenWrapper(
+                    child: AllWordsScreen(),
                   );
               break;
             case '/login':

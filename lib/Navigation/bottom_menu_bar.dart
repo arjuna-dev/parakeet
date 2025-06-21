@@ -1,58 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:parakeet/utils/constants.dart';
 
 class BottomMenuBar extends StatelessWidget {
   final String currentRoute;
+  final PageController? pageController;
+  final Function(int)? onTabTapped;
 
   const BottomMenuBar({
     super.key,
     required this.currentRoute,
+    this.pageController,
+    this.onTabTapped,
   });
+
+  int _getCurrentIndex() {
+    switch (currentRoute) {
+      case '/favorite':
+        return 0;
+      case '/create_lesson':
+        return 1;
+      case '/custom_lesson':
+        return 2;
+      default:
+        return 0;
+    }
+  }
+
+  void _handleTap(int index) {
+    if (onTabTapped != null) {
+      // Use callback for swipe navigation
+      onTabTapped!(index);
+    } else {
+      // Fallback to traditional navigation
+      String route;
+      switch (index) {
+        case 0:
+          route = '/favorite';
+          break;
+        case 1:
+          route = '/create_lesson';
+          break;
+        case 2:
+          route = '/custom_lesson';
+          break;
+        default:
+          route = '/favorite';
+      }
+
+      // Only navigate if we're on a different route
+      if (currentRoute != route) {
+        Navigator.pushReplacementNamed(navigatorKey.currentContext!, route);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return BottomAppBar(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.favorite, size: 24),
-            onPressed: () {
-              if (currentRoute != '/favorite') {
-                Navigator.pushReplacementNamed(context, '/favorite');
-              }
-            },
-            color: currentRoute == '/favorite' ? colorScheme.primary : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      child: BottomNavigationBar(
+        currentIndex: _getCurrentIndex(),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_music),
+            label: 'All Lessons',
           ),
-          IconButton(
-            icon: const Icon(Icons.library_add, size: 24),
-            onPressed: () {
-              if (currentRoute != '/create_lesson') {
-                Navigator.pushReplacementNamed(context, '/create_lesson');
-              }
-            },
-            color: currentRoute == '/create_lesson' ? colorScheme.primary : null,
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Generate',
           ),
-          IconButton(
-            icon: const Icon(Icons.list, size: 24),
-            onPressed: () {
-              if (currentRoute != '/word_management') {
-                Navigator.pushReplacementNamed(context, '/word_management');
-              }
-            },
-            color: currentRoute == '/word_management' ? colorScheme.primary : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.person, size: 24),
-            onPressed: () {
-              if (currentRoute != '/profile') {
-                Navigator.pushReplacementNamed(context, '/profile');
-              }
-            },
-            color: currentRoute == '/profile' ? colorScheme.primary : null,
+          BottomNavigationBarItem(
+            icon: Icon(Icons.create),
+            label: 'Custom',
           ),
         ],
+        onTap: _handleTap,
       ),
     );
   }
