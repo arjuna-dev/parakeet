@@ -367,7 +367,7 @@ class CategoryItemWithStats extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          height: 200,
+          height: 160,
           width: double.infinity,
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -443,7 +443,7 @@ class CategoryItemWithStats extends StatelessWidget {
 
                     // Stats below title area - this will not overlap with the icon
                     Padding(
-                      padding: const EdgeInsets.only(right: 80), // Make room for the icon
+                      padding: const EdgeInsets.only(right: 90, bottom: 8), // Balanced room for icon and bottom padding
                       child: isLoading
                           ? const SizedBox(
                               height: 20,
@@ -453,24 +453,30 @@ class CategoryItemWithStats extends StatelessWidget {
                               ),
                             )
                           : stats != null
-                              ? ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 150,
-                                    maxWidth: 200,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 6),
-                                      // Using a fixed width container for the progress bar
-                                      SizedBox(
-                                        width: 180,
-                                        child: _buildProgressBar(context, stats!),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      _buildLegend(context, stats!),
-                                    ],
-                                  ),
+                              ? LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Use available width minus some padding
+                                    final availableWidth = constraints.maxWidth - 16;
+                                    final progressBarWidth = availableWidth.clamp(120.0, 160.0);
+
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 6),
+                                        // Dynamic width progress bar based on available space
+                                        SizedBox(
+                                          width: progressBarWidth,
+                                          child: _buildProgressBar(context, stats!),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Constrain legend to prevent overflow
+                                        SizedBox(
+                                          width: availableWidth,
+                                          child: _buildLegend(context, stats!),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 )
                               : const SizedBox.shrink(),
                     ),
@@ -504,7 +510,6 @@ class CategoryItemWithStats extends StatelessWidget {
 
     // Calculate proportions based on total available words
     final masteredWidth = totalAvailableWords > 0 ? stats.mastered / totalAvailableWords : 0.0;
-    final learnedWidth = totalAvailableWords > 0 ? stats.learned / totalAvailableWords : 0.0;
     final learningWidth = totalAvailableWords > 0 ? stats.learning / totalAvailableWords : 0.0;
 
     return SizedBox(
@@ -527,22 +532,6 @@ class CategoryItemWithStats extends StatelessWidget {
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(6),
                         bottomLeft: const Radius.circular(6),
-                        topRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                      ),
-                    ),
-                  ),
-                ),
-              // Learned (blue)
-              if (learnedWidth > 0)
-                SizedBox(
-                  width: constraints.maxWidth * learnedWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade600.withOpacity(0.8),
-                      borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         topRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         bottomRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
                       ),
@@ -557,8 +546,8 @@ class CategoryItemWithStats extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.amber.shade600.withOpacity(0.8),
                       borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         topRight: const Radius.circular(6),
                         bottomRight: const Radius.circular(6),
                       ),
@@ -576,30 +565,18 @@ class CategoryItemWithStats extends StatelessWidget {
     // Get total words from category
     final totalAvailableWords = category['words']?.length ?? 0;
 
-    // Always include all three states
+    // Only include mastered and learning states
     final List<Widget> legendItems = [
       _buildLegendItem(context, stats.mastered, totalAvailableWords, 'Mastered', Colors.green.shade600.withOpacity(0.8)),
-      _buildLegendItem(context, stats.learned, totalAvailableWords, 'Learned', Colors.blue.shade600.withOpacity(0.8)),
       _buildLegendItem(context, stats.learning, totalAvailableWords, 'Learning', Colors.amber.shade600.withOpacity(0.8)),
     ];
 
-    // Split items into rows of 2
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Display both items in a single row with flexible sizing
+    return Row(
       children: [
-        Row(
-          children: [
-            legendItems[0],
-            const SizedBox(width: 16),
-            legendItems[1],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            legendItems[2],
-          ],
-        ),
+        Expanded(child: legendItems[0]),
+        const SizedBox(width: 4),
+        Expanded(child: legendItems[1]),
       ],
     );
   }
@@ -609,21 +586,28 @@ class CategoryItemWithStats extends StatelessWidget {
     final percentage = total > 0 ? (count / total * 100).round() : 0;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 6,
+          height: 6,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          '$percentage% $label',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.9),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            '$percentage% $label',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+            overflow: TextOverflow.visible,
+            maxLines: 1,
           ),
         ),
       ],

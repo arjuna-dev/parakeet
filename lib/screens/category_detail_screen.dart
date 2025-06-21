@@ -758,7 +758,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
             children: [
               _buildProgressStat('Mastered', _wordStats!.mastered, Theme.of(context).colorScheme.onSurface),
               _buildProgressStat('Learning', _wordStats!.learning, Theme.of(context).colorScheme.onSurfaceVariant),
-              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning - _wordStats!.learned, Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7)),
+              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning, Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7)),
             ],
           ),
 
@@ -850,8 +850,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
 
     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
-    final isLearning = !isMastered && !isLearned && reps > 0;
+    final isLearning = !isMastered && reps > 0;
 
     // Calculate progress percentage
     double progressValue;
@@ -860,9 +859,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     if (isMastered) {
       progressValue = 1.0;
       progressColor = Colors.green;
-    } else if (isLearned) {
-      progressValue = 0.8;
-      progressColor = Colors.blue;
     } else if (isLearning) {
       progressValue = scheduledDays / 100;
       progressColor = Colors.orange;
@@ -964,8 +960,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
 
     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-    final isLearned = scheduledDays >= 80 && scheduledDays != -1;
-    final isLearning = !isMastered && !isLearned && reps > 0;
+    final isLearning = !isMastered && reps > 0;
 
     Color statusColor;
     String statusText;
@@ -975,10 +970,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       statusColor = Colors.green;
       statusText = 'Mastered';
       statusIcon = Icons.star_rounded;
-    } else if (isLearned) {
-      statusColor = Colors.blue;
-      statusText = 'Learned';
-      statusIcon = Icons.check_circle_rounded;
     } else if (isLearning) {
       statusColor = Colors.orange;
       statusText = 'Learning';
@@ -1091,18 +1082,15 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
 
       final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-      final isLearned = scheduledDays >= 80 && scheduledDays != -1;
-      final isLearning = !isMastered && !isLearned && reps > 0;
+      final isLearning = !isMastered && reps > 0;
 
       int priority;
       if (isLearning) {
         priority = 0; // Show learning words first
-      } else if (!isMastered && !isLearned) {
+      } else if (!isMastered) {
         priority = 1; // Then new words
-      } else if (isLearned) {
-        priority = 2; // Then learned words
       } else {
-        priority = 3; // Mastered words last
+        priority = 2; // Mastered words last
       }
 
       return {

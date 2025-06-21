@@ -674,19 +674,19 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       child: Row(
                         children: [
                           Container(
-                            width: 56,
-                            height: 56,
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
                               color: colorScheme.primary.withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.style_rounded,
-                              size: 28,
+                              size: 24,
                               color: colorScheme.primary,
                             ),
                           ),
@@ -697,25 +697,28 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      'Card Review',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: colorScheme.onSurface,
+                                    Flexible(
+                                      child: Text(
+                                        'Card Review',
+                                        style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: colorScheme.primary.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         'Recommended',
                                         style: TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.w600,
                                           color: colorScheme.primary,
                                         ),
@@ -723,17 +726,20 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Text(
                                   'Visual flashcard review where you test and rate your memory',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: colorScheme.onSurfaceVariant,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Icon(
                             Icons.arrow_forward_ios_rounded,
                             size: 16,
@@ -762,19 +768,19 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       child: Row(
                         children: [
                           Container(
-                            width: 56,
-                            height: 56,
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
                               color: colorScheme.primary.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.school_rounded,
-                              size: 28,
+                              size: 24,
                               color: colorScheme.primary,
                             ),
                           ),
@@ -786,22 +792,26 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                                 Text(
                                   'New Lesson',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w700,
                                     color: colorScheme.onSurface,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Text(
                                   'Create a lesson with context, new words, and review overdue words',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: colorScheme.onSurfaceVariant,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Icon(
                             Icons.arrow_forward_ios_rounded,
                             size: 16,
@@ -825,19 +835,19 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     child: Row(
                       children: [
                         Container(
-                          width: 56,
-                          height: 56,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: colorScheme.onSurfaceVariant.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.headset_rounded,
-                            size: 28,
+                            size: 24,
                             color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                           ),
                         ),
@@ -848,25 +858,28 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Text(
-                                    'Audio Review',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                  Flexible(
+                                    child: Text(
+                                      'Audio Review',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: colorScheme.onSurfaceVariant.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
                                       'Coming Soon',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.w600,
                                         color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                                       ),
@@ -874,13 +887,15 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               Text(
                                 'Audio-based review with pronunciation practice',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),

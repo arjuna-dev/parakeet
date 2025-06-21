@@ -157,6 +157,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.onTrackChanged = _handleTrackChange;
     _audioPlayerService.onLessonCompleted = _handleLessonCompletion;
 
+    // Setup position-based track monitoring for better synchronization
+    _setupPositionBasedTrackMonitoring();
+
     // Setup listeners
     _repetitionsMode.addListener(_updatePlaylistOnTheFly);
 
@@ -426,6 +429,43 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (wasPlaying) {
       _audioPlayerService.isPlaying.value = true;
     }
+  }
+
+  // Setup position-based track monitoring for better synchronization
+  void _setupPositionBasedTrackMonitoring() {
+    // Monitor position changes more frequently for better track synchronization
+    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      if (_isDisposing) {
+        timer.cancel();
+        return;
+      }
+
+      if (!mounted || _script.isEmpty || _audioPlayerService.trackDurations.isEmpty) {
+        return;
+      }
+
+      try {
+        // Get the current track index based on position
+        final positionBasedIndex = _audioPlayerService.getCurrentTrackIndex();
+
+        // Only update if the track actually changed and is valid
+        if (positionBasedIndex >= 0 && positionBasedIndex < _script.length) {
+          final newTrack = _script[positionBasedIndex];
+
+          // Only trigger update if track actually changed
+          if (newTrack != _currentTrack) {
+            if (mounted) {
+              setState(() {
+                _currentTrack = newTrack;
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Silently handle errors to avoid disrupting playback
+        print("Position-based track monitoring error: $e");
+      }
+    });
   }
 
   void _handleTrackChange(int index) {

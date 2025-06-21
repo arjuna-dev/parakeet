@@ -57,7 +57,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       _initializeVisibleMessages();
     } else {
       // If not generating, show all messages immediately without animation
-      _showAllMessagesImmediately();
+      showAllMessagesImmediately();
     }
   }
 
@@ -370,7 +370,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
     }
 
     // Update dialogue only if it actually changed
-    if (!_areDialoguesEqual(widget.dialogue, _dialogueNotifier.value)) {
+    if (!areDialoguesEqual(widget.dialogue, _dialogueNotifier.value)) {
       final oldLength = _dialogueNotifier.value.length;
       _dialogueNotifier.value = List.from(widget.dialogue);
 
@@ -381,7 +381,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
       // If not generating, show all messages immediately without animation
       if (!widget.generating) {
-        _showAllMessagesImmediately();
+        showAllMessagesImmediately();
       }
       // If generating and this is the first update with no visible messages yet
       else if (_visibleMessages.isEmpty && widget.dialogue.isNotEmpty) {
@@ -398,7 +398,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
   }
 
   // Helper method to check if two dialogue lists are equal
-  bool _areDialoguesEqual(List<dynamic> list1, List<dynamic> list2) {
+  bool areDialoguesEqual(List<dynamic> list1, List<dynamic> list2) {
     try {
       if (list1.length != list2.length) return false;
 
@@ -425,12 +425,12 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       }
       return true;
     } catch (e) {
-      print("Error in _areDialoguesEqual: $e");
+      print("Error in areDialoguesEqual: $e");
       return false; // Consider them different if there's an error
     }
   }
 
-  Widget _buildDialogueItem(BuildContext context, dynamic dialogueItem, int index) {
+  Widget buildDialogueItem(BuildContext context, dynamic dialogueItem, int index) {
     // Safety check for null or invalid dialogue item
     if (dialogueItem == null) {
       return const SizedBox.shrink();
@@ -525,7 +525,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                 if (snapshot.hasError) {
                   print("StreamBuilder error: ${snapshot.error}");
                   // Return the current dialogue list instead of an error message
-                  return _buildDialogueListView(_dialogueNotifier.value);
+                  return buildDialogueListView(_dialogueNotifier.value);
                 }
 
                 // Show loading indicator only when we have no data at all
@@ -539,7 +539,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                     final Map<String, dynamic> data = snapshot.data!.docs[0].data() as Map<String, dynamic>;
                     if (data.containsKey('dialogue')) {
                       final newDialogueData = data['dialogue'] as List<dynamic>;
-                      if (!_areDialoguesEqual(newDialogueData, _dialogueNotifier.value)) {
+                      if (!areDialoguesEqual(newDialogueData, _dialogueNotifier.value)) {
                         // Store the old length before updating
                         final oldLength = _dialogueNotifier.value.length;
                         final bool wasEmpty = _dialogueNotifier.value.isEmpty;
@@ -554,7 +554,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
                         // If not generating, show all messages immediately without animation
                         if (!widget.generating) {
-                          _showAllMessagesImmediately();
+                          showAllMessagesImmediately();
                         }
                         // If generating and this is the first data we're receiving, initialize visible messages
                         else if (_visibleMessages.isEmpty && newDialogueData.isNotEmpty) {
@@ -651,7 +651,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
                 }
 
                 // Always return the current dialogue list
-                return _buildDialogueListView(_dialogueNotifier.value);
+                return buildDialogueListView(_dialogueNotifier.value);
               } catch (e) {
                 print("Error in StreamBuilder: $e");
                 // Return a fallback widget in case of error
@@ -663,7 +663,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       } else {
         // Use the existing dialogue list if streaming is not enabled
         return Expanded(
-          child: _buildDialogueListView(_dialogueNotifier.value),
+          child: buildDialogueListView(_dialogueNotifier.value),
         );
       }
     } catch (e) {
@@ -675,7 +675,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
   }
 
   // Extract the ListView builder into a separate method to avoid duplication
-  Widget _buildDialogueListView(List<dynamic> dialogueData) {
+  Widget buildDialogueListView(List<dynamic> dialogueData) {
     try {
       return ListView.builder(
         key: const PageStorageKey('dialogue_list'),
@@ -692,7 +692,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
               return const SizedBox.shrink();
             }
 
-            return _buildDialogueItem(context, dialogueData[index], index);
+            return buildDialogueItem(context, dialogueData[index], index);
           } catch (e) {
             print("Error building item at index $index: $e");
             return const SizedBox.shrink();
@@ -700,7 +700,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         },
       );
     } catch (e) {
-      print("Error in _buildDialogueListView: $e");
+      print("Error in buildDialogueListView: $e");
       return const Center(child: Text("Error displaying dialogue"));
     }
   }
@@ -713,7 +713,7 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
   }
 
   // Helper method to show all messages immediately without animation
-  void _showAllMessagesImmediately() {
+  void showAllMessagesImmediately() {
     try {
       if (!mounted) return;
 
