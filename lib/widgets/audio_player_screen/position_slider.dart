@@ -164,8 +164,21 @@ class _PositionSliderState extends State<PositionSlider> {
                 widget.onSliderChangeEnd();
               },
             ),
-            Text(
-              widget.finalTotalDuration == Duration.zero ? formatDuration(currentPosition) : "${formatDuration(currentPosition)} / ${formatDuration(widget.finalTotalDuration)}",
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    formatDuration(currentPosition),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    widget.finalTotalDuration == Duration.zero ? formatDuration(widget.totalDuration) : formatDuration(widget.finalTotalDuration),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ],
         );
@@ -177,6 +190,6 @@ class _PositionSliderState extends State<PositionSlider> {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(d.inSeconds.remainder(60));
-    return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 }

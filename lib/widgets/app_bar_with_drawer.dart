@@ -518,7 +518,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Daily Lessons',
+                          'Daily Generations Limit',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

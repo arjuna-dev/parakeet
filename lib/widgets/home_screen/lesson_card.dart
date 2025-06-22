@@ -25,6 +25,46 @@ class LessonCard extends StatefulWidget {
 class _LessonCardState extends State<LessonCard> {
   bool _isPressed = false;
   bool _isDeleting = false;
+  bool _isCompleted = false;
+  bool _isLoadingCompletion = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCompletionStatus();
+  }
+
+  Future<void> _checkCompletionStatus() async {
+    try {
+      final parentDocId = widget.audioFile.reference.parent.parent!.id;
+      final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (mounted) {
+          setState(() {
+            _isCompleted = data['completed'] ?? false;
+            _isLoadingCompletion = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isCompleted = false;
+            _isLoadingCompletion = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking completion status: $e');
+      if (mounted) {
+        setState(() {
+          _isCompleted = false;
+          _isLoadingCompletion = false;
+        });
+      }
+    }
+  }
 
   String getCategory() {
     final data = widget.audioFile.data() as Map<String, dynamic>?;
@@ -212,6 +252,71 @@ class _LessonCardState extends State<LessonCard> {
     }
   }
 
+  void _showOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Lesson Options',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.red.withOpacity(0.8),
+                        ),
+                        title: Text(
+                          'Delete Lesson',
+                          style: TextStyle(
+                            color: Colors.red.withOpacity(0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: const Text('This action cannot be undone'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _deleteLesson();
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -247,6 +352,8 @@ class _LessonCardState extends State<LessonCard> {
             if (result == 'reload' && widget.onReload != null) {
               widget.onReload!();
             }
+            // Refresh completion status when returning from audio player
+            _checkCompletionStatus();
           });
         },
         child: AnimatedContainer(
@@ -286,47 +393,46 @@ class _LessonCardState extends State<LessonCard> {
             ),
             child: Stack(
               children: [
-                // Decorative circles
-                Positioned(
-                  top: -20,
-                  right: -20,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: categoryColor.withOpacity(0.05),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-
-                // Delete button
+                // Top right icons row
                 Positioned(
                   top: 16,
                   right: 16,
-                  child: GestureDetector(
-                    onTap: _isDeleting ? null : _deleteLesson,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                        shape: BoxShape.circle,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Completion icon
+                      if (!_isLoadingCompletion && _isCompleted)
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                        ),
+
+                      // Three-dot menu button
+                      GestureDetector(
+                        onTap: _showOptionsMenu,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.more_vert_rounded,
+                            size: 16,
+                            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          ),
+                        ),
                       ),
-                      child: _isDeleting
-                          ? SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.red.withOpacity(0.4)),
-                              ),
-                            )
-                          : Icon(
-                              Icons.delete_outline_rounded,
-                              size: 14,
-                              color: Colors.red.withOpacity(0.3),
-                            ),
-                    ),
+                    ],
                   ),
                 ),
 
@@ -402,7 +508,7 @@ class _LessonCardState extends State<LessonCard> {
 
                       // Title with playful styling
                       Container(
-                        padding: const EdgeInsets.only(left: 4, right: 50), // Add right margin to avoid delete button
+                        padding: const EdgeInsets.only(left: 4, right: 60), // Increased right margin for icons
                         child: Text(
                           widget.audioFile.get('title'),
                           style: TextStyle(

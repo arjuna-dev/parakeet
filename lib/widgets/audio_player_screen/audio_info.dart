@@ -16,11 +16,7 @@ class AudioInfo extends StatelessWidget {
       padding: const EdgeInsets.all(5.0),
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-        ),
       ),
       child: Row(
         children: [
