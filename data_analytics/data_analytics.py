@@ -32,7 +32,7 @@ def filter_by_period(df, date_column, period_days):
     df[date_column] = pd.to_datetime(df[date_column]).dt.date
     return df[df[date_column] >= cutoff]
 
-# update_csvs()
+update_csvs()
 def generate_all_charts(style, period_days=None):
 
     # Ensure 'csv' directory exists before saving files
@@ -462,10 +462,11 @@ def generate_all_charts(style, period_days=None):
 
 # --- Hardcode period selection here ---
 if __name__ == "__main__":
-    style = Style.SKETCH
-    period_days = None  # Use None for all time, or 30, 60, or 90 for last N days
-    generate_all_charts(style, 90)
 
     style = Style.CYBERPUNK
     period_days = None  # Use None for all time, or 30, 60, or 90 for last N days
-    generate_all_charts(style, 90)
+    generate_all_charts(style, 10)
+
+    style = Style.SKETCH
+    period_days = None  # Use None for all time, or 30, 60, or 90 for last N days
+    generate_all_charts(style, 10)

@@ -290,13 +290,13 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.play_arrow_rounded,
+                              Icons.skip_next_rounded,
                               size: 14,
                               color: Colors.blue,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Play: ${_formatDuration(widget.breakdownStartTime!)}',
+                              'Jump to: ${_formatDuration(widget.breakdownStartTime!)}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Colors.blue,
