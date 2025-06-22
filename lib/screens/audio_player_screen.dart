@@ -81,6 +81,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _isSliderMoving = false;
   int _updateNumber = 0;
   late bool _generating;
+  bool _isCompleted = false;
 
   // Data variables
   late List<dynamic> _dialogue;
@@ -165,6 +166,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Begin the sequential initialization process
     _sequentialInitialization();
+
+    // Check completion status
+    _checkCompletionStatus();
   }
 
   // Sequentially handle all initialization steps in the correct order
@@ -675,6 +679,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
+    // Automatically mark as completed when lesson finishes
+    if (!_isCompleted) {
+      await _markAsCompleted();
+    }
+
+    // show list of words that were used and ask user to review them
+    await _showVocabularyReview();
+  }
+
+  Future<void> _showVocabularyReview() async {
     // show list of words that were used and ask user to review them
     await showDialog(
       context: context,
@@ -685,6 +699,109 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         );
       },
     );
+  }
+
+  Future<void> _checkCompletionStatus() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (mounted) {
+          setState(() {
+            _isCompleted = data['completed'] ?? false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking completion status: $e');
+    }
+  }
+
+  Future<void> _markAsCompleted() async {
+    // Pause audio before showing dialog
+    bool wasPlaying = _audioPlayerService.isPlaying.value;
+    if (wasPlaying) {
+      _audioPlayerService.isPlaying.value = false;
+    }
+
+    // Show confirmation dialog
+    bool? shouldComplete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Complete Lesson'),
+          content: const Text('Are you sure you want to mark this lesson as completed?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Complete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user cancelled, resume audio if it was playing
+    if (shouldComplete != true) {
+      if (wasPlaying) {
+        _audioPlayerService.isPlaying.value = true;
+      }
+      return;
+    }
+
+    // User confirmed, proceed with completion
+    try {
+      // Use set with merge: true to create the field if it doesn't exist
+      await FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).set({'completed': true}, SetOptions(merge: true));
+
+      if (mounted) {
+        setState(() {
+          _isCompleted = true;
+        });
+      }
+
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Lesson marked as completed!',
+              style: TextStyle(color: Colors.white),
+            ),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error marking lesson as completed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Failed to mark lesson as completed. Please try again.',
+              style: TextStyle(color: Colors.white),
+            ),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+      // Resume audio if it was playing and completion failed
+      if (wasPlaying) {
+        _audioPlayerService.isPlaying.value = true;
+      }
+    }
   }
 
   // void _toggleSpeechRecognition(bool value) async {
@@ -857,7 +974,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           repetitionMode: _repetitionsMode,
                           generating: _generating,
                           hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
-                          onReviewWords: _handleLessonCompletion,
+                          onReviewWords: _showVocabularyReview,
+                          isCompleted: _isCompleted,
+                          onMarkCompleted: _markAsCompleted,
                         ),
                       ],
                     ),
