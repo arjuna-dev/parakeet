@@ -24,7 +24,7 @@ class VocabularyReviewScreen extends StatefulWidget {
   State<VocabularyReviewScreen> createState() => _VocabularyReviewScreenState();
 }
 
-class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
+class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with TickerProviderStateMixin {
   late Map<String, DocumentReference> _allRefsMap;
   late bool _isLoadingAll;
   late bool _isLoadingDue;
@@ -40,6 +40,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
   final List<WordCard> _dueWordsFull = [];
   final Map<String, DocumentReference> _dueWordsRefs = {};
   int _totalDueWordsCount = 0; // Track total words available for review
+
+  // Track flipped state for each word
+  final Map<String, bool> _flippedCards = {};
 
   @override
   void initState() {
@@ -406,91 +409,129 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
     return null;
   }
 
-  Widget _buildWordItem(WordCard card, ColorScheme colorScheme) {
-    final scheduledDays = card.card.scheduledDays.toDouble();
-    final now = DateTime.now();
-    final dueDate = card.card.due;
-    final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
+  Widget _buildWordCard(WordCard card, ColorScheme colorScheme) {
     final translation = findWordTranslation(card.word);
-    final hasTranslation = translation != null;
+    final isFlipped = _flippedCards[card.word] ?? false;
 
-    String reviewText;
-    if (isOverdue) {
-      reviewText = 'Ready for review';
-    } else if (scheduledDays == -1) {
-      reviewText = 'Mastered';
-    } else {
-      final daysUntilDue = dueDate.difference(now).inDays;
-      reviewText = '$daysUntilDue days';
-    }
-
-    return InkWell(
-      onTap: hasTranslation ? () => _showTranslationSheet(context, card.word, translation) : null,
-      onLongPress: () {
-        final categoryName = _findCategoryName(card.word);
-        if (categoryName != null) {
-          showMarkAsMasteredModal(
-            context: context,
-            word: card.word,
-            categoryName: categoryName,
-            targetLanguage: _targetLanguage,
-            learningWords: List<Map<String, dynamic>>.from(_allWordsFull.map((c) => <String, dynamic>{
-                  'word': c.word.toLowerCase(),
-                  'scheduledDays': c.card.scheduledDays.toDouble(),
-                  'reps': c.card.reps,
-                })),
-            updateLearningWords: (_) {},
-            loadWordStats: () async {
-              await _loadAllWords();
-              await _loadDueWords();
-            },
-          );
+    return GestureDetector(
+      onTap: () {
+        if (translation != null) {
+          setState(() {
+            _flippedCards[card.word] = !isFlipped;
+          });
         }
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: colorScheme.onSurfaceVariant.withOpacity(0.1),
-              width: 1,
-            ),
-          ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          final rotateAnim = Tween(begin: 1.0, end: 0.0).animate(animation);
+          return AnimatedBuilder(
+            animation: rotateAnim,
+            child: child,
+            builder: (context, child) {
+              final isShowingFront = ValueKey(isFlipped) != child!.key;
+              var tilt = ((animation.value - 0.5).abs() - 0.5) * 0.003;
+              tilt *= isShowingFront ? -1.0 : 1.0;
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateY(rotateAnim.value * 3.14159),
+                child: child,
+              );
+            },
+          );
+        },
+        child: isFlipped ? _buildCardBack(card.word, translation, colorScheme) : _buildCardFront(card.word, colorScheme),
+      ),
+    );
+  }
+
+  Widget _buildCardFront(String word, ColorScheme colorScheme) {
+    return Container(
+      key: const ValueKey(false),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withOpacity(0.2),
+          width: 1,
         ),
-        child: Row(
-          children: [
-            // Word
-            Expanded(
-              child: Text(
-                card.word,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          word,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(width: 16),
-
-            // Review Time
-            SizedBox(
-              width: 100,
-              child: Text(
-                reviewText,
+  Widget _buildCardBack(String word, String? translation, ColorScheme colorScheme) {
+    return Container(
+      key: const ValueKey(true),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.primary.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Center(
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: word,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: isOverdue
-                      ? colorScheme.primary
-                      : scheduledDays == -1
-                          ? Colors.green
-                          : colorScheme.onSurfaceVariant,
+                  color: colorScheme.onSurface.withOpacity(0.7),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              TextSpan(
+                text: ' → ',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+              TextSpan(
+                text: translation ?? word,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -521,31 +562,31 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
           ? Padding(
               padding: const EdgeInsets.only(bottom: 20, right: 4),
               child: FloatingActionButton.extended(
-                onPressed: () => _showReviewOptions(context),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ReviewWordsDialog(
+                      words: _dueWordsRefs,
+                      userID: _userId,
+                      onReviewCompleted: () async {
+                        // Refresh the word lists after review is completed
+                        await _loadAllWords();
+                        await _loadDueWords();
+                      },
+                    ),
+                  );
+                },
                 backgroundColor: colorScheme.primary,
                 foregroundColor: Colors.white,
                 elevation: 8,
                 icon: const Icon(Icons.quiz_rounded, size: 22),
-                label: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Review Words',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      _totalDueWordsCount > 20 ? '${_dueWordsFull.length} of $_totalDueWordsCount ready' : '${_dueWordsFull.length} ready',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 11,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
+                label: const Text(
+                  'Review Words',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -554,361 +595,6 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
-  }
-
-  void _showReviewOptions(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                // Modal header
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.quiz_rounded,
-                          color: colorScheme.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Review Options',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              _totalDueWordsCount > 20 ? '${_dueWordsFull.length} of $_totalDueWordsCount words ready for review' : '${_dueWordsFull.length} words ready for review',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Card Review Option (Primary)
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showDialog(
-                      context: context,
-                      builder: (context) => ReviewWordsDialog(
-                        words: _dueWordsRefs,
-                        userID: _userId,
-                        onReviewCompleted: () async {
-                          // Refresh the word lists after review is completed
-                          await _loadAllWords();
-                          await _loadDueWords();
-                        },
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          colorScheme.primary.withOpacity(0.1),
-                          colorScheme.primary.withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.style_rounded,
-                              size: 24,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        'Card Review',
-                                        style: TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w700,
-                                          color: colorScheme.onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: colorScheme.primary.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        'Recommended',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Visual flashcard review where you test and rate your memory',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 16,
-                            color: colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // New Lesson Option
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushReplacementNamed(context, '/create_lesson');
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.school_rounded,
-                              size: 24,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'New Lesson',
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Create a lesson with context, new words, and review overdue words',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 16,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Audio Review Option (Coming Soon)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.1),
-                      width: 1,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.headset_rounded,
-                            size: 24,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      'Audio Review',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700,
-                                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.onSurfaceVariant.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      'Coming Soon',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Audio-based review with pronunciation practice',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -964,7 +650,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'These are words due for review based on our advanced FSRS algorithm.',
+                'These are words due for review.',
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontSize: isSmallScreen ? 14 : 16,
@@ -1008,98 +694,39 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> {
           ),
         ),
 
-        // Column Headers
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          margin: const EdgeInsets.symmetric(horizontal: 0),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
+        // Instructions
+        if (_dueWordsFull.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              'Tap any card to flip and see the translation',
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Word',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 100,
-                child: Text(
-                  'Next Review',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
 
+        // Words Grid
         Expanded(
-          child: Container(
-            margin: const EdgeInsets.all(0),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GridView.builder(
+              padding: const EdgeInsets.only(bottom: 120),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 20,
+                childAspectRatio: 1.8,
               ),
-              border: Border.all(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                if (_dueWordsFull.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-                    child: () {
-                      // Check if any displayed words have translations
-                      final hasAnyTranslations = _dueWordsFull.any((card) => findWordTranslation(card.word) != null);
-
-                      String instructionText;
-                      if (hasAnyTranslations) {
-                        instructionText = 'Tap any word to see its translation • Long press for options';
-                      } else {
-                        instructionText = 'Long press any word for options';
-                      }
-
-                      return Text(
-                        instructionText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      );
-                    }(),
-                  ),
-                ],
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 100),
-                    itemCount: _dueWordsFull.length,
-                    itemBuilder: (context, index) {
-                      final card = _dueWordsFull[index];
-                      return _buildWordItem(card, colorScheme);
-                    },
-                  ),
-                ),
-              ],
+              itemCount: _dueWordsFull.length,
+              itemBuilder: (context, index) {
+                final card = _dueWordsFull[index];
+                return _buildWordCard(card, colorScheme);
+              },
             ),
           ),
         ),
