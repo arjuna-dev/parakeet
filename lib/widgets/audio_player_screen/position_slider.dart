@@ -102,7 +102,7 @@ class _PositionSliderState extends State<PositionSlider> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Lesson is ready. Play now!",
+                  "Lesson is ready. Click on the Play button!",
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.bold,
