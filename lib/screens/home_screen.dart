@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/home_screen_service.dart';
-import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
+import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -20,11 +19,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     super.initState();
 
     // Initialize tab controller
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 1, vsync: this);
 
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
-    Provider.of<HomeScreenModel>(context, listen: false).loadNowPlayingFromPreference();
+    Provider.of<HomeScreenModel>(context, listen: false).loadAllLessons();
   }
 
   @override
@@ -36,7 +35,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   void _reloadPage() {
     // Load the audio files
     Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
-    Provider.of<HomeScreenModel>(context, listen: false).loadNowPlayingFromPreference();
+    Provider.of<HomeScreenModel>(context, listen: false).loadAllLessons();
   }
 
   @override
@@ -46,66 +45,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Favorites',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: colorScheme.primary,
-          indicatorWeight: 3,
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant,
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 14 : 16,
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.normal,
-            fontSize: isSmallScreen ? 14 : 16,
-          ),
-          tabs: [
-            Tab(
-              icon: Icon(Icons.play_circle_filled, size: isSmallScreen ? 22 : 24),
-              text: 'Recent',
-            ),
-            Tab(
-              icon: Icon(Icons.favorite, size: isSmallScreen ? 22 : 24),
-              text: 'Favorites',
-            ),
-          ],
-        ),
+      appBar: const AppBarWithDrawer(
+        title: 'All Lessons',
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Currently Playing Tab
-          Consumer<HomeScreenModel>(
-            builder: (context, model, _) {
-              return TabContentView(
-                isSmallScreen: isSmallScreen,
-                child: HomeScreenService.buildNowPlayingList(context, model, _reloadPage),
-              );
-            },
-          ),
-
-          // Favorites Tab
-          Consumer<HomeScreenModel>(
-            builder: (context, model, _) {
-              return TabContentView(
-                isSmallScreen: isSmallScreen,
-                child: HomeScreenService.buildFavoritesList(context, model, _reloadPage),
-              );
-            },
-          ),
-        ],
+      body: Consumer<HomeScreenModel>(
+        builder: (context, model, _) {
+          return HomeScreenService.buildAllLessonsList(context, model, _reloadPage);
+        },
       ),
-      bottomNavigationBar: const BottomMenuBar(currentRoute: "/favorite"),
     );
   }
 }

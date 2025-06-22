@@ -4,15 +4,19 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/streak_service.dart';
+import 'package:parakeet/services/profile_service.dart';
+import 'package:parakeet/utils/language_categories.dart';
 
 class ReviewWordsDialog extends StatefulWidget {
   final Map<String, DocumentReference> words;
   final String userID;
+  final VoidCallback? onReviewCompleted;
 
   const ReviewWordsDialog({
     Key? key,
     required this.words,
     required this.userID,
+    this.onReviewCompleted,
   }) : super(key: key);
 
   @override
@@ -26,6 +30,13 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   final StreakService _streakService = StreakService();
   bool _streakRecorded = false;
   fsrs.Rating? _pressedButton;
+  bool _isCardFlipped = false;
+
+  // Language and categories
+  String _targetLanguage = '';
+  String _nativeLanguage = '';
+  List<Map<String, dynamic>> _targetLanguageCategories = [];
+  List<Map<String, dynamic>> _nativeLanguageCategories = [];
 
   late AnimationController _slideController;
   late AnimationController _scaleController;
@@ -40,6 +51,8 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   void initState() {
     _logWordsInfo();
     super.initState();
+    _initializeLanguageData();
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -94,6 +107,24 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
     _updateProgress();
   }
 
+  Future<void> _initializeLanguageData() async {
+    try {
+      final userData = await ProfileService.fetchUserData();
+      _targetLanguage = userData['target_language'] as String? ?? '';
+      _nativeLanguage = userData['native_language'] as String? ?? 'English (US)';
+
+      // Load categories for both languages
+      _targetLanguageCategories = getCategoriesForLanguage(_targetLanguage);
+      _nativeLanguageCategories = getCategoriesForLanguage(_nativeLanguage);
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error initializing language data: $e');
+    }
+  }
+
   void _updateProgress() {
     final total = widget.words.keys.toList().length;
     double progress = 0.0;
@@ -101,6 +132,37 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
       progress = _currentWordIndex / total;
     }
     _progressController.animateTo(progress);
+  }
+
+  String? findWordTranslation(String word) {
+    // Find the category and index of the word in target language
+    for (final targetCategory in _targetLanguageCategories) {
+      final List<dynamic> words = targetCategory['words'];
+      final int wordIndex = words.indexWhere((w) => w.toLowerCase() == word.toLowerCase());
+
+      if (wordIndex != -1) {
+        // Found the word, now find matching category in native language
+        final String categoryName = targetCategory['name'];
+
+        final matchingNativeCategory = _nativeLanguageCategories.firstWhere(
+          (natCat) {
+            return natCat['name'] == categoryName;
+          },
+          orElse: () => <String, Object>{'words': <Object>[]},
+        );
+        // Get the translation at the same index if available
+        final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
+        if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
+          final translation = "${nativeWords[wordIndex]}";
+          // Only return translation if it's different from the original word
+          if (translation.toLowerCase() != word.toLowerCase()) {
+            return translation;
+          }
+        }
+      }
+    }
+    // If word not found in any category or matching translation not found
+    return null;
   }
 
   Future<void> _recordStreakIfCompleted() async {
@@ -143,91 +205,82 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
 
     return PopScope(
       canPop: isReviewComplete,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          // Only close if not review complete (otherwise let the "Continue Learning" button handle navigation)
-          if (!isReviewComplete) {
-            Navigator.of(context).pop();
-          }
-        },
-        child: Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // Background gradient
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.3),
-                      Colors.black.withOpacity(0.7),
-                    ],
-                  ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: [
+            // Background gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.7),
+                  ],
                 ),
               ),
-              // Animated background particles (subtle)
-              ...List.generate(6, (index) => _buildFloatingParticle(index, colorScheme)),
+            ),
+            // Animated background particles (subtle)
+            ...List.generate(6, (index) => _buildFloatingParticle(index, colorScheme)),
 
-              // Main dialog content with close button
-              Center(
-                child: AnimatedBuilder(
-                  animation: _scaleAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Stack(
-                        children: [
-                          Container(
-                            margin: EdgeInsets.symmetric(
-                              horizontal: isTablet ? 48 : (isSmallScreen ? 20 : 32),
-                              vertical: isSmallScreen ? 40 : 60,
-                            ),
-                            constraints: BoxConstraints(
-                              maxWidth: isTablet ? 600 : 450,
-                              maxHeight: screenSize.height * (isSmallScreen ? 0.85 : 0.8),
-                            ),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface,
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                  spreadRadius: 4,
-                                ),
-                                BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.1),
-                                  blurRadius: 40,
-                                  offset: const Offset(0, 16),
+            // Main dialog content with close button
+            Center(
+              child: AnimatedBuilder(
+                animation: _scaleAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: Stack(
+                      children: [
+                        Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 48 : (isSmallScreen ? 20 : 32),
+                            vertical: isSmallScreen ? 40 : 60,
+                          ),
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet ? 600 : 450,
+                            maxHeight: screenSize.height * (isSmallScreen ? 0.85 : 0.8),
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                                spreadRadius: 4,
+                              ),
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.1),
+                                blurRadius: 40,
+                                offset: const Offset(0, 16),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Main dialog content
+                                Expanded(
+                                  child: isReviewComplete ? _buildCompletionView(colorScheme, isSmallScreen, isTablet) : _buildReviewView(colorScheme, isSmallScreen, isTablet),
                                 ),
                               ],
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(28),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Main dialog content
-                                  Expanded(
-                                    child: isReviewComplete ? _buildCompletionView(colorScheme, isSmallScreen, isTablet) : _buildReviewView(colorScheme, isSmallScreen, isTablet),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -614,6 +667,10 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                         borderRadius: BorderRadius.circular(20),
                         onTap: () {
                           Navigator.of(context).pop();
+                          // Call the callback to refresh parent screen
+                          if (widget.onReviewCompleted != null) {
+                            widget.onReviewCompleted!();
+                          }
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -705,55 +762,140 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
             padding: EdgeInsets.all(isTablet ? 32 : (isSmallScreen ? 20 : 24)),
             child: Column(
               children: [
-                // Word card with animation
+                // Word card with animation and flip functionality
                 Expanded(
                   flex: 1,
                   child: Center(
                     child: SlideTransition(
                       position: _slideAnimation,
-                      child: Container(
-                        width: double.infinity,
-                        constraints: BoxConstraints(
-                          maxHeight: isTablet ? 120 : (isSmallScreen ? 80 : 100),
-                        ),
-                        padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 16 : 20)),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                              colorScheme.surfaceContainerHigh.withOpacity(0.5),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: colorScheme.outline.withOpacity(0.2),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colorScheme.shadow.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                      child: () {
+                        final currentWord = widget.words.keys.toList()[_currentWordIndex];
+                        final translation = findWordTranslation(currentWord);
+                        final hasTranslation = translation != null;
+
+                        return GestureDetector(
+                          onTap: hasTranslation
+                              ? () {
+                                  setState(() {
+                                    _isCardFlipped = !_isCardFlipped;
+                                  });
+                                }
+                              : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            width: double.infinity,
+                            constraints: BoxConstraints(
+                              maxHeight: isTablet ? 120 : (isSmallScreen ? 80 : 100),
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            widget.words.keys.toList()[_currentWordIndex],
-                            style: TextStyle(
-                              fontSize: isTablet ? 32 : (isSmallScreen ? 22 : 28),
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                              letterSpacing: 1.2,
+                            padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 16 : 20)),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: _isCardFlipped
+                                    ? [
+                                        colorScheme.primary.withOpacity(0.1),
+                                        colorScheme.secondary.withOpacity(0.1),
+                                      ]
+                                    : [
+                                        colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                        colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _isCardFlipped ? colorScheme.primary.withOpacity(0.3) : colorScheme.outline.withOpacity(0.2),
+                                width: _isCardFlipped ? 2 : 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _isCardFlipped ? colorScheme.primary.withOpacity(0.2) : colorScheme.shadow.withOpacity(0.1),
+                                  blurRadius: _isCardFlipped ? 15 : 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            textAlign: TextAlign.center,
+                            child: Stack(
+                              children: [
+                                // Current word or translation
+                                Center(
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: Column(
+                                      key: ValueKey(_isCardFlipped),
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _isCardFlipped && hasTranslation ? translation : currentWord,
+                                          style: TextStyle(
+                                            fontSize: isTablet ? 32 : (isSmallScreen ? 22 : 28),
+                                            fontWeight: FontWeight.bold,
+                                            color: _isCardFlipped ? colorScheme.primary : colorScheme.onSurface,
+                                            letterSpacing: 1.2,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Tap hint icon (only show if translation exists)
+                                if (!_isCardFlipped && hasTranslation)
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.flip_to_back_rounded,
+                                        size: isTablet ? 16 : (isSmallScreen ? 12 : 14),
+                                        color: colorScheme.primary.withOpacity(0.6),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      }(),
                     ),
                   ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Instruction text
+                AnimatedOpacity(
+                  opacity: _isCardFlipped ? 0.6 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: () {
+                    final currentWord = widget.words.keys.toList()[_currentWordIndex];
+                    final hasTranslation = findWordTranslation(currentWord) != null;
+
+                    String instructionText;
+                    if (_isCardFlipped && hasTranslation) {
+                      instructionText = 'Tap card to see word again';
+                    } else if (!_isCardFlipped && hasTranslation) {
+                      instructionText = 'Tap card to see translation';
+                    } else {
+                      instructionText = 'Rate how well you know this word';
+                    }
+
+                    return Text(
+                      instructionText,
+                      style: TextStyle(
+                        fontSize: isTablet ? 14 : (isSmallScreen ? 12 : 13),
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    );
+                  }(),
                 ),
 
                 SizedBox(height: isTablet ? 24 : (isSmallScreen ? 16 : 20)),
@@ -975,6 +1117,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
 
     setState(() {
       _currentWordIndex++;
+      _isCardFlipped = false; // Reset card flip state for next word
     });
 
     if (_currentWordIndex < widget.words.keys.toList().length) {
