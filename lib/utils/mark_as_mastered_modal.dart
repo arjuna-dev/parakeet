@@ -48,8 +48,8 @@ Future<void> showMarkAsMasteredModal({
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    isDismissible: false,
-    enableDrag: false,
+    isDismissible: true,
+    enableDrag: true,
     builder: (BuildContext dialogContext) {
       bool isLoading = false;
       return StatefulBuilder(builder: (BuildContext context, StateSetter setDialogState) {
@@ -83,21 +83,7 @@ Future<void> showMarkAsMasteredModal({
 
                 const SizedBox(height: 24),
 
-                // Icon and word
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    buttonIcon,
-                    size: 48,
-                    color: primaryColor,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
+                const SizedBox(height: 4),
 
                 // Word being acted upon
                 Container(
@@ -206,7 +192,7 @@ Future<void> showMarkAsMasteredModal({
                       // Confirm button
                       Expanded(
                         flex: 2,
-                        child: ElevatedButton.icon(
+                        child: ElevatedButton(
                           onPressed: () async {
                             setDialogState(() => isLoading = true);
                             try {
@@ -347,19 +333,6 @@ Future<void> showMarkAsMasteredModal({
                               print('Error in mastering word: $e');
                             }
                           },
-                          icon: Icon(
-                            buttonIcon,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            buttonText,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
@@ -368,6 +341,14 @@ Future<void> showMarkAsMasteredModal({
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
+                          ),
+                          child: Text(
+                            buttonText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),

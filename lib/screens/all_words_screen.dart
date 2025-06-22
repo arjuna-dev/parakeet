@@ -221,60 +221,41 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
 
                 const SizedBox(height: 20),
 
-                // Target language word
-                Text(
-                  word,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Arrow or divider
-                Icon(
-                  Icons.arrow_downward_rounded,
-                  color: colorScheme.onSurfaceVariant,
-                  size: 20,
-                ),
-
-                const SizedBox(height: 8),
-
-                // Native language translation
-                Text(
-                  nativeWord,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
+                // Word and translation on the same row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        word,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    Expanded(
+                      child: Text(
+                        nativeWord,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
-
-                // Close button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Got it',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -355,7 +336,13 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
       reviewText = 'Mastered';
     } else {
       final daysUntilDue = dueDate.difference(now).inDays;
-      reviewText = '$daysUntilDue days';
+      if (daysUntilDue == 0) {
+        reviewText = 'Today';
+      } else if (daysUntilDue == 1) {
+        reviewText = '1 day left';
+      } else {
+        reviewText = '$daysUntilDue days left';
+      }
     }
 
     return InkWell(
@@ -415,7 +402,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: (isOverdue && !reviewedToday)
-                      ? colorScheme.primary
+                      ? Colors.white
                       : scheduledDays == -1
                           ? Colors.green
                           : colorScheme.onSurfaceVariant,
