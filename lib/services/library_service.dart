@@ -13,7 +13,6 @@ class LibraryService {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
     final snapshot = await _firestore.collectionGroup('script-$userId').get();
 
-    Map<String, bool> newFavorites = {};
     Map<String, List<DocumentSnapshot>> newCategorizedDocuments = {};
     List<DocumentSnapshot> allDocuments = [];
 
@@ -21,11 +20,6 @@ class LibraryService {
     const String defaultCategory = "Custom Lesson";
 
     for (var doc in snapshot.docs) {
-      String parentId = doc.reference.parent.parent!.id;
-      String docId = doc.reference.id;
-      String key = '$parentId-$docId';
-      newFavorites[key] = model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId);
-
       // Get category from document or use default
       // Handle cases where category is null, empty, or doesn't exist
       String category;
@@ -59,42 +53,9 @@ class LibraryService {
 
     return {
       'documents': allDocuments,
-      'favorites': newFavorites,
       'categorizedDocuments': newCategorizedDocuments,
       'expandedCategories': newExpandedCategories,
     };
-  }
-
-  // Toggle favorite status
-  static Future<void> toggleFavorite(DocumentSnapshot document, HomeScreenModel model, Map<String, bool> localFavorites, Function(Map<String, bool>) updateFavorites) async {
-    final user = FirebaseAuth.instance.currentUser;
-    final userDocRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
-    String parentId = document.reference.parent.parent!.id;
-    String docId = document.reference.id;
-    String key = '$parentId-$docId';
-
-    bool newState = !(localFavorites[key] ?? false);
-
-    // Update local state
-    Map<String, bool> updatedFavorites = Map<String, bool>.from(localFavorites);
-    updatedFavorites[key] = newState;
-    updateFavorites(updatedFavorites);
-
-    if (!newState) {
-      model.removeAudioFile(document);
-      await userDocRef.update({
-        'favoriteAudioFiles': FieldValue.arrayRemove([
-          {'parentId': parentId, 'docId': docId}
-        ])
-      });
-    } else {
-      model.addAudioFile(document);
-      await userDocRef.set({
-        'favoriteAudioFiles': FieldValue.arrayUnion([
-          {'parentId': parentId, 'docId': docId}
-        ])
-      }, SetOptions(merge: true));
-    }
   }
 
   // Delete document
@@ -104,19 +65,8 @@ class LibraryService {
 
     final String userId = user.uid;
     final String parentId = document.reference.parent.parent!.id;
-    final String docId = document.reference.id;
 
-    // 1. Remove from favorites if it's a favorite
-    if (model.favoriteAudioFileIds.any((file) => file['docId'] == docId && file['parentId'] == parentId)) {
-      model.removeAudioFile(document);
-      await _firestore.collection('users').doc(userId).update({
-        'favoriteAudioFiles': FieldValue.arrayRemove([
-          {'parentId': parentId, 'docId': docId}
-        ])
-      });
-    }
-
-    // 2. Remove from "now playing" list in SharedPreferences
+    // Remove from "now playing" list in SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('savedPosition_${parentId}_$userId');
     await prefs.remove('savedTrackName_${parentId}_$userId');
@@ -128,7 +78,7 @@ class LibraryService {
       await prefs.setStringList("now_playing_$userId", nowPlayingList);
     }
 
-    // 3. Delete the audio file and document by calling cloud function
+    // Delete the audio file and document by calling cloud function
     deleteFromStorageAndFirestore(parentId, userId);
   }
 

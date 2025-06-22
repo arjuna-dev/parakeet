@@ -11,39 +11,21 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize tab controller
-    _tabController = TabController(length: 1, vsync: this);
-
-    // Load the audio files
-    Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+    // Load all lessons
     Provider.of<HomeScreenModel>(context, listen: false).loadAllLessons();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   void _reloadPage() {
-    // Load the audio files
-    Provider.of<HomeScreenModel>(context, listen: false).loadAudioFiles();
+    // Reload all lessons
     Provider.of<HomeScreenModel>(context, listen: false).loadAllLessons();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.height < 700;
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: const AppBarWithDrawer(
         title: 'All Lessons',
