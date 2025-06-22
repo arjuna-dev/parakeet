@@ -163,115 +163,165 @@ class _CategoryListState extends State<CategoryList> {
     final visibleCategories = widget.categories.sublist(0, _visibleCategoriesCount > widget.categories.length ? widget.categories.length : _visibleCategoriesCount);
     final visibleNativeCategories = widget.nativeCategories.sublist(0, _visibleCategoriesCount > widget.nativeCategories.length ? widget.nativeCategories.length : _visibleCategoriesCount);
 
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: widget.isSmallScreen ? 8 : 16,
-      ),
-      itemCount: visibleCategories.length + (_visibleCategoriesCount < widget.categories.length ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index < visibleCategories.length) {
-          final category = visibleCategories[index];
-          final nativeCategory = visibleNativeCategories[index];
-          final categoryName = category['name'];
-          final stats = _categoryStats[categoryName];
-          final isLocked = _isCategoryLocked(index);
-
-          return Stack(
+    return Column(
+      children: [
+        // Sticky header
+        Container(
+          width: double.infinity,
+          color: colorScheme.surface,
+          padding: EdgeInsets.fromLTRB(
+            16,
+            widget.isSmallScreen ? 16 : 20,
+            16,
+            20,
+          ),
+          child: Row(
             children: [
-              CategoryItemWithStats(
-                category: category,
-                onTap: isLocked ? () => _handleStoreNavigation() : () => _handleCategorySelection(context, category, nativeCategory),
-                isSmallScreen: widget.isSmallScreen,
-                stats: stats,
-                isLoading: _loadingStats.contains(categoryName),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: colorScheme.primary,
+                  size: 24,
+                ),
               ),
-
-              // Locked overlay for premium categories
-              if (isLocked)
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: () => _handleStoreNavigation(),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.lock,
-                              color: Colors.white,
-                              size: 48,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Premium Only',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Text(
-                                'Upgrade to unlock this category',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        } else {
-          // This is the "More categories" button
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: _loadMoreCategories,
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'More categories',
+                      'Choose your learning scenario and track your progress',
                       style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: colorScheme.onSurface,
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+
+        // Scrollable content
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: widget.isSmallScreen ? 8 : 16,
             ),
-          );
-        }
-      },
+            itemCount: visibleCategories.length + (_visibleCategoriesCount < widget.categories.length ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index < visibleCategories.length) {
+                final category = visibleCategories[index];
+                final nativeCategory = visibleNativeCategories[index];
+                final categoryName = category['name'];
+                final stats = _categoryStats[categoryName];
+                final isLocked = _isCategoryLocked(index);
+
+                return Stack(
+                  children: [
+                    CategoryItemWithStats(
+                      category: category,
+                      onTap: isLocked ? () => _handleStoreNavigation() : () => _handleCategorySelection(context, category, nativeCategory),
+                      isSmallScreen: widget.isSmallScreen,
+                      stats: stats,
+                      isLoading: _loadingStats.contains(categoryName),
+                    ),
+
+                    // Locked overlay for premium categories
+                    if (isLocked)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () => _handleStoreNavigation(),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.lock,
+                                    color: Colors.white,
+                                    size: 48,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Premium Only',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    child: Text(
+                                      'Upgrade to unlock this category',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              } else {
+                // This is the "More categories" button
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: ElevatedButton(
+                      onPressed: _loadMoreCategories,
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'More categories',
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: colorScheme.onSurface,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -317,7 +367,7 @@ class CategoryItemWithStats extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          height: 200,
+          height: 160,
           width: double.infinity,
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -393,7 +443,7 @@ class CategoryItemWithStats extends StatelessWidget {
 
                     // Stats below title area - this will not overlap with the icon
                     Padding(
-                      padding: const EdgeInsets.only(right: 80), // Make room for the icon
+                      padding: const EdgeInsets.only(right: 90, bottom: 8), // Balanced room for icon and bottom padding
                       child: isLoading
                           ? const SizedBox(
                               height: 20,
@@ -403,24 +453,30 @@ class CategoryItemWithStats extends StatelessWidget {
                               ),
                             )
                           : stats != null
-                              ? ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 150,
-                                    maxWidth: 200,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 6),
-                                      // Using a fixed width container for the progress bar
-                                      SizedBox(
-                                        width: 180,
-                                        child: _buildProgressBar(context, stats!),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      _buildLegend(context, stats!),
-                                    ],
-                                  ),
+                              ? LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Use available width minus some padding
+                                    final availableWidth = constraints.maxWidth - 16;
+                                    final progressBarWidth = availableWidth.clamp(120.0, 160.0);
+
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 6),
+                                        // Dynamic width progress bar based on available space
+                                        SizedBox(
+                                          width: progressBarWidth,
+                                          child: _buildProgressBar(context, stats!),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Constrain legend to prevent overflow
+                                        SizedBox(
+                                          width: availableWidth,
+                                          child: _buildLegend(context, stats!),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 )
                               : const SizedBox.shrink(),
                     ),
@@ -454,7 +510,6 @@ class CategoryItemWithStats extends StatelessWidget {
 
     // Calculate proportions based on total available words
     final masteredWidth = totalAvailableWords > 0 ? stats.mastered / totalAvailableWords : 0.0;
-    final learnedWidth = totalAvailableWords > 0 ? stats.learned / totalAvailableWords : 0.0;
     final learningWidth = totalAvailableWords > 0 ? stats.learning / totalAvailableWords : 0.0;
 
     return SizedBox(
@@ -473,26 +528,10 @@ class CategoryItemWithStats extends StatelessWidget {
                   width: constraints.maxWidth * masteredWidth,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.green,
+                      color: Colors.green.shade600.withOpacity(0.8),
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(6),
                         bottomLeft: const Radius.circular(6),
-                        topRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomRight: learnedWidth == 0 && learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                      ),
-                    ),
-                  ),
-                ),
-              // Learned (blue)
-              if (learnedWidth > 0)
-                SizedBox(
-                  width: constraints.maxWidth * learnedWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         topRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         bottomRight: learningWidth == 0 ? const Radius.circular(6) : Radius.zero,
                       ),
@@ -505,10 +544,10 @@ class CategoryItemWithStats extends StatelessWidget {
                   width: constraints.maxWidth * learningWidth,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.amber,
+                      color: Colors.amber.shade600.withOpacity(0.8),
                       borderRadius: BorderRadius.only(
-                        topLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
-                        bottomLeft: masteredWidth == 0 && learnedWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        topLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
+                        bottomLeft: masteredWidth == 0 ? const Radius.circular(6) : Radius.zero,
                         topRight: const Radius.circular(6),
                         bottomRight: const Radius.circular(6),
                       ),
@@ -526,30 +565,18 @@ class CategoryItemWithStats extends StatelessWidget {
     // Get total words from category
     final totalAvailableWords = category['words']?.length ?? 0;
 
-    // Always include all three states
+    // Only include mastered and learning states
     final List<Widget> legendItems = [
-      _buildLegendItem(context, stats.mastered, totalAvailableWords, 'Mastered', Colors.green),
-      _buildLegendItem(context, stats.learned, totalAvailableWords, 'Learned', Colors.blue),
-      _buildLegendItem(context, stats.learning, totalAvailableWords, 'Learning', Colors.amber),
+      _buildLegendItem(context, stats.mastered, totalAvailableWords, 'Mastered', Colors.green.shade600.withOpacity(0.8)),
+      _buildLegendItem(context, stats.learning, totalAvailableWords, 'Learning', Colors.amber.shade600.withOpacity(0.8)),
     ];
 
-    // Split items into rows of 2
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Display both items in a single row with flexible sizing
+    return Row(
       children: [
-        Row(
-          children: [
-            legendItems[0],
-            const SizedBox(width: 16),
-            legendItems[1],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            legendItems[2],
-          ],
-        ),
+        Expanded(child: legendItems[0]),
+        const SizedBox(width: 4),
+        Expanded(child: legendItems[1]),
       ],
     );
   }
@@ -559,21 +586,28 @@ class CategoryItemWithStats extends StatelessWidget {
     final percentage = total > 0 ? (count / total * 100).round() : 0;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 6,
+          height: 6,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          '$percentage% $label',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.9),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            '$percentage% $label',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+            ),
+            overflow: TextOverflow.visible,
+            maxLines: 1,
           ),
         ),
       ],
@@ -584,17 +618,50 @@ class CategoryItemWithStats extends StatelessWidget {
   Color _getCategoryColor(String categoryName) {
     switch (categoryName.toLowerCase()) {
       case 'at the coffee shop':
-        return Colors.brown;
-      case 'in the library':
-        return Colors.blue;
+        return const Color(0xFF5D4037);
       case 'weather talk':
-        return Colors.indigo;
+        return const Color(0xFF303F9F);
+      case 'in the supermarket':
+        return const Color(0xFF388E3C);
+      case 'asking for directions':
+        return const Color(0xFF1976D2);
       case 'making small talk':
-        return Colors.teal;
+        return const Color(0xFF00695C);
+      case 'at the airport':
+        return const Color(0xFF455A64);
+      case 'at the restaurant':
+        return const Color(0xFFD84315);
+      case 'at the hotel':
+        return const Color(0xFF4E342E);
+      case 'at the doctor\'s office':
+        return const Color(0xFFC62828);
+      case 'public transportation':
+        return const Color(0xFF7B1FA2);
+      case 'shopping for clothes':
+        return const Color(0xFFC2185B);
+      case 'at the gym':
+        return const Color(0xFFEF6C00);
+      case 'at the bank':
+        return const Color(0xFF512DA8);
+      case 'at the post office':
+        return const Color(0xFF00838F);
+      case 'at the pharmacy':
+        return const Color(0xFF0097A7);
+      case 'at the park':
+        return const Color(0xFF689F38);
+      case 'at the beach':
+        return const Color(0xFF0288D1);
+      case 'at the library':
+        return const Color(0xFF3949AB);
+      case 'at the cinema':
+        return const Color(0xFF5E35B1);
+      case 'at the hair salon':
+        return const Color(0xFFAD1457);
+      case 'custom lesson':
+        return const Color(0xFF546E7A);
       default:
-        // Generate a color based on the first letter of the category name
         final int hashCode = categoryName.toLowerCase().hashCode;
-        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.8);
+        return Color((hashCode & 0xFFFFFF) | 0xFF000000).withOpacity(0.6);
     }
   }
 }

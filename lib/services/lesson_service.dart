@@ -25,32 +25,231 @@ class LessonService {
       if (apiCalls >= freeAPILimit) {
         final shouldEnablePremium = await showDialog<bool>(
           context: context,
-          barrierDismissible: false,
+          barrierDismissible: true,
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Generate up to 10x lessons per day'),
-              content: const Text('You\'ve reached the free limit. Activate premium mode!!'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('No, thanks'),
+            final colorScheme = Theme.of(context).colorScheme;
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colorScheme.surface,
+                      colorScheme.surfaceContainer.withOpacity(0.8),
+                    ],
+                  ),
                 ),
-                TextButton(
-                  onPressed: () async {
-                    final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
-                    if (success) {
-                      Navigator.pop(context, true);
-                    } else {
-                      Navigator.pop(context, false);
-                    }
-                  },
-                  child: Text(hasUsedTrial ? 'Get premium for 1 month' : 'Try out free for 14 days'),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Premium Icon
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.amber.shade400,
+                              Colors.amber.shade700,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.amber.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.workspace_premium,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Title
+                      Text(
+                        'Unlock Premium',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Subtitle
+                      Text(
+                        'You\'ve reached the free limit',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Features
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colorScheme.primary.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: colorScheme.primary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    'Generate up to 10 lessons per day',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.all_inclusive,
+                                  color: colorScheme.primary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    'Access to all categories',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Action Buttons
+                      Column(
+                        children: [
+                          // Primary Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                try {
+                                  final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
+                                  if (context.mounted) {
+                                    Navigator.pop(context, success);
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    Navigator.pop(context, false);
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                                shadowColor: colorScheme.primary.withOpacity(0.3),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    hasUsedTrial ? 'Get Premium for 1 Month' : 'Try Free for 14 Days',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Secondary Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colorScheme.onSurfaceVariant,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Maybe Later',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             );
           },
         );
 
+        // If dialog was dismissed or user chose not to upgrade
         if (shouldEnablePremium != true) {
           return false;
         }
@@ -157,45 +356,14 @@ class LessonService {
 
     setIsCreatingCustomLesson(true);
 
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Creating your lesson...',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please wait while we generate a personalized lesson for you',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
     final canProceed = await checkPremiumAndAPILimits(context);
     if (!canProceed) {
-      Navigator.pop(context); // Close loading dialog
+      setIsCreatingCustomLesson(false);
+      return;
+    }
+
+    // Check if context is still valid after the premium check
+    if (!context.mounted) {
       setIsCreatingCustomLesson(false);
       return;
     }
@@ -246,35 +414,38 @@ class LessonService {
         }),
       );
 
-      // Navigate directly to AudioPlayerScreen
-      Navigator.pop(context); // Close loading dialog
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AudioPlayerScreen(
-            dialogue: const [],
-            title: topic,
-            documentID: documentId,
-            userID: userId,
-            scriptDocumentId: scriptDocRef.id,
-            generating: true,
-            targetLanguage: targetLanguage,
-            nativeLanguage: nativeLanguage,
-            languageLevel: languageLevel,
-            wordsToRepeat: List<String>.from(selectedWords),
-            numberOfTurns: 4,
+      // Check if context is still valid before navigation
+      if (context.mounted) {
+        // Navigate directly to AudioPlayerScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AudioPlayerScreen(
+              dialogue: const [],
+              title: topic,
+              documentID: documentId,
+              userID: userId,
+              scriptDocumentId: scriptDocRef.id,
+              generating: true,
+              targetLanguage: targetLanguage,
+              nativeLanguage: nativeLanguage,
+              languageLevel: languageLevel,
+              wordsToRepeat: List<String>.from(selectedWords),
+              numberOfTurns: 4,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       print(e);
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       setIsCreatingCustomLesson(false);
     }
@@ -319,26 +490,65 @@ class LessonService {
     final closestDueDateCard = <Map<String, dynamic>>[];
 
     for (var doc in categoryDocs.docs) {
-      final dueDate = DateTime.parse(doc.data()['due']);
-      final lastReview = DateTime.parse(doc.data()['lastReview']);
+      // Handle both string and int formats for date fields
+      DateTime dueDate;
+      DateTime lastReview;
+
+      final docData = doc.data();
+      final dueField = docData['due'];
+      if (dueField is String) {
+        try {
+          dueDate = DateTime.parse(dueField);
+        } catch (e) {
+          continue; // Skip this document if due date can't be parsed
+        }
+      } else if (dueField is int) {
+        if (dueField == 0) {
+          // Handle legacy case where due was set to 0 - treat as far future for mastered words
+          dueDate = DateTime.now().add(const Duration(days: 365));
+        } else {
+          dueDate = DateTime.fromMillisecondsSinceEpoch(dueField);
+        }
+      } else {
+        continue; // Skip this document if due date format is unexpected
+      }
+
+      final lastReviewField = docData['lastReview'];
+      if (lastReviewField is String) {
+        try {
+          lastReview = DateTime.parse(lastReviewField);
+        } catch (e) {
+          continue; // Skip this document if lastReview date can't be parsed
+        }
+      } else if (lastReviewField is int) {
+        lastReview = DateTime.fromMillisecondsSinceEpoch(lastReviewField);
+      } else {
+        continue; // Skip this document if lastReview format is unexpected
+      }
+
       final daysOverdue = DateTime.now().difference(dueDate).inDays;
       final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
 
       // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
+      final wordField = docData['word'];
+      if (wordField == null || wordField is! String) {
+        continue; // Skip this document if word field is missing or not a string
+      }
+
       if (daysSinceLastReview > 0) {
         if (daysOverdue <= 0) {
-          words.add(doc.data()['word']);
+          words.add(wordField);
         } else {
           closestDueDateCard.add({
-            'word': doc.data()['word'],
-            'due_date': doc.data()['due'],
+            'word': wordField,
+            'due_date': docData['due'],
             'daysOverdue': daysOverdue,
           });
         }
         print('words: $words');
         print('closestDueDateCard: $closestDueDateCard');
       }
-      existingWordsCard.add(doc.data()['word']);
+      existingWordsCard.add(wordField);
     }
 
     if (words.length > 5) {

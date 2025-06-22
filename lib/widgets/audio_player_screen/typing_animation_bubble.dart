@@ -11,6 +11,8 @@ class TypingAnimationBubble extends StatefulWidget {
   final VoidCallback? onAnimationComplete;
   final Duration typingSpeed;
   final Duration initialDelay;
+  final Duration? breakdownStartTime;
+  final Function(Duration)? onSeekToTime;
 
   const TypingAnimationBubble({
     Key? key,
@@ -23,13 +25,15 @@ class TypingAnimationBubble extends StatefulWidget {
     this.onAnimationComplete,
     this.typingSpeed = const Duration(milliseconds: 50),
     this.initialDelay = Duration.zero,
+    this.breakdownStartTime,
+    this.onSeekToTime,
   }) : super(key: key);
 
   @override
   State<TypingAnimationBubble> createState() => _TypingAnimationBubbleState();
 }
 
-class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with SingleTickerProviderStateMixin {
+class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with TickerProviderStateMixin {
   String _displayedText = '';
   String _displayedSubtitle = '';
   bool _showTypingIndicator = false;
@@ -38,8 +42,9 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
   Timer? _subtitleTimer;
   Timer? _initialDelayTimer;
   late AnimationController _bounceController;
+  late AnimationController _highlightController;
   late Animation<double> _bounceAnimation;
-  final DateTime _timestamp = DateTime.now();
+  late Animation<double> _highlightAnimation;
 
   @override
   void initState() {
@@ -49,8 +54,17 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
       duration: const Duration(milliseconds: 600),
     )..repeat(reverse: true);
 
+    _highlightController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
     _bounceAnimation = Tween<double>(begin: 0, end: 3).animate(
       CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+    );
+
+    _highlightAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _highlightController, curve: Curves.easeInOut),
     );
 
     if (widget.animate) {
@@ -62,6 +76,19 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
       _displayedText = widget.text;
       _displayedSubtitle = widget.subtitle ?? '';
       _showSubtitle = widget.subtitle != null;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TypingAnimationBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Start or stop highlight animation based on isHighlighted state
+    if (widget.isHighlighted && !oldWidget.isHighlighted) {
+      _highlightController.repeat(reverse: true);
+    } else if (!widget.isHighlighted && oldWidget.isHighlighted) {
+      _highlightController.stop();
+      _highlightController.reset();
     }
   }
 
@@ -127,6 +154,7 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
     _subtitleTimer?.cancel();
     _initialDelayTimer?.cancel();
     _bounceController.dispose();
+    _highlightController.dispose();
     super.dispose();
   }
 
@@ -148,52 +176,138 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
             child: Column(
               crossAxisAlignment: widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.7,
-                  ),
-                  margin: EdgeInsets.only(
-                    left: widget.isUser ? 40 : 8,
-                    right: widget.isUser ? 8 : 40,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: widget.isUser
-                        ? const Color.fromARGB(255, 62, 59, 124) // User bubble color
-                        : const Color.fromARGB(255, 85, 52, 115), // Other person bubble color
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(18),
-                      topRight: const Radius.circular(18),
-                      bottomLeft: Radius.circular(widget.isUser ? 18 : 4),
-                      bottomRight: Radius.circular(widget.isUser ? 4 : 18),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.isHighlighted ? colorScheme.onPrimaryContainer.withOpacity(0.5) : colorScheme.shadow.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: const Offset(-1, 1),
+                widget.isHighlighted
+                    ? AnimatedBuilder(
+                        animation: _highlightAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
+                            ),
+                            margin: EdgeInsets.only(
+                              left: widget.isUser ? 40 : 8,
+                              right: widget.isUser ? 8 : 40,
+                            ),
+                            padding: const EdgeInsets.all(3), // Padding for border effect
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(21),
+                                topRight: const Radius.circular(21),
+                                bottomLeft: Radius.circular(widget.isUser ? 21 : 7),
+                                bottomRight: Radius.circular(widget.isUser ? 7 : 21),
+                              ),
+                              gradient: LinearGradient(
+                                colors: [
+                                  colorScheme.primary.withOpacity(_highlightAnimation.value),
+                                  colorScheme.secondary.withOpacity(_highlightAnimation.value),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.primary.withOpacity(_highlightAnimation.value * 0.7),
+                                  spreadRadius: 2,
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: widget.isUser
+                                    ? Color.lerp(const Color.fromARGB(255, 62, 59, 124), colorScheme.primaryContainer, _highlightAnimation.value * 0.3)
+                                    : Color.lerp(const Color.fromARGB(255, 85, 52, 115), colorScheme.primaryContainer, _highlightAnimation.value * 0.3),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(18),
+                                  topRight: const Radius.circular(18),
+                                  bottomLeft: Radius.circular(widget.isUser ? 18 : 4),
+                                  bottomRight: Radius.circular(widget.isUser ? 4 : 18),
+                                ),
+                              ),
+                              child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.7,
+                        ),
+                        margin: EdgeInsets.only(
+                          left: widget.isUser ? 40 : 8,
+                          right: widget.isUser ? 8 : 40,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: widget.isUser
+                              ? const Color.fromARGB(255, 62, 59, 124) // User bubble color
+                              : const Color.fromARGB(255, 85, 52, 115), // Other person bubble color
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(18),
+                            topRight: const Radius.circular(18),
+                            bottomLeft: Radius.circular(widget.isUser ? 18 : 4),
+                            bottomRight: Radius.circular(widget.isUser ? 4 : 18),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.shadow.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(-1, 1),
+                            ),
+                          ],
+                        ),
+                        child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
                       ),
-                    ],
-                  ),
-                  child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
-                ),
 
-                // Timestamp
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: 4,
-                    left: widget.isUser ? 0 : 12,
-                    right: widget.isUser ? 12 : 0,
-                  ),
-                  child: Text(
-                    _formatTime(_timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[500],
+                // Timestamp - show breakdown start time
+                if (widget.breakdownStartTime != null && widget.breakdownStartTime! > Duration.zero)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 6,
+                      left: widget.isUser ? 0 : 12,
+                      right: widget.isUser ? 12 : 0,
+                    ),
+                    child: GestureDetector(
+                      onTap: () {
+                        if (widget.onSeekToTime != null) {
+                          widget.onSeekToTime!(widget.breakdownStartTime!);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.skip_next_rounded,
+                              size: 14,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Jump to: ${_formatDuration(widget.breakdownStartTime!)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -319,9 +433,9 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Sing
     );
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }

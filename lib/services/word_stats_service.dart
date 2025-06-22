@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class WordStats {
-  final int learning; // Words with 0 <= scheduledDays < 80
-  final int learned; // Words with 80 <= scheduledDays < 100
+  final int learning; // Words with 0 <= scheduledDays < 100 (includes formerly "learned" words)
+  final int learned; // Words with 80 <= scheduledDays < 100 (deprecated but kept for compatibility)
   final int mastered; // Words with scheduledDays >= 100
   final int total; // Total words in this category
 
@@ -44,6 +44,8 @@ class WordStatsService {
             mastered++;
           } else if (scheduledDays >= 80) {
             learned++;
+            // Include previously "learned" words in the learning count for UI display
+            learning++;
           } else if (scheduledDays >= 0) {
             learning++;
           }
@@ -54,7 +56,7 @@ class WordStatsService {
         learning: learning,
         learned: learned,
         mastered: mastered,
-        total: learning + learned + mastered,
+        total: learning + mastered, // Only count learning and mastered for total
       );
     } catch (e) {
       print('Error getting category word stats: $e');
