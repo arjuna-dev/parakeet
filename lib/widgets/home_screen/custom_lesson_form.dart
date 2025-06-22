@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/home_screen_model.dart';
-import 'package:parakeet/widgets/library_screen/lesson_item.dart';
 
 class CustomLessonForm extends StatefulWidget {
   final String nativeLanguage;
