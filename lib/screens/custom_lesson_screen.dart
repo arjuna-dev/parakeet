@@ -35,16 +35,6 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     _loadGenerationsRemaining();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Reset state when navigated back to this screen
-    if (ModalRoute.of(context)?.isCurrent ?? false) {
-      _loadUserPreferences();
-      _loadGenerationsRemaining();
-    }
-  }
-
   void _loadUserPreferences() async {
     try {
       final settings = await UserService.getUserLanguageSettings();

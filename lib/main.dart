@@ -317,7 +317,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Widget _buildAuthenticatedMainNavigation(int initialIndex) {
+  Widget _buildAuthenticatedMainNavigation(String initialRoute) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Scaffold(
@@ -339,7 +339,7 @@ class _MyAppState extends State<MyApp> {
                             });
                             return const Center(child: CircularProgressIndicator());
                           }
-                          return MainNavigationScreen(initialIndex: initialIndex);
+                          return MainNavigationScreen(initialRoute: initialRoute);
                         }
                       }
                       return const Center(child: CircularProgressIndicator());
@@ -409,17 +409,17 @@ class _MyAppState extends State<MyApp> {
               break;
             case '/create_lesson':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: _buildAuthenticatedMainNavigation(1),
+                    child: _buildAuthenticatedMainNavigation('/create_lesson'),
                   );
               break;
             case '/custom_lesson':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: _buildAuthenticatedMainNavigation(2),
+                    child: _buildAuthenticatedMainNavigation('/custom_lesson'),
                   );
               break;
             case '/favorite':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: _buildAuthenticatedMainNavigation(0),
+                    child: _buildAuthenticatedMainNavigation('/favorite'),
                   );
               break;
             case '/vocabulary_review':
