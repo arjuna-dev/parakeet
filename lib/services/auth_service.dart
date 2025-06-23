@@ -12,18 +12,27 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  Future<void> _initializeUserDocument(User user, BuildContext context) async {
+  Future<void> _initializeUserDocument(User user, BuildContext context, {String? signInProvider, String? appleFirstName}) async {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
     final userData = userDoc.data();
 
     if (!userDoc.exists) {
-      // Create new user document
-      await _firestore.collection('users').doc(user.uid).set({
-        'name': user.displayName,
+      // Create new user document with sign-in provider info
+      Map<String, dynamic> newUserData = {
+        'name': user.displayName ?? appleFirstName,
         'email': user.email,
         'premium': false,
         'onboarding_completed': false,
-      });
+        'sign_in_provider': signInProvider,
+      };
+
+      // For Apple Sign In users, pre-populate nickname with their first name to comply with Apple requirements
+      if (signInProvider == 'apple.com' && (user.displayName != null || appleFirstName != null)) {
+        newUserData['nickname'] = user.displayName ?? appleFirstName;
+      }
+
+      await _firestore.collection('users').doc(user.uid).set(newUserData);
+
       if (context.mounted) {
         Navigator.pushReplacementNamed(context, '/onboarding');
         return;
@@ -38,6 +47,14 @@ class AuthService {
       }
       if (!userData.containsKey('premium')) {
         updates['premium'] = false;
+      }
+      if (!userData.containsKey('sign_in_provider')) {
+        updates['sign_in_provider'] = signInProvider;
+      }
+
+      // For existing Apple users, ensure nickname is set to comply with Apple requirements
+      if (signInProvider == 'apple.com' && !userData.containsKey('nickname') && (user.displayName != null || appleFirstName != null)) {
+        updates['nickname'] = user.displayName ?? appleFirstName;
       }
 
       if (updates.isNotEmpty) {
@@ -79,7 +96,7 @@ class AuthService {
         final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
         if (userCredential.user != null) {
-          await _initializeUserDocument(userCredential.user!, context);
+          await _initializeUserDocument(userCredential.user!, context, signInProvider: 'google.com');
         }
 
         return userCredential.user;
@@ -107,7 +124,18 @@ class AuthService {
       final userCredential = await _auth.signInWithCredential(oauthCredential);
 
       if (userCredential.user != null) {
-        await _initializeUserDocument(userCredential.user!, context);
+        // Extract first name (given name) from Apple credential if available
+        String? appleFirstName;
+        if (appleCredential.givenName != null && appleCredential.givenName!.isNotEmpty) {
+          appleFirstName = appleCredential.givenName!.trim();
+        }
+
+        await _initializeUserDocument(
+          userCredential.user!,
+          context,
+          signInProvider: 'apple.com',
+          appleFirstName: appleFirstName,
+        );
       }
 
       return userCredential.user;
