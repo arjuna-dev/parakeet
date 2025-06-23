@@ -7,11 +7,11 @@ import 'package:parakeet/screens/custom_lesson_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  final int initialIndex;
+  final String initialRoute;
 
   const MainNavigationScreen({
     super.key,
-    this.initialIndex = 0,
+    this.initialRoute = '/favorite',
   });
 
   @override
@@ -19,63 +19,39 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  late PageController _pageController;
-  int _currentIndex = 0;
-
-  final List<String> _routes = ['/favorite', '/create_lesson', '/custom_lesson'];
+  late String _currentRoute;
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: _currentIndex);
+    _currentRoute = widget.initialRoute;
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+  Widget _getCurrentScreen() {
+    switch (_currentRoute) {
+      case '/favorite':
+        return ChangeNotifierProvider(
+          create: (context) => HomeScreenModel(),
+          child: const Home(),
+        );
+      case '/create_lesson':
+        return const CreateLesson(title: "Categories");
+      case '/custom_lesson':
+        return const CustomLessonScreen();
+      default:
+        return ChangeNotifierProvider(
+          create: (context) => HomeScreenModel(),
+          child: const Home(),
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: [
-          // Home/Library Screen
-          ChangeNotifierProvider(
-            create: (context) => HomeScreenModel(),
-            child: const Home(),
-          ),
-          // Create Lesson Screen
-          const CreateLesson(title: "Categories"),
-          // Custom Lesson Screen
-          const CustomLessonScreen(),
-        ],
-      ),
+      body: _getCurrentScreen(),
       bottomNavigationBar: BottomMenuBar(
-        currentRoute: _routes[_currentIndex],
-        pageController: _pageController,
-        onTabTapped: _onTabTapped,
+        currentRoute: _currentRoute,
       ),
     );
   }

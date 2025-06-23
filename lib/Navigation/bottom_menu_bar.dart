@@ -3,14 +3,10 @@ import 'package:parakeet/utils/constants.dart';
 
 class BottomMenuBar extends StatelessWidget {
   final String currentRoute;
-  final PageController? pageController;
-  final Function(int)? onTabTapped;
 
   const BottomMenuBar({
     super.key,
     required this.currentRoute,
-    this.pageController,
-    this.onTabTapped,
   });
 
   int _getCurrentIndex() {
@@ -27,30 +23,24 @@ class BottomMenuBar extends StatelessWidget {
   }
 
   void _handleTap(int index) {
-    if (onTabTapped != null) {
-      // Use callback for swipe navigation
-      onTabTapped!(index);
-    } else {
-      // Fallback to traditional navigation
-      String route;
-      switch (index) {
-        case 0:
-          route = '/favorite';
-          break;
-        case 1:
-          route = '/create_lesson';
-          break;
-        case 2:
-          route = '/custom_lesson';
-          break;
-        default:
-          route = '/favorite';
-      }
+    String route;
+    switch (index) {
+      case 0:
+        route = '/favorite';
+        break;
+      case 1:
+        route = '/create_lesson';
+        break;
+      case 2:
+        route = '/custom_lesson';
+        break;
+      default:
+        route = '/favorite';
+    }
 
-      // Only navigate if we're on a different route
-      if (currentRoute != route) {
-        Navigator.pushReplacementNamed(navigatorKey.currentContext!, route);
-      }
+    // Only navigate if we're on a different route
+    if (currentRoute != route) {
+      Navigator.pushReplacementNamed(navigatorKey.currentContext!, route);
     }
   }
 
