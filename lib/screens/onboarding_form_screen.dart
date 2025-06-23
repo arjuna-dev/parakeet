@@ -10,6 +10,8 @@ import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 import '../utils/native_language_list.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OnboardingFormScreen extends StatefulWidget {
   const OnboardingFormScreen({super.key});
@@ -32,6 +34,44 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
   final int totalPages = kIsWeb ? 4 : 5;
   bool? _notificationsEnabled;
 
+  // Apple Sign In tracking
+  bool _isAppleSignIn = false;
+  String? _appleFirstName;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserSignInProvider();
+  }
+
+  Future<void> _checkUserSignInProvider() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final signInProvider = userData['sign_in_provider'] as String?;
+
+          if (signInProvider == 'apple.com') {
+            setState(() {
+              _isAppleSignIn = true;
+              _appleFirstName = userData['name'] as String?;
+              // Pre-populate nickname for Apple users
+              if (userData.containsKey('nickname') && userData['nickname'] != null) {
+                _nickname = userData['nickname'] as String;
+              } else if (_appleFirstName != null && _appleFirstName!.isNotEmpty) {
+                _nickname = _appleFirstName;
+              }
+            });
+          }
+        }
+      } catch (e) {
+        print('Error checking user sign-in provider: $e');
+      }
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -46,9 +86,15 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
   }
 
   Future<void> _saveUserData() async {
+    // For Apple Sign In users, use their Apple first name if no nickname was provided
+    String? finalNickname = _nickname;
+    if (_isAppleSignIn && (finalNickname == null || finalNickname.isEmpty) && _appleFirstName != null && _appleFirstName!.isNotEmpty) {
+      finalNickname = _appleFirstName;
+    }
+
     final success = await OnboardingService.saveUserData(
       nativeLanguage: _selectedNativeLanguage,
-      nickname: _nickname,
+      nickname: finalNickname,
       targetLanguage: _selectedTargetLanguage,
       languageLevel: _selectedLanguageLevel,
       setLoading: _setLoading,
@@ -68,6 +114,8 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
       _selectedTargetLanguage,
       _selectedLanguageLevel,
       _notificationsEnabled,
+      isAppleSignIn: _isAppleSignIn,
+      appleUserName: _appleFirstName,
     );
   }
 
@@ -118,6 +166,9 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                         },
                       ),
                       NicknameStep(
+                        initialNickname: _nickname,
+                        isAppleSignIn: _isAppleSignIn,
+                        appleUserName: _appleFirstName,
                         onNicknameChanged: (value) {
                           setState(() {
                             _nickname = value;
