@@ -112,11 +112,15 @@ class OnboardingService {
     }
   }
 
-  static bool canProceed(int currentPage, String? nativeLanguage, String? nickname, String? targetLanguage, String? languageLevel, bool? notificationsEnabled) {
+  static bool canProceed(int currentPage, String? nativeLanguage, String? nickname, String? targetLanguage, String? languageLevel, bool? notificationsEnabled, {bool isAppleSignIn = false, String? appleUserName}) {
     switch (currentPage) {
       case 0:
         return nativeLanguage != null;
       case 1:
+        // For Apple Sign In users, if they have a name from Apple ID, allow proceeding even with empty nickname
+        if (isAppleSignIn && appleUserName != null && appleUserName.isNotEmpty) {
+          return true; // Apple users can proceed as they already provided their name
+        }
         return nickname != null && nickname.isNotEmpty;
       case 2:
         return targetLanguage != null;
