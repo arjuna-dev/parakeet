@@ -426,8 +426,8 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 20, right: 4),
             child: FloatingActionButton.extended(
-              onPressed: isGeneratingLesson ? null : () => _showCustomLessonModal(context),
-              backgroundColor: _generationsRemaining <= 0 ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
+              onPressed: isGeneratingLesson ? null : (_generationsRemaining <= 0 ? null : () => _showCustomLessonModal(context)),
+              backgroundColor: _generationsRemaining <= 0 ? Colors.grey.shade600 : colorScheme.primary,
               foregroundColor: Colors.white,
               elevation: 8,
               icon: isGeneratingLesson
@@ -448,27 +448,36 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                         fontSize: 15,
                       ),
                     )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _generationsRemaining <= 0 ? 'Upgrade to Generate' : 'Generate Lesson',
-                          style: const TextStyle(
+                  : _generationsRemaining <= 0 && _isPremium
+                      ? const Text(
+                          'Daily Limit Reached',
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                             color: Colors.white,
                           ),
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _generationsRemaining <= 0 ? 'Upgrade to Generate' : 'Generate Lesson',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
