@@ -34,11 +34,15 @@ class _CategoryListState extends State<CategoryList> {
   final Map<String, WordStats> _categoryStats = {};
   final Set<String> _loadingStats = {};
   String _currentTargetLanguage = '';
+  List<Map<String, dynamic>> _sortedCategories = [];
+  List<Map<String, dynamic>> _sortedNativeCategories = [];
 
   @override
   void initState() {
     super.initState();
     _currentTargetLanguage = widget.targetLanguage;
+    _sortedCategories = List.from(widget.categories);
+    _sortedNativeCategories = List.from(widget.nativeCategories);
     _loadInitialCategoryStats();
   }
 
@@ -51,17 +55,22 @@ class _CategoryListState extends State<CategoryList> {
       _currentTargetLanguage = widget.targetLanguage;
       _categoryStats.clear(); // Clear old stats
       _loadingStats.clear();
+      _sortedCategories = List.from(widget.categories);
+      _sortedNativeCategories = List.from(widget.nativeCategories);
       _loadInitialCategoryStats(); // Reload with new language
     }
   }
 
   Future<void> _loadInitialCategoryStats() async {
     // Load stats for initially visible categories
-    final visibleCategories = widget.categories.sublist(0, _visibleCategoriesCount > widget.categories.length ? widget.categories.length : _visibleCategoriesCount);
+    final visibleCategories = _sortedCategories.sublist(0, _visibleCategoriesCount > _sortedCategories.length ? _sortedCategories.length : _visibleCategoriesCount);
 
     for (var category in visibleCategories) {
-      _loadCategoryStats(category['name']);
+      await _loadCategoryStats(category['name']);
     }
+
+    // Sort categories after loading initial stats
+    _sortCategoriesByProgress();
   }
 
   Future<void> _loadCategoryStats(String categoryName) async {
@@ -89,17 +98,51 @@ class _CategoryListState extends State<CategoryList> {
       _categoryStats[categoryName] = stats;
       _loadingStats.remove(categoryName);
     });
+
+    // Re-sort categories after loading new stats
+    _sortCategoriesByProgress();
+  }
+
+  void _sortCategoriesByProgress() {
+    final categoriesWithStats = <Map<String, dynamic>>[];
+    final categoriesWithoutStats = <Map<String, dynamic>>[];
+    final nativeCategoriesWithStats = <Map<String, dynamic>>[];
+    final nativeCategoriesWithoutStats = <Map<String, dynamic>>[];
+
+    for (int i = 0; i < widget.categories.length; i++) {
+      final category = widget.categories[i];
+      final nativeCategory = i < widget.nativeCategories.length ? widget.nativeCategories[i] : category;
+      final categoryName = category['name'];
+      final stats = _categoryStats[categoryName];
+
+      // Categories with progress (learning or mastered words) go first
+      if (stats != null && (stats.learning > 0 || stats.mastered > 0)) {
+        categoriesWithStats.add(category);
+        nativeCategoriesWithStats.add(nativeCategory);
+      } else {
+        categoriesWithoutStats.add(category);
+        nativeCategoriesWithoutStats.add(nativeCategory);
+      }
+    }
+
+    setState(() {
+      _sortedCategories = [...categoriesWithStats, ...categoriesWithoutStats];
+      _sortedNativeCategories = [...nativeCategoriesWithStats, ...nativeCategoriesWithoutStats];
+    });
   }
 
   void _loadMoreCategories() {
     final newVisibleCount = _visibleCategoriesCount + 4;
-    final actualNewCount = newVisibleCount > widget.categories.length ? widget.categories.length : newVisibleCount;
+    final actualNewCount = newVisibleCount > _sortedCategories.length ? _sortedCategories.length : newVisibleCount;
 
     // Load stats for newly visible categories
     if (actualNewCount > _visibleCategoriesCount) {
       for (int i = _visibleCategoriesCount; i < actualNewCount; i++) {
-        if (i < widget.categories.length) {
-          _loadCategoryStats(widget.categories[i]['name']);
+        if (i < _sortedCategories.length) {
+          _loadCategoryStats(_sortedCategories[i]['name']).then((_) {
+            // Re-sort after loading new stats
+            _sortCategoriesByProgress();
+          });
         }
       }
     }
@@ -151,7 +194,7 @@ class _CategoryListState extends State<CategoryList> {
 
     // Lock the last 10 categories or all categories after the 4th one
     // whichever is smaller (to avoid locking all categories if there are fewer than 14)
-    final totalCategories = widget.categories.length;
+    final totalCategories = _sortedCategories.length;
     final maxUnlockedCategories = totalCategories > 10 ? totalCategories - 10 : 4;
 
     return index >= maxUnlockedCategories;
@@ -160,8 +203,8 @@ class _CategoryListState extends State<CategoryList> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final visibleCategories = widget.categories.sublist(0, _visibleCategoriesCount > widget.categories.length ? widget.categories.length : _visibleCategoriesCount);
-    final visibleNativeCategories = widget.nativeCategories.sublist(0, _visibleCategoriesCount > widget.nativeCategories.length ? widget.nativeCategories.length : _visibleCategoriesCount);
+    final visibleCategories = _sortedCategories.sublist(0, _visibleCategoriesCount > _sortedCategories.length ? _sortedCategories.length : _visibleCategoriesCount);
+    final visibleNativeCategories = _sortedNativeCategories.sublist(0, _visibleCategoriesCount > _sortedNativeCategories.length ? _sortedNativeCategories.length : _visibleCategoriesCount);
 
     return Column(
       children: [
@@ -215,7 +258,7 @@ class _CategoryListState extends State<CategoryList> {
               horizontal: 16,
               vertical: widget.isSmallScreen ? 8 : 16,
             ),
-            itemCount: visibleCategories.length + (_visibleCategoriesCount < widget.categories.length ? 1 : 0),
+            itemCount: visibleCategories.length + (_visibleCategoriesCount < _sortedCategories.length ? 1 : 0),
             itemBuilder: (context, index) {
               if (index < visibleCategories.length) {
                 final category = visibleCategories[index];
@@ -431,7 +474,7 @@ class CategoryItemWithStats extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${category['words'].length ?? 0} words available',
+                          '${category['words'].length ?? 0} words',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white.withOpacity(0.8),

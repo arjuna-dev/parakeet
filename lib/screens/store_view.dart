@@ -720,21 +720,21 @@ class _StoreViewState extends State<StoreView> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: colorScheme.errorContainer.withOpacity(0.5),
+                            color: _hasPremium ? colorScheme.primaryContainer.withOpacity(0.5) : colorScheme.errorContainer.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                Icons.info_outline,
-                                color: colorScheme.error,
+                                _hasPremium ? Icons.check_circle_outline : Icons.info_outline,
+                                color: _hasPremium ? colorScheme.primary : colorScheme.error,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   _notice!,
                                   style: TextStyle(
-                                    color: colorScheme.onErrorContainer,
+                                    color: _hasPremium ? colorScheme.onPrimaryContainer : colorScheme.onErrorContainer,
                                     fontSize: isSmallScreen ? 14 : 15,
                                   ),
                                 ),

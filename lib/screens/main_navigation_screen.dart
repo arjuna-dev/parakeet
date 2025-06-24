@@ -5,6 +5,7 @@ import 'package:parakeet/screens/home_screen.dart';
 import 'package:parakeet/screens/create_lesson_screen.dart';
 import 'package:parakeet/screens/custom_lesson_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
+import 'package:parakeet/services/loading_state_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String initialRoute;
@@ -48,10 +49,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _getCurrentScreen(),
-      bottomNavigationBar: BottomMenuBar(
-        currentRoute: _currentRoute,
+    return ChangeNotifierProvider(
+      create: (context) => LoadingStateService(),
+      child: Consumer<LoadingStateService>(
+        builder: (context, loadingState, child) {
+          return AbsorbPointer(
+            absorbing: loadingState.isGeneratingLesson,
+            child: Scaffold(
+              body: _getCurrentScreen(),
+              bottomNavigationBar: BottomMenuBar(
+                currentRoute: _currentRoute,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
