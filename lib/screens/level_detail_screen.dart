@@ -401,13 +401,22 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                       color: colorScheme.onSurfaceVariant,
                                     ),
                                   ),
-                                  Text(
-                                    '${(((_getCompletedLessonsCount() / requiredLessons) * 100).clamp(0, 100)).round()}%',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: levelColor,
-                                    ),
+                                  Row(
+                                    children: [
+                                      if (_isLevelCompleted())
+                                        const Text(
+                                          '🎉 ',
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                      Text(
+                                        '${(((_getCompletedLessonsCount() / requiredLessons) * 100).clamp(0, 100)).round()}%',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: levelColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -421,81 +430,38 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                   valueColor: AlwaysStoppedAnimation<Color>(levelColor),
                                 ),
                               ),
+                              // Status message below progress bar
+                              if (!_isLoadingLessons && (_hasEnoughGeneratedLessons() || _isLevelCompleted()))
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _isLevelCompleted() ? Icons.check_circle_rounded : Icons.play_circle_rounded,
+                                        color: _isLevelCompleted() ? Colors.green : Colors.orange,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _isLevelCompleted()
+                                              ? (widget.levelNumber < 3 ? 'Move to Level ${widget.levelNumber + 1} to continue your journey.' : 'You\'ve mastered all levels in this category!')
+                                              : 'Complete ${(CategoryLevelService.levelRequirements[widget.levelNumber] ?? 3) - _getCompletedLessonsCount()} more lessons${widget.levelNumber < 3 ? ' to unlock Level ${widget.levelNumber + 1}' : ' to master this category'}.',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: _isLevelCompleted() ? Colors.green : Colors.orange,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ],
                       ),
                     ),
-
-                    // Level status message
-                    if (!_isLoadingLessons && (_hasEnoughGeneratedLessons() || _isLevelCompleted()))
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: _isLevelCompleted()
-                                ? [
-                                    Colors.green.withOpacity(0.1),
-                                    Colors.green.withOpacity(0.05),
-                                  ]
-                                : [
-                                    Colors.orange.withOpacity(0.1),
-                                    Colors.orange.withOpacity(0.05),
-                                  ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _isLevelCompleted() ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: _isLevelCompleted() ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _isLevelCompleted() ? Icons.check_circle_rounded : Icons.play_circle_rounded,
-                                color: _isLevelCompleted() ? Colors.green : Colors.orange,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _isLevelCompleted() ? 'Level ${widget.levelNumber} Completed! 🎉' : 'Complete Generated Lessons',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _isLevelCompleted()
-                                        ? (widget.levelNumber < 3 ? 'Move to Level ${widget.levelNumber + 1} to generate more lessons.' : 'You\'ve mastered all levels in this category!')
-                                        : 'Complete ${(CategoryLevelService.levelRequirements[widget.levelNumber] ?? 3) - _getCompletedLessonsCount()} more lessons${widget.levelNumber < 3 ? ' to unlock Level ${widget.levelNumber + 1}' : ' to master this category'}.',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
 
                     const SizedBox(height: 32),
 
@@ -538,7 +504,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    '${_levelLessons.length}',
+                                    '${_levelLessons.length}/${CategoryLevelService.levelRequirements[widget.levelNumber] ?? 3}',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -655,7 +621,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                 ),
                               ),
                               Text(
-                                _generationsRemaining <= 0 ? 'Daily limit reached' : '${requiredLessons - _levelLessons.length} more needed',
+                                _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,

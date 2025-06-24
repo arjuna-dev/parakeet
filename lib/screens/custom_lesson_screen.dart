@@ -427,7 +427,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
             padding: const EdgeInsets.only(bottom: 20, right: 4),
             child: FloatingActionButton.extended(
               onPressed: isGeneratingLesson ? null : () => _showCustomLessonModal(context),
-              backgroundColor: colorScheme.primary,
+              backgroundColor: _generationsRemaining <= 0 ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
               foregroundColor: Colors.white,
               elevation: 8,
               icon: isGeneratingLesson
@@ -439,7 +439,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.auto_awesome_rounded, size: 22),
+                  : Icon(_generationsRemaining <= 0 ? Icons.lock_rounded : Icons.auto_awesome_rounded, size: 22),
               label: isGeneratingLesson
                   ? const Text(
                       'Generating...',
@@ -448,15 +448,23 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                         fontSize: 15,
                       ),
                     )
-                  : const Column(
+                  : Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Generate Lesson',
-                          style: TextStyle(
+                          _generationsRemaining <= 0 ? 'Upgrade to Generate' : 'Generate Lesson',
+                          style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                             color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
                           ),
                         ),
                       ],

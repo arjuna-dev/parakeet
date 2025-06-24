@@ -193,6 +193,24 @@ class _CategoryListState extends State<CategoryList> {
     });
   }
 
+  Future<void> _refreshCategoryData() async {
+    // Clear existing data to force refresh
+    _categoryStats.clear();
+    _categoryLevels.clear();
+    _actualCompletedCounts.clear();
+    _loadingStats.clear();
+
+    // Reload stats for all visible categories
+    final visibleCategories = _sortedCategories.sublist(0, _visibleCategoriesCount > _sortedCategories.length ? _sortedCategories.length : _visibleCategoriesCount);
+
+    for (var category in visibleCategories) {
+      await _loadCategoryStats(category['name']);
+    }
+
+    // Re-sort categories after refreshing data
+    _sortCategoriesByProgress();
+  }
+
   void _loadMoreCategories() {
     final newVisibleCount = _visibleCategoriesCount + 4;
     final actualNewCount = newVisibleCount > _sortedCategories.length ? _sortedCategories.length : newVisibleCount;
@@ -444,7 +462,10 @@ class _CategoryListState extends State<CategoryList> {
           languageLevel: widget.languageLevel,
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh data when returning from CategoryDetailScreen
+      _refreshCategoryData();
+    });
   }
 }
 
