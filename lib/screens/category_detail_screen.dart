@@ -635,7 +635,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface.withOpacity(0.8),
+                  color: colorScheme.surface.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
