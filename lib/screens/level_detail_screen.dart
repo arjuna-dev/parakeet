@@ -191,6 +191,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           "selectedWords": selectedWords,
           "target_language": widget.targetLanguage,
           "native_language": widget.nativeLanguage,
+          "level_number": widget.levelNumber,
         }),
       );
 
@@ -226,8 +227,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           "user_ID": userId,
           "language_level": widget.languageLevel,
           "document_id": documentId,
-          "tts_provider": ttsProvider.value.toString(),
-          "category_level": widget.levelNumber,
+          "tts_provider": ttsProvider.value.toString()
         }),
       );
 
