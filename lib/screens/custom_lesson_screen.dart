@@ -448,23 +448,15 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                         fontSize: 15,
                       ),
                     )
-                  : Column(
+                  : const Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Generate Lesson',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                             color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          '$_generationsRemaining remaining today',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w400,
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.7),
                           ),
                         ),
                       ],

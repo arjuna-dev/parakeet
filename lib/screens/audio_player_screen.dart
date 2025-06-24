@@ -19,6 +19,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_info.dart';
+import 'package:parakeet/services/category_level_service.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -768,21 +769,51 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Use set with merge: true to create the field if it doesn't exist
       await FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).set({'completed': true}, SetOptions(merge: true));
 
+      // Update category level progress if this is a category lesson
+      if (widget.category != null && widget.category != 'Custom Lesson') {
+        // Get current level to record lesson completion for the correct level
+        final categoryLevel = await CategoryLevelService.getCategoryLevel(
+          widget.category!,
+          widget.targetLanguage,
+        );
+
+        await CategoryLevelService.recordCompletedLesson(
+          widget.category!,
+          widget.targetLanguage,
+          categoryLevel.currentLevel,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _isCompleted = true;
         });
       }
 
+      // Check if level was completed and show appropriate message
+      String completionMessage = 'Lesson marked as completed!';
+      if (widget.category != null && widget.category != 'Custom Lesson') {
+        final updatedLevel = await CategoryLevelService.getCategoryLevel(
+          widget.category!,
+          widget.targetLanguage,
+        );
+
+        if (updatedLevel.isLevelCompleted && updatedLevel.canAccessNextLevel) {
+          completionMessage = 'Level ${updatedLevel.currentLevel - 1} completed! Level ${updatedLevel.currentLevel} unlocked!';
+        } else if (updatedLevel.isLevelCompleted && updatedLevel.currentLevel == CategoryLevelService.maxLevel) {
+          completionMessage = 'Congratulations! You\'ve mastered all levels in ${widget.category}!';
+        }
+      }
+
       // Show confirmation
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Lesson marked as completed!',
-              style: TextStyle(color: Colors.white),
+              completionMessage,
+              style: const TextStyle(color: Colors.white),
             ),
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
             backgroundColor: Colors.green,
           ),
         );

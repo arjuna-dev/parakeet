@@ -379,6 +379,10 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
         selected_words = request_data.get("selectedWords")
         target_language = request_data.get("target_language")
         native_language = request_data.get("native_language")
+        if "level_number" in request_data:
+            level_number = request_data.get("level_number")
+        else:
+            level_number = 1
 
         print(category, selected_words, target_language, native_language)
 
@@ -388,7 +392,7 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
                 status=400
             )
 
-        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language)
+        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number)
 
         response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_4_1_nano.value)
 
@@ -437,6 +441,12 @@ def translate_keywords(req: https_fn.Request) -> https_fn.Response:
             status=500
         )
 
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins=["*"],
+        cors_methods=["POST"]
+    )
+)
 def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
     try:
         request_data = req.get_json()
