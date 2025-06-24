@@ -730,7 +730,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Complete Level $nextAvailableLevel ($nextAvailableLevelName) to unlock this level.',
+                'Complete Level $nextAvailableLevel ($nextAvailableLevelName) to unlock subsequent levels.',
                 style: TextStyle(
                   fontSize: 16,
                   color: colorScheme.onSurfaceVariant,
@@ -753,7 +753,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        remainingLessons == 1 ? '1 more lesson needed in Level $nextAvailableLevel' : '$remainingLessons more lessons needed in Level $nextAvailableLevel',
+                        remainingLessons == 1 ? 'You need to complete 1 more lesson in Level $nextAvailableLevel' : 'You need to complete $remainingLessons more lessons in Level $nextAvailableLevel',
                         style: TextStyle(
                           fontSize: 14,
                           color: colorScheme.onSurfaceVariant,
