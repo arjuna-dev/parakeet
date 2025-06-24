@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
 import 'package:parakeet/widgets/home_screen/empty_state_view.dart';
@@ -8,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/services/loading_state_service.dart';
 
 class CustomLessonScreen extends StatefulWidget {
   const CustomLessonScreen({Key? key}) : super(key: key);
@@ -22,7 +24,6 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   String languageLevel = 'Absolute beginner (A1)';
   bool _isLoading = true;
   bool _isLoadingLessons = true;
-  bool _isGeneratingLesson = false;
   final List<DocumentSnapshot> _customLessons = [];
   int _generationsRemaining = 0;
   bool _isPremium = false;
@@ -123,9 +124,8 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   }
 
   Future<void> _handleLessonCreation(String topic, List<String> words) async {
-    setState(() {
-      _isGeneratingLesson = true;
-    });
+    final loadingState = Provider.of<LoadingStateService>(context, listen: false);
+    loadingState.setGeneratingLesson(true);
 
     try {
       await LessonService.createCustomLesson(
@@ -138,9 +138,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
         (bool value) {
           // Update loading state from service
           if (mounted) {
-            setState(() {
-              _isGeneratingLesson = value;
-            });
+            loadingState.setGeneratingLesson(value);
           }
         },
       );
@@ -159,9 +157,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isGeneratingLesson = false;
-        });
+        loadingState.setGeneratingLesson(false);
       }
       // Refresh the generations count after attempting to create a lesson
       _loadGenerationsRemaining();
@@ -269,202 +265,218 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     final isSmallScreen = screenSize.height < 700;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: const AppBarWithDrawer(
-        title: 'Custom Lessons',
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Sticky header
-                Container(
-                  width: double.infinity,
-                  color: colorScheme.surface,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    isSmallScreen ? 16 : 20,
-                    16,
-                    20,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.auto_awesome_rounded,
-                          color: colorScheme.primary,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Create personalized lessons with your own topics and words',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    return Consumer<LoadingStateService>(
+      builder: (context, loadingState, child) {
+        final isGeneratingLesson = loadingState.isGeneratingLesson;
 
-                // Scrollable content
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadCustomLessons,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Lessons section
-                          if (_isLoadingLessons)
-                            const Center(child: CircularProgressIndicator())
-                          else if (_customLessons.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: EmptyStateView(
-                                icon: Icons.auto_awesome_outlined,
-                                message: 'No custom lessons yet.\nTap the generate button to create your first lesson!',
-                                isSmallScreen: isSmallScreen,
-                              ),
-                            )
-                          else ...[
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Your Lessons (${_customLessons.length})',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
+        return Scaffold(
+          appBar: const AppBarWithDrawer(
+            title: 'Custom Lessons',
+          ),
+          body: Stack(
+            children: [
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                      children: [
+                        // Sticky header
+                        Container(
+                          width: double.infinity,
+                          color: colorScheme.surface,
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            isSmallScreen ? 16 : 20,
+                            16,
+                            20,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: colorScheme.primary,
+                                  size: 24,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            ...(_showAllLessons
-                                ? _customLessons.map((lesson) => LessonCard(
-                                      audioFile: lesson,
-                                      onReload: _loadCustomLessons,
-                                      isSmallScreen: isSmallScreen,
-                                    ))
-                                : _customLessons.take(10).map((lesson) => LessonCard(
-                                      audioFile: lesson,
-                                      onReload: _loadCustomLessons,
-                                      isSmallScreen: isSmallScreen,
-                                    ))),
-                            if (_customLessons.length > 10)
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 12, bottom: 16),
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      setState(() {
-                                        _showAllLessons = !_showAllLessons;
-                                      });
-                                    },
-                                    icon: Icon(
-                                      _showAllLessons ? Icons.expand_less : Icons.expand_more,
-                                      color: colorScheme.primary,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      _showAllLessons ? 'Show Less' : 'View All ${_customLessons.length} Lessons',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Create personalized lessons with your own topics and words',
+                                      style: TextStyle(
                                         fontSize: 14,
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      side: BorderSide(
-                                        color: colorScheme.primary,
-                                        width: 1.5,
-                                      ),
-                                      backgroundColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
+                        ),
 
-                          const SizedBox(height: 100), // Space for floating action button
-                        ],
-                      ),
+                        // Scrollable content
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _loadCustomLessons,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Lessons section
+                                  if (_isLoadingLessons)
+                                    const Center(child: CircularProgressIndicator())
+                                  else if (_customLessons.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: EmptyStateView(
+                                        icon: Icons.auto_awesome_outlined,
+                                        message: 'No custom lessons yet.\nTap the generate button to create your first lesson!',
+                                        isSmallScreen: isSmallScreen,
+                                      ),
+                                    )
+                                  else ...[
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'Your Lessons (${_customLessons.length})',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ...(_showAllLessons
+                                        ? _customLessons.map((lesson) => LessonCard(
+                                              audioFile: lesson,
+                                              onReload: _loadCustomLessons,
+                                              isSmallScreen: isSmallScreen,
+                                            ))
+                                        : _customLessons.take(10).map((lesson) => LessonCard(
+                                              audioFile: lesson,
+                                              onReload: _loadCustomLessons,
+                                              isSmallScreen: isSmallScreen,
+                                            ))),
+                                    if (_customLessons.length > 10)
+                                      Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(top: 12, bottom: 16),
+                                          child: OutlinedButton.icon(
+                                            onPressed: () {
+                                              setState(() {
+                                                _showAllLessons = !_showAllLessons;
+                                              });
+                                            },
+                                            icon: Icon(
+                                              _showAllLessons ? Icons.expand_less : Icons.expand_more,
+                                              color: colorScheme.primary,
+                                              size: 18,
+                                            ),
+                                            label: Text(
+                                              _showAllLessons ? 'Show Less' : 'View All ${_customLessons.length} Lessons',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                              side: BorderSide(
+                                                color: colorScheme.primary,
+                                                width: 1.5,
+                                              ),
+                                              backgroundColor: Colors.transparent,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+
+                                  const SizedBox(height: 100), // Space for floating action button
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+
+              // Loading overlay to block interactions
+              if (isGeneratingLesson)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
                 ),
-              ],
-            ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20, right: 4),
-        child: FloatingActionButton.extended(
-          onPressed: _isGeneratingLesson ? null : () => _showCustomLessonModal(context),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 8,
-          icon: _isGeneratingLesson
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Icon(Icons.auto_awesome_rounded, size: 22),
-          label: _isGeneratingLesson
-              ? const Text(
-                  'Generating...',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                )
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Generate Lesson',
+            ],
+          ),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 20, right: 4),
+            child: FloatingActionButton.extended(
+              onPressed: isGeneratingLesson ? null : () => _showCustomLessonModal(context),
+              backgroundColor: colorScheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              icon: isGeneratingLesson
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome_rounded, size: 22),
+              label: isGeneratingLesson
+                  ? const Text(
+                      'Generating...',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: Colors.white,
                       ),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Generate Lesson',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '$_generationsRemaining remaining today',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 10,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '$_generationsRemaining remaining today',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
           ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
     );
   }
 }

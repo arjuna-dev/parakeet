@@ -202,7 +202,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                   _buildMenuItem(
                                     buildContext,
                                     icon: Icons.library_books,
-                                    title: 'Your Words',
+                                    title: 'All Learning Words',
                                     subtitle: 'View all your learned words',
                                     onTap: () {
                                       if (Navigator.canPop(buildContext)) {

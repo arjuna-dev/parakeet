@@ -438,298 +438,311 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final isSmallScreen = screenSize.height < 700;
 
     return ResponsiveScreenWrapper(
-      child: Scaffold(
-        backgroundColor: colorScheme.surface,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            widget.category['name'],
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 20,
+      child: AbsorbPointer(
+        absorbing: _isGeneratingLesson,
+        child: Scaffold(
+          backgroundColor: colorScheme.surface,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              widget.category['name'],
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
             ),
+            centerTitle: true,
           ),
-          centerTitle: true,
-        ),
-        body: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(
-                  color: colorScheme.primary,
-                ),
-              )
-            : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-
-                    // Hero Section with Category Overview
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                            _getCategoryColor(widget.category['name']).withOpacity(0.05),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+          body: Stack(
+            children: [
+              _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: colorScheme.primary,
                       ),
+                    )
+                  : SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Category Icon
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              LessonConstants.getCategoryIcon(widget.category['name']),
-                              color: _getCategoryColor(widget.category['name']),
-                              size: 48,
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Category Title
-                          Text(
-                            widget.category['name'],
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: colorScheme.onSurface,
-                              height: 1.2,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-
                           const SizedBox(height: 8),
 
-                          // Progress Stats
-                          if (_wordStats != null) ...[
-                            const SizedBox(height: 20),
-                            _buildModernProgressSection(),
-                          ],
-
-                          const SizedBox(height: 20),
-
-                          // View Words Button
-                          OutlinedButton(
-                            onPressed: () => _showWordsModal(context),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _getCategoryColor(widget.category['name']),
-                              side: BorderSide(
-                                color: _getCategoryColor(widget.category['name']),
-                                width: 1.5,
+                          // Hero Section with Category Overview
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                  _getCategoryColor(widget.category['name']).withOpacity(0.05),
+                                ],
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+                                width: 1,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.visibility_rounded,
-                                  size: 18,
-                                  color: _getCategoryColor(widget.category['name']),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
                                 ),
-                                const SizedBox(width: 8),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                // Category Icon
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    LessonConstants.getCategoryIcon(widget.category['name']),
+                                    color: _getCategoryColor(widget.category['name']),
+                                    size: 48,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // Category Title
                                 Text(
-                                  'View All Words (${(widget.category['words'] as List).length})',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Colors.white,
+                                  widget.category['name'],
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w800,
+                                    color: colorScheme.onSurface,
+                                    height: 1.2,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Progress Stats
+                                if (_wordStats != null) ...[
+                                  const SizedBox(height: 20),
+                                  _buildModernProgressSection(),
+                                ],
+
+                                const SizedBox(height: 20),
+
+                                // View Words Button
+                                OutlinedButton(
+                                  onPressed: () => _showWordsModal(context),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _getCategoryColor(widget.category['name']),
+                                    side: BorderSide(
+                                      color: _getCategoryColor(widget.category['name']),
+                                      width: 1.5,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.visibility_rounded,
+                                        size: 18,
+                                        color: _getCategoryColor(widget.category['name']),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'View All Words (${(widget.category['words'] as List).length})',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
+
+                          const SizedBox(height: 32),
+
+                          // Generated Lessons Section
+                          if (!_isLoadingLessons && _categoryLessons.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Section Header
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          Icons.auto_awesome_rounded,
+                                          color: _getCategoryColor(widget.category['name']),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Generated Lessons',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${_categoryLessons.length}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: _getCategoryColor(widget.category['name']),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Lessons List
+                                  ...(_categoryLessons.take(3).map((lesson) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: LessonCard(
+                                          audioFile: lesson,
+                                          onReload: _loadCategoryLessons,
+                                          isSmallScreen: isSmallScreen,
+                                          showCategoryBadge: false,
+                                        ),
+                                      ))),
+
+                                  // Show More Button
+                                  if (_categoryLessons.length > 3)
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 12, bottom: 16),
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => _showAllLessonsModal(context),
+                                          icon: Icon(
+                                            Icons.expand_more,
+                                            color: _getCategoryColor(widget.category['name']),
+                                            size: 18,
+                                          ),
+                                          label: Text(
+                                            'View All ${_categoryLessons.length} Lessons',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            side: BorderSide(
+                                              color: _getCategoryColor(widget.category['name']),
+                                              width: 1.5,
+                                            ),
+                                            backgroundColor: Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                          const SizedBox(height: 120), // Space for floating action button
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 32),
-
-                    // Generated Lessons Section
-                    if (!_isLoadingLessons && _categoryLessons.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Section Header
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.auto_awesome_rounded,
-                                    color: _getCategoryColor(widget.category['name']),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Generated Lessons',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${_categoryLessons.length}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: _getCategoryColor(widget.category['name']),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Lessons List
-                            ...(_categoryLessons.take(3).map((lesson) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: LessonCard(
-                                    audioFile: lesson,
-                                    onReload: _loadCategoryLessons,
-                                    isSmallScreen: isSmallScreen,
-                                    showCategoryBadge: false,
-                                  ),
-                                ))),
-
-                            // Show More Button
-                            if (_categoryLessons.length > 3)
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 12, bottom: 16),
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _showAllLessonsModal(context),
-                                    icon: Icon(
-                                      Icons.expand_more,
-                                      color: _getCategoryColor(widget.category['name']),
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      'View All ${_categoryLessons.length} Lessons',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      side: BorderSide(
-                                        color: _getCategoryColor(widget.category['name']),
-                                        width: 1.5,
-                                      ),
-                                      backgroundColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 120), // Space for floating action button
-                  ],
+              // Loading overlay to block interactions
+              if (_isGeneratingLesson)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
                 ),
-              ),
+            ],
+          ),
 
-        // Generate Button positioned on the right
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 20, right: 4),
-          child: FloatingActionButton.extended(
-            onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
-            backgroundColor: _getCategoryColor(widget.category['name']),
-            foregroundColor: Colors.white,
-            elevation: 8,
-            icon: _isGeneratingLesson
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.auto_awesome_rounded, size: 22),
-            label: _isGeneratingLesson
-                ? const Text(
-                    'Generating...',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Generate Lesson',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Colors.white,
-                        ),
+          // Generate Button positioned on the right
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 20, right: 4),
+            child: FloatingActionButton.extended(
+              onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
+              backgroundColor: _getCategoryColor(widget.category['name']),
+              foregroundColor: Colors.white,
+              elevation: 8,
+              icon: _isGeneratingLesson
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
-                      Text(
-                        '$_generationsRemaining remaining today',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w400,
-                          fontSize: 10,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
+                    )
+                  : const Icon(Icons.auto_awesome_rounded, size: 22),
+              label: _isGeneratingLesson
+                  ? const Text(
+                      'Generating...',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
                       ),
-                    ],
-                  ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Generate Lesson',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '$_generationsRemaining remaining today',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 10,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
@@ -1112,10 +1125,11 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
         return Container(
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -1135,67 +1149,48 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // Target language word
-                Text(
-                  word,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: _getCategoryColor(widget.category['name']),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Arrow or divider
-                Icon(
-                  Icons.arrow_downward_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: 20,
-                ),
-
-                const SizedBox(height: 8),
-
-                // Native language translation
-                Text(
-                  nativeWord,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                // Word and translation on the same row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        word,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 18,
+                    ),
+                    Expanded(
+                      child: Text(
+                        nativeWord,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
-
-                // Close button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getCategoryColor(widget.category['name']),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Got it',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

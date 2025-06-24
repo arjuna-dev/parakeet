@@ -82,6 +82,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   int _updateNumber = 0;
   late bool _generating;
   bool _isCompleted = false;
+  bool _allDialogueGenerated = false;
 
   // Data variables
   late List<dynamic> _dialogue;
@@ -99,6 +100,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     super.initState();
     // Initialize _generating with widget.generating
     _generating = widget.generating;
+
+    // For non-generating mode, all dialogue is already available
+    _allDialogueGenerated = !widget.generating;
 
     // Make a mutable copy of the initial dialogue that we can update over time
     _dialogue = List<dynamic>.from(widget.dialogue);
@@ -342,6 +346,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (_updateNumber >= widget.numberOfTurns) {
       setState(() {
         _generating = false;
+        _allDialogueGenerated = true;
       });
     }
   }
@@ -840,6 +845,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   void _onAllDialogueDisplayed() {
     if (_isDisposing) return;
 
+    setState(() {
+      _allDialogueGenerated = true;
+    });
+
     if (!_audioPlayerService.playlistInitialized) {
       _initializePlaylist();
     }
@@ -892,7 +901,21 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         PopScope(
           canPop: false,
           onPopInvoked: (bool didPop) async {
-            if (didPop) return;
+            if (didPop) {
+              return;
+            }
+
+            // Only allow pop if not generating or all dialogue is generated
+            if (widget.generating && !_allDialogueGenerated) {
+              // Optionally show a message to the user that they can't go back yet
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Please wait for the lesson to finish generating."),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
 
             // Set disposing flag to prevent any async operations from using disposed resources
             _isDisposing = true;
@@ -908,7 +931,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             AudioPlayerScreen.cleanupSharedResources();
 
             // Always go back to previous screen (CategoryDetailScreen or other)
-            navigator.pop('reload');
+            if (navigator.canPop()) {
+              navigator.pop('reload');
+            }
           },
           child: FutureBuilder<int>(
             future: _audioPlayerService.getSavedPosition(),
@@ -917,6 +942,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               return Scaffold(
                 appBar: AppBar(
                   title: AudioInfo(title: widget.title, category: widget.category),
+                  automaticallyImplyLeading: !widget.generating || _allDialogueGenerated,
                 ),
                 body: Container(
                   decoration: const BoxDecoration(
