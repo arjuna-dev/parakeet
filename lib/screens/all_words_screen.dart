@@ -467,7 +467,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'All Learning Words',
+          'Word Bank',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(

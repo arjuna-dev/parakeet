@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/category_detail_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/word_stats_service.dart';
+import 'package:parakeet/services/category_level_service.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -32,6 +35,8 @@ class CategoryList extends StatefulWidget {
 class _CategoryListState extends State<CategoryList> {
   int _visibleCategoriesCount = 4;
   final Map<String, WordStats> _categoryStats = {};
+  final Map<String, CategoryLevel> _categoryLevels = {};
+  final Map<String, int> _actualCompletedCounts = {}; // Track actual completed lessons from database
   final Set<String> _loadingStats = {};
   String _currentTargetLanguage = '';
   List<Map<String, dynamic>> _sortedCategories = [];
@@ -54,6 +59,8 @@ class _CategoryListState extends State<CategoryList> {
     if (widget.targetLanguage != _currentTargetLanguage) {
       _currentTargetLanguage = widget.targetLanguage;
       _categoryStats.clear(); // Clear old stats
+      _categoryLevels.clear(); // Clear old levels
+      _actualCompletedCounts.clear(); // Clear old completion counts
       _loadingStats.clear();
       _sortedCategories = List.from(widget.categories);
       _sortedNativeCategories = List.from(widget.nativeCategories);
@@ -74,7 +81,7 @@ class _CategoryListState extends State<CategoryList> {
   }
 
   Future<void> _loadCategoryStats(String categoryName) async {
-    if (_loadingStats.contains(categoryName) || _categoryStats.containsKey(categoryName)) {
+    if (_loadingStats.contains(categoryName) || (_categoryStats.containsKey(categoryName) && _categoryLevels.containsKey(categoryName))) {
       return;
     }
 
@@ -88,19 +95,73 @@ class _CategoryListState extends State<CategoryList> {
       orElse: () => <String, Object>{'words': <Object>[]},
     );
 
-    final stats = await WordStatsService.getCategoryWordStats(
-      categoryName,
-      widget.targetLanguage,
-      category['words'] ?? [],
-    );
+    // Load word stats, level progress, and actual completion count
+    final statsResults = await Future.wait([
+      WordStatsService.getCategoryWordStats(
+        categoryName,
+        widget.targetLanguage,
+        category['words'] ?? [],
+      ),
+      CategoryLevelService.getCategoryLevel(
+        categoryName,
+        widget.targetLanguage,
+      ),
+      _loadActualCompletedCount(categoryName),
+    ]);
+
+    final stats = statsResults[0] as WordStats;
+    final level = statsResults[1] as CategoryLevel;
+    final actualCompletedCount = statsResults[2] as int;
 
     setState(() {
       _categoryStats[categoryName] = stats;
+      _categoryLevels[categoryName] = level;
+      _actualCompletedCounts[categoryName] = actualCompletedCount;
       _loadingStats.remove(categoryName);
     });
 
     // Re-sort categories after loading new stats
     _sortCategoriesByProgress();
+  }
+
+  Future<int> _loadActualCompletedCount(String categoryName) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return 0;
+
+      // Get all lessons for this category
+      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+
+      final categoryLessons = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        String lessonCategory;
+        if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
+          lessonCategory = doc.get('category');
+        } else {
+          lessonCategory = 'Custom Lesson';
+        }
+        return lessonCategory == categoryName;
+      }).toList();
+
+      int completedCount = 0;
+      // Check completion status for each lesson
+      for (final lesson in categoryLessons) {
+        final parentDocId = lesson.reference.parent.parent!.id;
+        try {
+          final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+          if (doc.exists && doc.data()?['completed'] == true) {
+            completedCount++;
+          }
+        } catch (e) {
+          print('Error checking completion for lesson $parentDocId: $e');
+        }
+      }
+
+      return completedCount;
+    } catch (e) {
+      print('Error loading actual completed count for $categoryName: $e');
+      return 0;
+    }
   }
 
   void _sortCategoriesByProgress() {
@@ -115,8 +176,9 @@ class _CategoryListState extends State<CategoryList> {
       final categoryName = category['name'];
       final stats = _categoryStats[categoryName];
 
-      // Categories with progress (learning or mastered words) go first
-      if (stats != null && (stats.learning > 0 || stats.mastered > 0)) {
+      // Categories with progress (any lessons completed) go first
+      final actualCompletedCount = _actualCompletedCounts[categoryName] ?? 0;
+      if (actualCompletedCount > 0) {
         categoriesWithStats.add(category);
         nativeCategoriesWithStats.add(nativeCategory);
       } else {
@@ -274,6 +336,8 @@ class _CategoryListState extends State<CategoryList> {
                       onTap: isLocked ? () => _handleStoreNavigation() : () => _handleCategorySelection(context, category, nativeCategory),
                       isSmallScreen: widget.isSmallScreen,
                       stats: stats,
+                      level: _categoryLevels[categoryName],
+                      actualCompletedCount: _actualCompletedCounts[categoryName] ?? 0,
                       isLoading: _loadingStats.contains(categoryName),
                     ),
 
@@ -389,6 +453,8 @@ class CategoryItemWithStats extends StatelessWidget {
   final VoidCallback onTap;
   final bool isSmallScreen;
   final WordStats? stats;
+  final CategoryLevel? level;
+  final int actualCompletedCount;
   final bool isLoading;
 
   const CategoryItemWithStats({
@@ -397,6 +463,8 @@ class CategoryItemWithStats extends StatelessWidget {
     required this.onTap,
     this.isSmallScreen = false,
     this.stats,
+    this.level,
+    this.actualCompletedCount = 0,
     this.isLoading = false,
   }) : super(key: key);
 
@@ -495,7 +563,7 @@ class CategoryItemWithStats extends StatelessWidget {
                                 strokeWidth: 2,
                               ),
                             )
-                          : stats != null
+                          : level != null
                               ? LayoutBuilder(
                                   builder: (context, constraints) {
                                     // Use available width minus some padding
@@ -505,18 +573,16 @@ class CategoryItemWithStats extends StatelessWidget {
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const SizedBox(height: 6),
+                                        // Level progress (primary)
+                                        _buildLevelInfo(context, level!),
+                                        const SizedBox(height: 12),
                                         // Dynamic width progress bar based on available space
                                         SizedBox(
                                           width: progressBarWidth,
-                                          child: _buildProgressBar(context, stats!),
+                                          child: _buildLevelProgressBar(context, level!, category['name']),
                                         ),
                                         const SizedBox(height: 8),
-                                        // Constrain legend to prevent overflow
-                                        SizedBox(
-                                          width: availableWidth,
-                                          child: _buildLegend(context, stats!),
-                                        ),
+                                        // Note: Word stats legend removed for cleaner UI
                                       ],
                                     );
                                   },
@@ -530,6 +596,111 @@ class CategoryItemWithStats extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLevelInfo(BuildContext context, CategoryLevel level) {
+    final levelColor = CategoryLevelService.getLevelColor(level.currentLevel);
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: levelColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            CategoryLevelService.getLevelIcon(level.currentLevel),
+            color: levelColor,
+            size: 14,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Level ${level.currentLevel}: ${level.levelName}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.9),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLevelProgressBar(BuildContext context, CategoryLevel level, String categoryName) {
+    final levelColor = CategoryLevelService.getLevelColor(level.currentLevel);
+    const barHeight = 12.0;
+
+    // Calculate current level completion (lessons completed for this specific level)
+    final previousLevelsCumulative = CategoryLevelService.getCumulativeRequiredLessons(level.currentLevel - 1);
+    final currentLevelCompleted = actualCompletedCount - previousLevelsCumulative;
+    final progressPercentage = level.requiredLessons > 0 ? (currentLevelCompleted / level.requiredLessons) * 100 : 0;
+
+    return SizedBox(
+      height: barHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: (progressPercentage / 100).clamp(0.0, 1.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: levelColor.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactWordStats(BuildContext context, WordStats stats) {
+    // Get total words from category
+    final totalAvailableWords = category['words']?.length ?? 0;
+
+    return Row(
+      children: [
+        _buildCompactStatItem(stats.mastered, totalAvailableWords, 'M', Colors.green.shade600.withOpacity(0.8)),
+        const SizedBox(width: 8),
+        _buildCompactStatItem(stats.learning, totalAvailableWords, 'L', Colors.amber.shade600.withOpacity(0.8)),
+      ],
+    );
+  }
+
+  Widget _buildCompactStatItem(int count, int total, String label, Color color) {
+    // Calculate percentage - avoid division by zero
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          '$percentage%$label',
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withOpacity(0.8),
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ],
     );
   }
 

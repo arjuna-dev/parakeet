@@ -5,14 +5,10 @@ import 'dart:math';
 import 'package:parakeet/utils/mark_as_mastered_modal.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
-import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/services/word_stats_service.dart';
-import 'package:parakeet/screens/audio_player_screen.dart';
-import 'package:parakeet/widgets/home_screen/lesson_card.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/services/category_level_service.dart';
+import 'package:parakeet/screens/level_detail_screen.dart';
 
 // Global variable to track active toast
 OverlayEntry? _activeToastEntry;
@@ -39,15 +35,10 @@ class CategoryDetailScreen extends StatefulWidget {
 
 class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   final List<Map<String, dynamic>> _learningWords = [];
-  final List<DocumentSnapshot> _categoryLessons = [];
   bool _isLoading = true;
-  bool _isLoadingLessons = true;
-  final bool _wordsExpanded = false;
   WordStats? _wordStats;
+  Map<int, CategoryLevel> _levelProgress = {};
   String _currentTargetLanguage = '';
-  bool _isGeneratingLesson = false;
-  int _generationsRemaining = 0;
-  bool _isPremium = false;
 
   @override
   void initState() {
@@ -55,8 +46,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     _currentTargetLanguage = widget.targetLanguage;
     _loadLearningWords();
     _loadWordStats();
-    _loadCategoryLessons();
-    _loadGenerationsRemaining();
+    _loadLevelProgress();
   }
 
   @override
@@ -67,22 +57,23 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     if (widget.targetLanguage != _currentTargetLanguage) {
       _currentTargetLanguage = widget.targetLanguage;
       _learningWords.clear();
-      _categoryLessons.clear();
       _wordStats = null;
+      _levelProgress.clear();
       _loadLearningWords();
       _loadWordStats();
-      _loadCategoryLessons();
-      _loadGenerationsRemaining();
+      _loadLevelProgress();
     }
   }
 
-  Future<void> _loadCategoryLessons() async {
-    setState(() => _isLoadingLessons = true);
+  Future<void> _loadLevelProgress() async {
     try {
+      final levels = <int, CategoryLevel>{};
+
+      // Load actual completed lessons count for each level (same as level_detail_screen)
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
 
-      final categoryLessons = snapshot.docs.where((doc) {
+      final allCategoryLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
         String lessonCategory;
         if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
@@ -93,19 +84,49 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         return lessonCategory == widget.category['name'];
       }).toList();
 
-      // Sort by timestamp (newest first)
-      categoryLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
+      // Count completed lessons by level
+      final Map<int, int> completedLessonsByLevel = {1: 0, 2: 0, 3: 0};
+
+      for (final doc in allCategoryLessons) {
+        final parentDocId = doc.reference.parent.parent!.id;
+        try {
+          final lessonDoc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+          if (lessonDoc.exists) {
+            final lessonData = lessonDoc.data();
+            final isCompleted = lessonData?['completed'] == true;
+            final lessonLevel = lessonData?['categoryLevel'] ?? 1;
+
+            if (isCompleted && lessonLevel >= 1 && lessonLevel <= 3) {
+              completedLessonsByLevel[lessonLevel] = (completedLessonsByLevel[lessonLevel] ?? 0) + 1;
+            }
+          }
+        } catch (e) {
+          print('Error checking completion for lesson $parentDocId: $e');
+        }
+      }
+
+      // Create level progress objects
+      for (int level = 1; level <= 3; level++) {
+        final requiredLessons = CategoryLevelService.levelRequirements[level] ?? 3;
+        final completedLessons = completedLessonsByLevel[level] ?? 0;
+        final isLevelCompleted = completedLessons >= requiredLessons;
+
+        levels[level] = CategoryLevel(
+          currentLevel: level,
+          completedLessons: completedLessons,
+          requiredLessons: requiredLessons,
+          isLevelCompleted: isLevelCompleted,
+          canAccessNextLevel: level < 3 && isLevelCompleted,
+        );
+      }
 
       if (mounted) {
         setState(() {
-          _categoryLessons.clear();
-          _categoryLessons.addAll(categoryLessons);
-          _isLoadingLessons = false;
+          _levelProgress = levels;
         });
       }
     } catch (e) {
-      print('Error loading category lessons: $e');
-      setState(() => _isLoadingLessons = false);
+      print('Error loading level progress: $e');
     }
   }
 
@@ -143,30 +164,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       }
     } catch (e) {
       print('Error loading word stats: $e');
-    }
-  }
-
-  Future<void> _loadGenerationsRemaining() async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null) {
-        // Check premium status
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-        final isPremium = userDoc.data()?['premium'] ?? false;
-
-        // Get API calls used today
-        final apiCallsUsed = await LessonService.countAPIcallsByUser();
-
-        if (mounted) {
-          setState(() {
-            _isPremium = isPremium;
-            int limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-            _generationsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error loading generations remaining: $e');
     }
   }
 
@@ -319,486 +316,576 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     );
   }
 
-  Future<void> _handleCreateNewLesson() async {
-    setState(() {
-      _isGeneratingLesson = true;
-    });
-
-    final canProceed = await LessonService.checkPremiumAndAPILimits(context);
-    if (!canProceed) {
-      setState(() {
-        _isGeneratingLesson = false;
-      });
-      return;
-    }
-
-    try {
-      // Step 1: Select words and generate lesson topic
-      final selectedWords = await LessonService.selectWordsFromCategory(widget.category['name'], widget.category['words'], widget.targetLanguage);
-
-      final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/generate_lesson_topic'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: jsonEncode(<String, dynamic>{
-          "category": widget.category['name'],
-          "selectedWords": selectedWords,
-          "target_language": widget.targetLanguage,
-          "native_language": widget.nativeLanguage,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to generate lesson topic');
-      }
-
-      final result = jsonDecode(response.body) as Map<String, dynamic>;
-      final String title = result['title'] as String;
-      final String topic = result['topic'] as String;
-
-      // Step 2: Start the lesson generation and navigate immediately
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
-      final String documentId = docRef.id;
-      final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
-      final TTSProvider ttsProvider = widget.targetLanguage == 'Azerbaijani' ? TTSProvider.openAI : TTSProvider.googleTTS;
-
-      // Create an empty script document ID
-      DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
-
-      // Start the API call (don't wait for it)
-      http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: jsonEncode(<String, dynamic>{
-          "requested_scenario": topic,
-          "category": widget.category['name'],
-          "keywords": selectedWords,
-          "native_language": widget.nativeLanguage,
-          "target_language": widget.targetLanguage,
-          "length": '4',
-          "user_ID": userId,
-          "language_level": widget.languageLevel,
-          "document_id": documentId,
-          "tts_provider": ttsProvider.value.toString(),
-        }),
-      );
-
-      // Navigate immediately to AudioPlayerScreen - let it handle the loading state
-      final navigationResult = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AudioPlayerScreen(
-            category: widget.category['name'],
-            dialogue: const [], // Start with empty dialogue, AudioPlayerScreen will load it
-            title: title,
-            documentID: documentId,
-            userID: userId,
-            scriptDocumentId: scriptDocRef.id,
-            generating: true,
-            targetLanguage: widget.targetLanguage,
-            nativeLanguage: widget.nativeLanguage,
-            languageLevel: widget.languageLevel,
-            wordsToRepeat: selectedWords,
-            numberOfTurns: 4,
-          ),
-        ),
-      );
-
-      // Refresh lessons when returning from AudioPlayerScreen
-      if (navigationResult == 'reload') {
-        _loadCategoryLessons();
-      }
-    } catch (e) {
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    } finally {
-      setState(() {
-        _isGeneratingLesson = false;
-      });
-      // Refresh the generations count after attempting to create a lesson
-      _loadGenerationsRemaining();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.height < 700;
 
     return ResponsiveScreenWrapper(
-      child: AbsorbPointer(
-        absorbing: _isGeneratingLesson,
-        child: Scaffold(
-          backgroundColor: colorScheme.surface,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: Text(
-              widget.category['name'],
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-              ),
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.category['name'],
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
             ),
-            centerTitle: true,
           ),
-          body: Stack(
-            children: [
-              _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: colorScheme.primary,
+          centerTitle: true,
+        ),
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: colorScheme.primary,
+                ),
+              )
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // Hero Section with Category Overview
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                            _getCategoryColor(widget.category['name']).withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    )
-                  : SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 8),
-
-                          // Hero Section with Category Overview
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 20),
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                  _getCategoryColor(widget.category['name']).withOpacity(0.05),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
+                          // Category Icon and Title in a row
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
                                   color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                // Category Icon
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    LessonConstants.getCategoryIcon(widget.category['name']),
-                                    color: _getCategoryColor(widget.category['name']),
-                                    size: 48,
-                                  ),
+                                child: Icon(
+                                  LessonConstants.getCategoryIcon(widget.category['name']),
+                                  color: _getCategoryColor(widget.category['name']),
+                                  size: 32,
                                 ),
-
-                                const SizedBox(height: 16),
-
-                                // Category Title
-                                Text(
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
                                   widget.category['name'],
                                   style: TextStyle(
-                                    fontSize: 24,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w800,
                                     color: colorScheme.onSurface,
                                     height: 1.2,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
-
-                                const SizedBox(height: 8),
-
-                                // Progress Stats
-                                if (_wordStats != null) ...[
-                                  const SizedBox(height: 20),
-                                  _buildModernProgressSection(),
-                                ],
-
-                                const SizedBox(height: 20),
-
-                                // View Words Button
-                                OutlinedButton(
-                                  onPressed: () => _showWordsModal(context),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: _getCategoryColor(widget.category['name']),
-                                    side: BorderSide(
-                                      color: _getCategoryColor(widget.category['name']),
-                                      width: 1.5,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.visibility_rounded,
-                                        size: 18,
-                                        color: _getCategoryColor(widget.category['name']),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'View All Words (${(widget.category['words'] as List).length})',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
 
-                          const SizedBox(height: 32),
-
-                          // Generated Lessons Section
-                          if (!_isLoadingLessons && _categoryLessons.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Section Header
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          Icons.auto_awesome_rounded,
-                                          color: _getCategoryColor(widget.category['name']),
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Generated Lessons',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w700,
-                                          color: colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '${_categoryLessons.length}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: _getCategoryColor(widget.category['name']),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Lessons List
-                                  ...(_categoryLessons.take(3).map((lesson) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: LessonCard(
-                                          audioFile: lesson,
-                                          onReload: _loadCategoryLessons,
-                                          isSmallScreen: isSmallScreen,
-                                          showCategoryBadge: false,
-                                        ),
-                                      ))),
-
-                                  // Show More Button
-                                  if (_categoryLessons.length > 3)
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 12, bottom: 16),
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => _showAllLessonsModal(context),
-                                          icon: Icon(
-                                            Icons.expand_more,
-                                            color: _getCategoryColor(widget.category['name']),
-                                            size: 18,
-                                          ),
-                                          label: Text(
-                                            'View All ${_categoryLessons.length} Lessons',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                            side: BorderSide(
-                                              color: _getCategoryColor(widget.category['name']),
-                                              width: 1.5,
-                                            ),
-                                            backgroundColor: Colors.transparent,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-
-                          const SizedBox(height: 120), // Space for floating action button
+                          // Word Stats (smaller, below level progress)
+                          if (_wordStats != null) ...[
+                            const SizedBox(height: 16),
+                            _buildWordStatsSection(),
+                            const SizedBox(height: 12),
+                            _buildViewWordsButton(),
+                          ],
                         ],
                       ),
                     ),
 
-              // Loading overlay to block interactions
-              if (_isGeneratingLesson)
-                Container(
-                  color: Colors.black.withOpacity(0.3),
-                ),
-            ],
-          ),
+                    const SizedBox(height: 32),
 
-          // Generate Button positioned on the right
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: 20, right: 4),
-            child: FloatingActionButton.extended(
-              onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
-              backgroundColor: _getCategoryColor(widget.category['name']),
-              foregroundColor: Colors.white,
-              elevation: 8,
-              icon: _isGeneratingLesson
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.auto_awesome_rounded, size: 22),
-              label: _isGeneratingLesson
-                  ? const Text(
-                      'Generating...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Generate Lesson',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: Colors.white,
+                    // Levels Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section Header
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.school_rounded,
+                                  color: _getCategoryColor(widget.category['name']),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Learning Levels',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Text(
-                          '$_generationsRemaining remaining today',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w400,
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
+
+                          const SizedBox(height: 16),
+
+                          // Level Cards
+                          ...List.generate(3, (index) {
+                            final levelNumber = index + 1;
+                            final level = _levelProgress[levelNumber];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildLevelCard(levelNumber, level),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        ),
       ),
     );
   }
 
-  Widget _buildModernProgressSection() {
+  Widget _buildLevelCard(int levelNumber, CategoryLevel? level) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final levelColor = CategoryLevelService.getLevelColor(levelNumber);
+    final levelName = levelNumber == 1
+        ? 'Beginner'
+        : levelNumber == 2
+            ? 'Intermediate'
+            : 'Advanced';
+    final requiredLessons = CategoryLevelService.levelRequirements[levelNumber] ?? 3;
+    final completedLessons = level?.completedLessons ?? 0;
+    final progressPercentage = requiredLessons > 0 ? (completedLessons / requiredLessons * 100).clamp(0, 100) : 0;
+
+    // Check if level is unlocked
+    final isLocked = _isLevelLocked(levelNumber);
+    final lockedColor = colorScheme.onSurfaceVariant.withOpacity(0.3);
+
+    return InkWell(
+      onTap: isLocked
+          ? () => _showLockedLevelDialog(levelNumber)
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LevelDetailScreen(
+                    category: widget.category,
+                    nativeCategory: widget.nativeCategory,
+                    nativeLanguage: widget.nativeLanguage,
+                    targetLanguage: widget.targetLanguage,
+                    languageLevel: widget.languageLevel,
+                    levelNumber: levelNumber,
+                  ),
+                ),
+              ).then((_) {
+                // Refresh level progress when returning
+                _loadLevelProgress();
+              });
+            },
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isLocked
+                    ? [
+                        lockedColor.withOpacity(0.1),
+                        lockedColor.withOpacity(0.05),
+                      ]
+                    : [
+                        levelColor.withOpacity(0.1),
+                        levelColor.withOpacity(0.05),
+                      ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isLocked ? lockedColor : levelColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              children: [
+                // Level Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isLocked ? lockedColor.withOpacity(0.15) : levelColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isLocked ? Icons.lock_rounded : CategoryLevelService.getLevelIcon(levelNumber),
+                        color: isLocked ? lockedColor : levelColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Level $levelNumber: $levelName',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isLocked ? lockedColor : colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isLocked ? 'Complete Level ${levelNumber - 1} to unlock' : '$completedLessons/$requiredLessons lessons completed',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isLocked ? lockedColor : colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      isLocked ? Icons.lock_rounded : Icons.arrow_forward_ios_rounded,
+                      color: isLocked ? lockedColor : levelColor,
+                      size: 16,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Progress Bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Progress',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isLocked ? lockedColor : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          isLocked ? 'Locked' : '${progressPercentage.round()}%',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isLocked ? lockedColor : levelColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: isLocked ? 0 : progressPercentage / 100,
+                        minHeight: 8,
+                        backgroundColor: isLocked ? lockedColor.withOpacity(0.2) : levelColor.withOpacity(0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(isLocked ? lockedColor : levelColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Lock overlay
+          if (isLocked)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lock_rounded,
+                        size: 48,
+                        color: lockedColor,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Locked',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: lockedColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool _isLevelLocked(int levelNumber) {
+    if (levelNumber == 1) return false; // Level 1 is always unlocked
+
+    // Check if previous level is completed
+    final previousLevel = _levelProgress[levelNumber - 1];
+    if (previousLevel == null) return true;
+
+    return !previousLevel.isLevelCompleted;
+  }
+
+  int _getNextAvailableLevel(int fromLevel) {
+    // Find the first level that's not completed, starting from level 1
+    for (int level = 1; level < fromLevel; level++) {
+      final levelProgress = _levelProgress[level];
+      if (levelProgress == null || !levelProgress.isLevelCompleted) {
+        return level;
+      }
+    }
+    return fromLevel - 1; // Fallback to previous level
+  }
+
+  void _showLockedLevelDialog(int levelNumber) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final nextAvailableLevel = _getNextAvailableLevel(levelNumber);
+    final nextAvailableLevelName = nextAvailableLevel == 1
+        ? 'Beginner'
+        : nextAvailableLevel == 2
+            ? 'Intermediate'
+            : 'Advanced';
+    final nextLevel = _levelProgress[nextAvailableLevel];
+    final requiredLessons = nextLevel?.requiredLessons ?? 3;
+    final completedLessons = nextLevel?.completedLessons ?? 0;
+    final remainingLessons = requiredLessons - completedLessons;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.lock_rounded,
+                color: colorScheme.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Level Locked',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Complete Level $nextAvailableLevel ($nextAvailableLevelName) to unlock this level.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        remainingLessons == 1 ? '1 more lesson needed in Level $nextAvailableLevel' : '$remainingLessons more lessons needed in Level $nextAvailableLevel',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (remainingLessons > 0)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate to the previous level
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LevelDetailScreen(
+                        category: widget.category,
+                        nativeCategory: widget.nativeCategory,
+                        nativeLanguage: widget.nativeLanguage,
+                        targetLanguage: widget.targetLanguage,
+                        languageLevel: widget.languageLevel,
+                        levelNumber: nextAvailableLevel,
+                      ),
+                    ),
+                  ).then((_) {
+                    _loadLevelProgress();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  'Go to Level $nextAvailableLevel',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWordStatsSection() {
     if (_wordStats == null) return const SizedBox.shrink();
 
+    final colorScheme = Theme.of(context).colorScheme;
     final totalWords = (widget.category['words'] as List).length;
-    final masteredPercentage = totalWords > 0 ? (_wordStats!.mastered / totalWords * 100).round() : 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _getCategoryColor(widget.category['name']).withOpacity(0.05),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+          color: colorScheme.outline.withOpacity(0.2),
           width: 1,
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Progress Ring
+          Text(
+            'Vocabulary Progress',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildProgressStat('Mastered', _wordStats!.mastered, Theme.of(context).colorScheme.onSurface),
-              _buildProgressStat('Learning', _wordStats!.learning, Theme.of(context).colorScheme.onSurfaceVariant),
-              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning, Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7)),
+              _buildProgressStat('Mastered', _wordStats!.mastered, Colors.green.shade600),
+              _buildProgressStat('Learning', _wordStats!.learning, Colors.orange.shade600),
+              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning, colorScheme.onSurfaceVariant),
             ],
           ),
-
-          const SizedBox(height: 12),
-
-          // Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: masteredPercentage / 100,
-              minHeight: 8,
-              backgroundColor: _getCategoryColor(widget.category['name']).withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(_getCategoryColor(widget.category['name'])),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            '$masteredPercentage% Complete',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildViewWordsButton() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final categoryColor = _getCategoryColor(widget.category['name']);
+    final totalWords = (widget.category['words'] as List).length;
+
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () => _showWordsModal(context),
+        icon: const Icon(
+          Icons.visibility_rounded,
+          size: 16,
+          color: Colors.white,
+        ),
+        label: Text(
+          'View All Words ($totalWords)',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: categoryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 2,
+        ),
       ),
     );
   }
@@ -823,32 +910,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildModernWordsGrid() {
-    final allWords = (widget.category['words'] as List).toList();
-    final sortedWords = _getSortedWords(allWords);
-    final displayWords = _wordsExpanded ? sortedWords : sortedWords.take(6).toList();
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: displayWords.length,
-      itemBuilder: (context, index) {
-        final wordData = displayWords[index];
-        final word = wordData['word'] as String;
-        final originalIndex = wordData['index'] as int;
-        final nativeWord = (widget.nativeCategory['words'] as List)[originalIndex].toString();
-
-        return _buildModernWordCard(word, nativeWord);
-      },
     );
   }
 
@@ -962,164 +1023,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     );
   }
 
-  Widget _buildModernWordCard(String word, String nativeWord) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final matching = _learningWords.firstWhere(
-      (element) => element['word'] == word.toLowerCase(),
-      orElse: () => {},
-    );
-
-    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-    final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
-
-    final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-    final isLearning = !isMastered && reps > 0;
-
-    Color statusColor;
-    String statusText;
-    IconData statusIcon;
-
-    if (isMastered) {
-      statusColor = Colors.green;
-      statusText = 'Mastered';
-      statusIcon = Icons.star_rounded;
-    } else if (isLearning) {
-      statusColor = Colors.orange;
-      statusText = 'Learning';
-      statusIcon = Icons.school_rounded;
-    } else {
-      statusColor = colorScheme.onSurfaceVariant;
-      statusText = 'New';
-      statusIcon = Icons.circle_outlined;
-    }
-
-    return InkWell(
-      onTap: () => showCenteredToast(context, nativeWord),
-      onLongPress: () => showMarkAsMasteredModal(
-        context: context,
-        word: word,
-        categoryName: widget.category['name'],
-        targetLanguage: widget.targetLanguage,
-        learningWords: _learningWords,
-        updateLearningWords: (updated) => setState(() => _learningWords
-          ..clear()
-          ..addAll(updated)),
-        loadWordStats: _loadWordStats,
-      ),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: statusColor.withOpacity(0.3),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.shadow.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Word and Status
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    word,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Icon(
-                  statusIcon,
-                  size: 16,
-                  color: statusColor,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Status and Progress
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-                if (!isMastered)
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: scheduledDays / 100,
-                        minHeight: 4,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Map<String, dynamic>> _getSortedWords(List allWords) {
-    return allWords.map((word) {
-      final matching = _learningWords.firstWhere(
-        (element) => element['word'] == word.toString().toLowerCase(),
-        orElse: () => {},
-      );
-      final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
-      final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
-
-      final isMastered = scheduledDays >= 100 || scheduledDays == -1;
-      final isLearning = !isMastered && reps > 0;
-
-      int priority;
-      if (isLearning) {
-        priority = 0; // Show learning words first
-      } else if (!isMastered) {
-        priority = 1; // Then new words
-      } else {
-        priority = 2; // Mastered words last
-      }
-
-      return {
-        'word': word.toString(),
-        'priority': priority,
-        'score': scheduledDays,
-        'index': allWords.indexOf(word),
-      };
-    }).toList()
-      ..sort((a, b) {
-        final cmp = (a['priority'] as int).compareTo(b['priority'] as int);
-        if (cmp != 0) return cmp;
-        return (b['score'] as double).compareTo(a['score'] as double);
-      });
-  }
-
   void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
     showModalBottomSheet(
       context: context,
@@ -1197,116 +1100,6 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         );
       },
     );
-  }
-
-  void _showAllLessonsModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Modal header
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-
-                  // Title
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome_rounded,
-                          color: _getCategoryColor(widget.category['name']),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '${widget.category['name']} Lessons',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Lessons List
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      itemCount: _categoryLessons.length,
-                      itemBuilder: (context, index) {
-                        return LessonCard(
-                          audioFile: _categoryLessons[index],
-                          onReload: _loadCategoryLessons,
-                          isSmallScreen: MediaQuery.of(context).size.height < 700,
-                          showCategoryBadge: false,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
-    } else {
-      return 'Just now';
-    }
   }
 
   // Helper method to generate colors based on category name

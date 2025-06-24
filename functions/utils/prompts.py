@@ -535,7 +535,7 @@ Expected JSON output:
 """
 '''
 
-def prompt_generate_lesson_topic(category, selected_words, target_language, native_language):
+def prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number):
   # Generate a boolean variable that is 50% chances false
   funky_topic = random.choice([True, False])
   extra_instructions = ""
@@ -543,9 +543,29 @@ def prompt_generate_lesson_topic(category, selected_words, target_language, nati
   if funky_topic:
     extra_instructions = "Because we will be generating many such lessons try to think outside the box and come up with a topic that is not too common, but still relevant to the category."
 
+  # Define level-specific instructions
+  level_mapping = {
+    1: "beginner",
+    2: "intermediate",
+    3: "advanced"
+  }
+
+  level_name = level_mapping.get(level_number, "beginner")
+
+  level_instructions = {
+    1: "The topic should be simple, practical, and focus on everyday situations that beginners would encounter.",
+    2: "The topic should be moderately complex, covering more nuanced situations and concepts.",
+    3: "The topic should be sophisticated, covering abstract concepts, professional situations, or specialized topics."
+  }
+
+  level_instruction = level_instructions.get(level_number, level_instructions[1])
+
   return f'''Generate a language lesson topic that fits the category '{category}' that can be taught with the words in {selected_words}.
         {extra_instructions}
-        The topic should be fun, engaging and practical for language learning.
+
+        IMPORTANT: This lesson is for {level_name} level learners. {level_instruction}
+
+        The topic should be fun, engaging and practical for language learning at the {level_name} level.
         Return the response in this exact JSON format:
         {{
             "title": "The lesson title in {native_language}",

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/utils/category_icons.dart';
+import 'package:parakeet/services/category_level_service.dart';
 
 class LessonCard extends StatefulWidget {
   final DocumentSnapshot audioFile;
@@ -27,6 +28,7 @@ class _LessonCardState extends State<LessonCard> {
   bool _isDeleting = false;
   bool _isCompleted = false;
   bool _isLoadingCompletion = true;
+  int? _lessonLevel;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _LessonCardState extends State<LessonCard> {
         if (mounted) {
           setState(() {
             _isCompleted = data['completed'] ?? false;
+            _lessonLevel = data['categoryLevel'];
             _isLoadingCompletion = false;
           });
         }
@@ -51,6 +54,7 @@ class _LessonCardState extends State<LessonCard> {
         if (mounted) {
           setState(() {
             _isCompleted = false;
+            _lessonLevel = null;
             _isLoadingCompletion = false;
           });
         }
@@ -393,46 +397,24 @@ class _LessonCardState extends State<LessonCard> {
             ),
             child: Stack(
               children: [
-                // Top right icons row
+                // Top right icons row (only menu button)
                 Positioned(
                   top: 16,
                   right: 16,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Completion icon
-                      if (!_isLoadingCompletion && _isCompleted)
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: Colors.green,
-                          ),
-                        ),
-
-                      // Three-dot menu button
-                      GestureDetector(
-                        onTap: _showOptionsMenu,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.more_vert_rounded,
-                            size: 16,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          ),
-                        ),
+                  child: GestureDetector(
+                    onTap: _showOptionsMenu,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                      child: Icon(
+                        Icons.more_vert_rounded,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
                   ),
                 ),
 
@@ -493,6 +475,40 @@ class _LessonCardState extends State<LessonCard> {
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            // Level badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1).withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    CategoryLevelService.getLevelIcon(_lessonLevel ?? 1),
+                                    size: 12,
+                                    color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Level ${_lessonLevel ?? 1}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1),
                                     ),
                                   ),
                                 ],
@@ -628,6 +644,36 @@ class _LessonCardState extends State<LessonCard> {
                           ),
                         ],
                       ),
+
+                      // Completion status below the timestamp/duration row
+                      if (!_isLoadingCompletion && _isCompleted) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_circle,
+                                size: 12,
+                                color: Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Completed',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.green,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
