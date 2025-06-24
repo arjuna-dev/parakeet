@@ -49,33 +49,41 @@ class _CreateLessonState extends State<CreateLesson> {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
         final isPremium = userDoc.data()?['premium'] ?? false;
 
-        setState(() {
-          _isPremiumUser = isPremium;
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isPremiumUser = isPremium;
+            _isLoading = false;
+          });
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            _isPremiumUser = false;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking premium status: $e');
+      if (mounted) {
         setState(() {
           _isPremiumUser = false;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('Error checking premium status: $e');
-      setState(() {
-        _isPremiumUser = false;
-        _isLoading = false;
-      });
     }
   }
 
   void _loadUserPreferences() async {
     try {
       final settings = await UserService.getUserLanguageSettings();
-      setState(() {
-        nativeLanguage = settings['nativeLanguage']!;
-        targetLanguage = settings['targetLanguage']!;
-        languageLevel = settings['languageLevel']!;
-      });
+      if (mounted) {
+        setState(() {
+          nativeLanguage = settings['nativeLanguage']!;
+          targetLanguage = settings['targetLanguage']!;
+          languageLevel = settings['languageLevel']!;
+        });
+      }
     } catch (e) {
       print('Error loading user preferences: $e');
     }
