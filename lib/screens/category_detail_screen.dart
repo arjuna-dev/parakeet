@@ -67,27 +67,30 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
   Future<void> _loadLevelProgress() async {
     try {
-      final levels = <int, CategoryLevel>{};
-
-      // Load actual completed lessons count for each level (same as level_detail_screen)
       final userId = FirebaseAuth.instance.currentUser!.uid;
       final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
 
-      final allCategoryLessons = snapshot.docs.where((doc) {
+      final categoryLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
+
+        // Filter by category
         String lessonCategory;
         if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
           lessonCategory = doc.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
         }
-        return lessonCategory == widget.category['name'];
+
+        // Filter by user's current target language
+        final lessonTargetLanguage = data?['target_language']?.toString();
+
+        return lessonCategory == widget.category['name'] && lessonTargetLanguage == widget.targetLanguage;
       }).toList();
 
       // Count completed lessons by level
       final Map<int, int> completedLessonsByLevel = {1: 0, 2: 0, 3: 0};
 
-      for (final doc in allCategoryLessons) {
+      for (final doc in categoryLessons) {
         final parentDocId = doc.reference.parent.parent!.id;
         try {
           final lessonDoc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
@@ -105,7 +108,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         }
       }
 
-      // Create level progress objects
+      // Build level progress data
+      final Map<int, CategoryLevel> levels = {};
       for (int level = 1; level <= 3; level++) {
         final requiredLessons = CategoryLevelService.levelRequirements[level] ?? 3;
         final completedLessons = completedLessonsByLevel[level] ?? 0;

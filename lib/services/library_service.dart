@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/home_screen_model.dart';
+import 'package:parakeet/services/user_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +12,11 @@ class LibraryService {
   // Load documents from Firestore
   static Future<Map<String, dynamic>> loadDocuments(HomeScreenModel model) async {
     final String userId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Get user's current target language preference
+    final userSettings = await UserService.getUserLanguageSettings();
+    final userTargetLanguage = userSettings['targetLanguage']!;
+
     final snapshot = await _firestore.collectionGroup('script-$userId').get();
 
     Map<String, List<DocumentSnapshot>> newCategorizedDocuments = {};
@@ -20,6 +26,13 @@ class LibraryService {
     const String defaultCategory = "Custom Lesson";
 
     for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) continue;
+
+      // Filter by user's current target language
+      final lessonTargetLanguage = data['target_language']?.toString();
+      if (lessonTargetLanguage != userTargetLanguage) continue;
+
       // Get category from document or use default
       // Handle cases where category is null, empty, or doesn't exist
       String category;

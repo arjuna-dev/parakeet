@@ -74,13 +74,19 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
 
       final customLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
+
+        // Filter by category (Custom Lesson)
         String lessonCategory;
         if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
           lessonCategory = doc.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
         }
-        return lessonCategory == 'Custom Lesson';
+
+        // Filter by user's current target language
+        final lessonTargetLanguage = data?['target_language']?.toString();
+
+        return lessonCategory == 'Custom Lesson' && lessonTargetLanguage == targetLanguage;
       }).toList();
 
       // Sort by timestamp (newest first)

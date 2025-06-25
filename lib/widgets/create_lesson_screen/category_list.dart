@@ -123,46 +123,6 @@ class _CategoryListState extends State<CategoryList> {
     _sortCategoriesByProgress();
   }
 
-  Future<int> _loadActualCompletedCount(String categoryName) async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return 0;
-
-      // Get all lessons for this category
-      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
-
-      final categoryLessons = snapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>?;
-        String lessonCategory;
-        if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
-          lessonCategory = doc.get('category');
-        } else {
-          lessonCategory = 'Custom Lesson';
-        }
-        return lessonCategory == categoryName;
-      }).toList();
-
-      int completedCount = 0;
-      // Check completion status for each lesson
-      for (final lesson in categoryLessons) {
-        final parentDocId = lesson.reference.parent.parent!.id;
-        try {
-          final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
-          if (doc.exists && doc.data()?['completed'] == true) {
-            completedCount++;
-          }
-        } catch (e) {
-          print('Error checking completion for lesson $parentDocId: $e');
-        }
-      }
-
-      return completedCount;
-    } catch (e) {
-      print('Error loading actual completed count for $categoryName: $e');
-      return 0;
-    }
-  }
-
   void _sortCategoriesByProgress() {
     final categoriesWithStats = <Map<String, dynamic>>[];
     final categoriesWithoutStats = <Map<String, dynamic>>[];

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:parakeet/services/user_service.dart';
 
 class HomeScreenModel extends ChangeNotifier {
   bool _isDisposed = false;
@@ -29,10 +30,24 @@ class HomeScreenModel extends ChangeNotifier {
 
   Future<void> loadAllLessons() async {
     final userId = user!.uid;
+
+    // Get user's current target language preference
+    final userSettings = await UserService.getUserLanguageSettings();
+    final userTargetLanguage = userSettings['targetLanguage']!;
+
     final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
 
+    // Filter lessons by user's current target language
+    final lessonsForCurrentLanguage = snapshot.docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return false;
+
+      final lessonTargetLanguage = data['target_language']?.toString();
+      return lessonTargetLanguage == userTargetLanguage;
+    }).toList();
+
     // Sort by timestamp (newest first)
-    allLessons = snapshot.docs.toList();
+    allLessons = lessonsForCurrentLanguage;
     allLessons.sort((a, b) => b.get('timestamp').compareTo(a.get('timestamp')));
 
     // Extract unique categories
