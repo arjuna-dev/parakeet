@@ -56,13 +56,19 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
 
       final allCategoryLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
+
+        // Filter by category
         String lessonCategory;
         if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
           lessonCategory = doc.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
         }
-        return lessonCategory == widget.category['name'];
+
+        // Filter by user's current target language
+        final lessonTargetLanguage = data?['target_language']?.toString();
+
+        return lessonCategory == widget.category['name'] && lessonTargetLanguage == widget.targetLanguage;
       }).toList();
 
       // Filter by level asynchronously

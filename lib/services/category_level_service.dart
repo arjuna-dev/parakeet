@@ -273,13 +273,19 @@ class CategoryLevelService {
 
       final categoryLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
+
+        // Filter by category
         String lessonCategory;
         if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
           lessonCategory = doc.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
         }
-        return lessonCategory == categoryName;
+
+        // Filter by target language
+        final lessonTargetLanguage = data?['target_language']?.toString();
+
+        return lessonCategory == categoryName && lessonTargetLanguage == targetLanguage;
       }).toList();
 
       // Count completed lessons by level
