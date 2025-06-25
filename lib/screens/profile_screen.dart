@@ -49,10 +49,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _fetchLessonGenerationCount() async {
-    final apiCallsUsed = await LessonService.countAPIcallsByUser();
+    final currentCredits = await LessonService.getCurrentCredits();
     setState(() {
-      int limit = _premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-      _apiCallsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+      _apiCallsRemaining = currentCredits;
     });
   }
 
@@ -275,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Daily Lesson Generator',
+                            'Lesson Credits',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -287,13 +286,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         children: [
                           Icon(
-                            Icons.schedule,
+                            Icons.credit_card,
                             size: 12,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Resets at midnight',
+                            _premium ? 'Refills monthly with subscription' : 'One-time credits for free users',
                             style: TextStyle(
                               fontSize: 11,
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -318,7 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'lesson${_apiCallsRemaining == 1 ? '' : 's'} remaining',
+                                'credit${_apiCallsRemaining == 1 ? '' : 's'} available',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontWeight: FontWeight.w500,
@@ -342,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           Container(
                             height: 12,
-                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? LessonService.premiumAPILimit : LessonService.freeAPILimit)),
+                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? 65 : 8)),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: _apiCallsRemaining > 0
@@ -367,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 8),
                       Text(
-                        _premium ? 'Premium access: $_apiCallsRemaining of ${LessonService.premiumAPILimit} lessons' : '$_apiCallsRemaining of ${LessonService.freeAPILimit} lessons remaining',
+                        _premium ? 'Premium: $_apiCallsRemaining of 65 credits available' : '$_apiCallsRemaining of 8 credits available',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 11,

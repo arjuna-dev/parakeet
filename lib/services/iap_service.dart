@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:parakeet/services/firebase_service.dart';
+import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 class IAPService {
@@ -25,9 +26,11 @@ class IAPService {
     });
   }
 
-  void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) {
+  void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) async {
     if (purchaseDetails.productID == '1m' || purchaseDetails.productID == '1year') {
       FirebaseService().setAccountType(uid: uid, type: 'premium');
+      // Set credits to 65 immediately upon subscription activation
+      await LessonCreditService.handlePremiumActivation();
     }
   }
 

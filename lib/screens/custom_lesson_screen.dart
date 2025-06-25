@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
 
 class CustomLessonScreen extends StatefulWidget {
@@ -109,18 +110,17 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
+        // Get current credits using the new credit service
+        final currentCredits = await LessonCreditService.getCurrentCredits();
+
         // Check premium status
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
         final isPremium = userDoc.data()?['premium'] ?? false;
 
-        // Get API calls used today
-        final apiCallsUsed = await LessonService.countAPIcallsByUser();
-
         if (mounted) {
           setState(() {
             _isPremium = isPremium;
-            int limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-            _generationsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+            _generationsRemaining = currentCredits;
           });
         }
       }
@@ -456,7 +456,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                     )
                   : _generationsRemaining <= 0 && _isPremium
                       ? const Text(
-                          'Daily Limit Reached',
+                          'No Credits Left',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
@@ -475,7 +475,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                               ),
                             ),
                             Text(
-                              _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
+                              _generationsRemaining <= 0 ? 'No credits remaining' : '$_generationsRemaining credits remaining',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
