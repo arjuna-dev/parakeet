@@ -95,28 +95,27 @@ class _CategoryListState extends State<CategoryList> {
       orElse: () => <String, Object>{'words': <Object>[]},
     );
 
-    // Load word stats, level progress, and actual completion count
+    // Load word stats and level progress (using actual lessons method)
     final statsResults = await Future.wait([
       WordStatsService.getCategoryWordStats(
         categoryName,
         widget.targetLanguage,
         category['words'] ?? [],
       ),
-      CategoryLevelService.getCategoryLevel(
+      CategoryLevelService.getCategoryLevelFromActualLessons(
         categoryName,
         widget.targetLanguage,
       ),
-      _loadActualCompletedCount(categoryName),
     ]);
 
     final stats = statsResults[0] as WordStats;
     final level = statsResults[1] as CategoryLevel;
-    final actualCompletedCount = statsResults[2] as int;
 
     setState(() {
       _categoryStats[categoryName] = stats;
       _categoryLevels[categoryName] = level;
-      _actualCompletedCounts[categoryName] = actualCompletedCount;
+      // Use the completed lessons from the level object for the current level
+      _actualCompletedCounts[categoryName] = level.completedLessons;
       _loadingStats.remove(categoryName);
     });
 
@@ -174,11 +173,11 @@ class _CategoryListState extends State<CategoryList> {
       final category = widget.categories[i];
       final nativeCategory = i < widget.nativeCategories.length ? widget.nativeCategories[i] : category;
       final categoryName = category['name'];
-      final stats = _categoryStats[categoryName];
+      final level = _categoryLevels[categoryName];
 
-      // Categories with progress (any lessons completed) go first
-      final actualCompletedCount = _actualCompletedCounts[categoryName] ?? 0;
-      if (actualCompletedCount > 0) {
+      // Categories with progress (any lessons completed across all levels) go first
+      final hasProgress = level != null && (level.completedLessons > 0 || level.currentLevel > 1);
+      if (hasProgress) {
         categoriesWithStats.add(category);
         nativeCategoriesWithStats.add(nativeCategory);
       } else {
@@ -657,10 +656,8 @@ class CategoryItemWithStats extends StatelessWidget {
     final levelColor = CategoryLevelService.getLevelColor(level.currentLevel);
     const barHeight = 12.0;
 
-    // Calculate current level completion (lessons completed for this specific level)
-    final previousLevelsCumulative = CategoryLevelService.getCumulativeRequiredLessons(level.currentLevel - 1);
-    final currentLevelCompleted = actualCompletedCount - previousLevelsCumulative;
-    final progressPercentage = level.requiredLessons > 0 ? (currentLevelCompleted / level.requiredLessons) * 100 : 0;
+    // Use the progress percentage directly from the level object
+    final progressPercentage = level.progressPercentage;
 
     return SizedBox(
       height: barHeight,

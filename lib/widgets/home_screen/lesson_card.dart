@@ -181,6 +181,83 @@ class _LessonCardState extends State<LessonCard> {
     }
   }
 
+  Future<void> _toggleCompletionStatus() async {
+    final newCompletionStatus = !_isCompleted;
+
+    // Show confirmation dialog
+    final bool? shouldUpdate = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(newCompletionStatus ? 'Mark as Complete' : 'Mark as Incomplete'),
+          content: Text(newCompletionStatus ? 'Are you sure you want to mark "${widget.audioFile.get('title')}" as completed?' : 'Are you sure you want to mark "${widget.audioFile.get('title')}" as incomplete?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: newCompletionStatus ? Colors.green : Colors.amber,
+              ),
+              child: Text(newCompletionStatus ? 'Mark Complete' : 'Mark Incomplete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldUpdate == true) {
+      setState(() {
+        _isLoadingCompletion = true;
+      });
+
+      try {
+        final parentDocId = widget.audioFile.reference.parent.parent!.id;
+
+        await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).update({
+          'completed': newCompletionStatus,
+        });
+
+        if (mounted) {
+          setState(() {
+            _isCompleted = newCompletionStatus;
+            _isLoadingCompletion = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                newCompletionStatus ? 'Lesson marked as completed!' : 'Lesson marked as incomplete',
+              ),
+              backgroundColor: newCompletionStatus ? Colors.green : Colors.amber,
+            ),
+          );
+
+          // Reload the page to show correct data
+          if (widget.onReload != null) {
+            widget.onReload!();
+          }
+        }
+      } catch (e) {
+        print('Error updating completion status: $e');
+        if (mounted) {
+          setState(() {
+            _isLoadingCompletion = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update lesson status: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _deleteLesson() async {
     // Show confirmation dialog
     final bool? shouldDelete = await showDialog<bool>(
@@ -291,6 +368,28 @@ class _LessonCardState extends State<LessonCard> {
                             ),
                       ),
                       const SizedBox(height: 16),
+                      // Complete/Incomplete option
+                      if (!_isLoadingCompletion)
+                        ListTile(
+                          leading: Icon(
+                            _isCompleted ? Icons.radio_button_checked_rounded : Icons.check_circle_outline_rounded,
+                            color: _isCompleted ? Colors.amber : Colors.green,
+                          ),
+                          title: Text(
+                            _isCompleted ? 'Mark as Incomplete' : 'Mark as Complete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: _isCompleted ? Colors.amber : Colors.green,
+                            ),
+                          ),
+                          subtitle: Text(_isCompleted ? 'Remove completion status' : 'Mark this lesson as finished'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _toggleCompletionStatus();
+                          },
+                        ),
+                      if (!_isLoadingCompletion) const SizedBox(height: 8),
+                      // Delete option
                       ListTile(
                         leading: Icon(
                           Icons.delete_outline_rounded,
@@ -560,7 +659,7 @@ class _LessonCardState extends State<LessonCard> {
                         children: [
                           Icon(
                             Icons.translate_rounded,
-                            size: 12,
+                            size: 13,
                             color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                           ),
                           const SizedBox(width: 6),

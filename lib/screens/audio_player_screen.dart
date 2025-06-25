@@ -685,13 +685,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _handleLessonCompletion() async {
-    // Automatically mark as completed when lesson finishes
+    // Show completion dialog when lesson finishes
     if (!_isCompleted) {
-      await _markAsCompleted();
-    }
+      bool completed = await _markAsCompleted();
 
-    // show list of words that were used and ask user to review them
-    await _showVocabularyReview();
+      // Only show vocabulary review if user confirmed completion
+      if (completed) {
+        await _showVocabularyReview();
+      }
+    } else {
+      // If already completed, show vocabulary review directly
+      await _showVocabularyReview();
+    }
   }
 
   Future<void> _showVocabularyReview() async {
@@ -724,7 +729,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
   }
 
-  Future<void> _markAsCompleted() async {
+  Future<bool> _markAsCompleted() async {
     // Pause audio before showing dialog
     bool wasPlaying = _audioPlayerService.isPlaying.value;
     if (wasPlaying) {
@@ -756,12 +761,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       },
     );
 
-    // If user cancelled, resume audio if it was playing
+    // If user cancelled, keep audio paused and return false
     if (shouldComplete != true) {
-      if (wasPlaying) {
-        _audioPlayerService.isPlaying.value = true;
-      }
-      return;
+      return false;
     }
 
     // User confirmed, proceed with completion
@@ -837,7 +839,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (wasPlaying) {
         _audioPlayerService.isPlaying.value = true;
       }
+      return false;
     }
+
+    // Return true if successfully completed
+    return true;
   }
 
   // void _toggleSpeechRecognition(bool value) async {
