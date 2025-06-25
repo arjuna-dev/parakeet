@@ -452,7 +452,12 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                         child: Text(
                                           _isLevelCompleted()
                                               ? (widget.levelNumber < 3 ? 'Move to Level ${widget.levelNumber + 1} to continue your journey.' : 'You\'ve mastered all levels in this category!')
-                                              : 'Complete ${(CategoryLevelService.levelRequirements[widget.levelNumber] ?? 3) - _getCompletedLessonsCount()} more lessons${widget.levelNumber < 3 ? ' to unlock Level ${widget.levelNumber + 1}' : ' to master this category'}.',
+                                              : () {
+                                                  final remainingLessons = (CategoryLevelService.levelRequirements[widget.levelNumber] ?? 3) - _getCompletedLessonsCount();
+                                                  final completedCount = _getCompletedLessonsCount();
+                                                  final moreText = completedCount == 0 ? '' : ' more';
+                                                  return 'Complete $remainingLessons$moreText lessons${widget.levelNumber < 3 ? ' to unlock Level ${widget.levelNumber + 1}' : ' to master this category'}.';
+                                                }(),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: _isLevelCompleted() ? Colors.green : Colors.orange,

@@ -838,12 +838,14 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Vocabulary Progress',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
+          Center(
+            child: Text(
+              'Vocabulary Progress',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
             ),
           ),
           const SizedBox(height: 12),
