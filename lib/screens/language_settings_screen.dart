@@ -236,19 +236,6 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Language Settings'),
-        actions: [
-          if (_hasChanges && !_isSaving)
-            TextButton(
-              onPressed: _saveSettings,
-              child: Text(
-                'Save',
-                style: TextStyle(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -348,22 +335,21 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Save Button (for larger screens or when changes are made)
-                  if (_hasChanges)
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _isSaving ? null : _saveSettings,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_rounded),
-                        label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
-                      ),
+                  // Save Button - always shown but disabled when no changes
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: (_isSaving || !_hasChanges) ? null : _saveSettings,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
                     ),
+                  ),
                 ],
               ),
             ),
