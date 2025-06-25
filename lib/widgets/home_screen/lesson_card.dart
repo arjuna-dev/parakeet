@@ -397,17 +397,20 @@ class _LessonCardState extends State<LessonCard> {
             ),
             child: Stack(
               children: [
-                // Top right icons row (only menu button)
+                // Top right corner menu button
                 Positioned(
-                  top: 16,
-                  right: 16,
+                  top: 0,
+                  right: 0,
                   child: GestureDetector(
                     onTap: _showOptionsMenu,
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                        shape: BoxShape.circle,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(24),
+                          bottomLeft: Radius.circular(16),
+                        ),
                       ),
                       child: Icon(
                         Icons.more_vert_rounded,
@@ -415,6 +418,17 @@ class _LessonCardState extends State<LessonCard> {
                         color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
                     ),
+                  ),
+                ),
+
+                // Right side arrow icon spanning across info rows
+                Positioned(
+                  bottom: 36, // Position to align with the two info rows
+                  right: 20,
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 32,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
                   ),
                 ),
 
@@ -522,7 +536,7 @@ class _LessonCardState extends State<LessonCard> {
                       // Conditional spacing - less space needed if no category badge
                       SizedBox(height: (widget.showCategoryBadge && category.toLowerCase() != 'custom lesson') ? 20 : 8),
 
-                      // Title with playful styling
+                      // Title
                       Container(
                         padding: const EdgeInsets.only(left: 4, right: 60), // Increased right margin for icons
                         child: Text(
@@ -541,50 +555,32 @@ class _LessonCardState extends State<LessonCard> {
 
                       const SizedBox(height: 16),
 
-                      // Language info
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: categoryColor.withOpacity(0.1),
-                            width: 1,
+                      // Language info row
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.translate_rounded,
+                            size: 12,
+                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: categoryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              "${(widget.audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? widget.audioFile.get('native_language') : 'English (US)'} → ${widget.audioFile.get('target_language')}",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                               ),
-                              child: Icon(
-                                Icons.translate_rounded,
-                                size: 14,
-                                color: categoryColor,
-                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "${(widget.audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? widget.audioFile.get('native_language') : 'English (US)'} → ${widget.audioFile.get('target_language')}",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 12),
 
-                      // Timestamp, duration info, and play button
+                      // Timestamp and completion status row
                       Row(
                         children: [
                           // Timestamp
@@ -616,40 +612,9 @@ class _LessonCardState extends State<LessonCard> {
                             ),
                           ),
 
-                          const SizedBox(width: 12),
-
-                          // Duration
-                          Icon(
-                            Icons.access_time_rounded,
-                            size: 12,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            getEstimatedDuration(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-
-                          const Spacer(),
-
-                          // Arrow button
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 16,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-
-                      // Completion status below the timestamp/duration row
-                      if (!_isLoadingCompletion && _isCompleted) ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
+                          // Completion status (next to generated info)
+                          if (!_isLoadingCompletion && _isCompleted) ...[
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
@@ -662,7 +627,7 @@ class _LessonCardState extends State<LessonCard> {
                                 color: Colors.green,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             const Text(
                               'Completed',
                               style: TextStyle(
@@ -672,8 +637,8 @@ class _LessonCardState extends State<LessonCard> {
                               ),
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
