@@ -18,9 +18,9 @@ import 'dart:io';
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  // Static method to show language settings dialog from anywhere
+  // Static method to navigate to language settings from anywhere
   static Future<void> showLanguageSettingsDialog(BuildContext context) async {
-    await ProfileService.showLanguageSettingsDialog(context);
+    await ProfileService.navigateToLanguageSettings(context);
   }
 
   @override
@@ -180,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showLanguageSelectionDialog() async {
-    final updated = await ProfileService.showLanguageSettingsDialog(context);
+    final updated = await ProfileService.navigateToLanguageSettings(context);
     if (updated) {
       // Refresh the UI after settings are updated
       _fetchUserData();
