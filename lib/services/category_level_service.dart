@@ -249,4 +249,102 @@ class CategoryLevelService {
     }
     return cumulative;
   }
+
+  /// Get the current level status for a category based on actual completed lessons
+  /// This method counts actual completed lessons from the database to ensure accuracy
+  static Future<CategoryLevel> getCategoryLevelFromActualLessons(
+    String categoryName,
+    String targetLanguage,
+  ) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        return CategoryLevel(
+          currentLevel: 1,
+          completedLessons: 0,
+          requiredLessons: levelRequirements[1]!,
+          isLevelCompleted: false,
+          canAccessNextLevel: false,
+        );
+      }
+
+      // Get all lessons for this category
+      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+
+      final categoryLessons = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        String lessonCategory;
+        if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
+          lessonCategory = doc.get('category');
+        } else {
+          lessonCategory = 'Custom Lesson';
+        }
+        return lessonCategory == categoryName;
+      }).toList();
+
+      // Count completed lessons by level
+      final Map<int, int> completedLessonsByLevel = {1: 0, 2: 0, 3: 0};
+
+      for (final doc in categoryLessons) {
+        final parentDocId = doc.reference.parent.parent!.id;
+        try {
+          final lessonDoc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+          if (lessonDoc.exists) {
+            final lessonData = lessonDoc.data();
+            final isCompleted = lessonData?['completed'] == true;
+            final lessonLevel = lessonData?['categoryLevel'] ?? 1;
+
+            if (isCompleted && lessonLevel >= 1 && lessonLevel <= 3) {
+              completedLessonsByLevel[lessonLevel] = (completedLessonsByLevel[lessonLevel] ?? 0) + 1;
+            }
+          }
+        } catch (e) {
+          print('Error checking completion for lesson $parentDocId: $e');
+        }
+      }
+
+      // Determine current level based on completed lessons
+      int currentLevel = 1;
+      for (int level = 1; level <= 3; level++) {
+        final requiredForThisLevel = levelRequirements[level] ?? 3;
+        final completedForThisLevel = completedLessonsByLevel[level] ?? 0;
+
+        if (completedForThisLevel >= requiredForThisLevel) {
+          // Level is completed, check if we can advance
+          if (level < 3) {
+            currentLevel = level + 1;
+          } else {
+            currentLevel = 3; // Max level
+          }
+        } else {
+          // This level is not completed, so this is our current level
+          currentLevel = level;
+          break;
+        }
+      }
+
+      // Get progress for the current level
+      final requiredLessons = levelRequirements[currentLevel] ?? 3;
+      final completedLessons = completedLessonsByLevel[currentLevel] ?? 0;
+      final isLevelCompleted = completedLessons >= requiredLessons;
+      final canAccessNextLevel = currentLevel < maxLevel && isLevelCompleted;
+
+      return CategoryLevel(
+        currentLevel: currentLevel,
+        completedLessons: completedLessons,
+        requiredLessons: requiredLessons,
+        isLevelCompleted: isLevelCompleted,
+        canAccessNextLevel: canAccessNextLevel,
+      );
+    } catch (e) {
+      print('Error getting category level from actual lessons: $e');
+      return CategoryLevel(
+        currentLevel: 1,
+        completedLessons: 0,
+        requiredLessons: levelRequirements[1]!,
+        isLevelCompleted: false,
+        canAccessNextLevel: false,
+      );
+    }
+  }
 }
