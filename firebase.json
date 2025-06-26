@@ -8,6 +8,11 @@
     {
       "source": "functions_plot_twist",
       "codebase": "plot_twist"
+    },
+    {
+      "source": "payment_verification_backend",
+      "codebase": "payment_verification",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", ".DS_Store"]
     }
   ],
   "flutter": {

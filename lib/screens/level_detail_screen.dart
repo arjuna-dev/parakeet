@@ -132,13 +132,12 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
       if (userId != null) {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
         final isPremium = userDoc.data()?['premium'] ?? false;
-        final apiCallsUsed = await LessonService.countAPIcallsByUser();
+        final currentCredits = await LessonService.getCurrentCredits();
 
         if (mounted) {
           setState(() {
             _isPremium = isPremium;
-            int limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-            _generationsRemaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+            _generationsRemaining = currentCredits;
           });
         }
       }
@@ -169,15 +168,9 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
   }
 
   Future<void> _handleCreateNewLesson() async {
-    // Check if no generations remaining - show upgrade modal
-    if (_generationsRemaining <= 0) {
-      final canProceed = await LessonService.checkPremiumAndAPILimits(context);
-      return; // Don't proceed with lesson generation
-    }
-
     setState(() => _isGeneratingLesson = true);
 
-    final canProceed = await LessonService.checkPremiumAndAPILimits(context);
+    final canProceed = await LessonService.checkAndDeductCredit(context);
     if (!canProceed) {
       setState(() => _isGeneratingLesson = false);
       return;
