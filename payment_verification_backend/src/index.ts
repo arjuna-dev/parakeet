@@ -1,20 +1,20 @@
 import * as Functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import {FirebaseCalls, IAPSource} from "./firebase.calls";
-import {PurchaseHandler} from "./purchase-handler";
-import {CLOUD_REGION} from "./constants";
-import {AppStorePurchaseHandler} from "./app-store.purchase_handler";
-import {GooglePlayPurchaseHandler} from "./google-play.purchase_handler";
-import {productDataMap} from "./products";
-import {HttpsError} from "firebase-functions/v1/https";
+import { FirebaseCalls, IAPSource } from "./firebase.calls";
+import { PurchaseHandler } from "./purchase-handler";
+import { CLOUD_REGION } from "./constants";
+import { AppStorePurchaseHandler } from "./app-store.purchase_handler";
+import { GooglePlayPurchaseHandler } from "./google-play.purchase_handler";
+import { productDataMap } from "./products";
+import { HttpsError } from "firebase-functions/v1/https";
 
 admin.initializeApp();
 
 const functions = Functions.region(CLOUD_REGION);
 const firebaseCalls = new FirebaseCalls(admin.firestore());
 const purchaseHandlers: { [source in IAPSource]: PurchaseHandler } = {
-  "google_play": new GooglePlayPurchaseHandler(firebaseCalls),
-  "app_store": new AppStorePurchaseHandler(firebaseCalls),
+  google_play: new GooglePlayPurchaseHandler(firebaseCalls),
+  app_store: new AppStorePurchaseHandler(firebaseCalls),
 };
 
 interface VerifyPurchaseParams {
@@ -49,18 +49,25 @@ export const verifyPurchase = functions.https.onCall(
     return purchaseHandlers[data.source].verifyPurchase(
       context.auth?.uid,
       productData,
-      data.verificationData,
+      data.verificationData
     );
   }
 );
 
-export const handleAppStoreServerEvent =
-    (purchaseHandlers.app_store as AppStorePurchaseHandler).handleServerEvent;
+export const handleAppStoreServerEvent = (
+  purchaseHandlers.app_store as AppStorePurchaseHandler
+).handleServerEvent;
 
-export const handlePlayStoreServerEvent =
-    (purchaseHandlers.google_play as GooglePlayPurchaseHandler)
-      .handleServerEvent;
+export const handlePlayStoreServerEvent = (
+  purchaseHandlers.google_play as GooglePlayPurchaseHandler
+).handleServerEvent;
 
-export const expireSubscriptions = functions.pubsub.schedule("0 0 * * *")
+export const expireSubscriptions = functions.pubsub
+  .schedule("0 0 * * *")
   .timeZone("Europe/Berlin")
   .onRun(() => firebaseCalls.expireSubscriptions());
+
+export const resetMonthlyCredits = functions.pubsub
+  .schedule("0 1 * * *")
+  .timeZone("Europe/Berlin")
+  .onRun(() => firebaseCalls.resetMonthlyCredits());

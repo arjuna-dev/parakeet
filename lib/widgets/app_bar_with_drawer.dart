@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
@@ -485,8 +486,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         final data = snapshot.data!;
         final apiCallsRemaining = data['remaining'] as int;
         final isPremium = data['isPremium'] as bool;
-        final limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-        final progress = apiCallsRemaining / limit;
+        final limit = data['limit'] as int;
+        final progress = limit > 0 ? apiCallsRemaining / limit : 0.0;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -518,7 +519,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Daily Generations Limit',
+                          'Lesson Credits',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -526,7 +527,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           ),
                         ),
                         Text(
-                          '$apiCallsRemaining/$limit',
+                          '$apiCallsRemaining',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -557,7 +558,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       ),
                     ),
-                    // Show upgrade section when user has run out of lessons and is not premium
+                    // Show upgrade section when user has run out of credits and is not premium
                     if (apiCallsRemaining == 0 && !isPremium) ...[
                       const SizedBox(height: 10),
                       Container(
@@ -589,7 +590,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Out of lessons',
+                                  'Out of credits',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -689,19 +690,20 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       final isPremium = userDoc.data()?['premium'] ?? false;
 
-      // Get API calls used today
-      final apiCallsUsed = await LessonService.countAPIcallsByUser();
-      final limit = isPremium ? LessonService.premiumAPILimit : LessonService.freeAPILimit;
-      final remaining = apiCallsUsed >= limit ? 0 : limit - apiCallsUsed;
+      // Get current lesson credits
+      final currentCredits = await LessonCreditService.getCurrentCredits();
+      final creditLimit = await LessonCreditService.getCreditLimit();
 
       return {
-        'remaining': remaining,
+        'remaining': currentCredits,
         'isPremium': isPremium,
+        'limit': creditLimit,
       };
     } catch (e) {
       return {
         'remaining': 0,
         'isPremium': false,
+        'limit': LessonCreditService.freeUserCredits,
       };
     }
   }
