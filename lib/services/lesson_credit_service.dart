@@ -239,19 +239,27 @@ class LessonCreditService {
       final userData = userDoc.data() as Map<String, dynamic>;
       final lastCreditReset = userData['lastCreditReset'] as Timestamp?;
 
-      // Get user's latest subscription
-      final purchases = await FirebaseFirestore.instance
-          .collection('purchases')
-          .where('userId', isEqualTo: user.uid)
-          .where('type', isEqualTo: 'SUBSCRIPTION')
-          .where('productId', whereIn: ['1m', '1year'])
-          .orderBy('purchaseDate', descending: true)
-          .limit(1)
-          .get();
+      // Get user's subscriptions (filter by user first, then filter in code)
+      final purchases = await FirebaseFirestore.instance.collection('purchases').where('userId', isEqualTo: user.uid).where('type', isEqualTo: 'SUBSCRIPTION').get();
 
-      if (purchases.docs.isEmpty) return null;
+      // Filter and sort in code to avoid composite index requirement
+      final validPurchases = purchases.docs.where((doc) {
+        final data = doc.data();
+        final productId = data['productId'] as String?;
+        return ['1m', '1year'].contains(productId);
+      }).toList();
 
-      final latestPurchase = purchases.docs.first.data();
+      if (validPurchases.isEmpty) return null;
+
+      // Sort by purchase date (most recent first)
+      validPurchases.sort((a, b) {
+        final aDate = (a.data()['purchaseDate'] as Timestamp?)?.toDate() ?? DateTime(1970);
+        final bDate = (b.data()['purchaseDate'] as Timestamp?)?.toDate() ?? DateTime(1970);
+        return bDate.compareTo(aDate);
+      });
+
+      final latestPurchaseDoc = validPurchases.first;
+      final latestPurchase = latestPurchaseDoc.data();
       final purchaseDate = (latestPurchase['purchaseDate'] as Timestamp?)?.toDate();
 
       if (purchaseDate == null) return null;
@@ -300,7 +308,7 @@ class LessonCreditService {
 
     try {
       // Check if user has any expired subscriptions
-      final purchases = await FirebaseFirestore.instance.collection('purchases').where('userId', isEqualTo: user.uid).where('type', isEqualTo: 'SUBSCRIPTION').where('productId', whereIn: ['1m', '1year']).get();
+      final purchases = await FirebaseFirestore.instance.collection('purchases').where('userId', isEqualTo: user.uid).where('type', isEqualTo: 'SUBSCRIPTION').get();
 
       if (purchases.docs.isEmpty) return;
 
@@ -309,8 +317,12 @@ class LessonCreditService {
 
       for (final doc in purchases.docs) {
         final data = doc.data();
+        final productId = data['productId'] as String?;
         final status = data['status'] as String?;
         final expiryDate = (data['expiryDate'] as Timestamp?)?.toDate();
+
+        // Only check subscription products
+        if (!['1m', '1year'].contains(productId)) continue;
 
         if (status == 'ACTIVE' && expiryDate != null && _isSameDateOrAfter(expiryDate, now)) {
           hasActiveSubscription = true;

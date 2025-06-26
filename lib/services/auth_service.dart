@@ -1,4 +1,3 @@
-import 'package:parakeet/widgets/trial_modal.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -67,18 +66,6 @@ class AuthService {
           return;
         }
       }
-    }
-
-    // Only show trial modal if onboarding is completed
-    if (context.mounted &&
-        userData != null &&
-        userData['onboarding_completed'] == true &&
-        ((!userDoc.exists) || (!userData.containsKey('premium') || userData['premium'] == false) && (!userData.containsKey('hasUsedTrial') || userData['hasUsedTrial'] == false))) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => TrialModal(userId: user.uid),
-      );
     }
   }
 

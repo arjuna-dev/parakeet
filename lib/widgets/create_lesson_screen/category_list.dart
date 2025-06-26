@@ -85,6 +85,7 @@ class _CategoryListState extends State<CategoryList> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _loadingStats.add(categoryName);
     });
@@ -111,6 +112,7 @@ class _CategoryListState extends State<CategoryList> {
     final stats = statsResults[0] as WordStats;
     final level = statsResults[1] as CategoryLevel;
 
+    if (!mounted) return;
     setState(() {
       _categoryStats[categoryName] = stats;
       _categoryLevels[categoryName] = level;
@@ -146,6 +148,7 @@ class _CategoryListState extends State<CategoryList> {
       }
     }
 
+    if (!mounted) return;
     setState(() {
       _sortedCategories = [...categoriesWithStats, ...categoriesWithoutStats];
       _sortedNativeCategories = [...nativeCategoriesWithStats, ...nativeCategoriesWithoutStats];
@@ -180,12 +183,15 @@ class _CategoryListState extends State<CategoryList> {
         if (i < _sortedCategories.length) {
           _loadCategoryStats(_sortedCategories[i]['name']).then((_) {
             // Re-sort after loading new stats
-            _sortCategoriesByProgress();
+            if (mounted) {
+              _sortCategoriesByProgress();
+            }
           });
         }
       }
     }
 
+    if (!mounted) return;
     setState(() {
       _visibleCategoriesCount = actualNewCount;
     });

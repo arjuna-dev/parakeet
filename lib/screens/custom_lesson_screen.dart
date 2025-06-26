@@ -29,6 +29,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   int _generationsRemaining = 0;
   bool _isPremium = false;
   bool _showAllLessons = false;
+  DateTime? _nextCreditReset;
 
   @override
   void initState() {
@@ -117,10 +118,17 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
         final isPremium = userDoc.data()?['premium'] ?? false;
 
+        // Get next credit reset date for premium users
+        DateTime? nextReset;
+        if (isPremium) {
+          nextReset = await LessonCreditService.getNextCreditResetDate();
+        }
+
         if (mounted) {
           setState(() {
             _isPremium = isPremium;
             _generationsRemaining = currentCredits;
+            _nextCreditReset = nextReset;
           });
         }
       }
@@ -131,6 +139,20 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
 
   Future<void> _handleLessonCreation(String topic, List<String> words) async {
     final loadingState = Provider.of<LoadingStateService>(context, listen: false);
+
+    // Check credits first before setting loading state
+    final hasCredit = await LessonCreditService.checkAndDeductCredit();
+    if (!hasCredit) {
+      // Show premium dialog and navigate to store if user wants to upgrade
+      final shouldEnablePremium = await LessonService.showPremiumDialog(context);
+      if (!shouldEnablePremium) {
+        // Refresh the generations count
+        _loadGenerationsRemaining();
+        return;
+      }
+    }
+
+    // Only set loading state if we have credits
     loadingState.setGeneratingLesson(true);
 
     try {
@@ -167,6 +189,19 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
       }
       // Refresh the generations count after attempting to create a lesson
       _loadGenerationsRemaining();
+    }
+  }
+
+  String _formatResetDate(DateTime resetDate) {
+    final now = DateTime.now();
+    final difference = resetDate.difference(now);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'}';
+    } else {
+      return 'Soon';
     }
   }
 
@@ -432,7 +467,17 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 20, right: 4),
             child: FloatingActionButton.extended(
-              onPressed: isGeneratingLesson ? null : (_generationsRemaining <= 0 ? null : () => _showCustomLessonModal(context)),
+              onPressed: isGeneratingLesson
+                  ? null
+                  : _generationsRemaining <= 0
+                      ? _isPremium
+                          ? null // Disable button if premium user has no credits
+                          : () async {
+                              // Show premium dialog when no credits and not premium
+                              await LessonService.showPremiumDialog(context);
+                              _loadGenerationsRemaining(); // Refresh credits after dialog
+                            }
+                      : () => _showCustomLessonModal(context),
               backgroundColor: _generationsRemaining <= 0 ? Colors.grey.shade600 : colorScheme.primary,
               foregroundColor: Colors.white,
               elevation: 8,
@@ -455,13 +500,27 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                       ),
                     )
                   : _generationsRemaining <= 0 && _isPremium
-                      ? const Text(
-                          'No Credits Left',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: Colors.white,
-                          ),
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'No Credits Left',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: Colors.white,
+                              ),
+                            ),
+                            if (_nextCreditReset != null)
+                              Text(
+                                'Resets in ${_formatResetDate(_nextCreditReset!)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                          ],
                         )
                       : Column(
                           mainAxisSize: MainAxisSize.min,

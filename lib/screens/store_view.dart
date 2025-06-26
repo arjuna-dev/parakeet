@@ -29,7 +29,6 @@ class _StoreViewState extends State<StoreView> {
   List<ProductDetails> _products = [];
   bool _loading = true;
   bool _hasPremium = false;
-  bool _hasUsedTrial = false;
 
   @override
   void initState() {
@@ -51,11 +50,9 @@ class _StoreViewState extends State<StoreView> {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
       final isPremium = userDoc.data()?['premium'] ?? false;
-      final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
 
       setState(() {
         _hasPremium = isPremium;
-        _hasUsedTrial = hasUsedTrial;
       });
 
       if (!_hasPremium) {
@@ -216,16 +213,6 @@ class _StoreViewState extends State<StoreView> {
         (List<PurchaseDetails> purchases) async {
           for (final purchase in purchases) {
             if (purchase.status == PurchaseStatus.purchased) {
-              // Purchase was successful
-              final userId = FirebaseAuth.instance.currentUser?.uid;
-              if (userId != null && !_hasUsedTrial) {
-                // Update the user's trial status in Firestore
-                await FirebaseFirestore.instance.collection('users').doc(userId).update({'hasUsedTrial': true});
-                setState(() {
-                  _hasUsedTrial = true;
-                });
-              }
-
               // Complete the purchase
               await _inAppPurchase.completePurchase(purchase);
 
@@ -274,7 +261,7 @@ class _StoreViewState extends State<StoreView> {
   List<Map<String, dynamic>> _getSubscriptionBenefits() {
     return [
       {'icon': Icons.category, 'text': 'Access to all premium categories'},
-      {'icon': Icons.auto_awesome, 'text': '10x Lessons creation every day'},
+      {'icon': Icons.auto_awesome, 'text': '65x lessons every month'},
       {'icon': Icons.music_note, 'text': 'Listen to your lesson without ads'},
       {'icon': Icons.star, 'text': 'Priority access to latest features'},
     ];
