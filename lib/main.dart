@@ -29,8 +29,8 @@ import 'screens/onboarding_form_screen.dart';
 import 'screens/vocabulary_review_screen.dart';
 import 'screens/all_words_screen.dart';
 
-const bool versionForTestFlight = true;
-const String localShouldUpdateID = "gWYwwwYH";
+const bool versionForTestFlight = false;
+const String localShouldUpdateID = "gWYwwwYY";
 const String localCouldUpdateID = "d*h&f%0a";
 
 Future<void> main() async {
