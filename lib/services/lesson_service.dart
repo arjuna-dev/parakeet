@@ -4,14 +4,236 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/constants.dart';
-import 'package:parakeet/utils/activate_free_trial.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
+import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
 
 class LessonService {
   static const int activeCreationAllowed = 20;
   static const int freeAPILimit = 2;
   static const int premiumAPILimit = 10;
+
+  // Function to show premium dialog when credits are exhausted
+  static Future<bool> showPremiumDialog(BuildContext context) async {
+    final shouldEnablePremium = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  colorScheme.surface,
+                  colorScheme.surfaceContainer.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Premium Icon
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.amber.shade400,
+                          Colors.amber.shade700,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.workspace_premium,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Text(
+                    'Unlock Premium',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Subtitle
+                  Text(
+                    'You\'ve used all your credits',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Features
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              color: colorScheme.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Generate 65x lessons every month',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.all_inclusive,
+                              color: colorScheme.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Access to all categories',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  Column(
+                    children: [
+                      // Primary Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context, false);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const StoreView()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                            shadowColor: colorScheme.primary.withOpacity(0.3),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Get Premium',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Secondary Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.onSurfaceVariant,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Maybe Later',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    return shouldEnablePremium ?? false;
+  }
 
   // Function to check credit limits and deduct credit if available
   static Future<bool> checkAndDeductCredit(BuildContext context) async {
@@ -20,9 +242,6 @@ class LessonService {
 
     if (!hasCredit) {
       // No credits remaining, show dialog
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
-      final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
-
       final shouldEnablePremium = await showDialog<bool>(
         context: context,
         barrierDismissible: true,
@@ -129,7 +348,7 @@ class LessonService {
                               const SizedBox(width: 10),
                               Flexible(
                                 child: Text(
-                                  'Generate up to 100 lessons per month',
+                                  'Generate 65x lessons every month',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -173,17 +392,12 @@ class LessonService {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () async {
-                              try {
-                                final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
-                                if (context.mounted) {
-                                  Navigator.pop(context, success);
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  Navigator.pop(context, false);
-                                }
-                              }
+                            onPressed: () {
+                              Navigator.pop(context, false);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const StoreView()),
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: colorScheme.primary,
@@ -195,21 +409,17 @@ class LessonService {
                               elevation: 4,
                               shadowColor: colorScheme.primary.withOpacity(0.3),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
                                 Text(
-                                  hasUsedTrial ? 'Get Premium for 1 Month' : 'Try Free for 14 Days',
-                                  style: const TextStyle(
+                                  'Get Premium',
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.2,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
@@ -275,7 +485,6 @@ class LessonService {
     // Check premium status
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
     final isPremium = userDoc.data()?['premium'] ?? false;
-    final hasUsedTrial = userDoc.data()?['hasUsedTrial'] ?? false;
 
     final apiCalls = await countAPIcallsByUser();
     // Free user limit
@@ -431,17 +640,12 @@ class LessonService {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () async {
-                                try {
-                                  final success = await activateFreeTrial(context, FirebaseAuth.instance.currentUser!.uid);
-                                  if (context.mounted) {
-                                    Navigator.pop(context, success);
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    Navigator.pop(context, false);
-                                  }
-                                }
+                              onPressed: () {
+                                Navigator.pop(context, false);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const StoreView()),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.primary,
@@ -453,21 +657,22 @@ class LessonService {
                                 elevation: 4,
                                 shadowColor: colorScheme.primary.withOpacity(0.3),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.star_rounded,
                                     size: 20,
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Text(
-                                    hasUsedTrial ? 'Get Premium for 1 Month' : 'Try Free for 14 Days',
-                                    style: const TextStyle(
+                                    'Get Premium',
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.2,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
@@ -620,13 +825,7 @@ class LessonService {
 
     setIsCreatingCustomLesson(true);
 
-    final canProceed = await checkAndDeductCredit(context);
-    if (!canProceed) {
-      setIsCreatingCustomLesson(false);
-      return;
-    }
-
-    // Check if context is still valid after the premium check
+    // Check if context is still valid
     if (!context.mounted) {
       setIsCreatingCustomLesson(false);
       return;

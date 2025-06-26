@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/services/category_level_service.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
@@ -40,6 +41,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
   bool _isGeneratingLesson = false;
   int _generationsRemaining = 0;
   bool _isPremium = false;
+  DateTime? _nextCreditReset;
 
   @override
   void initState() {
@@ -134,10 +136,17 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
         final isPremium = userDoc.data()?['premium'] ?? false;
         final currentCredits = await LessonService.getCurrentCredits();
 
+        // Get next credit reset date for premium users
+        DateTime? nextReset;
+        if (isPremium) {
+          nextReset = await LessonCreditService.getNextCreditResetDate();
+        }
+
         if (mounted) {
           setState(() {
             _isPremium = isPremium;
             _generationsRemaining = currentCredits;
+            _nextCreditReset = nextReset;
           });
         }
       }
@@ -168,13 +177,14 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
   }
 
   Future<void> _handleCreateNewLesson() async {
-    setState(() => _isGeneratingLesson = true);
-
+    // Check credits first before setting loading state
     final canProceed = await LessonService.checkAndDeductCredit(context);
     if (!canProceed) {
-      setState(() => _isGeneratingLesson = false);
+      _loadGenerationsRemaining();
       return;
     }
+
+    setState(() => _isGeneratingLesson = true);
 
     try {
       final selectedWords = await LessonService.selectWordsFromCategory(widget.category['name'], widget.category['words'], widget.targetLanguage);
@@ -269,6 +279,19 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
     } finally {
       setState(() => _isGeneratingLesson = false);
       _loadGenerationsRemaining();
+    }
+  }
+
+  String _formatResetDate(DateTime resetDate) {
+    final now = DateTime.now();
+    final difference = resetDate.difference(now);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'}';
+    } else {
+      return 'Soon';
     }
   }
 
@@ -591,7 +614,17 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
               : Padding(
                   padding: const EdgeInsets.only(bottom: 20, right: 4),
                   child: FloatingActionButton.extended(
-                    onPressed: _isGeneratingLesson ? null : _handleCreateNewLesson,
+                    onPressed: _isGeneratingLesson
+                        ? null
+                        : _generationsRemaining <= 0
+                            ? _isPremium
+                                ? null // Disable button if premium user has no credits
+                                : () async {
+                                    // Show premium dialog when no credits and not premium
+                                    await LessonService.showPremiumDialog(context);
+                                    _loadGenerationsRemaining(); // Refresh credits after dialog
+                                  }
+                            : _handleCreateNewLesson,
                     backgroundColor: _generationsRemaining <= 0 ? Colors.grey.shade600 : levelColor,
                     foregroundColor: Colors.white,
                     elevation: 8,
@@ -614,13 +647,27 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                             ),
                           )
                         : _generationsRemaining <= 0 && _isPremium
-                            ? const Text(
-                                'Daily Limit Reached',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: Colors.white,
-                                ),
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Out of credits',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  if (_nextCreditReset != null)
+                                    Text(
+                                      'Resets in ${_formatResetDate(_nextCreditReset!)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                ],
                               )
                             : Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -634,7 +681,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _generationsRemaining <= 0 ? 'Daily limit reached' : '$_generationsRemaining credits remaining',
+                                    _generationsRemaining <= 0 ? 'Out of credits' : '$_generationsRemaining credits remaining',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 12,

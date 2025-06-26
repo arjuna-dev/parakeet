@@ -461,6 +461,19 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
     return days[date.weekday - 1];
   }
 
+  String _formatResetDate(DateTime resetDate) {
+    final now = DateTime.now();
+    final difference = resetDate.difference(now);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'}';
+    } else {
+      return 'Soon';
+    }
+  }
+
   Widget _buildLessonProgressDisplay(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return const SizedBox.shrink();
@@ -487,6 +500,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         final apiCallsRemaining = data['remaining'] as int;
         final isPremium = data['isPremium'] as bool;
         final limit = data['limit'] as int;
+        final nextReset = data['nextReset'] as DateTime?;
         final progress = limit > 0 ? apiCallsRemaining / limit : 0.0;
 
         return Container(
@@ -559,7 +573,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                     // Show upgrade section when user has run out of credits and is not premium
-                    if (apiCallsRemaining == 0 && !isPremium) ...[
+                    // OR show reset date when premium user has run out of credits
+                    if (apiCallsRemaining == 0) ...[
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -583,7 +598,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Icon(
-                                    Icons.lock,
+                                    isPremium ? Icons.schedule : Icons.lock,
                                     size: 12,
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
@@ -600,76 +615,112 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            GestureDetector(
-                              onTap: () {
-                                // Close drawer first
-                                if (Navigator.canPop(context)) {
-                                  Navigator.pop(context);
-                                }
-                                // Navigate to store
-                                _handleStoreNavigation(context);
-                              },
-                              child: Container(
+                            if (isPremium && nextReset != null) ...[
+                              // Show reset date for premium users
+                              Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Theme.of(context).colorScheme.primary,
-                                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                                    ],
-                                  ),
+                                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.star_rounded,
-                                      size: 16,
-                                      color: Theme.of(context).colorScheme.onPrimary,
+                                      Icons.refresh,
+                                      size: 14,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                     const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        'Upgrade',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Theme.of(context).colorScheme.onPrimary,
-                                          letterSpacing: 0.2,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '10x',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: Theme.of(context).colorScheme.onPrimary,
-                                        ),
+                                    Text(
+                                      'Resets in ${_formatResetDate(nextReset)}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
+                            ] else if (!isPremium) ...[
+                              // Show upgrade button for non-premium users
+                              GestureDetector(
+                                onTap: () {
+                                  // Close drawer first
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                  // Navigate to store
+                                  _handleStoreNavigation(context);
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Theme.of(context).colorScheme.primary,
+                                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.star_rounded,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Flexible(
+                                        child: Text(
+                                          'Upgrade',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                            letterSpacing: 0.2,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text(
+                                          '65x',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -694,16 +745,24 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       final currentCredits = await LessonCreditService.getCurrentCredits();
       final creditLimit = await LessonCreditService.getCreditLimit();
 
+      // Get next credit reset date for premium users
+      DateTime? nextReset;
+      if (isPremium) {
+        nextReset = await LessonCreditService.getNextCreditResetDate();
+      }
+
       return {
         'remaining': currentCredits,
         'isPremium': isPremium,
         'limit': creditLimit,
+        'nextReset': nextReset,
       };
     } catch (e) {
       return {
         'remaining': 0,
         'isPremium': false,
         'limit': LessonCreditService.freeUserCredits,
+        'nextReset': null,
       };
     }
   }
