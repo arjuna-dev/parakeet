@@ -1,5 +1,7 @@
 # Compiled JavaScript files
-lib/assets/service-account.json
+# ignore all service account files
+**/service-account.json
+
 lib/**/*.js
 lib/**/*.json
 lib/**/*.js.map
