@@ -334,8 +334,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                // Remove automatic navigation - user can use bottom nav instead
-                                // Navigator.pushReplacementNamed(context, '/create_lesson');
+                                Navigator.pushNamed(context, '/create_lesson');
                               },
                           ),
                           TextSpan(
