@@ -29,6 +29,8 @@ class _StoreViewState extends State<StoreView> {
   List<ProductDetails> _products = [];
   bool _loading = true;
   bool _hasPremium = false;
+  bool _purchaseInProgress = false;
+  String _selectedSubscription = "1m"; // Default to monthly subscription
 
   @override
   void initState() {
@@ -198,6 +200,10 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Future<void> _makePurchase(ProductDetails productDetails) async {
+    setState(() {
+      _purchaseInProgress = true;
+    });
+
     late PurchaseParam purchaseParam;
 
     if (Platform.isAndroid) {
@@ -216,14 +222,56 @@ class _StoreViewState extends State<StoreView> {
               // Complete the purchase
               await _inAppPurchase.completePurchase(purchase);
 
+              // Update Firestore with the new subscription information
+              try {
+                final userId = FirebaseAuth.instance.currentUser?.uid;
+                if (userId != null) {
+                  // We don't need to wait for this to complete before showing success to the user
+                  FirebaseFirestore.instance.collection('users').doc(userId).update({
+                    'premium': true,
+                    'subscriptionType': productDetails.id,
+                  });
+                }
+              } catch (e) {
+                print("Error updating user premium status: $e");
+              }
+
               // Cancel the subscription after successful processing
               subscription.cancel();
+
+              if (mounted) {
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Purchase successful! You now have premium access.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+
+                // Reset loading state
+                setState(() {
+                  _purchaseInProgress = false;
+                });
+
+                // Reload the page by refreshing the state
+                await checkPremiumStatus();
+              }
             } else if (purchase.status == PurchaseStatus.error) {
               // Show error message
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Purchase failed. Please try again.')),
                 );
+                setState(() {
+                  _purchaseInProgress = false;
+                });
+              }
+              subscription.cancel();
+            } else if (purchase.status == PurchaseStatus.canceled) {
+              if (mounted) {
+                setState(() {
+                  _purchaseInProgress = false;
+                });
               }
               subscription.cancel();
             }
@@ -234,6 +282,9 @@ class _StoreViewState extends State<StoreView> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Purchase failed: $error')),
             );
+            setState(() {
+              _purchaseInProgress = false;
+            });
           }
           subscription.cancel();
         },
@@ -295,20 +346,52 @@ class _StoreViewState extends State<StoreView> {
     );
   }
 
-  Widget _buildSubscriptionCard(ProductDetails productDetails) {
-    String? discountedPrice = _getDiscountedPrice(productDetails);
-    String? renewalText = _getRenewalText(productDetails);
-    print("discountedPrice: $discountedPrice");
-    bool hasDiscountedPrice = discountedPrice != null;
-    bool hasRenewalText = renewalText != null;
-
+  Widget _buildCombinedSubscriptionCard() {
     final colorScheme = Theme.of(context).colorScheme;
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
     final benefits = _getSubscriptionBenefits();
 
+    // Get product details for monthly and annual subscriptions
+    ProductDetails? monthlyProduct;
+    ProductDetails? annualProduct;
+
+    // Find products safely
+    for (var product in _products) {
+      if (product.id == "1m") {
+        monthlyProduct = product;
+      } else if (product.id == "1year") {
+        annualProduct = product;
+      }
+    }
+
+    // Fallback if products aren't found
+    monthlyProduct ??= _products.isNotEmpty ? _products.first : null;
+    annualProduct ??= _products.isNotEmpty ? _products.last : monthlyProduct;
+
+    // Safety check - if we don't have products, return an empty container
+    if (monthlyProduct == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Text(
+            "No subscription products available",
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
+
+    // Get the currently selected product
+    final selectedProduct = _selectedSubscription == "1m" ? monthlyProduct : (annualProduct ?? monthlyProduct);
+
+    String? discountedPrice = _getDiscountedPrice(selectedProduct);
+    String? renewalText = _getRenewalText(selectedProduct);
+    bool hasDiscountedPrice = discountedPrice != null;
+    bool hasRenewalText = renewalText != null;
+
     // Define the subscription type label based on product ID
-    final String subscriptionType = productDetails.id == "1m" ? "Monthly" : "Annual";
-    final bool isAnnual = productDetails.id == "1year";
+    final String subscriptionType = _selectedSubscription == "1m" ? "Monthly" : "Annual";
+    final bool isAnnual = _selectedSubscription == "1year";
 
     // Add savings label for annual subscription
     final Widget? savingsLabel = isAnnual
@@ -322,7 +405,7 @@ class _StoreViewState extends State<StoreView> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              "SAVE 50%",
+              "SAVE 65%",
               style: TextStyle(
                 color: colorScheme.onPrimary,
                 fontWeight: FontWeight.bold,
@@ -341,8 +424,8 @@ class _StoreViewState extends State<StoreView> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isAnnual ? colorScheme.primary.withOpacity(0.4) : colorScheme.surfaceContainerHighest.withOpacity(0.2),
-          width: isAnnual ? 2 : 1,
+          color: colorScheme.primary.withOpacity(0.4),
+          width: 2,
         ),
       ),
       child: Column(
@@ -354,7 +437,7 @@ class _StoreViewState extends State<StoreView> {
               vertical: isSmallScreen ? 12 : 16,
             ),
             decoration: BoxDecoration(
-              color: isAnnual ? colorScheme.primaryContainer.withOpacity(0.5) : colorScheme.surfaceContainerLow,
+              color: colorScheme.primaryContainer.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -366,11 +449,11 @@ class _StoreViewState extends State<StoreView> {
                   width: isSmallScreen ? 40 : 44,
                   height: isSmallScreen ? 40 : 44,
                   decoration: BoxDecoration(
-                    color: isAnnual ? colorScheme.primary.withOpacity(0.2) : colorScheme.primaryContainer,
+                    color: colorScheme.primary.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isAnnual ? Icons.star : Icons.star_half,
+                    Icons.workspace_premium,
                     color: colorScheme.primary,
                     size: isSmallScreen ? 22 : 24,
                   ),
@@ -383,13 +466,13 @@ class _StoreViewState extends State<StoreView> {
                       Row(
                         children: [
                           Text(
-                            "$subscriptionType Premium",
+                            "Premium",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: isSmallScreen ? 16 : 18,
                             ),
                           ),
-                          if (savingsLabel != null) ...[
+                          if (savingsLabel != null && isAnnual) ...[
                             const SizedBox(width: 8),
                             savingsLabel,
                           ],
@@ -399,6 +482,98 @@ class _StoreViewState extends State<StoreView> {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Subscription Toggle
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedSubscription = "1m";
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _selectedSubscription == "1m" ? colorScheme.primaryContainer : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            "Monthly",
+                            style: TextStyle(
+                              fontWeight: _selectedSubscription == "1m" ? FontWeight.bold : FontWeight.normal,
+                              color: _selectedSubscription == "1m" ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedSubscription = "1year";
+                        });
+                      },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedSubscription == "1year" ? colorScheme.primaryContainer : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Annual",
+                                style: TextStyle(
+                                  fontWeight: _selectedSubscription == "1year" ? FontWeight.bold : FontWeight.normal,
+                                  color: _selectedSubscription == "1year" ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                "65% OFF",
+                                style: TextStyle(
+                                  color: colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 8,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -419,9 +594,9 @@ class _StoreViewState extends State<StoreView> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isAnnual ? colorScheme.primary : colorScheme.primaryContainer,
-                        foregroundColor: isAnnual ? colorScheme.onPrimary : colorScheme.primary,
-                        elevation: isAnnual ? 2 : 0,
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        elevation: 2,
                         padding: EdgeInsets.symmetric(
                           vertical: isSmallScreen ? 12 : 16,
                         ),
@@ -429,69 +604,78 @@ class _StoreViewState extends State<StoreView> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () => _makePurchase(productDetails),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (hasDiscountedPrice)
-                            Column(
+                      onPressed: _purchaseInProgress ? null : () => _makePurchase(selectedProduct),
+                      child: _purchaseInProgress
+                          ? SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: colorScheme.onPrimary,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    discountedPrice,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: isSmallScreen ? 14 : 16,
-                                    ),
+                                if (hasDiscountedPrice)
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          discountedPrice,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: isSmallScreen ? 14 : 16,
+                                          ),
+                                        ),
+                                      ),
+                                      if (hasRenewalText)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            renewalText,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 10 : 11,
+                                              color: colorScheme.onPrimary.withOpacity(0.7),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          // check the platform and return the correct price
+                                          Platform.isAndroid ? _getOriginalProductPriceForAndroid(selectedProduct)! : selectedProduct.price,
+                                          style: TextStyle(
+                                            decoration: TextDecoration.lineThrough,
+                                            fontSize: isSmallScreen ? 12 : 13,
+                                            color: colorScheme.onPrimary.withOpacity(0.7),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                if (hasRenewalText)
+                                if (!hasDiscountedPrice)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.only(top: 4),
                                     child: Text(
-                                      renewalText,
+                                      selectedProduct.price,
                                       style: TextStyle(
-                                        fontSize: isSmallScreen ? 10 : 11,
-                                        color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
+                                        fontSize: isSmallScreen ? 14 : 15,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                       textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    // check the platform and return the correct price
-                                    Platform.isAndroid ? _getOriginalProductPriceForAndroid(productDetails)! : productDetails.price,
-                                    style: TextStyle(
-                                      decoration: TextDecoration.lineThrough,
-                                      fontSize: isSmallScreen ? 12 : 13,
-                                      color: isAnnual ? colorScheme.onPrimary.withOpacity(0.7) : colorScheme.primary.withOpacity(0.7),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
                               ],
                             ),
-                          if (!hasDiscountedPrice)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                productDetails.price,
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                        ],
-                      ),
                     ),
                   ],
                 ),
@@ -554,8 +738,65 @@ class _StoreViewState extends State<StoreView> {
             ),
             textAlign: TextAlign.center,
           ),
+          _buildCurrentMembershipStatus(),
         ],
       ),
+    );
+  }
+
+  Widget _buildCurrentMembershipStatus() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).get(),
+      builder: (context, snapshot) {
+        // Default values
+        String membershipType = _hasPremium ? "Premium" : "Free";
+
+        if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+          final userData = snapshot.data!.data() as Map<String, dynamic>?;
+
+          if (userData != null && _hasPremium) {
+            // Get subscription type if available
+            if (userData['subscriptionType'] != null) {
+              membershipType = userData['subscriptionType'] == "1year" ? "Annual Premium" : "Monthly Premium";
+            }
+          }
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: _hasPremium ? colorScheme.primaryContainer.withOpacity(0.3) : colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _hasPremium ? colorScheme.primary.withOpacity(0.3) : colorScheme.outlineVariant,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _hasPremium ? Icons.card_membership : Icons.person_outline,
+                size: 18,
+                color: _hasPremium ? colorScheme.primary : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                membershipType,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: _hasPremium ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -730,7 +971,7 @@ class _StoreViewState extends State<StoreView> {
                           ),
                         ),
                       ),
-                    if (!_hasPremium && _products.isNotEmpty) ..._getUniqueProducts().map(_buildSubscriptionCard),
+                    if (!_hasPremium && _products.isNotEmpty) _buildCombinedSubscriptionCard(),
                     if (!_hasPremium) _buildRestoreButton(),
                     _buildFooterLinks(),
                     SizedBox(height: isSmallScreen ? 16 : 24),
