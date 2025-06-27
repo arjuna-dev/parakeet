@@ -216,9 +216,9 @@ class _LessonCardState extends State<LessonCard> {
       try {
         final parentDocId = widget.audioFile.reference.parent.parent!.id;
 
-        await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).update({
+        await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).set({
           'completed': newCompletionStatus,
-        });
+        }, SetOptions(merge: true));
 
         if (mounted) {
           setState(() {
