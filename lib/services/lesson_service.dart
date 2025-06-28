@@ -991,7 +991,7 @@ class LessonService {
         continue; // Skip this document if word field is missing or not a string
       }
 
-      if (daysSinceLastReview > 0) {
+      if (daysSinceLastReview > 0 && docData['scheduledDays'] >= 0) {
         if (daysOverdue >= 0) {
           words.add(wordField);
         } else {
