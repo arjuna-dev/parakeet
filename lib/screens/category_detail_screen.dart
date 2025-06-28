@@ -182,137 +182,185 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           minChildSize: 0.5,
           maxChildSize: 0.95,
           builder: (context, scrollController) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Modal header
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+            return StatefulBuilder(
+              builder: (BuildContext context, StateSetter setModalState) {
+                // Create a sorted list of word indices
+                final List<int> sortedIndices = List.generate((widget.category['words'] as List).length, (index) => index);
 
-                  // Title
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LessonConstants.getCategoryIcon(widget.category['name']),
-                          color: _getCategoryColor(widget.category['name']),
-                          size: 24,
+                // Sort the indices based on mastery status
+                sortedIndices.sort((a, b) {
+                  final wordA = (widget.category['words'] as List)[a].toString().toLowerCase();
+                  final wordB = (widget.category['words'] as List)[b].toString().toLowerCase();
+
+                  final matchingA = _learningWords.firstWhere(
+                    (element) => element['word'] == wordA,
+                    orElse: () => {},
+                  );
+
+                  final matchingB = _learningWords.firstWhere(
+                    (element) => element['word'] == wordB,
+                    orElse: () => {},
+                  );
+
+                  final scheduledDaysA = matchingA.isEmpty ? 0.0 : (matchingA['scheduledDays'] is int ? (matchingA['scheduledDays'] as int).toDouble() : (matchingA['scheduledDays'] as double? ?? 0.0));
+
+                  final scheduledDaysB = matchingB.isEmpty ? 0.0 : (matchingB['scheduledDays'] is int ? (matchingB['scheduledDays'] as int).toDouble() : (matchingB['scheduledDays'] as double? ?? 0.0));
+
+                  final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
+                  final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
+
+                  // Sort mastered words to the bottom
+                  if (isMasteredA && !isMasteredB) {
+                    return 1; // A is mastered, B is not, so A comes after B
+                  } else if (!isMasteredA && isMasteredB) {
+                    return -1; // A is not mastered, B is, so A comes before B
+                  } else {
+                    // Both are mastered or both are not mastered, sort alphabetically
+                    return wordA.compareTo(wordB);
+                  }
+                });
+
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Modal header
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Practise Words',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.onSurface,
+                      ),
+
+                      // Title
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            Icon(
+                              LessonConstants.getCategoryIcon(widget.category['name']),
+                              color: _getCategoryColor(widget.category['name']),
+                              size: 24,
                             ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Instructions
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Tap any word to see translation • Long press for options',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Column Headers
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Word',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Practise Words',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          SizedBox(
-                            width: 64,
-                            child: Text(
-                              'Mastery',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 8),
+                      const SizedBox(height: 8),
 
-                  // Words List
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: (widget.category['words'] as List).length,
-                      itemBuilder: (context, index) {
-                        final word = (widget.category['words'] as List)[index].toString();
-                        final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
-                        return _buildSimpleWordItem(word, nativeWord);
-                      },
-                    ),
+                      // Instructions
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'Tap any word to see translation • Long press for options',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Column Headers
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Word',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              SizedBox(
+                                width: 64,
+                                child: Text(
+                                  'Mastery',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Words List
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: sortedIndices.length,
+                          itemBuilder: (context, i) {
+                            final index = sortedIndices[i];
+                            final word = (widget.category['words'] as List)[index].toString();
+                            final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                            return _buildSimpleWordItem(
+                              word,
+                              nativeWord,
+                              onWordUpdated: () {
+                                // Refresh the modal state when a word is updated
+                                setModalState(() {});
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -919,7 +967,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     );
   }
 
-  Widget _buildSimpleWordItem(String word, String nativeWord) {
+  Widget _buildSimpleWordItem(String word, String nativeWord, {required Function() onWordUpdated}) {
     final colorScheme = Theme.of(context).colorScheme;
     final matching = _learningWords.firstWhere(
       (element) => element['word'] == word.toLowerCase(),
@@ -955,10 +1003,17 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         categoryName: widget.category['name'],
         targetLanguage: widget.targetLanguage,
         learningWords: _learningWords,
-        updateLearningWords: (updated) => setState(() => _learningWords
-          ..clear()
-          ..addAll(updated)),
-        loadWordStats: _loadWordStats,
+        updateLearningWords: (updated) {
+          setState(() => _learningWords
+            ..clear()
+            ..addAll(updated));
+          onWordUpdated(); // Call the callback to refresh the modal
+        },
+        loadWordStats: () async {
+          await _loadWordStats();
+          onWordUpdated(); // Call the callback to refresh the modal
+          return;
+        },
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),

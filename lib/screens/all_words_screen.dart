@@ -330,10 +330,10 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
     final reviewedToday = lastReviewDate.isAtSameMomentAs(today);
 
     String reviewText;
-    if (isOverdue && !reviewedToday) {
-      reviewText = 'Ready for review';
-    } else if (scheduledDays == -1) {
+    if (scheduledDays == -1 || scheduledDays >= 100) {
       reviewText = 'Mastered';
+    } else if (isOverdue && !reviewedToday) {
+      reviewText = 'Ready for review';
     } else {
       final daysUntilDue = dueDate.difference(now).inDays;
       if (daysUntilDue == 0) {
@@ -401,10 +401,10 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: (isOverdue && !reviewedToday)
-                      ? Colors.white
-                      : scheduledDays == -1
-                          ? Colors.green
+                  color: (scheduledDays == -1 || scheduledDays >= 100)
+                      ? Colors.green
+                      : (isOverdue && !reviewedToday)
+                          ? Colors.white
                           : colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
