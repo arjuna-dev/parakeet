@@ -965,13 +965,6 @@ class LessonService {
         } catch (e) {
           continue; // Skip this document if due date can't be parsed
         }
-      } else if (dueField is int) {
-        if (dueField == 0) {
-          // Handle legacy case where due was set to 0 - treat as far future for mastered words
-          dueDate = DateTime.now().add(const Duration(days: 365));
-        } else {
-          dueDate = DateTime.fromMillisecondsSinceEpoch(dueField);
-        }
       } else {
         continue; // Skip this document if due date format is unexpected
       }
@@ -999,7 +992,7 @@ class LessonService {
       }
 
       if (daysSinceLastReview > 0) {
-        if (daysOverdue <= 0) {
+        if (daysOverdue >= 0) {
           words.add(wordField);
         } else {
           closestDueDateCard.add({
