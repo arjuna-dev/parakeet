@@ -296,12 +296,12 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     if (translation != null) {
       showCenteredToast(context, translation);
     } else {
-      showCenteredToast(context, word); // Show original word if no translation
+      showCenteredToast(context, "No translation available"); // Show message if no translation
     }
   }
 
   // Helper method to show translation in a modal sheet
-  void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
+  void _showTranslationSheet(BuildContext context, String word, String? nativeWord) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -360,11 +360,11 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
 
                 // Native language translation
                 Text(
-                  nativeWord,
+                  (nativeWord?.isNotEmpty == true) ? nativeWord! : "No translation available",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+                    color: (nativeWord?.isNotEmpty == true) ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
                   ),
                 ),
 
@@ -415,11 +415,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
 
     return GestureDetector(
       onTap: () {
-        if (translation != null) {
-          setState(() {
-            _flippedCards[card.word] = !isFlipped;
-          });
-        }
+        setState(() {
+          _flippedCards[card.word] = !isFlipped;
+        });
       },
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
@@ -523,11 +521,11 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 ),
               ),
               TextSpan(
-                text: translation ?? word,
+                text: translation ?? "N/A",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: colorScheme.primary,
+                  color: translation != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
