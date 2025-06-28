@@ -185,7 +185,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
   }
 
   // Helper method to show translation in a modal sheet
-  void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
+  void _showTranslationSheet(BuildContext context, String word, String? nativeWord) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -243,11 +243,11 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        nativeWord,
+                        nativeWord ?? "N/A",
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
+                          color: nativeWord != null ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -346,7 +346,7 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
     }
 
     return InkWell(
-      onTap: hasTranslation ? () => _showTranslationSheet(context, card.word, translation) : null,
+      onTap: () => _showTranslationSheet(context, card.word, translation),
       onLongPress: () {
         final categoryName = _findCategoryName(card.word);
         if (categoryName != null) {
@@ -614,26 +614,14 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
                 if (displayed.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-                    child: () {
-                      // Check if any displayed words have translations
-                      final hasAnyTranslations = displayed.any((card) => findWordTranslation(card.word) != null);
-
-                      String instructionText;
-                      if (hasAnyTranslations) {
-                        instructionText = 'Tap any word to see its translation • Long press for options';
-                      } else {
-                        instructionText = 'Long press any word for options';
-                      }
-
-                      return Text(
-                        instructionText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      );
-                    }(),
+                    child: Text(
+                      'Tap any word to see its translation • Long press for options',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ),
                 ],
                 Expanded(
