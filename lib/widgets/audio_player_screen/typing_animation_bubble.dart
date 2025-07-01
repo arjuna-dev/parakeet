@@ -83,6 +83,25 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
   void didUpdateWidget(covariant TypingAnimationBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // Handle transition from empty text to having text
+    if (oldWidget.text.isEmpty && widget.text.isNotEmpty && widget.animate) {
+      // Cancel any existing timers
+      _typingTimer?.cancel();
+      _subtitleTimer?.cancel();
+      _initialDelayTimer?.cancel();
+
+      // Reset state and start typing animation for the new text
+      _displayedText = '';
+      _displayedSubtitle = '';
+      _showSubtitle = false;
+      _showTypingIndicator = true;
+
+      // Start typing animation with a small delay
+      _initialDelayTimer = Timer(const Duration(milliseconds: 300), () {
+        _startTypingAnimation();
+      });
+    }
+
     // Start or stop highlight animation based on isHighlighted state
     if (widget.isHighlighted && !oldWidget.isHighlighted) {
       _highlightController.repeat(reverse: true);
@@ -94,6 +113,12 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
 
   void _startTypingAnimation() {
     if (mounted) {
+      // If text is empty, keep showing typing indicator indefinitely
+      if (widget.text.isEmpty) {
+        // Keep the typing indicator showing - don't change _showTypingIndicator
+        return;
+      }
+
       setState(() {
         _showTypingIndicator = false;
       });
@@ -329,9 +354,10 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Text(
-          widget.isUser ? '👤' : '🗣️',
-          style: const TextStyle(fontSize: 16),
+        child: Icon(
+          Icons.account_circle,
+          color: widget.isUser ? Colors.lightBlue : Colors.white,
+          size: 18,
         ),
       ),
     );

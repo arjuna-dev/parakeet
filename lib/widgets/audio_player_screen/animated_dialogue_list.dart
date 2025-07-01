@@ -745,6 +745,37 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
   // Extract the ListView builder into a separate method to avoid duplication
   Widget buildDialogueListView(List<dynamic> dialogueData) {
     try {
+      // Show typing animation when generating and no dialogue data is available
+      if (widget.generating && dialogueData.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const TypingAnimationBubble(
+                  key: ValueKey('generating_bubble'),
+                  text: '', // Empty text to show only typing indicator
+                  isUser: false,
+                  animate: true,
+                  typingSpeed: Duration(milliseconds: 100),
+                  onAnimationComplete: null, // No completion callback needed
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Generating your lesson...',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       return ListView.builder(
         key: const PageStorageKey('dialogue_list'),
         controller: _scrollController,
