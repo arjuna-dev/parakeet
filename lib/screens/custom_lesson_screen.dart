@@ -140,9 +140,9 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   Future<void> _handleLessonCreation(String topic, List<String> words) async {
     final loadingState = Provider.of<LoadingStateService>(context, listen: false);
 
-    // Check credits first before setting loading state
-    final hasCredit = await LessonCreditService.checkAndDeductCredit();
-    if (!hasCredit) {
+    // Check credits first before setting loading state (but don't deduct yet - server will handle deduction)
+    final currentCredits = await LessonCreditService.getCurrentCredits();
+    if (currentCredits <= 0) {
       // Show premium dialog and navigate to store if user wants to upgrade
       final shouldEnablePremium = await LessonService.showPremiumDialog(context);
       if (!shouldEnablePremium) {
