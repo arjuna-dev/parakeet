@@ -235,12 +235,12 @@ class LessonService {
     return shouldEnablePremium ?? false;
   }
 
-  // Function to check credit limits and deduct credit if available
+  // Function to check credit limits (server will handle deduction)
   static Future<bool> checkAndDeductCredit(BuildContext context) async {
-    // Try to deduct a credit
-    final hasCredit = await LessonCreditService.checkAndDeductCredit();
+    // Only check credits, don't deduct (server will handle deduction)
+    final currentCredits = await LessonCreditService.getCurrentCredits();
 
-    if (!hasCredit) {
+    if (currentCredits <= 0) {
       // No credits remaining, show dialog
       final shouldEnablePremium = await showDialog<bool>(
         context: context,
@@ -459,12 +459,8 @@ class LessonService {
         },
       );
 
-      // If dialog was dismissed or user chose not to upgrade
-      if (shouldEnablePremium != true) {
-        return false;
-      }
+      return shouldEnablePremium ?? false;
     }
-
     // Check if there are too many users in active creation
     var usersInActiveCreation = await countUsersInActiveCreation();
     if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {

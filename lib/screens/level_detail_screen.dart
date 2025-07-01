@@ -177,9 +177,11 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
   }
 
   Future<void> _handleCreateNewLesson() async {
-    // Check credits first before setting loading state
-    final canProceed = await LessonService.checkAndDeductCredit(context);
-    if (!canProceed) {
+    // Check credits first before setting loading state (but don't deduct yet - server will handle deduction)
+    final currentCredits = await LessonCreditService.getCurrentCredits();
+    if (currentCredits <= 0) {
+      // Show premium dialog if no credits
+      await LessonService.showPremiumDialog(context);
       _loadGenerationsRemaining();
       return;
     }
