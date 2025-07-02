@@ -943,11 +943,13 @@ class LessonService {
     // check if there are due words in the category stored in the firestore
     final userId = FirebaseAuth.instance.currentUser!.uid.toString();
     final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
-    // check each word in categoryDocs and see if it is due or overdue
+
     var words = <String>[];
     final existingWordsCard = <String>[];
+    final overdueWords = <String>[];
     final closestDueDateCard = <Map<String, dynamic>>[];
 
+    // First, categorize existing words
     for (var doc in categoryDocs.docs) {
       // Handle both string and int formats for date fields
       DateTime dueDate;
@@ -981,15 +983,15 @@ class LessonService {
       final daysOverdue = DateTime.now().difference(dueDate).inDays;
       final daysSinceLastReview = DateTime.now().difference(lastReview).inDays;
 
-      // CASE 1: if there are due or overdue words and the word has not been reviewed today, add them to the words list
       final wordField = docData['word'];
       if (wordField == null || wordField is! String) {
         continue; // Skip this document if word field is missing or not a string
       }
 
+      // Categorize words based on their status
       if (daysSinceLastReview > 0 && docData['scheduledDays'] >= 0) {
         if (daysOverdue >= 0) {
-          words.add(wordField);
+          overdueWords.add(wordField);
         } else {
           closestDueDateCard.add({
             'word': wordField,
@@ -997,38 +999,36 @@ class LessonService {
             'daysOverdue': daysOverdue,
           });
         }
-        print('words: $words');
-        print('closestDueDateCard: $closestDueDateCard');
       }
       existingWordsCard.add(wordField);
     }
 
-    if (words.length > 5) {
-      words = words.sublist(0, 5);
+    // PRIORITY 1: Add new words first (words not in existingWordsCard)
+    final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
+    final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
+    newWords.shuffle(); // randomize the newWords list
+
+    if (newWords.isNotEmpty) {
+      final wordsToAdd = newWords.length >= 5 ? newWords.sublist(0, 5) : newWords;
+      words.addAll(wordsToAdd);
     }
 
-    if (words.length < 5) {
-      // CASE 2: if there are less than 5 words, check if there are any words in allWords that are not in existingWordsCard
-      final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
-      final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
-      // randomize the newWords list
-      newWords.shuffle();
-      if (newWords.isNotEmpty) {
-        final wordsNeeded = 5 - words.length;
-        final wordsToAdd = newWords.length >= wordsNeeded ? newWords.sublist(0, wordsNeeded) : newWords;
-        words.addAll(wordsToAdd);
-      }
-
-      if (words.length < 5) {
-        // CASE 3: if there are still less than 5 words, check if there are any words in closestDueDateCard
-        if (closestDueDateCard.isNotEmpty) {
-          closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
-          final wordsNeeded = 5 - words.length;
-          final wordsToAdd = closestDueDateCard.length >= wordsNeeded ? closestDueDateCard.sublist(0, wordsNeeded) : closestDueDateCard;
-          words.addAll(wordsToAdd.map((item) => item['word'] as String));
-        }
-      }
+    // PRIORITY 2: Add overdue words if we need more
+    if (words.length < 5 && overdueWords.isNotEmpty) {
+      final wordsNeeded = 5 - words.length;
+      final wordsToAdd = overdueWords.length >= wordsNeeded ? overdueWords.sublist(0, wordsNeeded) : overdueWords;
+      words.addAll(wordsToAdd);
     }
+
+    // PRIORITY 3: Add closest to overdue words if we still need more
+    if (words.length < 5 && closestDueDateCard.isNotEmpty) {
+      closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
+      final wordsNeeded = 5 - words.length;
+      final wordsToAdd = closestDueDateCard.length >= wordsNeeded ? closestDueDateCard.sublist(0, wordsNeeded) : closestDueDateCard;
+      words.addAll(wordsToAdd.map((item) => item['word'] as String));
+    }
+
+    print('words selected: $words');
     return words;
   }
 }
