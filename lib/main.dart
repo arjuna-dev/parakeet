@@ -29,7 +29,7 @@ import 'screens/onboarding_form_screen.dart';
 import 'screens/vocabulary_review_screen.dart';
 import 'screens/all_words_screen.dart';
 
-const bool versionForTestFlight = false;
+const bool versionForTestFlight = true;
 const String localShouldUpdateID = "gWYwwwYY";
 const String localCouldUpdateID = "d*h&f%0a";
 
