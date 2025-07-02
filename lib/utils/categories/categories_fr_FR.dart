@@ -58,7 +58,7 @@ const categories = [
     ]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": [
       "bonjour",
       "salut",

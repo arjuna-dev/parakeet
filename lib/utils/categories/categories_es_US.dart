@@ -58,7 +58,7 @@ const categories = [
     ]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": ["hola", "qué onda", "bien", "gracias", "tú", "clima", "bien", "mal", "ocupado", "cansado", "fin de semana", "planes", "disfrutar", "hoy", "mañana", "ayer", "chido", "conocer", "otra vez"]
   },
   {

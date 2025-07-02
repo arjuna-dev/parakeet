@@ -104,7 +104,7 @@ class CategoryItem extends StatelessWidget {
         return Colors.blue;
       case 'weather talk':
         return Colors.indigo;
-      case 'making small talk':
+      case 'essential conversations':
         return Colors.teal;
       default:
         // Generate a color based on the first letter of the category name

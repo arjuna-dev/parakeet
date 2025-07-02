@@ -1174,7 +1174,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         return const Color(0xFF388E3C);
       case 'asking for directions':
         return const Color(0xFF1976D2);
-      case 'making small talk':
+      case 'essential conversations':
         return const Color(0xFF00695C);
       case 'at the airport':
         return const Color(0xFF455A64);

@@ -16,7 +16,7 @@ const categories = [
     "words": ["harita", "cadde", "yol", "bulvar", "sol", "sağ", "düz", "köşe", "blok", "trafik ışığı", "kavşak", "dönmek", "yakın", "uzak", "arka", "ön", "yanında", "arasında", "karşısında", "işaret"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": [
       "merhaba",
       "selam",

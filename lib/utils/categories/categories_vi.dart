@@ -37,7 +37,7 @@ const categories = [
     "words": ["bản đồ", "đường", "lối đi", "đại lộ", "trái", "phải", "thẳng", "góc", "khối nhà", "đèn giao thông", "ngã tư", "rẽ", "gần", "xa", "phía sau", "phía trước", "bên cạnh", "giữa", "đối diện", "biển báo"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": [
       "xin chào",
       "chào",

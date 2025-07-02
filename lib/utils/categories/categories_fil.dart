@@ -35,7 +35,7 @@ const categories = [
     "words": ["mapa", "kalye", "daan", "abenyu", "kaliwa", "kanan", "diretso", "kanto", "bloke", "traffic light", "krus", "lumiko", "malapit", "malayo", "likod", "harap", "tabi", "pagitan", "kaharap", "senyas"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": ["kumusta", "hi", "paano", "ayos", "salamat", "ikaw", "panahon", "mabuti", "masama", "abala", "pagod", "weekend", "plano", "mag-enjoy", "ngayon", "bukas", "kahapon", "maganda", "makilala", "muli"]
   },
   {
