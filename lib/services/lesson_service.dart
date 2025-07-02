@@ -1028,6 +1028,16 @@ class LessonService {
       words.addAll(wordsToAdd.map((item) => item['word'] as String));
     }
 
+    // PRIORITY 4: just add random words if we still need more
+    if (words.length < 5) {
+      final wordsNeeded = 5 - words.length;
+      // randomize the allWords list
+      final randomWords = allWords.toList();
+      randomWords.shuffle();
+      final wordsToAdd = randomWords.length >= wordsNeeded ? randomWords.sublist(0, wordsNeeded) : randomWords;
+      words.addAll(wordsToAdd);
+    }
+
     print('words selected: $words');
     return words;
   }
