@@ -217,7 +217,7 @@ class CategoryLevelService {
       case 2:
         return const Color(0xFFFF9800); // Orange for Intermediate
       case 3:
-        return const Color(0xFFF44336); // Red for Advanced
+        return const Color(0xFF673AB7); // Deep Purple for Advanced
       default:
         return const Color(0xFF9E9E9E); // Gray for unknown
     }
