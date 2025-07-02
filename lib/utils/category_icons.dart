@@ -11,7 +11,7 @@ class CategoryIcons {
         return Icons.shopping_cart;
       case 'Asking for Directions':
         return Icons.map;
-      case 'Making Small Talk':
+      case 'Essential Conversations':
         return Icons.chat_bubble;
       case 'At the Airport':
         return Icons.flight;

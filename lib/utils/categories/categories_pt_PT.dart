@@ -37,7 +37,7 @@ const categories = [
     "words": ["mapa", "rua", "caminho", "avenida", "esquerda", "direita", "reto", "esquina", "quarteirão", "semáforo", "cruzamento", "virar", "perto", "longe", "atrás", "frente", "ao lado", "entre", "em frente", "placa"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": ["olá", "oi", "como está", "bem", "obrigado", "você", "tempo", "bom", "mau", "ocupado", "cansado", "fim de semana", "planos", "aproveitar", "hoje", "amanhã", "ontem", "agradável", "encontrar", "novamente"]
   },
   {

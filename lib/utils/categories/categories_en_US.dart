@@ -16,7 +16,7 @@ const categories = [
     "words": ["map", "street", "road", "avenue", "left", "right", "straight", "corner", "block", "traffic light", "intersection", "turn", "near", "far", "behind", "in front of", "next to", "between", "opposite", "sign"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": ["hello", "hi", "how", "fine", "thank", "you", "weather", "good", "bad", "busy", "tired", "weekend", "plans", "enjoy", "today", "tomorrow", "yesterday", "nice", "meet", "again"]
   },
   {

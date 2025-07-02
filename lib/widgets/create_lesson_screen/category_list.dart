@@ -72,8 +72,23 @@ class _CategoryListState extends State<CategoryList> {
     // Load stats for initially visible categories
     final visibleCategories = _sortedCategories.sublist(0, _visibleCategoriesCount > _sortedCategories.length ? _sortedCategories.length : _visibleCategoriesCount);
 
+    // Always ensure Essential Conversations is included in initial load
+    final categoriesToLoad = <String>{};
     for (var category in visibleCategories) {
-      await _loadCategoryStats(category['name']);
+      categoriesToLoad.add(category['name']);
+    }
+
+    // Add Essential Conversations if it's not already included
+    final essentialConversationsCategory = _sortedCategories.firstWhere(
+      (cat) => cat['name'].toLowerCase() == 'essential conversations',
+      orElse: () => <String, dynamic>{},
+    );
+    if (essentialConversationsCategory.isNotEmpty) {
+      categoriesToLoad.add(essentialConversationsCategory['name']);
+    }
+
+    for (var categoryName in categoriesToLoad) {
+      await _loadCategoryStats(categoryName);
     }
 
     // Sort categories after loading initial stats
@@ -127,8 +142,10 @@ class _CategoryListState extends State<CategoryList> {
 
   void _sortCategoriesByProgress() {
     final categoriesWithStats = <Map<String, dynamic>>[];
+    final essentialConversationsCategory = <Map<String, dynamic>>[];
     final categoriesWithoutStats = <Map<String, dynamic>>[];
     final nativeCategoriesWithStats = <Map<String, dynamic>>[];
+    final nativeEssentialConversationsCategory = <Map<String, dynamic>>[];
     final nativeCategoriesWithoutStats = <Map<String, dynamic>>[];
 
     for (int i = 0; i < widget.categories.length; i++) {
@@ -143,15 +160,21 @@ class _CategoryListState extends State<CategoryList> {
         categoriesWithStats.add(category);
         nativeCategoriesWithStats.add(nativeCategory);
       } else {
-        categoriesWithoutStats.add(category);
-        nativeCategoriesWithoutStats.add(nativeCategory);
+        // Among categories without progress, prioritize "Essential Conversations"
+        if (categoryName.toLowerCase() == 'essential conversations') {
+          essentialConversationsCategory.add(category);
+          nativeEssentialConversationsCategory.add(nativeCategory);
+        } else {
+          categoriesWithoutStats.add(category);
+          nativeCategoriesWithoutStats.add(nativeCategory);
+        }
       }
     }
 
     if (!mounted) return;
     setState(() {
-      _sortedCategories = [...categoriesWithStats, ...categoriesWithoutStats];
-      _sortedNativeCategories = [...nativeCategoriesWithStats, ...nativeCategoriesWithoutStats];
+      _sortedCategories = [...categoriesWithStats, ...essentialConversationsCategory, ...categoriesWithoutStats];
+      _sortedNativeCategories = [...nativeCategoriesWithStats, ...nativeEssentialConversationsCategory, ...nativeCategoriesWithoutStats];
     });
   }
 
@@ -823,7 +846,7 @@ class CategoryItemWithStats extends StatelessWidget {
         return const Color(0xFF388E3C);
       case 'asking for directions':
         return const Color(0xFF1976D2);
-      case 'making small talk':
+      case 'essential conversations':
         return const Color(0xFF00695C);
       case 'at the airport':
         return const Color(0xFF455A64);

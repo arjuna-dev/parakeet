@@ -16,7 +16,7 @@ const categories = [
     "words": ["karta", "gata", "väg", "aveny", "vänster", "höger", "rakt fram", "hörn", "kvarter", "trafikljus", "korsning", "svänga", "nära", "långt", "bakom", "framför", "bredvid", "mellan", "mittemot", "skylt"]
   },
   {
-    "name": "Making Small Talk",
+    "name": "Essential Conversations",
     "words": ["hej", "hallå", "hur mår du", "bra", "tack", "du", "väder", "bra", "dåligt", "upptagen", "trött", "helg", "planer", "njuta", "idag", "imorgon", "igår", "trevligt", "träffa", "igen"]
   },
   {
