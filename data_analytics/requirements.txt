@@ -1,2 +1,5 @@
 firebase-admin
 pandas
+matplotlib
+seaborn
+numpy
