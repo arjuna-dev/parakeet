@@ -6,7 +6,6 @@ import 'package:parakeet/widgets/home_screen/empty_state_view.dart';
 import 'package:parakeet/widgets/home_screen/lesson_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
@@ -30,12 +29,24 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   bool _isPremium = false;
   bool _showAllLessons = false;
   DateTime? _nextCreditReset;
+  bool _hasShownInitialModal = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserPreferences();
     _loadGenerationsRemaining();
+
+    // Show the modal once when the widget first loads
+    if (!_hasShownInitialModal) {
+      _hasShownInitialModal = true;
+      // Use a longer delay to ensure the widget is fully built and navigation is stable
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          _showCustomLessonModal(context);
+        }
+      });
+    }
   }
 
   @override
@@ -192,19 +203,6 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     }
   }
 
-  String _formatResetDate(DateTime resetDate) {
-    final now = DateTime.now();
-    final difference = resetDate.difference(now);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'}';
-    } else {
-      return 'Soon';
-    }
-  }
-
   void _showCustomLessonModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -309,7 +307,6 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     return Consumer<LoadingStateService>(
       builder: (context, loadingState, child) {
         final isGeneratingLesson = loadingState.isGeneratingLesson;
-
         return Scaffold(
           appBar: const AppBarWithDrawer(
             title: 'Custom Lessons',
@@ -389,7 +386,7 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 16),
                                       child: Text(
-                                        'Your Lessons (${_customLessons.length})',
+                                        'Your Custom Lessons (${_customLessons.length})',
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w600,
@@ -464,9 +461,10 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                 ),
             ],
           ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: 20, right: 4),
-            child: FloatingActionButton.extended(
+          bottomNavigationBar: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ElevatedButton(
               onPressed: isGeneratingLesson
                   ? null
                   : _generationsRemaining <= 0
@@ -478,11 +476,20 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                               _loadGenerationsRemaining(); // Refresh credits after dialog
                             }
                       : () => _showCustomLessonModal(context),
-              backgroundColor: _generationsRemaining <= 0 ? Colors.grey.shade600 : colorScheme.primary,
-              foregroundColor: Colors.white,
-              elevation: 8,
-              icon: isGeneratingLesson
-                  ? const SizedBox(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _generationsRemaining <= 0 ? Colors.grey.shade600 : colorScheme.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isGeneratingLesson)
+                    const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
@@ -490,65 +497,29 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Icon(_generationsRemaining <= 0 ? Icons.lock_rounded : Icons.auto_awesome_rounded, size: 22),
-              label: isGeneratingLesson
-                  ? const Text(
-                      'Generating...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    )
-                  : _generationsRemaining <= 0 && _isPremium
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'No Credits Left',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                            if (_nextCreditReset != null)
-                              Text(
-                                'Resets in ${_formatResetDate(_nextCreditReset!)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                  color: Colors.white.withOpacity(0.9),
-                                ),
-                              ),
-                          ],
-                        )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _generationsRemaining <= 0 ? 'Upgrade to Generate' : 'Generate Lesson',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              _generationsRemaining <= 0 ? 'No credits remaining' : '$_generationsRemaining credits remaining',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                  else if (_generationsRemaining <= 0)
+                    const Icon(Icons.lock_rounded, size: 20)
+                  else
+                    const Icon(Icons.add, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    isGeneratingLesson
+                        ? 'Generating...'
+                        : _generationsRemaining <= 0 && _isPremium
+                            ? 'No Credits Left'
+                            : _generationsRemaining <= 0
+                                ? 'Upgrade to Generate'
+                                : 'Create Lesson',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );

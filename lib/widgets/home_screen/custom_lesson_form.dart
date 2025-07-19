@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
-import 'package:parakeet/services/home_screen_model.dart';
+import 'package:parakeet/utils/example_scenarios.dart';
+import 'dart:math';
 
 class CustomLessonForm extends StatefulWidget {
   final String nativeLanguage;
@@ -31,7 +31,6 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   final FocusNode _topicFocusNode = FocusNode();
   final FocusNode _wordFocusNode = FocusNode();
   final List<String> _selectedWords = [];
-  final HomeScreenModel _model = HomeScreenModel();
   bool _isSuggestingRandom = false;
   bool _showWordInput = false;
 
@@ -40,6 +39,32 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     super.initState();
     // Listen to topic changes to update button state
     _topicController.addListener(_updateButtonState);
+    // Populate fields with a random scenario on load
+    _populateRandomScenario();
+  }
+
+  void _populateRandomScenario() {
+    try {
+      // Get a random scenario from the dictionary
+      final random = Random();
+      final scenarios = scenarioKeywords.keys.toList();
+      final randomScenario = scenarios[random.nextInt(scenarios.length)];
+      final words = scenarioKeywords[randomScenario]!;
+
+      // Populate the topic field
+      _topicController.text = randomScenario;
+
+      // Populate the words to learn (up to the max allowed)
+      _selectedWords.clear();
+      for (var word in words) {
+        if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
+          _selectedWords.add(word);
+        }
+      }
+    } catch (e) {
+      // If there's an error, just leave the fields empty
+      debugPrint('Failed to populate random scenario: $e');
+    }
   }
 
   @override
@@ -147,20 +172,20 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
 
     try {
-      final result = await LessonService.suggestRandomLesson(
-        widget.targetLanguage,
-        widget.nativeLanguage,
-      );
+      // Get a random scenario from the dictionary
+      final random = Random();
+      final scenarios = scenarioKeywords.keys.toList();
+      final randomScenario = scenarios[random.nextInt(scenarios.length)];
+      final words = scenarioKeywords[randomScenario]!;
 
       if (mounted) {
         setState(() {
           // Clear existing data
-          _topicController.text = result['topic'] as String;
+          _topicController.text = randomScenario;
           _selectedWords.clear();
 
-          // Add new words
-          final wordsToLearn = (result['words_to_learn'] as List).cast<String>();
-          for (var word in wordsToLearn) {
+          // Add words from the scenario (up to the max allowed)
+          for (var word in words) {
             if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
               _selectedWords.add(word);
             }
@@ -222,7 +247,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Topic',
+                              'Topic (in any language)',
                               style: TextStyle(
                                 fontSize: widget.isSmallScreen ? 14 : 16,
                                 fontWeight: FontWeight.bold,
@@ -241,7 +266,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                       ),
                                     )
                                   : const Icon(Icons.auto_awesome, size: 16),
-                              label: const Text('Suggest Random'),
+                              label: const Text('Generate Random'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 visualDensity: VisualDensity.compact,
@@ -309,7 +334,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Words to Learn (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
+                                'Words to Learn (in any language) (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
                                 style: TextStyle(
                                   fontSize: widget.isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.bold,

@@ -532,11 +532,6 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
       // Calculate breakdown start time for this dialogue
       final Duration breakdownStartTime = _calculateDialogueBreakdownStartTime(index);
 
-      // Debug: print breakdown time for first few dialogues
-      if (index < 3) {
-        print("Dialogue $index breakdown starts at: ${breakdownStartTime.inMinutes}:${(breakdownStartTime.inSeconds % 60).toString().padLeft(2, '0')}");
-      }
-
       // Single bubble with target language and native language as subtitle
       return TypingAnimationBubble(
         key: ValueKey('dialogue_$index'),

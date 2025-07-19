@@ -60,11 +60,11 @@ class BottomMenuBar extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.create),
-            label: 'Custom',
+            label: 'Generate',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Generate',
+            icon: Icon(Icons.auto_stories),
+            label: 'Learning Track',
           ),
         ],
         onTap: _handleTap,
