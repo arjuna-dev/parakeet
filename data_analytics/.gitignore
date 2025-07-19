@@ -1,3 +1,8 @@
 private_key
 img_*
 csv
+analytics.csv
+big_jsons.csv
+timestamps.csv
+users_timestamps.csv
+users.csv
