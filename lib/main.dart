@@ -215,7 +215,7 @@ Future<String> _getInitialRoute() async {
       }
     }
   }
-  return '/create_lesson';
+  return '/custom_lesson';
 }
 
 class MyApp extends StatefulWidget {

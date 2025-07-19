@@ -12,7 +12,7 @@ class MainNavigationScreen extends StatefulWidget {
 
   const MainNavigationScreen({
     super.key,
-    this.initialRoute = '/favorite',
+    this.initialRoute = '/custom_lesson',
   });
 
   @override

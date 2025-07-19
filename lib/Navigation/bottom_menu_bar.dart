@@ -13,12 +13,12 @@ class BottomMenuBar extends StatelessWidget {
     switch (currentRoute) {
       case '/favorite':
         return 0;
-      case '/create_lesson':
-        return 1;
       case '/custom_lesson':
+        return 1;
+      case '/create_lesson':
         return 2;
       default:
-        return 0;
+        return 1; // Default to custom_lesson (middle tab)
     }
   }
 
@@ -29,13 +29,13 @@ class BottomMenuBar extends StatelessWidget {
         route = '/favorite';
         break;
       case 1:
-        route = '/create_lesson';
-        break;
-      case 2:
         route = '/custom_lesson';
         break;
+      case 2:
+        route = '/create_lesson';
+        break;
       default:
-        route = '/favorite';
+        route = '/custom_lesson'; // Default to custom_lesson
     }
 
     // Only navigate if we're on a different route
@@ -59,12 +59,12 @@ class BottomMenuBar extends StatelessWidget {
             label: 'All Lessons',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Generate',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.create),
             label: 'Custom',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Generate',
           ),
         ],
         onTap: _handleTap,
