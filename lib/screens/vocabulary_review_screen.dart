@@ -505,22 +505,6 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
           text: TextSpan(
             children: [
               TextSpan(
-                text: word,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-              TextSpan(
-                text: ' → ',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: colorScheme.onSurface.withOpacity(0.5),
-                ),
-              ),
-              TextSpan(
                 text: translation ?? "N/A",
                 style: TextStyle(
                   fontSize: 16,
@@ -555,11 +539,12 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
         child: _buildDueWordsTab(isSmallScreen, colorScheme),
       ),
 
-      // Floating Action Button for Review
-      floatingActionButton: !_isLoadingDue && _dueWordsFull.isNotEmpty
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 20, right: 4),
-              child: FloatingActionButton.extended(
+      // Bottom Navigation Bar with Review Button
+      bottomNavigationBar: !_isLoadingDue && _dueWordsFull.isNotEmpty
+          ? Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ElevatedButton.icon(
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -574,25 +559,27 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                     ),
                   );
                 },
-                backgroundColor: colorScheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 8,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 icon: const Icon(Icons.quiz_rounded, size: 22),
                 label: const Text(
                   'Review Words',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    fontSize: 16,
                     color: Colors.white,
                   ),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -713,7 +700,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GridView.builder(
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: const EdgeInsets.only(bottom: 20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
