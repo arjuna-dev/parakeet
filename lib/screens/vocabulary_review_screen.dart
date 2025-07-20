@@ -38,6 +38,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
   final List<WordCard> _allWordsFull = [];
   final List<WordCard> _dueWordsFull = [];
   final Map<String, DocumentReference> _dueWordsRefs = {};
+  final Map<String, Map<String, dynamic>> _rawDocData = {}; // Store raw Firestore data
   int _totalDueWordsCount = 0; // Track total words available for review
 
   // Track flipped state for each word
@@ -89,10 +90,6 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       final categories = await categoriesRef.get();
       final refs = <DocumentReference>[];
       for (var cat in categories.docs) {
-        // Skip Custom Lesson words
-        if (cat.id.toLowerCase() == 'custom lesson') {
-          continue;
-        }
         final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
         final snap = await wordsCol.get();
         for (var doc in snap.docs) {
@@ -104,7 +101,14 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       _allRefsMap = maps['refsMap'] as Map<String, DocumentReference>;
 
       // Convert to WordCard objects first for easier sorting
-      final wordCards = docs.map(WordCard.fromFirestore).toList(); // Sort words by learning status and then alphabetically within each group
+      final wordCards = docs.map(WordCard.fromFirestore).toList();
+
+      // Store raw document data for accessing custom fields like native_language_translation
+      _rawDocData.clear();
+      for (final doc in docs) {
+        final word = doc['word'] as String;
+        _rawDocData[word] = doc;
+      } // Sort words by learning status and then alphabetically within each group
       wordCards.sort((a, b) {
         // Get status flags for word A
         final scheduledDaysA = a.card.scheduledDays.toDouble();
@@ -166,25 +170,15 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     setState(() => _isLoadingDue = true);
     try {
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
 
-      // Filter _allWordsFull for words where due date is today or in the past AND not reviewed today
+      // Filter _allWordsFull for words where due date is today or in the past
       final dueWords = _allWordsFull.where((wordCard) {
         // Check if the word is due (due date <= now)
         final dueDate = wordCard.card.due;
         final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
 
-        if (!isOverdue) return false;
-
-        // Check if lastReview was today
-        final lastReviewDate = DateTime(
-          wordCard.card.lastReview.year,
-          wordCard.card.lastReview.month,
-          wordCard.card.lastReview.day,
-        );
-
-        // Exclude if reviewed today
-        return !lastReviewDate.isAtSameMomentAs(today);
+        // Only consider due date - no lastReview filtering
+        return isOverdue;
       }).toList();
 
       // Optionally, sort as before (by learning status and alphabetically)
@@ -257,9 +251,34 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     }
   }
 
-  // Method to find word translation by looking up the category and index
-  String? findWordTranslation(String word) {
-    // Find the category and index of the word in target language
+  // Method to find word translation - prioritize WordCard's native_language_translation field
+  String? findWordTranslation(String word, [WordCard? wordCard]) {
+    debugPrint('VocabularyReview: Finding translation for word "$word"');
+
+    // First priority: Check if raw document data has native_language_translation field
+    if (_rawDocData.containsKey(word)) {
+      final rawData = _rawDocData[word]!;
+      debugPrint('VocabularyReview: Raw document data keys: ${rawData.keys.toList()}');
+      debugPrint('VocabularyReview: Has native_language_translation key: ${rawData.containsKey('native_language_translation')}');
+
+      if (rawData.containsKey('native_language_translation')) {
+        final translation = rawData['native_language_translation'];
+        debugPrint('VocabularyReview: native_language_translation value: "$translation" (type: ${translation.runtimeType})');
+        debugPrint('VocabularyReview: Is null: ${translation == null}');
+        debugPrint('VocabularyReview: Is empty: ${translation.toString().isEmpty}');
+
+        if (translation != null && translation.toString().isNotEmpty) {
+          debugPrint('VocabularyReview: Using native_language_translation: "${translation.toString()}"');
+          return translation.toString();
+        }
+      }
+    } else {
+      debugPrint('VocabularyReview: No raw document data found for word "$word"');
+    }
+
+    debugPrint('VocabularyReview: Falling back to category-based translation lookup');
+
+    // Fallback: Find the category and index of the word in target language
     for (final targetCategory in _targetLanguageCategories) {
       final List<dynamic> words = targetCategory['words'];
       final int wordIndex = words.indexWhere((w) => w.toLowerCase() == word.toLowerCase());
@@ -267,6 +286,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       if (wordIndex != -1) {
         // Found the word, now find matching category in native language
         final String categoryName = targetCategory['name'];
+        debugPrint('VocabularyReview: Found word in category "$categoryName" at index $wordIndex');
 
         final matchingNativeCategory = _nativeLanguageCategories.firstWhere(
           (natCat) {
@@ -278,6 +298,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
         final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
           final translation = "${nativeWords[wordIndex]}";
+          debugPrint('VocabularyReview: Category-based translation: "$translation"');
           // Only return translation if it's different from the original word
           if (translation.toLowerCase() != word.toLowerCase()) {
             return translation;
@@ -286,6 +307,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       }
     }
     // If word not found in any category or matching translation not found
+    debugPrint('VocabularyReview: No translation found for word "$word"');
     return null;
   }
 
@@ -409,7 +431,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
   }
 
   Widget _buildWordCard(WordCard card, ColorScheme colorScheme) {
-    final translation = findWordTranslation(card.word);
+    final translation = findWordTranslation(card.word, card);
     final isFlipped = _flippedCards[card.word] ?? false;
 
     return GestureDetector(
@@ -426,9 +448,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
             animation: rotateAnim,
             child: child,
             builder: (context, child) {
-              final isShowingFront = ValueKey(isFlipped) != child!.key;
-              var tilt = ((animation.value - 0.5).abs() - 0.5) * 0.003;
-              tilt *= isShowingFront ? -1.0 : 1.0;
+              // final isShowingFront = ValueKey(isFlipped) != child!.key;
+              // var tilt = ((animation.value - 0.5).abs() - 0.5) * 0.003;
+              // tilt *= isShowingFront ? -1.0 : 1.0;
               return Transform(
                 alignment: Alignment.center,
                 transform: Matrix4.identity()
@@ -625,55 +647,56 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
         Container(
           width: double.infinity,
           margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colorScheme.primary.withOpacity(0.1),
+                colorScheme.primaryContainer.withOpacity(0.15),
+                colorScheme.secondary.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.primary.withOpacity(0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                'These are words due for review.',
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: isSmallScreen ? 14 : 16,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.schedule_rounded,
+                  color: colorScheme.primary,
+                  size: isSmallScreen ? 20 : 24,
                 ),
               ),
-              if (_totalDueWordsCount > 20) ...[
-                SizedBox(height: isSmallScreen ? 8 : 12),
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Showing 20 words at a time to optimize your learning. Complete this session to access more words.',
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'These are words due for review.',
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),

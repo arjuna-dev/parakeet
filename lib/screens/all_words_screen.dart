@@ -78,10 +78,6 @@ class _AllWordsScreenState extends State<AllWordsScreen> {
       final categories = await categoriesRef.get();
       final refs = <DocumentReference>[];
       for (var cat in categories.docs) {
-        // Skip Custom Lesson words
-        // if (cat.id.toLowerCase() == 'custom lesson') {
-        //   continue;
-        // }
         final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
         final snap = await wordsCol.get();
         for (var doc in snap.docs) {
