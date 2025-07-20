@@ -222,9 +222,9 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
           children: [
             // Form Section
             Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: widget.isSmallScreen ? 8 : 16,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 5,
+                vertical: 5,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +239,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                         width: 1,
                       ),
                     ),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -247,7 +247,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Topic (in any language)',
+                              'Topic',
                               style: TextStyle(
                                 fontSize: widget.isSmallScreen ? 14 : 16,
                                 fontWeight: FontWeight.bold,
@@ -275,7 +275,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 18),
                         TextField(
                           controller: _topicController,
                           focusNode: _topicFocusNode,
@@ -296,14 +296,19 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   )
                                 : null,
                           ),
-                          maxLines: 2,
+                          maxLines: 3,
                           textCapitalization: TextCapitalization.sentences,
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _dismissKeyboard(),
+                          style: TextStyle(
+                            color: colorScheme.tertiary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Text(
-                          'Example: "Ordering food at a restaurant" or "Asking for directions"',
+                          'You can enter your own in any language.',
                           style: TextStyle(
                             fontSize: 12,
                             color: colorScheme.onSurfaceVariant,
@@ -334,7 +339,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Words to Learn (in any language) (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
+                                'Words to Learn (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
                                 style: TextStyle(
                                   fontSize: widget.isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.bold,
@@ -464,7 +469,9 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                 label: Text(
                                   word,
                                   style: TextStyle(
-                                    fontSize: widget.isSmallScreen ? 12 : 14,
+                                    fontSize: 16,
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                                 deleteIcon: const Icon(Icons.close, size: 18),
@@ -477,11 +484,20 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   color: colorScheme.primary,
                                 ),
                                 deleteIconColor: colorScheme.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
                                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               );
                             }).toList(),
                           ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'You can enter your own in any language.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                       ],
                     ),
                   ),

@@ -321,7 +321,7 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Jump to: ${_formatDuration(widget.breakdownStartTime!)}',
+                              'Jump to ${_formatDuration(widget.breakdownStartTime!)}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Colors.blue,
