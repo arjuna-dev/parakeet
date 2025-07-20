@@ -106,9 +106,9 @@ class AudioControls extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Left side - Vocabulary Review Button
+                  // Right side - Vocabulary Review Button
                   if (hasWordsToReview && !generating)
                     TextButton.icon(
                       onPressed: () async {
@@ -120,12 +120,12 @@ class AudioControls extends StatelessWidget {
                         onReviewWords?.call();
                       },
                       icon: Icon(
-                        Icons.quiz_outlined,
+                        Icons.school,
                         size: 16,
                         color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                       ),
                       label: Text(
-                        'Vocab Review',
+                        'Vocabulary Review',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
@@ -140,37 +140,37 @@ class AudioControls extends StatelessWidget {
                   else
                     const SizedBox.shrink(),
 
-                  // Right side - Mark as Completed Button
-                  if (!generating)
-                    TextButton.icon(
-                      onPressed: isCompleted
-                          ? null
-                          : () async {
-                              // Pause audio before marking as completed
-                              if (audioPlayerService.isPlaying.value) {
-                                audioPlayerService.isPlaying.value = false;
-                              }
-                              // Call the completion function
-                              onMarkCompleted?.call();
-                            },
-                      icon: Icon(
-                        isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-                        size: 16,
-                        color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      ),
-                      label: Text(
-                        isCompleted ? 'Completed' : 'Mark as Completed',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
+                  // // Right side - Mark as Completed Button
+                  // if (!generating)
+                  //   TextButton.icon(
+                  //     onPressed: isCompleted
+                  //         ? null
+                  //         : () async {
+                  //             // Pause audio before marking as completed
+                  //             if (audioPlayerService.isPlaying.value) {
+                  //               audioPlayerService.isPlaying.value = false;
+                  //             }
+                  //             // Call the completion function
+                  //             onMarkCompleted?.call();
+                  //           },
+                  //     icon: Icon(
+                  //       isCompleted ? Icons.check_circle : Icons.check_circle_outline,
+                  //       size: 16,
+                  //       color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  //     ),
+                  //     label: Text(
+                  //       isCompleted ? 'Completed' : 'Mark as Completed',
+                  //       style: TextStyle(
+                  //         fontSize: 14,
+                  //         color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  //       ),
+                  //     ),
+                  //     style: TextButton.styleFrom(
+                  //       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  //       minimumSize: Size.zero,
+                  //       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  //     ),
+                  //   ),
                 ],
               ),
             ),
