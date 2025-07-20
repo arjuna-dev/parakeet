@@ -6,7 +6,6 @@ import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/utils/script_generator.dart' show getDocsAndRefsMaps;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
-
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredToast;
 import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;

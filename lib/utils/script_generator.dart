@@ -1,12 +1,70 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'script_sequences.dart' as sequences;
 import 'constants.dart';
 import 'script_generator_to_urls.dart' show constructUrl;
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'spaced_repetition_fsrs.dart' show WordCard;
 import '../screens/audio_player_s_utils.dart' show accessBigJson;
+
+// Helper functions for storing and retrieving keyword translations
+Future<void> storeKeywordTranslations(List<Map<String, dynamic>> keywordObjects, String targetLanguage, String nativeLanguage) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final keywordTranslationsJson = jsonEncode(keywordObjects);
+    await prefs.setString('keyword_translations_$targetLanguage', keywordTranslationsJson);
+    await prefs.setString('keyword_native_language', nativeLanguage);
+  } catch (e) {
+    print('❌ ERROR storing keyword translations: $e');
+  }
+}
+
+Future<String?> getWordTranslationFromStorage(String targetWord, String targetLanguage) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final keywordTranslationsJson = prefs.getString('keyword_translations_$targetLanguage');
+    final nativeLanguage = prefs.getString('keyword_native_language');
+
+    if (keywordTranslationsJson == null || nativeLanguage == null) {
+      print('⚠️ DEBUG: No keyword translations found in storage for $targetLanguage');
+      return null;
+    }
+
+    final List<dynamic> keywordObjects = jsonDecode(keywordTranslationsJson);
+
+    // Find the translation for the target word
+    for (var keywordObj in keywordObjects) {
+      final Map<String, dynamic> keywordMap = keywordObj as Map<String, dynamic>;
+      final targetLanguageWord = keywordMap[targetLanguage]?.toString().toLowerCase().trim();
+
+      if (targetLanguageWord == targetWord.toLowerCase().trim()) {
+        final nativeTranslation = keywordMap[nativeLanguage]?.toString();
+        print('🔍 DEBUG: Found translation for "$targetWord": "$nativeTranslation"');
+        return nativeTranslation;
+      }
+    }
+
+    print('⚠️ DEBUG: No translation found for "$targetWord" in stored keywords');
+    return null;
+  } catch (e) {
+    print('❌ ERROR retrieving word translation: $e');
+    return null;
+  }
+}
+
+Future<void> clearKeywordTranslations(String targetLanguage) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('keyword_translations_$targetLanguage');
+    await prefs.remove('keyword_native_language');
+    print('🧹 DEBUG: Cleared keyword translations from storage');
+  } catch (e) {
+    print('❌ ERROR clearing keyword translations: $e');
+  }
+}
 
 Future<List<DocumentReference>> getSelectedWordCardDocRefs(String userId, String targetLanguage, String category, List<dynamic> words) async {
   final docRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
@@ -260,6 +318,22 @@ Future<void> saveWordAudioUrls({
         "native_chunk": nativeChunkUrl,
         "target_chunk": targetChunkUrl,
       });
+
+      // Get translation from local storage and save to Firestore
+      final translation = await getWordTranslationFromStorage(word, targetLanguage);
+      print('🔍 DEBUG: Translation for word "$word": $translation');
+      if (translation != null) {
+        await appendWordTranslationToFirestore(
+          userId: userId,
+          targetLanguage: targetLanguage,
+          word: word,
+          category: category,
+          nativeLanguageTranslation: translation,
+          context: 'lesson_context_$documentId',
+        );
+      } else {
+        print('⚠️ DEBUG: No translation found for word "$word" in local storage');
+      }
     }
   }
 }
@@ -275,6 +349,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   String nativeLanguage,
   String category,
 ) async {
+  print("parseAndCreateScript called with userId: $userId, targetLanguage: $targetLanguage, category: $category, selectedWords: $selectedWords");
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
 
@@ -478,6 +553,7 @@ Future<void> _appendRepetitionUrlsToWordDoc(
   String category,
   Map<String, dynamic> urlsMap,
 ) async {
+  print('🌐 DEBUG: Appending repetition URLs for word: "$word" in category: "$category"');
   // Make sure the category (parent) document exists
   final parentRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
   await parentRef.set(
@@ -485,7 +561,7 @@ Future<void> _appendRepetitionUrlsToWordDoc(
     SetOptions(merge: true),
   );
 
-  // Update / create the word document inside that category’s sub‑collection
+  // Update / create the word document inside that category's sub‑collection
   final wordRef = parentRef.collection(category).doc(word);
   await wordRef.set(
     {
@@ -493,4 +569,49 @@ Future<void> _appendRepetitionUrlsToWordDoc(
     },
     SetOptions(merge: true),
   );
+}
+
+Future<void> appendWordTranslationToFirestore({
+  required String userId,
+  required String targetLanguage,
+  required String word,
+  required String category,
+  required String nativeLanguageTranslation,
+  String? context, // Optional context where the word was found
+  Map<String, dynamic>? additionalTranslationData, // Optional additional data
+}) async {
+  print('🌐 DEBUG: Appending translation for word: "$word" in category: "$category"');
+  print('📝 DEBUG: Translation: "$nativeLanguageTranslation"');
+
+  // Make sure the category (parent) document exists
+  final parentRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category);
+  await parentRef.set(
+    {'createdAt': FieldValue.serverTimestamp()},
+    SetOptions(merge: true),
+  );
+
+  // Prepare the translation data
+  Map<String, dynamic> translationData = {
+    'native_language_translation': nativeLanguageTranslation,
+    'translation_updated_at': FieldValue.serverTimestamp(),
+  };
+
+  // Add optional context if provided
+  if (context != null && context.isNotEmpty) {
+    translationData['translation_context'] = context;
+  }
+
+  // Add any additional translation data if provided
+  if (additionalTranslationData != null) {
+    translationData.addAll(additionalTranslationData);
+  }
+
+  // Update / create the word document inside that category's sub‑collection
+  final wordRef = parentRef.collection(category).doc(word);
+  await wordRef.set(
+    translationData,
+    SetOptions(merge: true),
+  );
+
+  print('✅ DEBUG: Translation successfully appended to WordCard at path: users/$userId/${targetLanguage}_words/$category/$word');
 }

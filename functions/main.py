@@ -446,8 +446,9 @@ def translate_keywords(req: https_fn.Request) -> https_fn.Response:
         request_data = req.get_json()
         keywords = request_data.get("keywords")
         target_language = request_data.get("target_language")
+        native_language = request_data.get("native_language")
 
-        prompt = prompt_translate_keywords(keywords, target_language)
+        prompt = prompt_translate_keywords(keywords, target_language, native_language)
 
         response = chatGPT_API_call(prompt, use_stream=False)
 

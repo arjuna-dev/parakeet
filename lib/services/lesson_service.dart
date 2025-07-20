@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
+import 'package:parakeet/utils/script_generator.dart' show storeKeywordTranslations, clearKeywordTranslations;
 
 class LessonService {
   static const int activeCreationAllowed = 20;
@@ -841,12 +843,24 @@ class LessonService {
         body: jsonEncode(<String, dynamic>{
           "keywords": selectedWords,
           "target_language": targetLanguage,
+          "native_language": nativeLanguage, // Add the missing native_language parameter
         }),
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
-        final List<dynamic> keywords = data['keywords'].map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+        // Extract target language words from the new keyword format
+        final List<dynamic> keywordObjects = data['keywords'] as List<dynamic>;
+        // Store the bilingual keyword objects in local storage
+        await storeKeywordTranslations(keywordObjects.cast<Map<String, dynamic>>(), targetLanguage, nativeLanguage);
+
+        final List<dynamic> keywords = keywordObjects.map((keywordObj) {
+          final Map<String, dynamic> keywordMap = keywordObj as Map<String, dynamic>;
+          // Get the target language word (not the native language one)
+          final targetLanguageWord = keywordMap[targetLanguage] as String;
+          return targetLanguageWord.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase();
+        }).toList();
+        print("keywords: $keywords");
         selectedWords = keywords;
       }
 
@@ -1040,5 +1054,14 @@ class LessonService {
 
     print('words selected: $words');
     return words;
+  }
+
+  // Function to clean up lesson data from local storage
+  static Future<void> cleanupLessonData(String targetLanguage) async {
+    try {
+      await clearKeywordTranslations(targetLanguage);
+    } catch (e) {
+      print('Error cleaning up lesson data: $e');
+    }
   }
 }
