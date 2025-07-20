@@ -117,19 +117,24 @@ Expected output in JSON format:
 ###
 '''
 
-def prompt_translate_keywords(keywords, target_language):
-   return f'''Please translate the following keywords {keywords} to {target_language}. if it is already in {target_language} return the same keywords:
+def prompt_translate_keywords(keywords, target_language, native_language):
+   return f'''Please translate the following keywords {keywords} to {target_language}. Return an array of objects where each object contains the word in both {native_language} (native_language) and {target_language} (target_language). If a keyword is already in {target_language}, keep it as is for the target_language value, but provide the {native_language} translation for the native_language value.
 
 Example request:
 ###
 keywords: ["health", "compassion", "peanut butter"]
 target_language: "German"
+native_language: "English"
 ###
 
 Expected output in JSON format:
 ###
 {{
-    "keywords": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
+    "keywords": [
+        {{"{native_language}": "health", "{target_language}": "Gesundheit"}},
+        {{"{native_language}": "compassion", "{target_language}": "Mitgefühl"}},
+        {{"{native_language}": "peanut butter", "{target_language}": "Erdnussbutter"}}
+    ]
 }}
 ###
 
@@ -137,12 +142,17 @@ Example request:
 ###
 keywords: ["Gesundheit", "compassion", "Erdnussbutter"]
 target_language: "German"
+native_language: "English"
 ###
 
 Expected output in JSON format:
 ###
 {{
-    "keywords": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
+    "keywords": [
+        {{"{native_language}": "health", "{target_language}": "Gesundheit"}},
+        {{"{native_language}": "compassion", "{target_language}": "Mitgefühl"}},
+        {{"{native_language}": "peanut butter", "{target_language}": "Erdnussbutter"}}
+    ]
 }}
 ###
 
