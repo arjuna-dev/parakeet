@@ -369,25 +369,25 @@ class _LessonCardState extends State<LessonCard> {
                       ),
                       const SizedBox(height: 16),
                       // Complete/Incomplete option
-                      if (!_isLoadingCompletion)
-                        ListTile(
-                          leading: Icon(
-                            _isCompleted ? Icons.radio_button_checked_rounded : Icons.check_circle_outline_rounded,
-                            color: _isCompleted ? Colors.amber : Colors.green,
-                          ),
-                          title: Text(
-                            _isCompleted ? 'Mark as Incomplete' : 'Mark as Complete',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: _isCompleted ? Colors.amber : Colors.green,
-                            ),
-                          ),
-                          subtitle: Text(_isCompleted ? 'Remove completion status' : 'Mark this lesson as finished'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _toggleCompletionStatus();
-                          },
-                        ),
+                      // if (!_isLoadingCompletion)
+                      //   ListTile(
+                      //     leading: Icon(
+                      //       _isCompleted ? Icons.radio_button_checked_rounded : Icons.check_circle_outline_rounded,
+                      //       color: _isCompleted ? Colors.amber : Colors.green,
+                      //     ),
+                      //     title: Text(
+                      //       _isCompleted ? 'Mark as Incomplete' : 'Mark as Complete',
+                      //       style: TextStyle(
+                      //         fontWeight: FontWeight.w500,
+                      //         color: _isCompleted ? Colors.amber : Colors.green,
+                      //       ),
+                      //     ),
+                      //     subtitle: Text(_isCompleted ? 'Remove completion status' : 'Mark this lesson as finished'),
+                      //     onTap: () {
+                      //       Navigator.pop(context);
+                      //       _toggleCompletionStatus();
+                      //     },
+                      //   ),
                       if (!_isLoadingCompletion) const SizedBox(height: 8),
                       // Delete option
                       ListTile(
@@ -468,28 +468,34 @@ class _LessonCardState extends State<LessonCard> {
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
                 colors: [
-                  colorScheme.surface,
-                  colorScheme.surface.withOpacity(0.8),
+                  colorScheme.primary.withOpacity(0.09),
+                  colorScheme.tertiary.withOpacity(0.1),
                 ],
               ),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: categoryColor.withOpacity(0.2),
-                width: 2,
+                color: categoryColor.withOpacity(0.15),
+                width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: categoryColor.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  color: colorScheme.primary.withOpacity(0.02),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                   spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.05),
-                  blurRadius: 10,
+                  color: colorScheme.primary.withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(-2, -2),
+                ),
+                BoxShadow(
+                  color: colorScheme.tertiary.withOpacity(0.03),
+                  // color: colorScheme.shadow.withOpacity(0.06),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -503,18 +509,25 @@ class _LessonCardState extends State<LessonCard> {
                   child: GestureDetector(
                     onTap: _showOptionsMenu,
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        color: colorScheme.surfaceContainerHigh.withOpacity(0.4),
                         borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(24),
-                          bottomLeft: Radius.circular(16),
+                          topRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(14),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.shadow.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         Icons.more_vert_rounded,
-                        size: 16,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.8),
                       ),
                     ),
                   ),
@@ -546,7 +559,7 @@ class _LessonCardState extends State<LessonCard> {
 
                 // Main content
                 Padding(
-                  padding: EdgeInsets.all(widget.isSmallScreen ? 20 : 24),
+                  padding: const EdgeInsets.all(15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -565,13 +578,6 @@ class _LessonCardState extends State<LessonCard> {
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: categoryColor.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -593,151 +599,24 @@ class _LessonCardState extends State<LessonCard> {
                                 ],
                               ),
                             ),
-
-                            const SizedBox(width: 8),
-
-                            // Level badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1).withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    CategoryLevelService.getLevelIcon(_lessonLevel ?? 1),
-                                    size: 12,
-                                    color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Level ${_lessonLevel ?? 1}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: CategoryLevelService.getLevelColor(_lessonLevel ?? 1),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const Spacer(),
                           ],
                         ),
 
-                      // Conditional spacing - less space needed if no category badge
-                      SizedBox(height: (widget.showCategoryBadge && category.toLowerCase() != 'custom lesson') ? 20 : 8),
-
                       // Title
                       Container(
-                        padding: const EdgeInsets.only(left: 4, right: 60), // Increased right margin for icons
+                        padding: const EdgeInsets.only(left: 4, right: 40), // Increased right margin to avoid arrow icon overlap
                         child: Text(
                           widget.audioFile.get('title'),
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
-                            fontSize: widget.isSmallScreen ? 18 : 20,
+                            fontSize: 18,
                             color: colorScheme.onSurface,
-                            height: 1.3,
-                            letterSpacing: -0.5,
                           ),
-                          maxLines: 2,
+                          maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-
                       const SizedBox(height: 16),
-
-                      // Language info row
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.translate_rounded,
-                            size: 13,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              "${(widget.audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? widget.audioFile.get('native_language') : 'English (US)'} → ${widget.audioFile.get('target_language')}",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Timestamp and completion status row
-                      Row(
-                        children: [
-                          // Timestamp
-                          Icon(
-                            Icons.auto_awesome_rounded,
-                            size: 12,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            () {
-                              try {
-                                final data = widget.audioFile.data() as Map<String, dynamic>?;
-                                if (data?.containsKey('timestamp') == true) {
-                                  final timestamp = widget.audioFile.get('timestamp') as Timestamp?;
-                                  if (timestamp != null) {
-                                    return 'Generated ${getTimeAgo(timestamp.toDate())}';
-                                  }
-                                }
-                                return 'Generated recently';
-                              } catch (e) {
-                                return 'Generated recently';
-                              }
-                            }(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-
-                          // Completion status (next to generated info)
-                          if (!_isLoadingCompletion && _isCompleted) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check_circle,
-                                size: 12,
-                                color: Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Completed',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.green,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
                     ],
                   ),
                 ),

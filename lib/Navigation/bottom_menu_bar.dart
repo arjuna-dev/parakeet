@@ -15,7 +15,7 @@ class BottomMenuBar extends StatelessWidget {
         return 0;
       case '/custom_lesson':
         return 1;
-      case '/create_lesson':
+      case '/vocabulary_review':
         return 2;
       default:
         return 1; // Default to custom_lesson (middle tab)
@@ -32,7 +32,7 @@ class BottomMenuBar extends StatelessWidget {
         route = '/custom_lesson';
         break;
       case 2:
-        route = '/create_lesson';
+        route = '/vocabulary_review';
         break;
       default:
         route = '/custom_lesson'; // Default to custom_lesson
@@ -59,13 +59,17 @@ class BottomMenuBar extends StatelessWidget {
             label: 'All Lessons',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.create),
+            icon: Icon(Icons.add_circle_outline),
             label: 'Generate',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.auto_stories),
-            label: 'Learning Track',
+            icon: Icon(Icons.text_snippet_sharp),
+            label: 'Review',
           ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.auto_stories),
+          //   label: 'Learning Track',
+          // ),
         ],
         onTap: _handleTap,
       ),
