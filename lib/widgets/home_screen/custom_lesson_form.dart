@@ -216,157 +216,212 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
 
     return GestureDetector(
       onTap: _dismissKeyboard,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Form Section
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 5,
-                vertical: 5,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Topic Input
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 25,
+                    vertical: 5,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Topic Input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Topic',
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Topic',
+                                  style: TextStyle(
+                                    fontSize: widget.isSmallScreen ? 14 : 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _isSuggestingRandom ? null : _suggestRandomLesson,
+                                  icon: _isSuggestingRandom
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                          ),
+                                        )
+                                      : const Icon(Icons.auto_awesome, size: 16),
+                                  label: const Text('Generate Random'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    visualDensity: VisualDensity.compact,
+                                    textStyle: TextStyle(fontSize: widget.isSmallScreen ? 12 : 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            TextField(
+                              controller: _topicController,
+                              focusNode: _topicFocusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Enter a topic for your lesson',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: colorScheme.surface,
+                                suffixIcon: _topicController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () {
+                                          _topicController.clear();
+                                          _updateButtonState();
+                                        },
+                                      )
+                                    : null,
+                              ),
+                              maxLines: 3,
+                              textCapitalization: TextCapitalization.sentences,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _dismissKeyboard(),
                               style: TextStyle(
-                                fontSize: widget.isSmallScreen ? 14 : 16,
+                                color: colorScheme.tertiary,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
                               ),
                             ),
-                            OutlinedButton.icon(
-                              onPressed: _isSuggestingRandom ? null : _suggestRandomLesson,
-                              icon: _isSuggestingRandom
-                                  ? SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                                      ),
-                                    )
-                                  : const Icon(Icons.auto_awesome, size: 16),
-                              label: const Text('Generate Random'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                visualDensity: VisualDensity.compact,
-                                textStyle: TextStyle(fontSize: widget.isSmallScreen ? 12 : 14),
+                            const SizedBox(height: 8),
+                            Text(
+                              'You can enter your own in any language.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        TextField(
-                          controller: _topicController,
-                          focusNode: _topicFocusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Enter a topic for your lesson',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: colorScheme.surface,
-                            suffixIcon: _topicController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _topicController.clear();
-                                      _updateButtonState();
-                                    },
-                                  )
-                                : null,
-                          ),
-                          maxLines: 3,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _dismissKeyboard(),
-                          style: TextStyle(
-                            color: colorScheme.tertiary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You can enter your own in any language.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Words to Learn
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                        width: 1,
                       ),
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                      // Flexible spacer
+                      const Expanded(
+                        flex: 1,
+                        child: SizedBox(height: 16),
+                      ),
+
+                      // Words to Learn
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                'Words to Learn (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
-                                style: TextStyle(
-                                  fontSize: widget.isSmallScreen ? 14 : 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Words to Learn (${_selectedWords.length}/${LessonConstants.maxWordsAllowed})',
+                                    style: TextStyle(
+                                      fontSize: widget.isSmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if (!_showWordInput)
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.add_circle,
+                                      color: _selectedWords.length >= LessonConstants.maxWordsAllowed ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
+                                      size: 24,
+                                    ),
+                                    onPressed: _selectedWords.length >= LessonConstants.maxWordsAllowed
+                                        ? null
+                                        : () {
+                                            if (mounted) {
+                                              setState(() {
+                                                _showWordInput = true;
+                                              });
+                                            }
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              _wordFocusNode.requestFocus();
+                                              // Ensure the input field scrolls into view
+                                              Future.delayed(const Duration(milliseconds: 300), () {
+                                                if (mounted && _wordFocusNode.context != null) {
+                                                  Scrollable.ensureVisible(
+                                                    _wordFocusNode.context!,
+                                                    duration: const Duration(milliseconds: 300),
+                                                    curve: Curves.easeInOut,
+                                                  );
+                                                }
+                                              });
+                                            });
+                                          },
+                                    tooltip: 'Add word',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                              ],
                             ),
-                            if (!_showWordInput)
-                              IconButton(
-                                icon: Icon(
-                                  Icons.add_circle,
-                                  color: _selectedWords.length >= LessonConstants.maxWordsAllowed ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
-                                  size: 24,
-                                ),
-                                onPressed: _selectedWords.length >= LessonConstants.maxWordsAllowed
-                                    ? null
-                                    : () {
-                                        if (mounted) {
-                                          setState(() {
-                                            _showWordInput = true;
-                                          });
-                                        }
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          _wordFocusNode.requestFocus();
-                                          // Ensure the input field scrolls into view
+                            const SizedBox(height: 8),
+
+                            // Word input field (inline)
+                            if (_showWordInput)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _wordController,
+                                        focusNode: _wordFocusNode,
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter a word',
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          filled: true,
+                                          fillColor: colorScheme.surface,
+                                          contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          isDense: true,
+                                        ),
+                                        textCapitalization: TextCapitalization.none,
+                                        textInputAction: TextInputAction.done,
+                                        onSubmitted: (_) => _addWordFromInput(),
+                                        onTap: () {
+                                          // Ensure the input field is visible when tapped
                                           Future.delayed(const Duration(milliseconds: 300), () {
-                                            if (mounted && _wordFocusNode.context != null) {
+                                            if (mounted) {
                                               Scrollable.ensureVisible(
                                                 _wordFocusNode.context!,
                                                 duration: const Duration(milliseconds: 300),
@@ -374,159 +429,120 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                               );
                                             }
                                           });
-                                        });
-                                      },
-                                tooltip: 'Add word',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.check, color: Colors.green),
+                                      onPressed: _addWordFromInput,
+                                      tooltip: 'Add word',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.green.withOpacity(0.1),
+                                        padding: const EdgeInsets.all(8),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.red),
+                                      onPressed: _hideWordInput,
+                                      tooltip: 'Cancel',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.red.withOpacity(0.1),
+                                        padding: const EdgeInsets.all(8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+
+                            if (_selectedWords.isEmpty && !_showWordInput)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Text(
+                                    'Add up to 5 words you want to learn',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (_selectedWords.isNotEmpty)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _selectedWords.map((word) {
+                                  return Chip(
+                                    label: Text(
+                                      word,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    deleteIcon: const Icon(Icons.close, size: 18),
+                                    onDeleted: () => _removeWord(word),
+                                    backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                    side: BorderSide(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: colorScheme.primary,
+                                    ),
+                                    deleteIconColor: colorScheme.primary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  );
+                                }).toList(),
+                              ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'You can enter your own in any language.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                      ),
 
-                        // Word input field (inline)
-                        if (_showWordInput)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _wordController,
-                                    focusNode: _wordFocusNode,
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter a word',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      filled: true,
-                                      fillColor: colorScheme.surface,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      isDense: true,
-                                    ),
-                                    textCapitalization: TextCapitalization.none,
-                                    textInputAction: TextInputAction.done,
-                                    onSubmitted: (_) => _addWordFromInput(),
-                                    onTap: () {
-                                      // Ensure the input field is visible when tapped
-                                      Future.delayed(const Duration(milliseconds: 300), () {
-                                        if (mounted) {
-                                          Scrollable.ensureVisible(
-                                            _wordFocusNode.context!,
-                                            duration: const Duration(milliseconds: 300),
-                                            curve: Curves.easeInOut,
-                                          );
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.check, color: Colors.green),
-                                  onPressed: _addWordFromInput,
-                                  tooltip: 'Add word',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.green.withOpacity(0.1),
-                                    padding: const EdgeInsets.all(8),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: _hideWordInput,
-                                  tooltip: 'Cancel',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.red.withOpacity(0.1),
-                                    padding: const EdgeInsets.all(8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      // Flexible spacer
+                      const Expanded(
+                        flex: 1,
+                        child: SizedBox(height: 16),
+                      ),
 
-                        if (_selectedWords.isEmpty && !_showWordInput)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Text(
-                                'Add up to 5 words you want to learn',
-                                style: TextStyle(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (_selectedWords.isNotEmpty)
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _selectedWords.map((word) {
-                              return Chip(
-                                label: Text(
-                                  word,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                deleteIcon: const Icon(Icons.close, size: 18),
-                                onDeleted: () => _removeWord(word),
-                                backgroundColor: colorScheme.primary.withOpacity(0.1),
-                                side: BorderSide(
-                                  color: colorScheme.primary.withOpacity(0.2),
-                                ),
-                                labelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                ),
-                                deleteIconColor: colorScheme.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              );
-                            }).toList(),
-                          ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'You can enter your own in any language.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
+                      // Create Lesson Button
+                      FilledButton(
+                        onPressed: _canCreateLesson ? _createCustomLesson : null,
+                        style: FilledButton.styleFrom(
+                          minimumSize: Size(double.infinity, widget.isSmallScreen ? 40 : 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                        child: Text(
+                          'Generate Lesson',
+                          style: TextStyle(
+                            fontSize: widget.isSmallScreen ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
 
-                  // Create Lesson Button (moved below form)
-                  FilledButton(
-                    onPressed: _canCreateLesson ? _createCustomLesson : null,
-                    style: FilledButton.styleFrom(
-                      minimumSize: Size(double.infinity, widget.isSmallScreen ? 40 : 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Generate Lesson',
-                      style: TextStyle(
-                        fontSize: widget.isSmallScreen ? 16 : 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                      // Bottom padding to account for keyboard
+                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
+                    ],
                   ),
-                  // Add extra bottom padding to ensure keyboard doesn't overlap
-                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 100),
-                ],
+                ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
