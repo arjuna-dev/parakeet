@@ -41,10 +41,6 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       final refs = <DocumentReference>[];
 
       for (var cat in categories.docs) {
-        // Skip Custom Lesson words
-        if (cat.id.toLowerCase() == 'custom lesson') {
-          continue;
-        }
         final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
         final snap = await wordsCol.get();
         for (var doc in snap.docs) {

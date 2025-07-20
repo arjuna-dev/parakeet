@@ -127,11 +127,6 @@ Future<List<DocumentReference>> get5MostOverdueWordsRefs(String userId, String t
   for (var categoryDoc in categoriesSnapshot.docs) {
     final category = categoryDoc.id;
 
-    // Skip Custom Lesson words
-    if (category.toLowerCase() == 'custom lesson') {
-      continue;
-    }
-
     final wordsCollectionRef = categoriesRef.doc(category).collection(category);
 
     // Query overdue words in a category (removed scheduledDays filter to avoid multiple inequality filters)
