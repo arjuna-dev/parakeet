@@ -511,7 +511,7 @@ class _LessonCardState extends State<LessonCard> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh.withOpacity(0.4),
+                        color: Colors.transparent,
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(20),
                           bottomLeft: Radius.circular(14),
