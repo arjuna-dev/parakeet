@@ -175,40 +175,40 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               ),
                               child: Column(
                                 children: [
-                                  FutureBuilder<int>(
-                                    future: _getDueWordsCount(),
-                                    builder: (context, snapshot) {
-                                      final dueCount = snapshot.data ?? 0;
-                                      return _buildMenuItem(
-                                        buildContext,
-                                        icon: Icons.quiz_rounded,
-                                        title: 'Vocabulary Review',
-                                        subtitle: dueCount > 0 ? '$dueCount word${dueCount == 1 ? '' : 's'} ready for review' : 'Review words due for practice',
-                                        onTap: () {
-                                          if (Navigator.canPop(buildContext)) {
-                                            Navigator.pop(buildContext);
-                                          }
-                                          Navigator.pushNamed(buildContext, '/vocabulary_review');
-                                        },
-                                        hasBadge: dueCount > 0,
-                                        badgeCount: dueCount,
-                                      );
-                                    },
-                                  ),
-                                  SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
-                                  _buildMenuItem(
-                                    buildContext,
-                                    icon: Icons.library_books,
-                                    title: 'Word Bank',
-                                    subtitle: 'View all your learned words',
-                                    onTap: () {
-                                      if (Navigator.canPop(buildContext)) {
-                                        Navigator.pop(buildContext);
-                                      }
-                                      Navigator.pushNamed(buildContext, '/all_words');
-                                    },
-                                  ),
-                                  SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
+                                  // FutureBuilder<int>(
+                                  //   future: _getDueWordsCount(),
+                                  //   builder: (context, snapshot) {
+                                  //     final dueCount = snapshot.data ?? 0;
+                                  //     return _buildMenuItem(
+                                  //       buildContext,
+                                  //       icon: Icons.quiz_rounded,
+                                  //       title: 'Vocabulary Review',
+                                  //       subtitle: dueCount > 0 ? '$dueCount word${dueCount == 1 ? '' : 's'} ready for review' : 'Review words due for practice',
+                                  //       onTap: () {
+                                  //         if (Navigator.canPop(buildContext)) {
+                                  //           Navigator.pop(buildContext);
+                                  //         }
+                                  //         Navigator.pushNamed(buildContext, '/vocabulary_review');
+                                  //       },
+                                  //       hasBadge: dueCount > 0,
+                                  //       badgeCount: dueCount,
+                                  //     );
+                                  //   },
+                                  // ),
+                                  // SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
+                                  // _buildMenuItem(
+                                  //   buildContext,
+                                  //   icon: Icons.library_books,
+                                  //   title: 'Word Bank',
+                                  //   subtitle: 'View all your learned words',
+                                  //   onTap: () {
+                                  //     if (Navigator.canPop(buildContext)) {
+                                  //       Navigator.pop(buildContext);
+                                  //     }
+                                  //     Navigator.pushNamed(buildContext, '/all_words');
+                                  //   },
+                                  // ),
+                                  // SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
                                   _buildMenuItem(
                                     buildContext,
                                     icon: Icons.language,
