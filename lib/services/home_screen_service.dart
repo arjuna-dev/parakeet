@@ -217,96 +217,96 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
           ),
 
           // Category Filter
-          if (widget.model.availableCategories.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: colorScheme.outline.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: widget.model.selectedCategory,
-                        hint: Text(
-                          'All Categories',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        isExpanded: true,
-                        icon: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        items: [
-                          DropdownMenuItem<String>(
-                            value: null,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.apps_rounded,
-                                  size: 16,
-                                  color: colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'All Categories',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ...widget.model.availableCategories.map((category) {
-                            final categoryColor = _getCategoryColor(category);
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    CategoryIcons.getCategoryIcon(category),
-                                    size: 16,
-                                    color: categoryColor,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      category,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: colorScheme.onSurface,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (String? value) {
-                          widget.model.setSelectedCategory(value);
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // if (widget.model.availableCategories.isNotEmpty)
+          //   Container(
+          //     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          //     decoration: BoxDecoration(
+          //       color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          //       borderRadius: BorderRadius.circular(16),
+          //       border: Border.all(
+          //         color: colorScheme.outline.withOpacity(0.1),
+          //         width: 1,
+          //       ),
+          //     ),
+          //     child: Row(
+          //       children: [
+          //         Expanded(
+          //           child: DropdownButtonHideUnderline(
+          //             child: DropdownButton<String>(
+          //               value: widget.model.selectedCategory,
+          //               hint: Text(
+          //                 'All Categories',
+          //                 style: TextStyle(
+          //                   color: colorScheme.onSurfaceVariant,
+          //                   fontSize: 13,
+          //                   fontWeight: FontWeight.w500,
+          //                 ),
+          //               ),
+          //               isExpanded: true,
+          //               icon: Icon(
+          //                 Icons.keyboard_arrow_down_rounded,
+          //                 color: colorScheme.onSurfaceVariant,
+          //               ),
+          //               items: [
+          //                 DropdownMenuItem<String>(
+          //                   value: null,
+          //                   child: Row(
+          //                     children: [
+          //                       Icon(
+          //                         Icons.apps_rounded,
+          //                         size: 16,
+          //                         color: colorScheme.primary,
+          //                       ),
+          //                       const SizedBox(width: 8),
+          //                       Text(
+          //                         'All Categories',
+          //                         style: TextStyle(
+          //                           fontSize: 13,
+          //                           fontWeight: FontWeight.w500,
+          //                           color: colorScheme.onSurface,
+          //                         ),
+          //                       ),
+          //                     ],
+          //                   ),
+          //                 ),
+          //                 ...widget.model.availableCategories.map((category) {
+          //                   final categoryColor = _getCategoryColor(category);
+          //                   return DropdownMenuItem<String>(
+          //                     value: category,
+          //                     child: Row(
+          //                       children: [
+          //                         Icon(
+          //                           CategoryIcons.getCategoryIcon(category),
+          //                           size: 16,
+          //                           color: categoryColor,
+          //                         ),
+          //                         const SizedBox(width: 8),
+          //                         Expanded(
+          //                           child: Text(
+          //                             category,
+          //                             style: TextStyle(
+          //                               fontSize: 13,
+          //                               fontWeight: FontWeight.w500,
+          //                               color: colorScheme.onSurface,
+          //                             ),
+          //                             overflow: TextOverflow.ellipsis,
+          //                           ),
+          //                         ),
+          //                       ],
+          //                     ),
+          //                   );
+          //                 }).toList(),
+          //               ],
+          //               onChanged: (String? value) {
+          //                 widget.model.setSelectedCategory(value);
+          //               },
+          //             ),
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
 
           // Lessons List
           Expanded(
