@@ -26,7 +26,6 @@ import 'package:parakeet/services/notification_service.dart';
 import 'package:parakeet/services/background_audio_service.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/onboarding_form_screen.dart';
-import 'screens/vocabulary_review_screen.dart';
 import 'screens/all_words_screen.dart';
 
 const bool versionForTestFlight = true;
@@ -423,8 +422,8 @@ class _MyAppState extends State<MyApp> {
                   );
               break;
             case '/vocabulary_review':
-              builder = (context) => const ResponsiveScreenWrapper(
-                    child: VocabularyReviewScreen(),
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: _buildAuthenticatedMainNavigation('/vocabulary_review'),
                   );
               break;
             case '/all_words':

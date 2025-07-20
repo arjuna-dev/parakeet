@@ -554,27 +554,22 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
           'Vocabulary Review',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        leading: null, // Remove back button since we're in main navigation
+        automaticallyImplyLeading: false, // Disable automatic back button
       ),
-      body: TabContentView(
-        isSmallScreen: isSmallScreen,
-        child: _buildDueWordsTab(isSmallScreen, colorScheme),
-      ),
+      body: Stack(
+        children: [
+          TabContentView(
+            isSmallScreen: isSmallScreen,
+            child: _buildDueWordsTab(isSmallScreen, colorScheme),
+          ),
 
-      // Bottom Navigation Bar with Review Button
-      bottomNavigationBar: !_isLoadingDue && _dueWordsFull.isNotEmpty
-          ? Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.transparent,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.transparent,
-                    blurRadius: 10,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
+          // Floating Review Button
+          if (!_isLoadingDue && _dueWordsFull.isNotEmpty)
+            Positioned(
+              bottom: 5, // Position almost touching the bottom navigation bar
+              left: 20,
+              right: 20,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -648,8 +643,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                   ),
                 ),
               ),
-            )
-          : null,
+            ),
+        ],
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/screens/home_screen.dart';
 import 'package:parakeet/screens/create_lesson_screen.dart';
 import 'package:parakeet/screens/custom_lesson_screen.dart';
+import 'package:parakeet/screens/vocabulary_review_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/services/loading_state_service.dart';
 
@@ -39,6 +40,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         return const CreateLesson(title: "Categories");
       case '/custom_lesson':
         return const CustomLessonScreen();
+      case '/vocabulary_review':
+        return const VocabularyReviewScreen();
       default:
         return ChangeNotifierProvider(
           create: (context) => HomeScreenModel(),
