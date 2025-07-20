@@ -198,7 +198,7 @@ class RepetitionModeSelector extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Reps',
+            'Repeat',
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.primary,
