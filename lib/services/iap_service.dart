@@ -29,8 +29,7 @@ class IAPService {
   void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) async {
     if (purchaseDetails.productID == '1m' || purchaseDetails.productID == '1year') {
       FirebaseService().setAccountType(uid: uid, type: 'premium');
-      // Set credits to 65 immediately upon subscription activation
-      await LessonCreditService.handlePremiumActivation();
+      // Premium users now get daily limits instead of credits
     }
   }
 

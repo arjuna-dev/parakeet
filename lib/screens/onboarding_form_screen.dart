@@ -102,7 +102,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/create_lesson');
+      Navigator.pushReplacementNamed(context, '/custom_lesson');
     }
   }
 

@@ -611,7 +611,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
                       Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/create_lesson',
+                        '/custom_lesson',
                         (route) => false,
                       );
                     },

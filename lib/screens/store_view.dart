@@ -311,10 +311,10 @@ class _StoreViewState extends State<StoreView> {
 
   List<Map<String, dynamic>> _getSubscriptionBenefits() {
     return [
-      {'icon': Icons.category, 'text': 'Access to all premium categories'},
-      {'icon': Icons.auto_awesome, 'text': '65x lessons every month'},
+      {'icon': Icons.speaker_group, 'text': 'Access to premium voices'},
+      {'icon': Icons.auto_awesome, 'text': 'Generate 10 lessons per day'},
       {'icon': Icons.music_note, 'text': 'Listen to your lesson without ads'},
-      {'icon': Icons.star, 'text': 'Priority access to latest features'},
+      {'icon': Icons.star, 'text': 'Priority access to new features'},
     ];
   }
 

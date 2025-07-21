@@ -136,17 +136,11 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
         final isPremium = userDoc.data()?['premium'] ?? false;
         final currentCredits = await LessonService.getCurrentCredits();
 
-        // Get next credit reset date for premium users
-        DateTime? nextReset;
-        if (isPremium) {
-          nextReset = await LessonCreditService.getNextCreditResetDate();
-        }
-
         if (mounted) {
           setState(() {
             _isPremium = isPremium;
             _generationsRemaining = currentCredits;
-            _nextCreditReset = nextReset;
+            _nextCreditReset = null; // No longer using credit reset dates in daily system
           });
         }
       }
@@ -177,9 +171,9 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
   }
 
   Future<void> _handleCreateNewLesson() async {
-    // Check credits first before setting loading state (but don't deduct yet - server will handle deduction)
-    final currentCredits = await LessonCreditService.getCurrentCredits();
-    if (currentCredits <= 0) {
+    // Check daily lessons remaining first before setting loading state (but don't deduct yet - server will handle deduction)
+    final remainingLessons = await LessonService.getCurrentCredits();
+    if (remainingLessons <= 0) {
       // Show premium dialog if no credits
       await LessonService.showPremiumDialog(context);
       _loadGenerationsRemaining();

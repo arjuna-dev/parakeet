@@ -274,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Lesson Credits',
+                            'Daily Lessons',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -286,13 +286,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         children: [
                           Icon(
-                            Icons.credit_card,
+                            Icons.today,
                             size: 12,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _premium ? 'Refills monthly with subscription' : 'One-time credits for free users',
+                            _premium ? 'Refills daily with subscription' : 'Limited daily lessons for free users',
                             style: TextStyle(
                               fontSize: 11,
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -317,7 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'credit${_apiCallsRemaining == 1 ? '' : 's'} available',
+                                'lesson${_apiCallsRemaining == 1 ? '' : 's'} remaining today',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontWeight: FontWeight.w500,
@@ -341,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           Container(
                             height: 12,
-                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? 65 : 8)),
+                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? 10 : 2)),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: _apiCallsRemaining > 0
@@ -366,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 8),
                       Text(
-                        _premium ? 'Premium: $_apiCallsRemaining of 65 credits available' : '$_apiCallsRemaining of 8 credits available',
+                        _premium ? 'Premium: $_apiCallsRemaining of 10 daily lessons remaining' : '$_apiCallsRemaining of 2 daily lessons remaining',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 11,
