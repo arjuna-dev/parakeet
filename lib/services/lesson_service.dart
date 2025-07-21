@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
-import 'package:parakeet/services/lesson_credit_service.dart';
+import 'package:parakeet/services/daily_lesson_service.dart';
 import 'package:parakeet/utils/script_generator.dart' show storeKeywordTranslations, clearKeywordTranslations;
 
 class LessonService {
@@ -89,7 +89,7 @@ class LessonService {
 
                   // Subtitle
                   Text(
-                    'You\'ve used all your credits',
+                    'You\'re out of daily lessons',
                     style: TextStyle(
                       fontSize: 14,
                       color: colorScheme.onSurfaceVariant,
@@ -123,7 +123,7 @@ class LessonService {
                             const SizedBox(width: 10),
                             Flexible(
                               child: Text(
-                                'Generate 65x lessons every month',
+                                'Generate 10 lessons per day',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -137,14 +137,14 @@ class LessonService {
                         Row(
                           children: [
                             Icon(
-                              Icons.all_inclusive,
+                              Icons.speaker_group,
                               color: colorScheme.primary,
                               size: 18,
                             ),
                             const SizedBox(width: 10),
                             Flexible(
                               child: Text(
-                                'Access to all categories',
+                                'Access to premium voices',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -239,11 +239,11 @@ class LessonService {
 
   // Function to check credit limits (server will handle deduction)
   static Future<bool> checkAndDeductCredit(BuildContext context) async {
-    // Only check credits, don't deduct (server will handle deduction)
-    final currentCredits = await LessonCreditService.getCurrentCredits();
+    // Check daily limit, don't deduct yet (server will handle deduction)
+    final remainingLessons = await DailyLessonService.getRemainingLessons();
 
-    if (currentCredits <= 0) {
-      // No credits remaining, show dialog
+    if (remainingLessons <= 0) {
+      // No daily lessons remaining, show dialog
       final shouldEnablePremium = await showDialog<bool>(
         context: context,
         barrierDismissible: true,
@@ -785,9 +785,9 @@ class LessonService {
     }
   }
 
-  // Function to get current lesson credits
+  // Function to get current daily lessons remaining
   static Future<int> getCurrentCredits() async {
-    return await LessonCreditService.getCurrentCredits();
+    return await DailyLessonService.getRemainingLessons();
   }
 
   // Function to create a custom lesson
