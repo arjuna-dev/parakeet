@@ -334,7 +334,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                Navigator.pushNamed(context, '/create_lesson');
+                                Navigator.pushNamed(context, '/custom_lesson');
                               },
                           ),
                           TextSpan(

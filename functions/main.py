@@ -68,56 +68,56 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     user_doc_ref = db.collection('users').document(user_ID)
     api_call_count_ref = user_doc_ref.collection('api_call_count').document('first_API_calls')
 
-    # Transaction to check credits and update call count for tracking
+    # Transaction to check daily limits and update call count
     @firestore.transactional
-    def check_credits_and_update_call_count(transaction, user_doc_ref, api_call_count_ref):
+    def check_daily_limit_and_update_call_count(transaction, user_doc_ref, api_call_count_ref):
         user_doc_snapshot = user_doc_ref.get(transaction=transaction)
         api_call_snapshot = api_call_count_ref.get(transaction=transaction)
 
-        # Initialize user document if it doesn't exist
-        if not user_doc_snapshot.exists:
-            transaction.set(user_doc_ref, {
-                'lesson_credit': 7,  # Start with 7 credits (8 - 1 for this generation)
-                'premium': False
-            })
-        else:
+        # Check user's premium status
+        is_premium = False
+        if user_doc_snapshot.exists:
             user_data = user_doc_snapshot.to_dict()
             is_premium = user_data.get('premium', False)
 
-            # Check if lesson_credit field exists
-            if 'lesson_credit' not in user_data:
-                # Initialize credits based on user type
-                initial_credits = 65 if is_premium else 8
-                transaction.update(user_doc_ref, {
-                    'lesson_credit': initial_credits - 1  # Deduct 1 credit for this generation
-                })
-            else:
-                current_credits = user_data.get('lesson_credit', 0)
-                if current_credits <= 0:
-                    return False  # No credits remaining
+        # Set daily limits based on premium status
+        daily_limit = 10 if is_premium else 2
 
-                # Deduct 1 credit
-                transaction.update(user_doc_ref, {
-                    'lesson_credit': current_credits - 1
-                })
+        # Check current daily usage
+        current_count = 0
+        if api_call_snapshot.exists:
+            api_call_data = api_call_snapshot.to_dict()
+            last_call_date = api_call_data.get('last_call_date', '')
+            current_count = api_call_data.get('call_count', 0)
 
-        # Update call count for tracking (but don't reset daily anymore)
-        if not api_call_snapshot.exists:
-            transaction.set(api_call_count_ref, {'last_call_date': today, 'call_count': 1})
-        else:
-            transaction.update(api_call_count_ref, {
-                'last_call_date': today,
-                'call_count': firestore.Increment(1)
+            # Reset count if it's a new day
+            if last_call_date != today:
+                current_count = 0
+
+        # Check if daily limit reached
+        if current_count >= daily_limit:
+            return False  # Daily limit reached
+
+        # Initialize/update user document if needed
+        if not user_doc_snapshot.exists:
+            transaction.set(user_doc_ref, {
+                'premium': False
             })
+
+        # Update call count with daily reset logic
+        transaction.set(api_call_count_ref, {
+            'last_call_date': today,
+            'call_count': current_count + 1
+        })
 
         return True
 
     # Start the transaction
     transaction = db.transaction()
-    if not check_credits_and_update_call_count(transaction, user_doc_ref, api_call_count_ref):
-        # If the user has no credits remaining, return an error response
+    if not check_daily_limit_and_update_call_count(transaction, user_doc_ref, api_call_count_ref):
+        # If the user has reached daily limit, return an error response
         return https_fn.Response(
-            json.dumps({"error": "No lesson credits remaining"}),
+            json.dumps({"error": "Daily lesson limit reached"}),
             status=429,  # HTTP status code for Too Many Requests
         )
 

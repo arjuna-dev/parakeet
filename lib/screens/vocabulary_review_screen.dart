@@ -677,7 +677,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                   ),
                   recognizer: TapGestureRecognizer()
                     ..onTap = () {
-                      Navigator.pushReplacementNamed(context, '/create_lesson');
+                      Navigator.pushReplacementNamed(context, '/custom_lesson');
                     },
                 )
               ],
@@ -767,7 +767,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GridView.builder(
-              padding: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.only(bottom: 100),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
