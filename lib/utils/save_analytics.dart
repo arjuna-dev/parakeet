@@ -1,86 +1,42 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AnalyticsData {
-  DateTime timestamp;
-  String action; // 'play', 'pause', or 'completed'
-  int count;
-  List<DateTime> timestamps;
+class AnalyticsAction {
+  final String action;
+  final DateTime timestamp;
 
-  AnalyticsData({
-    required this.timestamp,
+  AnalyticsAction({
     required this.action,
-    this.count = 1,
-    required this.timestamps,
+    required this.timestamp,
   });
-
-  // Method to update the analytics data
-  void updateData(DateTime newTimestamp) {
-    timestamp = newTimestamp;
-    count += 1;
-    timestamps.add(newTimestamp);
-  }
 
   Map<String, dynamic> toMap() {
     return {
-      action: {
-        'timestamp': timestamp,
-        'count': count,
-        'timestamps': timestamps.map((ts) => ts.toIso8601String()).toList(),
-      }
+      'action': action,
+      'timestamp': timestamp,
     };
+  }
+
+  factory AnalyticsAction.fromMap(Map<String, dynamic> map) {
+    return AnalyticsAction(
+      action: map['action'] as String,
+      timestamp: (map['timestamp'] as Timestamp).toDate(),
+    );
   }
 }
 
 class AnalyticsManager {
-  Map<String, AnalyticsData> analytics = {};
   final String userId;
-  final String documentId;
 
-  AnalyticsManager(this.userId, this.documentId);
+  AnalyticsManager(this.userId);
 
-  void loadAnalyticsFromFirebase() {
-    FirebaseFirestore.instance.collection('users').doc(userId).collection('analytics').doc(documentId).get().then((DocumentSnapshot<Map<String, dynamic>> snapshot) {
-      if (snapshot.exists) {
-        _loadAnalytics(snapshot.data()!);
-      }
-    });
-  }
+  /// Store a single action with timestamp to Firebase
+  Future<void> storeAction(String action) async {
+    final analyticsAction = AnalyticsAction(
+      action: action,
+      timestamp: DateTime.now(),
+    );
 
-  void _loadAnalytics(Map<String, dynamic> data) {
-    data.forEach((key, value) {
-      analytics[key] = AnalyticsData(
-          timestamp: (value['timestamp'] as Timestamp).toDate(),
-          action: key,
-          count: value['count'],
-          timestamps: List<DateTime>.from(
-            value['timestamps'].map((ts) => DateTime.parse(ts as String)),
-          ));
-    });
-  }
-
-  void storeAnalytics(String fileId, String action) {
-    DateTime currentTimestamp = DateTime.now();
-
-    if (analytics.containsKey(action)) {
-      analytics[action]!.updateData(currentTimestamp);
-    } else {
-      analytics[action] = AnalyticsData(
-        timestamp: currentTimestamp,
-        action: action,
-        timestamps: [currentTimestamp],
-      );
-    }
-    // Save to Firebase
-    _saveToFirebase(fileId, action);
-  }
-
-  Future<void> _saveToFirebase(String fileId, String action) async {
-    AnalyticsData data = analytics[action]!;
-
-    await FirebaseFirestore.instance.collection('users').doc(userId).collection('analytics').doc(fileId).set(data.toMap(), SetOptions(merge: true));
-  }
-
-  Map<String, AnalyticsData> getAnalytics() {
-    return analytics;
+    // Create a new document for each action in the user's analytics subcollection
+    await FirebaseFirestore.instance.collection('users').doc(userId).collection('analytics').add(analyticsAction.toMap());
   }
 }

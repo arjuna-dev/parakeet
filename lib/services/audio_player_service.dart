@@ -38,7 +38,7 @@ class AudioPlayerService {
   }) {
     player = AudioPlayer();
     playlist = ConcatenatingAudioSource(useLazyPreparation: true, children: []);
-    analyticsManager = AnalyticsManager(userID, documentID);
+    analyticsManager = AnalyticsManager(userID);
 
     // Initialize player
     _init();
@@ -46,7 +46,6 @@ class AudioPlayerService {
 
   void _init() {
     player.setSpeed(playbackSpeed.value);
-    analyticsManager.loadAnalyticsFromFirebase();
 
     // Setup listeners
     playbackSpeed.addListener(() {
@@ -67,7 +66,7 @@ class AudioPlayerService {
 
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying.value) {
-          analyticsManager.storeAnalytics(documentID, 'completed');
+          analyticsManager.storeAction('lesson_completed');
           // Notify completion
           onLessonCompleted?.call();
         }
@@ -185,7 +184,7 @@ class AudioPlayerService {
     //   );
     // }
 
-    analyticsManager.storeAnalytics(documentID, 'play');
+    analyticsManager.storeAction('play');
   }
 
   // Pause audio
@@ -194,7 +193,7 @@ class AudioPlayerService {
     player.pause();
 
     if (analyticsOn) {
-      analyticsManager.storeAnalytics(documentID, 'pause');
+      analyticsManager.storeAction('pause');
     }
   }
 
