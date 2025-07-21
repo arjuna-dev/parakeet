@@ -3,14 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/services/lesson_service.dart';
-import 'package:parakeet/services/lesson_credit_service.dart';
+import 'package:parakeet/services/daily_lesson_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:parakeet/utils/script_generator.dart' show getDocsAndRefsMaps;
-import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 
 class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -22,64 +20,6 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  // Get count of due words that haven't been reviewed today
-  Future<int> _getDueWordsCount() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return 0;
-
-      final userId = user.uid;
-      final userData = await ProfileService.fetchUserData();
-      final targetLanguage = userData['target_language'] as String? ?? '';
-
-      if (targetLanguage.isEmpty) return 0;
-
-      // Get all words
-      final categoriesRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words');
-      final categories = await categoriesRef.get();
-      final refs = <DocumentReference>[];
-
-      for (var cat in categories.docs) {
-        final wordsCol = categoriesRef.doc(cat.id).collection(cat.id);
-        final snap = await wordsCol.get();
-        for (var doc in snap.docs) {
-          refs.add(doc.reference);
-        }
-      }
-
-      final maps = await getDocsAndRefsMaps(refs);
-      final docs = maps['docs'] as List<Map<String, dynamic>>;
-      final allWords = docs.map(WordCard.fromFirestore).toList();
-
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      // Filter for words where due date is today or in the past AND not reviewed today
-      final dueWords = allWords.where((wordCard) {
-        // Check if the word is due (due date <= now)
-        final dueDate = wordCard.card.due;
-        final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
-
-        if (!isOverdue) return false;
-
-        // Check if lastReview was today
-        final lastReviewDate = DateTime(
-          wordCard.card.lastReview.year,
-          wordCard.card.lastReview.month,
-          wordCard.card.lastReview.day,
-        );
-
-        // Exclude if reviewed today
-        return !lastReviewDate.isAtSameMomentAs(today);
-      }).toList();
-
-      return dueWords.length;
-    } catch (e) {
-      debugPrint('Error getting due words count: $e');
-      return 0;
-    }
-  }
 
   void _showDrawerMenu(BuildContext context) {
     showGeneralDialog(
@@ -457,19 +397,6 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
     return days[date.weekday - 1];
   }
 
-  String _formatResetDate(DateTime resetDate) {
-    final now = DateTime.now();
-    final difference = resetDate.difference(now);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'}';
-    } else {
-      return 'Soon';
-    }
-  }
-
   Widget _buildLessonProgressDisplay(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return const SizedBox.shrink();
@@ -493,11 +420,11 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         }
 
         final data = snapshot.data!;
-        final apiCallsRemaining = data['remaining'] as int;
+        final lessonsRemaining = data['remaining'] as int;
+        final lessonsUsed = data['used'] as int;
         final isPremium = data['isPremium'] as bool;
         final limit = data['limit'] as int;
-        final nextReset = data['nextReset'] as DateTime?;
-        final progress = limit > 0 ? apiCallsRemaining / limit : 0.0;
+        final progress = limit > 0 ? (limit - lessonsRemaining) / limit : 0.0;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -529,7 +456,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Lesson Credits',
+                          'Daily Lessons',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -537,7 +464,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           ),
                         ),
                         Text(
-                          '$apiCallsRemaining',
+                          '$lessonsRemaining/$limit',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -559,7 +486,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: apiCallsRemaining > 0
+                              colors: lessonsRemaining > 0
                                   ? (isPremium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
                                   : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
                             ),
@@ -568,9 +495,9 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       ),
                     ),
-                    // Show upgrade section when user has run out of credits and is not premium
-                    // OR show reset date when premium user has run out of credits
-                    if (apiCallsRemaining == 0) ...[
+                    // Show upgrade section when user has run out of lessons and is not premium
+                    // OR show daily reset info for premium users
+                    if (lessonsRemaining == 0) ...[
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -601,7 +528,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Out of credits',
+                                  'Daily limit reached',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -611,8 +538,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            if (isPremium && nextReset != null) ...[
-                              // Show reset date for premium users
+                            if (isPremium) ...[
+                              // Show daily reset info for premium users
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -634,7 +561,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Resets in ${_formatResetDate(nextReset)}',
+                                      'Resets tomorrow',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -644,7 +571,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                   ],
                                 ),
                               ),
-                            ] else if (!isPremium) ...[
+                            ] else ...[
                               // Show upgrade button for non-premium users
                               GestureDetector(
                                 onTap: () {
@@ -686,7 +613,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                       const SizedBox(width: 6),
                                       const Flexible(
                                         child: Text(
-                                          'Upgrade',
+                                          'Upgrade for More',
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
@@ -704,7 +631,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: const Text(
-                                          '65x',
+                                          '10/day',
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w800,
@@ -733,32 +660,23 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
 
   Future<Map<String, dynamic>> _getLessonProgressData(String userId) async {
     try {
-      // Check premium status
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      final isPremium = userDoc.data()?['premium'] ?? false;
-
-      // Get current lesson credits
-      final currentCredits = await LessonCreditService.getCurrentCredits();
-      final creditLimit = await LessonCreditService.getCreditLimit();
-
-      // Get next credit reset date for premium users
-      DateTime? nextReset;
-      if (isPremium) {
-        nextReset = await LessonCreditService.getNextCreditResetDate();
-      }
+      // Get daily lesson progress data
+      final progressData = await DailyLessonService.getDailyProgressData();
 
       return {
-        'remaining': currentCredits,
-        'isPremium': isPremium,
-        'limit': creditLimit,
-        'nextReset': nextReset,
+        'remaining': progressData['remaining'],
+        'used': progressData['used'],
+        'isPremium': progressData['isPremium'],
+        'limit': progressData['limit'],
+        'isDaily': true, // Flag to indicate this is daily system
       };
     } catch (e) {
       return {
-        'remaining': 0,
+        'remaining': DailyLessonService.freeUserDailyLimit,
+        'used': 0,
         'isPremium': false,
-        'limit': LessonCreditService.freeUserCredits,
-        'nextReset': null,
+        'limit': DailyLessonService.freeUserDailyLimit,
+        'isDaily': true,
       };
     }
   }
@@ -938,36 +856,9 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      leading: FutureBuilder<int>(
-        future: _getDueWordsCount(),
-        builder: (context, snapshot) {
-          final dueCount = snapshot.data ?? 0;
-          return Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () => _showDrawerMenu(context),
-              ),
-              if (dueCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.surface,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: () => _showDrawerMenu(context),
       ),
     );
   }

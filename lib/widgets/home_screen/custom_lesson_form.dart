@@ -8,6 +8,7 @@ class CustomLessonForm extends StatefulWidget {
   final String targetLanguage;
   final String languageLevel;
   final bool isSmallScreen;
+  final bool isLoading;
   final VoidCallback? onLessonCreated;
   final Function(String topic, List<String> words)? onLessonStarted;
 
@@ -17,6 +18,7 @@ class CustomLessonForm extends StatefulWidget {
     required this.targetLanguage,
     required this.languageLevel,
     this.isSmallScreen = false,
+    this.isLoading = false,
     this.onLessonCreated,
     this.onLessonStarted,
   }) : super(key: key);
@@ -517,19 +519,92 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                       ),
 
                       // Create Lesson Button
-                      FilledButton(
-                        onPressed: _canCreateLesson ? _createCustomLesson : null,
-                        style: FilledButton.styleFrom(
-                          minimumSize: Size(double.infinity, widget.isSmallScreen ? 40 : 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      Container(
+                        width: double.infinity,
+                        height: widget.isSmallScreen ? 50 : 56,
+                        decoration: BoxDecoration(
+                          gradient: _canCreateLesson && !widget.isLoading
+                              ? LinearGradient(
+                                  colors: [
+                                    colorScheme.primary,
+                                    colorScheme.primary.withOpacity(0.8),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : LinearGradient(
+                                  colors: [
+                                    colorScheme.onSurface.withOpacity(0.12),
+                                    colorScheme.onSurface.withOpacity(0.08),
+                                  ],
+                                ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _canCreateLesson && !widget.isLoading
+                              ? [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
                         ),
-                        child: Text(
-                          'Generate Lesson',
-                          style: TextStyle(
-                            fontSize: widget.isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: (_canCreateLesson && !widget.isLoading) ? _createCustomLesson : null,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              alignment: Alignment.center,
+                              child: widget.isLoading
+                                  ? Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              colorScheme.onPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Text(
+                                          'Generating Lesson...',
+                                          style: TextStyle(
+                                            fontSize: widget.isSmallScreen ? 16 : 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: colorScheme.onPrimary,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.auto_awesome_rounded,
+                                          color: _canCreateLesson ? Colors.white : colorScheme.onSurface.withOpacity(0.38),
+                                          size: widget.isSmallScreen ? 20 : 22,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Generate Lesson',
+                                          style: TextStyle(
+                                            fontSize: widget.isSmallScreen ? 16 : 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: _canCreateLesson ? Colors.white : colorScheme.onSurface.withOpacity(0.38),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
                           ),
                         ),
                       ),
