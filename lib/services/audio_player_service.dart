@@ -66,7 +66,7 @@ class AudioPlayerService {
 
       if (playerState.processingState == ProcessingState.completed) {
         if (isPlaying.value) {
-          analyticsManager.storeAction('lesson_completed');
+          analyticsManager.storeAction('lesson_completed', documentID);
           // Notify completion
           onLessonCompleted?.call();
         }
@@ -183,18 +183,12 @@ class AudioPlayerService {
     //     },
     //   );
     // }
-
-    analyticsManager.storeAction('play');
   }
 
   // Pause audio
   Future<void> pause({bool analyticsOn = true}) async {
     await _savePlayerPosition();
     player.pause();
-
-    if (analyticsOn) {
-      analyticsManager.storeAction('pause');
-    }
   }
 
   // Stop audio

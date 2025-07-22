@@ -10,6 +10,7 @@ import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredToast;
 import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
 import 'package:parakeet/utils/language_categories.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 
 class VocabularyReviewScreen extends StatefulWidget {
   final String? nativeLanguage;
@@ -30,6 +31,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
   late String _userId;
   late String _targetLanguage;
   late String _nativeLanguage;
+  late AnalyticsManager analyticsManager;
 
   // Categories for both languages
   late List<Map<String, dynamic>> _targetLanguageCategories;
@@ -64,6 +66,10 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
         return;
       }
       _userId = user.uid;
+
+      // Initialize analytics manager
+      analyticsManager = AnalyticsManager(_userId);
+
       final userData = await ProfileService.fetchUserData();
       _targetLanguage = userData['target_language'] as String? ?? '';
       _nativeLanguage = widget.nativeLanguage ?? userData['native_language'] as String? ?? 'English (US)';
@@ -395,7 +401,10 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      analyticsManager.storeAction('vocabulary_review_translation_modal_closed', word);
+                      Navigator.pop(context);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colorScheme.primary,
                       foregroundColor: Colors.white,
@@ -436,6 +445,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
 
     return GestureDetector(
       onTap: () {
+        final wasFlipped = _flippedCards[card.word] ?? false;
+        analyticsManager.storeAction('vocabulary_review_card_flipped', '${card.word}|${wasFlipped ? 'to_front' : 'to_back'}');
         setState(() {
           _flippedCards[card.word] = !isFlipped;
         });
@@ -597,12 +608,14 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    analyticsManager.storeAction('review_words_button_pressed', '${_dueWordsFull.length} words');
                     showDialog(
                       context: context,
                       builder: (context) => ReviewWordsDialog(
                         words: _dueWordsRefs,
                         userID: _userId,
                         onReviewCompleted: () async {
+                          analyticsManager.storeAction('vocabulary_review_session_completed');
                           // Refresh the word lists after review is completed
                           await _loadAllWords();
                           await _loadDueWords();
@@ -677,6 +690,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                   ),
                   recognizer: TapGestureRecognizer()
                     ..onTap = () {
+                      analyticsManager.storeAction('vocabulary_review_create_lesson_link_tapped');
                       Navigator.pushReplacementNamed(context, '/custom_lesson');
                     },
                 )

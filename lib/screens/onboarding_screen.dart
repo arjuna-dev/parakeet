@@ -5,6 +5,8 @@ import 'package:parakeet/widgets/onboarding_screen/context_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/science_step.dart';
 import 'package:parakeet/widgets/onboarding_screen/ready_step.dart';
 import 'package:parakeet/screens/onboarding_form_screen.dart';
+import '../utils/save_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -16,6 +18,22 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  late AnalyticsManager analyticsManager;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnalytics();
+  }
+
+  void _initializeAnalytics() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      analyticsManager = AnalyticsManager(user.uid);
+      // Track initial screen view
+      analyticsManager.storeAction('onboarding_welcome_screen_viewed');
+    }
+  }
 
   @override
   void dispose() {
@@ -67,6 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (_currentPage > 0)
                     TextButton(
                       onPressed: () {
+                        analyticsManager.storeAction('onboarding_screen_previous_page', _currentPage.toString());
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -78,6 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const SizedBox(width: 80),
                   FilledButton(
                     onPressed: () {
+                      analyticsManager.storeAction('onboarding_screen_next_page', _currentPage.toString());
                       if (_currentPage < 3) {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),

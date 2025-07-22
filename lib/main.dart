@@ -16,6 +16,7 @@ import 'screens/custom_lesson_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
@@ -31,6 +32,14 @@ import 'screens/all_words_screen.dart';
 const bool versionForTestFlight = true;
 const String localShouldUpdateID = "gWYwwwYY";
 const String localCouldUpdateID = "d*h&f%0a";
+
+AnalyticsManager? getAnalyticsManager() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    return AnalyticsManager(user.uid);
+  }
+  return null;
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +71,8 @@ Future<void> main() async {
 }
 
 Future<void> checkForMandatoryUpdate() async {
+  getAnalyticsManager()?.storeAction('mandatory_update_check_initiated');
+
   final firestore = FirebaseFirestore.instance;
   final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
@@ -73,17 +84,25 @@ Future<void> checkForMandatoryUpdate() async {
     final String? updateMessage = data['should_update_app_message'] as String?;
 
     if (firebaseShouldUpdateID == null || updateMessage == null || versionForTestFlight) {
+      getAnalyticsManager()?.storeAction('mandatory_update_check_skipped', 'missing_data_or_testflight');
       // Optionally log or handle missing fields
       return;
     }
 
     if (firebaseShouldUpdateID != localShouldUpdateID) {
+      getAnalyticsManager()?.storeAction('mandatory_update_required');
       _showUpdateDialog(updateMessage, true);
+    } else {
+      getAnalyticsManager()?.storeAction('mandatory_update_not_required');
     }
+  } else {
+    getAnalyticsManager()?.storeAction('mandatory_update_check_failed', 'document_not_found');
   }
 }
 
 Future<void> checkForRecommendedUpdate() async {
+  getAnalyticsManager()?.storeAction('recommended_update_check_initiated');
+
   final firestore = FirebaseFirestore.instance;
   final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
@@ -95,12 +114,18 @@ Future<void> checkForRecommendedUpdate() async {
     final String updateMessage = data['could_update_app_message'];
 
     if (firebaseCouldUpdateID != localCouldUpdateID) {
+      getAnalyticsManager()?.storeAction('recommended_update_available');
       _showUpdateDialog(updateMessage, false);
+    } else {
+      getAnalyticsManager()?.storeAction('recommended_update_not_available');
     }
+  } else {
+    getAnalyticsManager()?.storeAction('recommended_update_check_failed', 'document_not_found');
   }
 }
 
 void _showUpdateDialog(String message, bool brickApp) {
+  getAnalyticsManager()?.storeAction('update_dialog_shown', brickApp ? 'mandatory' : 'recommended');
   showDialog(
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // Prevent dialog dismissal
@@ -118,6 +143,7 @@ void _showUpdateDialog(String message, bool brickApp) {
           TextButton(
             child: const Text('Update'),
             onPressed: () {
+              getAnalyticsManager()?.storeAction('update_dialog_update_button_pressed');
               final appStoreUrl = Platform.isIOS ? urlIOS : urlAndroid;
               launchURL(appStoreUrl); // Redirect to App Store/Play Store
             },
@@ -126,8 +152,10 @@ void _showUpdateDialog(String message, bool brickApp) {
             child: brickApp ? const Text('Close App') : const Text('Continue'),
             onPressed: () {
               if (brickApp) {
+                getAnalyticsManager()?.storeAction('update_dialog_close_app_button_pressed');
                 exit(0); // Close the app
               } else {
+                getAnalyticsManager()?.storeAction('update_dialog_continue_button_pressed');
                 // Close the dialog
                 Navigator.of(context).pop();
               }
@@ -142,6 +170,8 @@ void _showUpdateDialog(String message, bool brickApp) {
 Future<void> requestTrackingPermission() async {
   // Check if the tracking status has not been determined
   if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
+    getAnalyticsManager()?.storeAction('tracking_permission_request_initiated');
+
     // Show an explainer dialog before the ATT prompt
     await showCustomTrackingDialog();
 
@@ -149,12 +179,17 @@ Future<void> requestTrackingPermission() async {
     await Future.delayed(const Duration(milliseconds: 200));
 
     // Request tracking authorization
-    await AppTrackingTransparency.requestTrackingAuthorization();
+    final result = await AppTrackingTransparency.requestTrackingAuthorization();
+    getAnalyticsManager()?.storeAction('tracking_permission_result', result.toString());
+  } else {
+    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+    getAnalyticsManager()?.storeAction('tracking_permission_already_determined', status.toString());
   }
 }
 
 // Method to display the custom explainer dialog
 Future<void> showCustomTrackingDialog() async {
+  getAnalyticsManager()?.storeAction('tracking_permission_explainer_dialog_shown');
   return showDialog<void>(
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // User must explicitly interact with dialog
@@ -194,6 +229,7 @@ Future<void> showCustomTrackingDialog() async {
           TextButton(
             child: const Text('Continue'),
             onPressed: () {
+              getAnalyticsManager()?.storeAction('tracking_permission_dialog_continue_button_pressed');
               Navigator.of(context).pop(); // Dismiss the dialog
             },
           ),
@@ -210,9 +246,13 @@ Future<String> _getInitialRoute() async {
     if (userDoc.exists) {
       final userData = userDoc.data();
       if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
+        getAnalyticsManager()?.storeAction('app_launched_with_incomplete_onboarding');
         return '/onboarding';
       }
     }
+    getAnalyticsManager()?.storeAction('app_launched_authenticated_user');
+  } else {
+    getAnalyticsManager()?.storeAction('app_launched_unauthenticated_user');
   }
   return '/custom_lesson';
 }
@@ -297,6 +337,7 @@ class _MyAppState extends State<MyApp> {
           final userData = userDoc.data();
           if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
             if (mounted) {
+              getAnalyticsManager()?.storeAction('user_redirected_to_onboarding');
               setState(() {
                 _navigatingToOnboarding = true;
               });
@@ -305,6 +346,8 @@ class _MyAppState extends State<MyApp> {
             return;
           }
         }
+      } else {
+        getAnalyticsManager()?.storeAction('user_signed_out');
       }
     });
   }

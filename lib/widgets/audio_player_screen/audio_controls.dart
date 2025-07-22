@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/services/audio_player_service.dart';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/save_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+void _trackUserAction(String action, {String? data}) {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final analyticsManager = AnalyticsManager(user.uid);
+    analyticsManager.storeAction(action, data ?? '');
+  }
+}
 
 class AudioControls extends StatelessWidget {
   final AudioPlayerService audioPlayerService;
@@ -56,7 +66,12 @@ class AudioControls extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.skip_previous),
                         iconSize: 32,
-                        onPressed: audioPlayerService.player.hasPrevious ? () => audioPlayerService.player.seekToPrevious() : null,
+                        onPressed: audioPlayerService.player.hasPrevious
+                            ? () {
+                                _trackUserAction('audio_controls_previous_track_pressed');
+                                audioPlayerService.player.seekToPrevious();
+                              }
+                            : null,
                       ),
                       ValueListenableBuilder<bool>(
                         valueListenable: audioPlayerService.isPlaying,
@@ -73,6 +88,8 @@ class AudioControls extends StatelessWidget {
                               ),
                               iconSize: 36,
                               onPressed: () {
+                                final isCurrentlyPlaying = audioPlayerService.isPlaying.value;
+                                _trackUserAction(isCurrentlyPlaying ? 'audio_controls_pause_pressed' : 'audio_controls_play_pressed');
                                 audioPlayerService.isPlaying.value = !audioPlayerService.isPlaying.value;
                               },
                             ),
@@ -82,7 +99,12 @@ class AudioControls extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.skip_next),
                         iconSize: 32,
-                        onPressed: audioPlayerService.player.hasNext ? () => audioPlayerService.player.seekToNext() : null,
+                        onPressed: audioPlayerService.player.hasNext
+                            ? () {
+                                _trackUserAction('audio_controls_next_track_pressed');
+                                audioPlayerService.player.seekToNext();
+                              }
+                            : null,
                       ),
                     ],
                   ),
@@ -112,6 +134,7 @@ class AudioControls extends StatelessWidget {
                   if (hasWordsToReview && !generating)
                     TextButton.icon(
                       onPressed: () async {
+                        _trackUserAction('audio_controls_vocabulary_review_pressed');
                         // Pause audio before opening review
                         if (audioPlayerService.isPlaying.value) {
                           audioPlayerService.isPlaying.value = false;
@@ -269,6 +292,7 @@ class RepetitionModeSelector extends StatelessWidget {
             ),
           );
         } else {
+          _trackUserAction('audio_controls_repetition_mode_changed', data: value.toString());
           repetitionMode.value = value;
         }
       },
@@ -309,6 +333,7 @@ class SpeedSelector extends StatelessWidget {
           ],
           onChanged: (double? newValue) {
             if (newValue != null) {
+              _trackUserAction('audio_controls_playback_speed_changed', data: '${newValue}x');
               playbackSpeed.value = newValue;
             }
           },

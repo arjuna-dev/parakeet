@@ -12,6 +12,8 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/save_analytics.dart';
 
 class OnboardingFormScreen extends StatefulWidget {
   const OnboardingFormScreen({super.key});
@@ -21,14 +23,15 @@ class OnboardingFormScreen extends StatefulWidget {
 }
 
 class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
+  late AnalyticsManager analyticsManager;
   final PageController _pageController = PageController();
   final player = AudioPlayer();
   int _currentPage = 0;
   String? _selectedNativeLanguage = 'English (US)';
   String? _nickname;
   String? _selectedTargetLanguage = 'German';
-  String? _selectedLanguageLevel = 'Absolute beginner (A1)';
-  final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
+  String? _selectedLanguageLevel = 'Advanced';
+  final List<String> _languageLevels = ['Absolute beginner', 'Beginner', 'Intermediate', 'Advanced'];
   final List<String> _supportedLanguages = supportedLanguages;
   bool _isLoading = false;
   final int totalPages = kIsWeb ? 4 : 5;
@@ -42,6 +45,16 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
   void initState() {
     super.initState();
     _checkUserSignInProvider();
+    _initializeAnalytics();
+  }
+
+  void _initializeAnalytics() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      analyticsManager = AnalyticsManager(user.uid);
+      // Track initial screen view
+      analyticsManager.storeAction('onboarding_form_screen_viewed');
+    }
   }
 
   Future<void> _checkUserSignInProvider() async {
@@ -213,6 +226,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                       if (_currentPage > 0)
                         TextButton(
                           onPressed: () {
+                            analyticsManager.storeAction('onboarding_form_previous_page_button', _currentPage.toString());
                             _pageController.previousPage(
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
@@ -223,7 +237,10 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                       else
                         const SizedBox(width: 80), // Empty space instead of Back button
                       FilledButton(
-                        onPressed: _canProceed() ? _goToNextPage : null,
+                        onPressed: () {
+                          analyticsManager.storeAction('onboarding_form_next_page_button', _currentPage.toString());
+                          _canProceed() ? _goToNextPage() : null;
+                        },
                         child: Text(_currentPage < 3 ? 'Next' : 'Get Started'),
                       ),
                     ],

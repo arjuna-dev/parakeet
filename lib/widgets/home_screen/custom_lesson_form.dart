@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
+import 'package:parakeet/utils/save_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 
 class CustomLessonForm extends StatefulWidget {
@@ -35,14 +37,23 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   final List<String> _selectedWords = [];
   bool _isSuggestingRandom = false;
   bool _showWordInput = false;
+  late AnalyticsManager analyticsManager;
 
   @override
   void initState() {
     super.initState();
+    _initializeAnalytics();
     // Listen to topic changes to update button state
     _topicController.addListener(_updateButtonState);
     // Populate fields with a random scenario on load
     _populateRandomScenario();
+  }
+
+  void _initializeAnalytics() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      analyticsManager = AnalyticsManager(user.uid);
+    }
   }
 
   void _populateRandomScenario() {
@@ -98,6 +109,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
       setState(() {
         if (_selectedWords.length < LessonConstants.maxWordsAllowed && !_selectedWords.contains(normalizedWord)) {
           _selectedWords.add(normalizedWord);
+          analyticsManager.storeAction('custom_lesson_word_added', normalizedWord);
         }
       });
     }
@@ -141,6 +153,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   Future<void> _createCustomLesson() async {
     // Validate inputs
     if (_topicController.text.trim().isEmpty) {
+      analyticsManager.storeAction('custom_lesson_validation_failed_empty_topic');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a topic for your lesson'),
@@ -151,6 +164,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
 
     if (_selectedWords.isEmpty) {
+      analyticsManager.storeAction('custom_lesson_validation_failed_no_words');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please add at least one word to learn'),
@@ -159,6 +173,9 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
       );
       return;
     }
+
+    // Track successful lesson creation
+    analyticsManager.storeAction('custom_lesson_generate_button_pressed', '${_topicController.text.trim()}|${_selectedWords.length} words');
 
     // Call the callback to start lesson creation in parent
     if (widget.onLessonStarted != null) {
@@ -195,6 +212,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
         });
       }
     } catch (e) {
+      analyticsManager.storeAction('custom_lesson_random_suggestion_failed', e.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -260,7 +278,12 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   ),
                                 ),
                                 OutlinedButton.icon(
-                                  onPressed: _isSuggestingRandom ? null : _suggestRandomLesson,
+                                  onPressed: _isSuggestingRandom
+                                      ? null
+                                      : () {
+                                          analyticsManager.storeAction('custom_lesson_generate_random_button_pressed');
+                                          _suggestRandomLesson();
+                                        },
                                   icon: _isSuggestingRandom
                                       ? SizedBox(
                                           width: 16,
@@ -295,6 +318,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     ? IconButton(
                                         icon: const Icon(Icons.clear),
                                         onPressed: () {
+                                          analyticsManager.storeAction('custom_lesson_topic_clear_button_pressed');
                                           _topicController.clear();
                                           _updateButtonState();
                                         },
@@ -367,6 +391,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     onPressed: _selectedWords.length >= LessonConstants.maxWordsAllowed
                                         ? null
                                         : () {
+                                            analyticsManager.storeAction('custom_lesson_add_word_button_pressed');
                                             if (mounted) {
                                               setState(() {
                                                 _showWordInput = true;
@@ -437,7 +462,10 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     const SizedBox(width: 8),
                                     IconButton(
                                       icon: const Icon(Icons.check, color: Colors.green),
-                                      onPressed: _addWordFromInput,
+                                      onPressed: () {
+                                        analyticsManager.storeAction('custom_lesson_confirm_word_button_pressed');
+                                        _addWordFromInput();
+                                      },
                                       tooltip: 'Add word',
                                       style: IconButton.styleFrom(
                                         backgroundColor: Colors.green.withOpacity(0.1),
@@ -446,7 +474,10 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.close, color: Colors.red),
-                                      onPressed: _hideWordInput,
+                                      onPressed: () {
+                                        analyticsManager.storeAction('custom_lesson_cancel_word_input_button_pressed');
+                                        _hideWordInput();
+                                      },
                                       tooltip: 'Cancel',
                                       style: IconButton.styleFrom(
                                         backgroundColor: Colors.red.withOpacity(0.1),
@@ -485,7 +516,10 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                       ),
                                     ),
                                     deleteIcon: const Icon(Icons.close, size: 18),
-                                    onDeleted: () => _removeWord(word),
+                                    onDeleted: () {
+                                      analyticsManager.storeAction('custom_lesson_word_chip_deleted', word);
+                                      _removeWord(word);
+                                    },
                                     backgroundColor: colorScheme.primary.withOpacity(0.1),
                                     side: BorderSide(
                                       color: colorScheme.primary.withOpacity(0.2),
@@ -552,7 +586,11 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: (_canCreateLesson && !widget.isLoading) ? _createCustomLesson : null,
+                            onTap: (_canCreateLesson && !widget.isLoading)
+                                ? () {
+                                    _createCustomLesson();
+                                  }
+                                : null,
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
                               alignment: Alignment.center,
