@@ -978,7 +978,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               int savedPosition = snapshot.data ?? 0;
               return Scaffold(
                 appBar: AppBar(
-                  title: AudioInfo(title: widget.title, category: widget.category),
+                  title: AudioInfo(title: widget.title),
                   automaticallyImplyLeading: !widget.generating || _allDialogueGenerated,
                 ),
                 body: Container(
