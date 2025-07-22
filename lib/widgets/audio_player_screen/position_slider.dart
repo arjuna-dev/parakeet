@@ -93,19 +93,33 @@ class _PositionSliderState extends State<PositionSlider> {
         } else if (widget.audioPlayerService.playlistInitialized == true && !widget.isPlaying && (_lastKnownPosition.inMilliseconds == 0 || widget.savedPosition == 0)) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  "Lesson is ready. Click on the Play button!",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Lesson is ready. Click on the Play button!",
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Triangle pointer - directly connected to container
+                CustomPaint(
+                  size: const Size(20, 10),
+                  painter: TrianglePainter(
+                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -192,4 +206,28 @@ class _PositionSliderState extends State<PositionSlider> {
     String twoDigitSeconds = twoDigits(d.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
+}
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+
+  TrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(size.width / 2, size.height) // Bottom point
+      ..lineTo(0, 0) // Top left
+      ..lineTo(size.width, 0) // Top right
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
