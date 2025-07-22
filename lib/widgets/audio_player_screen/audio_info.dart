@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 class AudioInfo extends StatelessWidget {
   final String title;
-  final String? category;
 
   const AudioInfo({
     super.key,
     required this.title,
-    this.category,
   });
 
   @override
@@ -31,21 +29,16 @@ class AudioInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  category ?? 'Custom Lesson',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    softWrap: true,
+                  ),
                 ),
               ],
             ),
