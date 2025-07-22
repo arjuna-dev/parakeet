@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/services/streak_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/utils/language_categories.dart';
+import 'package:parakeet/utils/save_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReviewWordsDialog extends StatefulWidget {
   final Map<String, DocumentReference> words;
@@ -37,6 +39,14 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   String _nativeLanguage = '';
   List<Map<String, dynamic>> _targetLanguageCategories = [];
   List<Map<String, dynamic>> _nativeLanguageCategories = [];
+
+  void _trackUserAction(String action, {String? data}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final analyticsManager = AnalyticsManager(user.uid);
+      analyticsManager.storeAction(action, data ?? '');
+    }
+  }
 
   late AnimationController _slideController;
   late AnimationController _scaleController;
@@ -610,6 +620,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
+                      _trackUserAction('review_words_dialog_continue_learning_pressed', data: '${widget.words.length}_words_completed');
                       Navigator.of(context).pushNamedAndRemoveUntil(
                         '/custom_lesson',
                         (route) => false,
@@ -666,6 +677,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
                         onTap: () {
+                          _trackUserAction('review_words_dialog_close_button_pressed', data: '${_currentWordIndex}/${widget.words.keys.toList().length}');
                           Navigator.of(context).pop();
                           // Call the callback to refresh parent screen
                           if (widget.onReviewCompleted != null) {
@@ -776,6 +788,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                         return GestureDetector(
                           onTap: hasTranslation
                               ? () {
+                                  _trackUserAction('review_words_dialog_card_flipped', data: _isCardFlipped ? 'to_word' : 'to_translation');
                                   setState(() {
                                     _isCardFlipped = !_isCardFlipped;
                                   });
@@ -1080,6 +1093,25 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
   }
 
   Future<void> _handleReview(fsrs.Rating rating) async {
+    // Track the rating given for the current word
+    final currentWord = widget.words.keys.toList()[_currentWordIndex];
+    String ratingString = '';
+    switch (rating) {
+      case fsrs.Rating.again:
+        ratingString = 'forgot_completely';
+        break;
+      case fsrs.Rating.hard:
+        ratingString = 'hard_to_remember';
+        break;
+      case fsrs.Rating.good:
+        ratingString = 'remembered_with_effort';
+        break;
+      case fsrs.Rating.easy:
+        ratingString = 'easy_recall';
+        break;
+    }
+    _trackUserAction('review_words_dialog_word_rated', data: '$ratingString:$currentWord');
+
     // Provide haptic feedback
     HapticFeedback.mediumImpact();
 
@@ -1123,6 +1155,9 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
     if (_currentWordIndex < widget.words.keys.toList().length) {
       _updateProgress();
       _slideController.forward();
+    } else {
+      // Review session completed
+      _trackUserAction('review_words_dialog_session_completed', data: '${widget.words.length}_words_reviewed');
     }
   }
 }
