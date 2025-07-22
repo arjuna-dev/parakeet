@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/supported_language_codes.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
 import 'package:parakeet/services/cloud_function_service.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 import 'dart:async';
 
 class LanguageSettingsScreen extends StatefulWidget {
@@ -19,15 +20,23 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
   String _nativeLanguage = 'English (US)';
   String _targetLanguage = 'German';
-  String _languageLevel = 'Absolute beginner (A1)';
+  String _languageLevel = 'Absolute beginner';
 
   String _originalNativeLanguage = '';
   String _originalTargetLanguage = '';
   String _originalLanguageLevel = '';
 
-  final List<String> _languageLevels = ['Absolute beginner (A1)', 'Beginner (A2-B1)', 'Intermediate (B2-C1)', 'Advanced (C2)'];
+  final List<String> _languageLevels = ['Absolute beginner', 'Beginner', 'Intermediate', 'Advanced'];
 
   late List<String> _languages;
+
+  void _trackUserAction(String action, {String? data}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final analyticsManager = AnalyticsManager(user.uid);
+      analyticsManager.storeAction(action, data ?? '');
+    }
+  }
 
   @override
   void initState() {
@@ -51,7 +60,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
         setState(() {
           _nativeLanguage = userData['native_language'] ?? 'English (US)';
           _targetLanguage = userData['target_language'] ?? 'German';
-          _languageLevel = userData['language_level'] ?? 'Absolute beginner (A1)';
+          _languageLevel = userData['language_level'] ?? 'Absolute beginner';
 
           // Store original values to check for changes
           _originalNativeLanguage = _nativeLanguage;
@@ -72,6 +81,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
+    _trackUserAction('language_settings_save_button_pressed');
+
     if (!_hasChanges) {
       Navigator.of(context).pop(false);
       return;
@@ -97,6 +108,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
       // Show confirmation
       if (mounted) {
+        _trackUserAction('language_settings_saved_successfully', data: 'Native: $_nativeLanguage, Target: $_targetLanguage, Level: $_languageLevel');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Language settings updated')),
         );
@@ -270,12 +282,18 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         ),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () => _selectLanguageFromList(
-                        'Select Native Language',
-                        _languages,
-                        _nativeLanguage,
-                        (selected) => setState(() => _nativeLanguage = selected),
-                      ),
+                      onTap: () {
+                        _trackUserAction('language_settings_native_language_selection_opened');
+                        _selectLanguageFromList(
+                          'Select Native Language',
+                          _languages,
+                          _nativeLanguage,
+                          (selected) {
+                            _trackUserAction('language_settings_native_language_selected', data: selected);
+                            setState(() => _nativeLanguage = selected);
+                          },
+                        );
+                      },
                     ),
                   ),
 
@@ -297,12 +315,18 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         ),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () => _selectLanguageFromList(
-                        'Select Target Language',
-                        _languages,
-                        _targetLanguage,
-                        (selected) => setState(() => _targetLanguage = selected),
-                      ),
+                      onTap: () {
+                        _trackUserAction('language_settings_target_language_selection_opened');
+                        _selectLanguageFromList(
+                          'Select Target Language',
+                          _languages,
+                          _targetLanguage,
+                          (selected) {
+                            _trackUserAction('language_settings_target_language_selected', data: selected);
+                            setState(() => _targetLanguage = selected);
+                          },
+                        );
+                      },
                     ),
                   ),
 
@@ -324,12 +348,18 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         ),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () => _selectLanguageFromList(
-                        'Select Language Level',
-                        _languageLevels,
-                        _languageLevel,
-                        (selected) => setState(() => _languageLevel = selected),
-                      ),
+                      onTap: () {
+                        _trackUserAction('language_settings_language_level_selection_opened');
+                        _selectLanguageFromList(
+                          'Select Language Level',
+                          _languageLevels,
+                          _languageLevel,
+                          (selected) {
+                            _trackUserAction('language_settings_language_level_selected', data: selected);
+                            setState(() => _languageLevel = selected);
+                          },
+                        );
+                      },
                     ),
                   ),
 

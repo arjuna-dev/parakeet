@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/utils/category_icons.dart';
 import 'package:parakeet/services/category_level_service.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 
 class LessonCard extends StatefulWidget {
   final DocumentSnapshot audioFile;
@@ -29,6 +30,14 @@ class _LessonCardState extends State<LessonCard> {
   bool _isCompleted = false;
   bool _isLoadingCompletion = true;
   int? _lessonLevel;
+
+  AnalyticsManager? _getAnalyticsManager() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      return AnalyticsManager(user.uid);
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -268,11 +277,17 @@ class _LessonCardState extends State<LessonCard> {
           content: Text('Are you sure you want to delete "${widget.audioFile.get('title')}"? This action cannot be undone.'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () {
+                _getAnalyticsManager()?.storeAction('lesson_delete_dialog_cancelled', widget.audioFile.get('title'));
+                Navigator.of(context).pop(false);
+              },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                _getAnalyticsManager()?.storeAction('lesson_delete_dialog_confirmed', widget.audioFile.get('title'));
+                Navigator.of(context).pop(true);
+              },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
@@ -284,6 +299,7 @@ class _LessonCardState extends State<LessonCard> {
     );
 
     if (shouldDelete == true) {
+      _getAnalyticsManager()?.storeAction('lesson_deletion_initiated', widget.audioFile.get('title'));
       setState(() {
         _isDeleting = true;
       });
@@ -404,6 +420,7 @@ class _LessonCardState extends State<LessonCard> {
                         ),
                         subtitle: const Text('This action cannot be undone'),
                         onTap: () {
+                          _getAnalyticsManager()?.storeAction('lesson_card_delete_option_tapped', widget.audioFile.get('title'));
                           Navigator.pop(context);
                           _deleteLesson();
                         },
@@ -433,6 +450,9 @@ class _LessonCardState extends State<LessonCard> {
         onTapUp: (_) => setState(() => _isPressed = false),
         onTapCancel: () => setState(() => _isPressed = false),
         onTap: () async {
+          final category = getCategory();
+          _getAnalyticsManager()?.storeAction('lesson_card_tapped', '${widget.audioFile.get('title')}|$category');
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -507,7 +527,10 @@ class _LessonCardState extends State<LessonCard> {
                   top: 0,
                   right: 0,
                   child: GestureDetector(
-                    onTap: _showOptionsMenu,
+                    onTap: () {
+                      _getAnalyticsManager()?.storeAction('lesson_card_options_menu_tapped', widget.audioFile.get('title'));
+                      _showOptionsMenu();
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(

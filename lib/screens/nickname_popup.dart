@@ -6,6 +6,7 @@ import 'package:parakeet/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parakeet/utils/greetings_list_all_languages.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -31,6 +32,14 @@ class _NicknamePopupState extends State<NicknamePopup> {
   // Track initial values to detect changes
   String _initialNickname = '';
   bool _initialUseName = true;
+
+  void _trackUserAction(String action, {String? data}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final analyticsManager = AnalyticsManager(user.uid);
+      analyticsManager.storeAction(action, data ?? '');
+    }
+  }
 
   @override
   void initState() {
@@ -172,6 +181,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _handleGenerate() async {
     String nicknameText = _nicknameController.text.trim();
+    _trackUserAction('nickname_popup_save_button_pressed', data: _getButtonText());
 
     setState(() {
       _isLoading = true;
@@ -182,6 +192,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
     // If no nickname is entered, just save the preference and close
     if (nicknameText.isEmpty) {
+      _trackUserAction('nickname_popup_preference_only_saved');
       // Update initial values to reflect saved state
       _initialUseName = _useName;
       setState(() {
@@ -220,6 +231,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
       await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _nativeLanguage);
       await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText);
+
+      _trackUserAction('nickname_popup_nickname_generated_successfully', data: nicknameText);
 
       setState(() {
         _currentNickname = nicknameText;
@@ -475,6 +488,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                       Switch(
                                         value: _useName,
                                         onChanged: (value) {
+                                          _trackUserAction('nickname_popup_address_by_name_toggled', data: value.toString());
                                           setState(() {
                                             _useName = value;
                                           });
@@ -498,6 +512,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                       Switch(
                                         value: _useName,
                                         onChanged: (value) {
+                                          _trackUserAction('nickname_popup_address_by_name_toggled', data: value.toString());
                                           setState(() {
                                             _useName = value;
                                           });
@@ -579,6 +594,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                             onPressed: _isLoading
                                 ? null
                                 : () {
+                                    _trackUserAction('nickname_popup_close_button_pressed');
                                     Navigator.of(context).pop();
                                   },
                             style: TextButton.styleFrom(
@@ -601,6 +617,7 @@ class _NicknamePopupState extends State<NicknamePopup> {
                           onPressed: _isLoading
                               ? null
                               : () {
+                                  _trackUserAction('nickname_popup_close_button_pressed');
                                   Navigator.of(context).pop();
                                 },
                           style: TextButton.styleFrom(

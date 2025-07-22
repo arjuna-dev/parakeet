@@ -13,6 +13,8 @@ import 'package:parakeet/widgets/profile_screen/delete_account_button.dart';
 import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
+import 'package:parakeet/utils/save_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
@@ -39,6 +41,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _languageLevel = 'Absolute beginner (A1)';
 
   int _apiCallsRemaining = 0;
+
+  void _trackUserAction(String action, {String? data}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final analyticsManager = AnalyticsManager(user.uid);
+      analyticsManager.storeAction(action, data ?? '');
+    }
+  }
 
   @override
   void initState() {
@@ -77,6 +87,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showTimePickerDialog() async {
+    _trackUserAction('profile_reminder_time_picker_opened');
+
     await requestNotificationPermission();
     if (Platform.isAndroid) {
       bool? alarmPermissions = await requestExactAlarmPermission();
@@ -91,6 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (picked != null) {
+      _trackUserAction('profile_reminder_time_selected', data: '${picked.hour}:${picked.minute}');
       setState(() {
         _reminderTime = picked;
       });
@@ -99,6 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _cancelReminder() async {
+    _trackUserAction('profile_reminder_cancelled');
     await _notificationService.cancelDailyReminder();
     setState(() {
       _reminderTime = null;
@@ -106,6 +120,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _deleteAccount() async {
+    _trackUserAction('profile_delete_account_button_pressed');
+
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -115,12 +131,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
+                _trackUserAction('profile_delete_account_cancelled');
                 Navigator.of(context).pop(false);
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
+                _trackUserAction('profile_delete_account_confirmed');
                 Navigator.of(context).pop(true);
               },
               child: const Text('Delete'),
@@ -146,6 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _handleStoreNavigation() {
     if (kIsWeb) {
+      _trackUserAction('profile_store_navigation_attempted_web');
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -171,6 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       );
     } else {
+      _trackUserAction('profile_store_navigation_mobile');
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const StoreView()),
@@ -377,7 +397,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
                           child: ElevatedButton(
-                            onPressed: _handleStoreNavigation,
+                            onPressed: () {
+                              _trackUserAction('profile_upgrade_to_premium_button_pressed');
+                              _handleStoreNavigation();
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                               foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -415,6 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Edit Nickname',
               subtitle: 'Change how the app addresses you',
               onTap: () {
+                _trackUserAction('profile_edit_nickname_menu_item_pressed');
                 showDialog(
                   context: context,
                   builder: (BuildContext context) {
@@ -431,6 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Help & Support',
               subtitle: 'FAQs and contact information',
               onTap: () {
+                _trackUserAction('profile_help_support_menu_item_pressed');
                 ProfileService.launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"));
               },
             ),
@@ -439,6 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Privacy Policy',
               subtitle: 'View our privacy policy',
               onTap: () {
+                _trackUserAction('profile_privacy_policy_menu_item_pressed');
                 ProfileService.launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
               },
             ),

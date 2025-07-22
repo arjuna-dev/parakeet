@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:parakeet/utils/save_analytics.dart';
 
 class StoreView extends StatefulWidget {
   const StoreView({super.key});
@@ -31,6 +32,14 @@ class _StoreViewState extends State<StoreView> {
   bool _hasPremium = false;
   bool _purchaseInProgress = false;
   String _selectedSubscription = "1m"; // Default to monthly subscription
+
+  void _trackUserAction(String action, {String? data}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final analyticsManager = AnalyticsManager(user.uid);
+      analyticsManager.storeAction(action, data ?? '');
+    }
+  }
 
   @override
   void initState() {
@@ -200,6 +209,8 @@ class _StoreViewState extends State<StoreView> {
   }
 
   Future<void> _makePurchase(ProductDetails productDetails) async {
+    _trackUserAction('store_purchase_initiated', data: productDetails.id);
+
     setState(() {
       _purchaseInProgress = true;
     });
@@ -240,6 +251,7 @@ class _StoreViewState extends State<StoreView> {
               subscription.cancel();
 
               if (mounted) {
+                _trackUserAction('store_purchase_completed_successfully', data: productDetails.id);
                 // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -268,6 +280,7 @@ class _StoreViewState extends State<StoreView> {
               }
               subscription.cancel();
             } else if (purchase.status == PurchaseStatus.canceled) {
+              _trackUserAction('store_purchase_cancelled', data: productDetails.id);
               if (mounted) {
                 setState(() {
                   _purchaseInProgress = false;
@@ -498,6 +511,7 @@ class _StoreViewState extends State<StoreView> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
+                        _trackUserAction('store_subscription_toggle_monthly_selected');
                         setState(() {
                           _selectedSubscription = "1m";
                         });
@@ -523,6 +537,7 @@ class _StoreViewState extends State<StoreView> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
+                        _trackUserAction('store_subscription_toggle_annual_selected');
                         setState(() {
                           _selectedSubscription = "1year";
                         });
@@ -604,7 +619,12 @@ class _StoreViewState extends State<StoreView> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _purchaseInProgress ? null : () => _makePurchase(selectedProduct),
+                      onPressed: _purchaseInProgress
+                          ? null
+                          : () {
+                              _trackUserAction('store_purchase_button_pressed', data: _selectedSubscription);
+                              _makePurchase(selectedProduct);
+                            },
                       child: _purchaseInProgress
                           ? SizedBox(
                               height: 24,
@@ -821,7 +841,10 @@ class _StoreViewState extends State<StoreView> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        onPressed: () => _inAppPurchase.restorePurchases(),
+        onPressed: () {
+          _trackUserAction('store_restore_purchases_button_pressed');
+          _inAppPurchase.restorePurchases();
+        },
         icon: Icon(
           Icons.restore,
           size: isSmallScreen ? 18 : 20,
@@ -859,11 +882,14 @@ class _StoreViewState extends State<StoreView> {
                   ),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                onPressed: () => _launchURL(Uri(
-                  scheme: "https",
-                  host: "gregarious-giant-4a5.notion.site",
-                  path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26",
-                )),
+                onPressed: () {
+                  _trackUserAction('store_terms_of_service_link_pressed');
+                  _launchURL(Uri(
+                    scheme: "https",
+                    host: "gregarious-giant-4a5.notion.site",
+                    path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26",
+                  ));
+                },
                 child: Text(
                   'Terms of Service',
                   style: TextStyle(
@@ -887,7 +913,10 @@ class _StoreViewState extends State<StoreView> {
                   ),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                onPressed: () => _launchURL(Uri.parse("https://parakeet.world/privacypolicy")),
+                onPressed: () {
+                  _trackUserAction('store_privacy_policy_link_pressed');
+                  _launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
+                },
                 child: Text(
                   'Privacy Policy',
                   style: TextStyle(

@@ -9,6 +9,7 @@ import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/utils/save_analytics.dart';
 
 class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -20,6 +21,14 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  AnalyticsManager? _getAnalyticsManager() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      return AnalyticsManager(user.uid);
+    }
+    return null;
+  }
 
   void _showDrawerMenu(BuildContext context) {
     showGeneralDialog(
@@ -87,6 +96,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           ),
                           IconButton(
                             onPressed: () {
+                              _getAnalyticsManager()?.storeAction('app_drawer_close_button_tapped');
                               if (Navigator.canPop(buildContext)) {
                                 Navigator.pop(buildContext);
                               }
@@ -155,6 +165,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     title: 'Language Settings',
                                     subtitle: 'Change your learning languages',
                                     onTap: () {
+                                      _getAnalyticsManager()?.storeAction('app_drawer_language_settings_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
@@ -168,6 +179,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     title: 'Store',
                                     subtitle: 'View available packages and offers',
                                     onTap: () {
+                                      _getAnalyticsManager()?.storeAction('app_drawer_store_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
@@ -181,6 +193,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     title: 'Profile',
                                     subtitle: 'Settings and account info',
                                     onTap: () {
+                                      _getAnalyticsManager()?.storeAction('app_drawer_profile_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
@@ -220,6 +233,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                   subtitle: 'Log out of your account',
                                   iconColor: Colors.red,
                                   onTap: () async {
+                                    _getAnalyticsManager()?.storeAction('app_drawer_sign_out_tapped');
                                     if (Navigator.canPop(buildContext)) {
                                       Navigator.pop(buildContext);
                                     }
@@ -575,6 +589,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               // Show upgrade button for non-premium users
                               GestureDetector(
                                 onTap: () {
+                                  _getAnalyticsManager()?.storeAction('app_drawer_upgrade_button_tapped');
                                   // Close drawer first
                                   if (Navigator.canPop(context)) {
                                     Navigator.pop(context);
@@ -683,6 +698,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
 
   void _handleStoreNavigation(BuildContext context) {
     if (kIsWeb) {
+      _getAnalyticsManager()?.storeAction('app_store_navigation_blocked_web');
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -700,7 +716,10 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  _getAnalyticsManager()?.storeAction('app_store_web_dialog_closed');
+                  Navigator.of(context).pop();
+                },
                 child: const Text('OK'),
               ),
             ],
@@ -708,6 +727,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         },
       );
     } else {
+      _getAnalyticsManager()?.storeAction('app_store_navigation_mobile');
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const StoreView()),
@@ -821,11 +841,17 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           content: const Text('Are you sure you want to sign out?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () {
+                _getAnalyticsManager()?.storeAction('app_sign_out_dialog_cancelled');
+                Navigator.of(context).pop(false);
+              },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                _getAnalyticsManager()?.storeAction('app_sign_out_dialog_confirmed');
+                Navigator.of(context).pop(true);
+              },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
@@ -837,6 +863,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
     );
 
     if (shouldSignOut == true) {
+      _getAnalyticsManager()?.storeAction('app_sign_out_executed');
       final authService = AuthService();
       await authService.signOut();
       if (context.mounted) {
@@ -858,7 +885,10 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       ),
       leading: IconButton(
         icon: const Icon(Icons.menu),
-        onPressed: () => _showDrawerMenu(context),
+        onPressed: () {
+          _getAnalyticsManager()?.storeAction('app_menu_button_tapped');
+          _showDrawerMenu(context);
+        },
       ),
     );
   }
