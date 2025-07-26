@@ -463,7 +463,6 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     IconButton(
                                       icon: const Icon(Icons.check, color: Colors.green),
                                       onPressed: () {
-                                        analyticsManager.storeAction('custom_lesson_confirm_word_button_pressed');
                                         _addWordFromInput();
                                       },
                                       tooltip: 'Add word',
