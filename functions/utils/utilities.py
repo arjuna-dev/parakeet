@@ -12,6 +12,8 @@ class GPT_MODEL(Enum):
     GPT_3_5 = "gpt-3.5-turbo-1106" # Supports JSON mode
     GPT_4o = "gpt-4o"
     GPT_4_1_nano = "gpt-4.1-nano"
+    GPT_5_mini = "gpt-5-mini"
+    GPT_5_nano = "gpt-5-nano"
 
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1

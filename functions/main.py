@@ -418,7 +418,7 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number)
 
-        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_4_1_nano.value)
+        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_5_nano.value)
 
         # Since we're not using streaming, we need to get the content directly
         result = json.loads(response.choices[0].message.content)
@@ -487,7 +487,7 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
 
         prompt = prompt_suggest_custom_lesson(target_language, native_language)
 
-        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_4_1_nano.value)
+        response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_5_nano.value)
 
         result = json.loads(response.choices[0].message.content)
 
