@@ -12,7 +12,7 @@ else:
 
 assert OPEN_AI_API_KEY, "OPEN_AI_API_KEY is not set in the environment variables"
 
-def chatGPT_API_call(prompt, use_stream, model=GPT_MODEL.GPT_4o.value):
+def chatGPT_API_call(prompt, use_stream, model=GPT_MODEL.GPT_5_mini.value):
 
     client = openai.OpenAI(api_key=OPEN_AI_API_KEY)
 
