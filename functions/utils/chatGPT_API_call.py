@@ -20,7 +20,7 @@ def chatGPT_API_call(prompt, use_stream, model=GPT_MODEL.GPT_5_mini.value):
     completion = client.chat.completions.create(
         model=model,
         stream=use_stream,
-        max_tokens=4096,
+        max_completion_tokens=4096,
         messages=[
             {"role": "system", "content": "You are a language learning teacher and content creator. You specialize in writing engaging dialogues in any language and their translations to any language to be used as content for learning a language. You are also able to create conversations in different tones and for different audiences."},
             {"role": "user", "content": prompt}
