@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "104439269977-6t3pd6hkjg9nsjvko494bg4pru0mk021.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.parakeetapp.app",
+            "certificate_hash": "ac27343826c2d05974446b3e1ee7d73b12e5b93f"
+          }
+        },
+        {
           "client_id": "104439269977-87k7cgmrap986tlqrr22cn61d2hprj9v.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -62,6 +70,14 @@
           }
         },
         {
+          "client_id": "104439269977-rhom3d8d8l7hqrqgvrdflne1uq30eoj0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.parakeetapp.app",
+            "certificate_hash": "6f1bbe55598ad8caf4832a7e92463bf1e2f22195"
+          }
+        },
+        {
           "client_id": "104439269977-trav3urupcs3ahbc4ktfr46bm7gjvcft.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -95,7 +111,8 @@
             }
           ]
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-8442868776505925~5468943006"
     }
   ],
   "configuration_version": "1"

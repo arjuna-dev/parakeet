@@ -65,7 +65,7 @@ class AudioPlayerScreen extends StatefulWidget {
 class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Services
   late AudioPlayerService _audioPlayerService;
-  // late SpeechRecognitionService _speechRecognitionService;
+
   late AudioGenerationService _audioGenerationService;
   late AudioDurationService _audioDurationService;
   late PlaylistGenerator _playlistGenerator;
@@ -73,13 +73,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   FileDurationUpdate? _fileDurationUpdate;
 
   // State variables
-  final ValueNotifier<RepetitionMode> _repetitionsMode = ValueNotifier(RepetitionMode.normal);
-  // final ValueNotifier<bool> _speechRecognitionActive = ValueNotifier(false);
+  final ValueNotifier<RepetitionMode> _repetitionsMode =
+      ValueNotifier(RepetitionMode.normal);
+
   List<dynamic>? _wordsToRepeat;
   bool _isDisposing = false;
   bool _hasNicknameAudio = false;
   bool _addressByNickname = true;
-  bool _isSliderMoving = false;
+
   int _updateNumber = 0;
   late bool _generating;
   bool _isCompleted = false;
@@ -92,7 +93,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Map<String, DocumentReference> _allUsedWordsCardsRefsMap = {};
   String _currentTrack = '';
   Map<String, dynamic>? _latestSnapshot;
-  Map<int, String> _filesToCompare = {};
+
   Map<String, dynamic>? _existingBigJson;
   bool _hasPremium = false;
 
@@ -116,16 +117,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       userID: widget.userID,
       hasPremium: _hasPremium,
     );
-
-    // _speechRecognitionService = SpeechRecognitionService(
-    //   targetLanguage: widget.targetLanguage,
-    //   nativeLanguage: widget.nativeLanguage,
-    //   onLiveTextChanged: (String text) {
-    //     if (mounted) {
-    //       setState(() {});
-    //     }
-    //   },
-    // );
 
     _audioGenerationService = AudioGenerationService(
       documentID: widget.documentID,
@@ -155,9 +146,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
 
     // Initialize Firestore services
-    _firestoreService = UpdateFirestoreService.getInstance(widget.documentID, widget.generating, _updatePlaylist, _updateTrackLength, _saveSnapshot);
+    _firestoreService = UpdateFirestoreService.getInstance(widget.documentID,
+        widget.generating, _updatePlaylist, _updateTrackLength, _saveSnapshot);
 
-    _fileDurationUpdate = FileDurationUpdate.getInstance(widget.documentID, _calculateTotalDurationAndUpdateTrackDurations);
+    _fileDurationUpdate = FileDurationUpdate.getInstance(
+        widget.documentID, _calculateTotalDurationAndUpdateTrackDurations);
 
     // Setup callbacks
     _audioPlayerService.onTrackChanged = _handleTrackChange;
@@ -198,7 +191,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
           // Convert to a properly handled Future chain
-          _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
+          _scriptAndWordCards =
+              await _playlistGenerator.generateScriptWithRepetitionMode(
             _existingBigJson!,
             _dialogue,
             _repetitionsMode.value,
@@ -206,13 +200,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           );
 
           _script = _scriptAndWordCards['script'] ?? [];
-          _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
+          _allUsedWordsCardsRefsMap =
+              _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
           _currentTrack = _script.isNotEmpty ? _script[0] : '';
 
           if (mounted) {
             setState(() {
               _script = _scriptAndWordCards['script'] ?? [];
-              _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
+              _allUsedWordsCardsRefsMap =
+                  _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? [];
               _currentTrack = _script.isNotEmpty ? _script[0] : '';
             });
           } else {
@@ -249,16 +245,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Filter script to remove files that start with '$'
-    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+    List<dynamic> filteredScript =
+        _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
     // Generate audio sources
-    List<AudioSource> audioSources = await _playlistGenerator.generateAudioSources(filteredScript);
+    List<AudioSource> audioSources =
+        await _playlistGenerator.generateAudioSources(filteredScript);
 
     // Initialize playlist
     await _audioPlayerService.initializePlaylist(audioSources);
 
     // Connect to background audio service
-    BackgroundAudioService.connectAudioPlayerService(_audioPlayerService, widget.title, widget.category);
+    BackgroundAudioService.connectAudioPlayerService(
+        _audioPlayerService, widget.title, widget.category);
 
     // Play first track only for non-generating mode
     if (!widget.generating) {
@@ -270,13 +269,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     setState(() {});
 
     //Calculate track durations
-    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    List<Duration> trackDurations =
+        await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
     if (!widget.generating) {
       _audioPlayerService.setFinalTotalDuration();
-      // Build files to compare map for speech recognition
-      _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
 
       // Update background audio service with final duration
       BackgroundAudioService.updateLessonInfo(
@@ -306,12 +304,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       final data = snapshot.docs[0].data();
-      if (data == null || data is! Map<String, dynamic> || !data.containsKey("dialogue")) {
+      if (data == null ||
+          data is! Map<String, dynamic> ||
+          !data.containsKey("dialogue")) {
         print("Error: Invalid data format in snapshot");
         return;
       }
 
-      final scriptData = await _playlistGenerator.generateScriptWithRepetitionMode(data, _dialogue, _repetitionsMode.value, widget.category ?? 'Custom Lesson');
+      final scriptData =
+          await _playlistGenerator.generateScriptWithRepetitionMode(
+              data,
+              _dialogue,
+              _repetitionsMode.value,
+              widget.category ?? 'Custom Lesson');
 
       _script = scriptData['script'] ?? [];
       _allUsedWordsCardsRefsMap = scriptData['allUsedWordsCardsRefsMap'] ?? [];
@@ -320,22 +325,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return;
     }
 
-    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
-
     // Filter script to remove files that start with '$'
-    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+    List<dynamic> filteredScript =
+        _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
     // Get new script items that aren't already in the playlist
     var newScript = List.from(filteredScript);
     newScript.removeRange(0, _audioPlayerService.playlist.children.length);
 
     // Generate audio sources for new items
-    List<AudioSource> newAudioSources = await _playlistGenerator.generateAudioSources(newScript);
+    List<AudioSource> newAudioSources =
+        await _playlistGenerator.generateAudioSources(newScript);
 
     // Update playlist
     await _audioPlayerService.addToPlaylist(newAudioSources);
     // Calculate track durations
-    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    List<Duration> trackDurations =
+        await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
     _audioPlayerService.setFinalTotalDuration();
@@ -365,7 +371,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _updateTrackLength() async {
     if (_isDisposing) return;
 
-    CollectionReference colRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('file_durations');
+    CollectionReference colRef = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(widget.documentID)
+        .collection('file_durations');
     QuerySnapshot querySnap = await colRef.get();
     if (querySnap.docs.isNotEmpty) {
       await _calculateTotalDurationAndUpdateTrackDurations(querySnap);
@@ -373,18 +382,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   // Calculate total duration and update track durations
-  Future<void> _calculateTotalDurationAndUpdateTrackDurations(QuerySnapshot snapshot) async {
+  Future<void> _calculateTotalDurationAndUpdateTrackDurations(
+      QuerySnapshot snapshot) async {
     if (_isDisposing) return;
 
     // Filter script to remove files that start with '$'
-    List<dynamic> filteredScript = _script.where((fileName) => !fileName.startsWith('\$')).toList();
+    List<dynamic> filteredScript =
+        _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
     // Calculate track durations
-    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    List<Duration> trackDurations =
+        await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
     // Set final total duration after reaching numberOfTurns or if not generating
-    if ((_updateNumber >= widget.numberOfTurns || !widget.generating) && !_isDisposing) {
+    if ((_updateNumber >= widget.numberOfTurns || !widget.generating) &&
+        !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
     }
   }
@@ -407,7 +420,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Generate script with repetition mode
-    _scriptAndWordCards = await _playlistGenerator.generateScriptWithRepetitionMode(
+    _scriptAndWordCards =
+        await _playlistGenerator.generateScriptWithRepetitionMode(
       _existingBigJson!,
       _dialogue,
       _repetitionsMode.value,
@@ -415,22 +429,22 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
 
     _script = _scriptAndWordCards['script'] ?? [];
-    _allUsedWordsCardsRefsMap = _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? {};
-
-    // Build files to compare map
-    _filesToCompare = _audioDurationService.buildFilesToCompare(_script);
+    _allUsedWordsCardsRefsMap =
+        _scriptAndWordCards['allUsedWordsCardsRefsMap'] ?? {};
 
     // Filter script
     List<dynamic> filteredScript = _playlistGenerator.filterScript(_script);
 
     // Generate audio sources
-    List<AudioSource> audioSources = await _playlistGenerator.generateAudioSources(filteredScript);
+    List<AudioSource> audioSources =
+        await _playlistGenerator.generateAudioSources(filteredScript);
 
     // Update playlist
     await _audioPlayerService.updatePlaylist(audioSources);
 
     // Calculate track durations
-    List<Duration> trackDurations = await _audioDurationService.calculateTrackDurations(filteredScript);
+    List<Duration> trackDurations =
+        await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
     _audioPlayerService.setFinalTotalDuration();
@@ -450,7 +464,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
 
-      if (!mounted || _script.isEmpty || _audioPlayerService.trackDurations.isEmpty) {
+      if (!mounted ||
+          _script.isEmpty ||
+          _audioPlayerService.trackDurations.isEmpty) {
         return;
       }
 
@@ -487,66 +503,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {
         _currentTrack = newTrack;
       });
-
-      // if (_speechRecognitionActive.value) {
-      //   _handleTrackChangeToCompareSpeech(index);
-      // }
     }
   }
-
-  // void _handleTrackChangeToCompareSpeech(int currentIndex) async {
-  //   if (_speechRecognitionService.isSkipping || _isSliderMoving) return;
-
-  //   if (_currentTrack == "five_second_break" && _speechRecognitionService.isLanguageSupported) {
-  //     final audioFileName = _filesToCompare[currentIndex];
-  //     if (audioFileName == null) {
-  //       print("Error: filesToCompare[currentIndex] is null for index $currentIndex");
-  //       return;
-  //     }
-
-  //     String targetPhrase;
-  //     try {
-  //       if (widget.generating && _latestSnapshot != null) {
-  //         targetPhrase = _audioGenerationService.accessBigJson(_latestSnapshot!, audioFileName);
-  //       } else if (_existingBigJson != null) {
-  //         targetPhrase = _audioGenerationService.accessBigJson(_existingBigJson!, audioFileName);
-  //       } else {
-  //         print("Error: Required JSON data is null.");
-  //         return;
-  //       }
-
-  //       _speechRecognitionService.setTargetPhraseToCompareWith(targetPhrase);
-
-  //       // Capture the current speech text
-  //       final String stringWhenStarting = _speechRecognitionService.liveTextSpeechToText;
-
-  //       // Wait for user to speak and then compare
-  //       Future.delayed(const Duration(milliseconds: 4500), () async {
-  //         bool isCorrect = await _speechRecognitionService.compareSpeechWithPhrase(stringWhenStarting);
-
-  //         // Pause playback to provide feedback
-  //         if (_audioPlayerService.isPlaying.value) {
-  //           await _audioPlayerService.pause(analyticsOn: false);
-  //         }
-
-  //         // Provide feedback
-  //         await _speechRecognitionService.provideFeedback(isPositive: isCorrect);
-
-  //         // Resume playback
-  //         if (!_isDisposing) {
-  //           _audioPlayerService.isPlaying.value = true;
-  //         }
-  //       });
-  //     } catch (e) {
-  //       print("Error in speech comparison: $e");
-  //     }
-  //   }
-  // }
 
   Future<void> _createScriptAndMakeSecondApiCall() async {
     try {
       // First, wait for the first dialogue part to appear (15 second timeout)
-      Map<String, dynamic>? firstDialogueData = await _audioGenerationService.waitForFirstDialogue();
+      Map<String, dynamic>? firstDialogueData =
+          await _audioGenerationService.waitForFirstDialogue();
 
       // If widget is no longer mounted, exit early
       if (!mounted || _isDisposing) return;
@@ -604,20 +568,30 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }
 
       // Get keywords used in dialogue and set _wordsToRepeat to them
-      List<dynamic> keywordsUsedInDialogue = _latestSnapshot!['keywords_used'] ?? [];
-      keywordsUsedInDialogue = keywordsUsedInDialogue.map((word) => word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase()).toList();
+      List<dynamic> keywordsUsedInDialogue =
+          _latestSnapshot!['keywords_used'] ?? [];
+      keywordsUsedInDialogue = keywordsUsedInDialogue
+          .map((word) => word
+              .replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '')
+              .toLowerCase())
+          .toList();
       setState(() {
         _wordsToRepeat = keywordsUsedInDialogue;
       });
 
       // Save script to Firestore
-      await _audioGenerationService.saveScriptToFirestore(_script, keywordsUsedInDialogue, completeDialogue, widget.category ?? 'Custom Lesson');
+      await _audioGenerationService.saveScriptToFirestore(
+          _script,
+          keywordsUsedInDialogue,
+          completeDialogue,
+          widget.category ?? 'Custom Lesson');
 
       // Add user to active creation
       await _audioGenerationService.addUserToActiveCreation();
 
       // Make the second API call
-      await _audioGenerationService.makeSecondApiCall(_latestSnapshot!, keywordsUsedInDialogue);
+      await _audioGenerationService.makeSecondApiCall(
+          _latestSnapshot!, keywordsUsedInDialogue);
 
       // Initialize playlist after a delay to allow audio files to be generated
       if (mounted && !_audioPlayerService.playlistInitialized) {
@@ -634,7 +608,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<void> _updateHasNicknameAudio() async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    String url = 'https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_1_nickname.mp3?timestamp=$timestamp';
+    String url =
+        'https://storage.googleapis.com/user_nicknames/${widget.userID}_${widget.nativeLanguage}_1_nickname.mp3?timestamp=$timestamp';
     _hasNicknameAudio = await AudioUrlBuilder.urlExists(url);
 
     if (mounted) {
@@ -652,7 +627,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 
   Future<void> _checkPremiumStatus() async {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userID).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userID)
+        .get();
 
     if (mounted) {
       setState(() {
@@ -714,7 +692,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Future<void> _checkCompletionStatus() async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('chatGPT_responses')
+          .doc(widget.documentID)
+          .get();
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
@@ -742,7 +723,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Complete Lesson'),
-          content: const Text('Are you sure you want to mark this lesson as completed?'),
+          content: const Text(
+              'Are you sure you want to mark this lesson as completed?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -769,7 +751,10 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // User confirmed, proceed with completion
     try {
       // Use set with merge: true to create the field if it doesn't exist
-      await FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).set({'completed': true}, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('chatGPT_responses')
+          .doc(widget.documentID)
+          .set({'completed': true}, SetOptions(merge: true));
 
       // Update category level progress if this is a category lesson
       if (widget.category != null && widget.category != 'Custom Lesson') {
@@ -801,9 +786,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         );
 
         if (updatedLevel.isLevelCompleted && updatedLevel.canAccessNextLevel) {
-          completionMessage = 'Level ${updatedLevel.currentLevel - 1} completed! Level ${updatedLevel.currentLevel} unlocked!';
-        } else if (updatedLevel.isLevelCompleted && updatedLevel.currentLevel == CategoryLevelService.maxLevel) {
-          completionMessage = 'Congratulations! You\'ve mastered all levels in ${widget.category}!';
+          completionMessage =
+              'Level ${updatedLevel.currentLevel - 1} completed! Level ${updatedLevel.currentLevel} unlocked!';
+        } else if (updatedLevel.isLevelCompleted &&
+            updatedLevel.currentLevel == CategoryLevelService.maxLevel) {
+          completionMessage =
+              'Congratulations! You\'ve mastered all levels in ${widget.category}!';
         }
       }
 
@@ -902,14 +890,17 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     }
 
     // Find which track index contains this time
-    final trackIndex = _audioPlayerService.findTrackIndexForPosition(targetTime.inMilliseconds.toDouble());
+    final trackIndex = _audioPlayerService
+        .findTrackIndexForPosition(targetTime.inMilliseconds.toDouble());
 
     // Calculate the position within that track
-    final cumulativeDurationUpToTrack = _audioPlayerService.cumulativeDurationUpTo(trackIndex);
+    final cumulativeDurationUpToTrack =
+        _audioPlayerService.cumulativeDurationUpTo(trackIndex);
     final positionInTrack = targetTime - cumulativeDurationUpToTrack;
 
     // Ensure the position is not negative
-    final seekPosition = positionInTrack.isNegative ? Duration.zero : positionInTrack;
+    final seekPosition =
+        positionInTrack.isNegative ? Duration.zero : positionInTrack;
 
     try {
       // Seek to the specific position
@@ -947,7 +938,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               // Optionally show a message to the user that they can't go back yet
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("Please wait for the lesson to finish generating."),
+                  content:
+                      Text("Please wait for the lesson to finish generating."),
                   duration: Duration(seconds: 2),
                 ),
               );
@@ -979,7 +971,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               return Scaffold(
                 appBar: AppBar(
                   title: AudioInfo(title: widget.title),
-                  automaticallyImplyLeading: !widget.generating || _allDialogueGenerated,
+                  automaticallyImplyLeading:
+                      !widget.generating || _allDialogueGenerated,
                 ),
                 body: Container(
                   decoration: const BoxDecoration(
@@ -1003,40 +996,43 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                           documentID: widget.documentID,
                           useStream: widget.generating,
                           generating: widget.generating,
-                          onAllDialogueDisplayed: widget.generating ? _onAllDialogueDisplayed : null,
+                          onAllDialogueDisplayed: widget.generating
+                              ? _onAllDialogueDisplayed
+                              : null,
                           script: _script,
                           trackDurations: _audioPlayerService.trackDurations,
                           onSeekToTime: _seekToTime,
                         ),
                         PositionSlider(
                           audioPlayerService: _audioPlayerService,
-                          positionDataStream: _audioPlayerService.positionDataStream,
+                          positionDataStream:
+                              _audioPlayerService.positionDataStream,
                           totalDuration: _audioPlayerService.totalDuration,
-                          finalTotalDuration: _audioPlayerService.finalTotalDuration,
+                          finalTotalDuration:
+                              _audioPlayerService.finalTotalDuration,
                           isPlaying: _audioPlayerService.isPlaying.value,
                           savedPosition: savedPosition,
-                          findTrackIndexForPosition: _audioPlayerService.findTrackIndexForPosition,
+                          findTrackIndexForPosition:
+                              _audioPlayerService.findTrackIndexForPosition,
                           player: _audioPlayerService.player,
-                          cumulativeDurationUpTo: _audioPlayerService.cumulativeDurationUpTo,
-                          pause: ({bool analyticsOn = true}) => _audioPlayerService.pause(analyticsOn: analyticsOn),
+                          cumulativeDurationUpTo:
+                              _audioPlayerService.cumulativeDurationUpTo,
+                          pause: ({bool analyticsOn = true}) =>
+                              _audioPlayerService.pause(
+                                  analyticsOn: analyticsOn),
                           onSliderChangeStart: () {
-                            setState(() {
-                              _isSliderMoving = true;
-                              // _speechRecognitionService.isSliderMoving = true;
-                            });
+                            // Slider interaction started
                           },
                           onSliderChangeEnd: () {
-                            setState(() {
-                              _isSliderMoving = false;
-                              // _speechRecognitionService.isSliderMoving = false;
-                            });
+                            // Slider interaction ended
                           },
                         ),
                         AudioControls(
                           audioPlayerService: _audioPlayerService,
                           repetitionMode: _repetitionsMode,
                           generating: _generating,
-                          hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
+                          hasWordsToReview:
+                              _allUsedWordsCardsRefsMap.isNotEmpty,
                           onReviewWords: _showVocabularyReview,
                           isCompleted: _isCompleted,
                           onMarkCompleted: _markAsCompleted,
