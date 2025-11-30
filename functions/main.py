@@ -14,7 +14,6 @@ from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
 from google.cloud import storage
 from google.cloud import texttospeech
-from utils.google_tts.google_tts_voices import google_tts_voices
 
 
 import os
