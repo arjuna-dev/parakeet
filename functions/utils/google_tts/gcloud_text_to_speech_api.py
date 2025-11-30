@@ -4,27 +4,16 @@ import time
 from pathlib import Path
 from google.cloud import texttospeech, storage, firestore
 from mutagen.mp3 import MP3
-from .google_tts_voices import google_tts_voices
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utilities import push_to_firestore
+from .language_names import LANGUAGE_NAMES
 
-def list_voices(language_code=None):
-    client = tts.TextToSpeechClient()
-    response = client.list_voices(language_code=language_code)
-    voices = sorted(response.voices, key=lambda voice: voice.name)
-
-    print(f" Voices: {len(voices)} ".center(60, "-"))
-    for voice in voices:
-        languages = ", ".join(voice.language_codes)
-        name = voice.name
-        gender = tts.SsmlVoiceGender(voice.ssml_gender).name
-        rate = voice.natural_sample_rate_hertz
-        print(f"{languages:<8} | {name:<24} | {gender:<8} | {rate:,} Hz")
 
 def language_to_language_code(language):
-    for voice in google_tts_voices:
-        if voice['language'] == language:
-            return voice['language_code']
+    # get the key from LANGUAGE_NAMES that has the value equal to the language
+    for key, value in LANGUAGE_NAMES.items():
+        if value == language:
+            return key
     raise Exception(f"Language code not found for {language}")
 
 def find_matching_voice_google(gender, exclude_voice_id=None, narrator_voice = False):
