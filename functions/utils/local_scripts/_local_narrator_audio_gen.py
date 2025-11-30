@@ -2,6 +2,7 @@ import json
 import sys
 import os
 import asyncio
+import time
 from google.cloud import firestore
 from mutagen.mp3 import MP3
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -16,8 +17,36 @@ from google_tts.gcloud_text_to_speech_api import google_synthesize_text, create_
 
 # Language code to language name mapping
 LANGUAGE_NAMES = {
-    'en_UK': 'English (UK)',
-    'en_AU': 'English (Australia)',
+    'ne-NP': 'Nepali',
+    'pa-IN': 'Punjabi',
+    # 'cmn-TW': 'Mandarin Chinese',
+    # 'de-DE': 'German',
+    # 'en-GB': 'English (UK)',
+    # 'en-US': 'English (US)',
+    # 'es-ES': 'Spanish (Spain)',
+    # 'es-MX': 'Spanish (Mexico)',
+    # 'fil-PH': 'Filipino',
+    # 'fr-CA': 'French (Canada)',
+    # 'fr-FR': 'French (France)',
+    # 'gu-IN': 'Gujarati',
+    # 'hi-IN': 'Hindi',
+    # 'id-ID': 'Indonesian',
+    # 'it-IT': 'Italian',
+    # 'ja-JP': 'Japanese',
+    # 'kn-IN': 'Kannada',
+    # 'ko-KR': 'Korean',
+    # 'ml-IN': 'Malayalam',
+    # 'ms-MY': 'Malay',
+    # 'nb-NO': 'Norwegian',
+    # 'pa-IN': 'Punjabi',
+    # 'pl-PL': 'Polish',
+    # 'pt-BR': 'Portuguese (Brazil)',
+    # 'pt-PT': 'Portuguese (Portugal)',
+    # 'ru-RU': 'Russian',
+    # 'sv-SE': 'Swedish',
+    # 'ta-IN': 'Tamil',
+    # 'tr-TR': 'Turkish',
+    # 'vi-VN': 'Vietnamese'
 }
 
 def get_audio_duration(file_path):
@@ -35,7 +64,8 @@ async def generate_audio(key, value, narrator_voice, lang_code):
         value,
         narrator_voice,
         file_path,
-        bucket_name="narrator_audio_files"
+        bucket_name="narrator_audio_files",
+        narrator_voice=True
     )
 
     # Calculate duration after generation
@@ -46,8 +76,8 @@ async def generate_audio(key, value, narrator_voice, lang_code):
         print(f"Error calculating duration for {file_path}: {e}")
         return {}
 
-async def process_language(lang_code, voice_name):
-    narrator_voice = create_google_voice(voice_name.split("-")[0] + "-" + voice_name.split("-")[1], voice_name)
+async def process_language(lang_code):
+    narrator_voice = create_google_voice(lang_code, 'Zephyr', narrator_voice=True)
     narrator_file_durations = {}
     language_name = LANGUAGE_NAMES.get(lang_code)
 
@@ -86,20 +116,14 @@ async def process_language(lang_code, voice_name):
     doc_ref.set(narrator_file_durations)
 
     print(f"Processed {len(narrator_file_durations)} files for {language_name}")
+    
     return narrator_file_durations
 
 async def main():
-    # Load voice configurations
-    try:
-        with open('narrator_tts_voices.json', 'r', encoding='utf-8') as file:
-            voice_configs = json.load(file)
-    except FileNotFoundError:
-        print("Error: narrator_tts_voices.json not found")
-        return
 
     # Create tasks for all languages
-    tasks = [process_language(lang_code, voice_name)
-             for lang_code, voice_name in voice_configs.items()]
+    tasks = [process_language(lang_code)
+             for lang_code in LANGUAGE_NAMES.keys()]
 
     # Process all languages concurrently
     await asyncio.gather(*tasks)

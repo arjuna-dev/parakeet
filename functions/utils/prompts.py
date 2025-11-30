@@ -19,6 +19,14 @@ language_level: {language_level}
 If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
 For "keywords_used", include the exact form of the keywords as they appear in the dialogue, even if they differ from their base or dictionary form. Do not alter, stem, or normalize the words — capture them exactly as used.
 
+IMPORTANT: Each dialogue SHOULD be between 6 and 12 words and SHOULD be to the point, AVOID long sentences and unnecessary words.
+
+IMPORTANT: Include natural speech markers and vocal markups throughout the dialogue to make it sound more natural and realistic. USE exactly these markers as defined below:
+- Non-speech sounds: [sigh], [laughing], [uhm]
+- Style modifiers: [sarcasm], [whispering], [extremely fast]
+- Pacing and pauses: [short pause], [medium pause], [long pause]
+There should NEVER be two markers one after the other. Place these markers strategically and at natural speech pauses for emotional expression and natural flow.
+it should always be enclosed in big brackets [] and not in parentheses ().
 This is an example of a request you could get and its expected output.
 
 
@@ -44,15 +52,15 @@ Expected output in JSON format:
         }},
     "dialogue": [
         {{
-            "target_language": "\u00bfqu\u00e9 significa exactamente viveka en el contexto de Viveka Chudamani?",
-            "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
+            "target_language": "[whispering] \u00bfqu\u00e9 significa exactamente viveka [short pause] en el contexto de Viveka Chudamani?",
+            "native_language": "[whispering] What exactly does viveka [short pause] mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "Viveka es la capacidad de discriminar entre lo real y lo no real.",
-            "native_language": "Viveka is the ability to discriminate between the real and the unreal.",
+            "target_language": "Viveka [medium pause] es la capacidad de discriminar [short pause] entre lo real y lo no real.",
+            "native_language": "Viveka [medium pause] is the ability to discriminate [short pause] between the real and the unreal.",
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "m"
@@ -91,22 +99,22 @@ Expected output in JSON format:
             "gender": "m"
         }},
         {{
-            "target_language": "It is good for health and shows compassion for animals.",
-            "native_language": "Es ist gut für die Gesundheit und zeigt Mitgefühl für Tiere.",
+            "target_language": "It is good for health [short pause] and shows compassion for animals.",
+            "native_language": "Es ist gut für die Gesundheit [short pause] und zeigt Mitgefühl für Tiere.",
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "f"
         }},
         {{
-            "target_language": "But can I still eat peanut butter?",
-            "native_language": "Aber kann ich trotzdem Erdnussbutter essen?",
+            "target_language": "[sarcasm]But can I still [uhm] eat peanut butter?",
+            "native_language": "[sarcasm] Aber kann ich [uhm] trotzdem Erdnussbutter essen?",
             "turn_nr": "3",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "Yes, peanut butter is vegetarian!",
-            "native_language": "Ja, Erdnussbutter ist vegetarisch, und sogar Astronauten essen sie!",
+            "target_language": "[laughing] Yes, peanut butter is vegetarian [sarcasm]!",
+            "native_language": "[laughing] Ja, Erdnussbutter ist vegetarisch [sarcasm], und sogar Astronauten essen sie!",
             "turn_nr": "4",
             "speaker": "speaker_2",
             "gender": "f"
@@ -168,6 +176,13 @@ def prompt_big_JSON(dialogue, native_language, target_language, language_level, 
     - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation.
   - For the narrator_translation json key avoid grammatical explanations, avoid explaining gender and number of articles for example.
   - For the narrator_fun_fact json key focus on things like etymology, explaining compound words, explaining idiomatic phrases, etc.
+IMPORTANT: Include natural speech markers and vocal markups throughout the dialogue to make it sound more natural and realistic. USE exactly these markers as defined below:
+- Non-speech sounds: [sigh], [laughing], [uhm]
+- Style modifiers: [sarcasm], [whispering], [extremely fast]
+- Pacing and pauses: [short pause], [medium pause], [long pause]
+There should NEVER be two markers one after the other. Place these markers strategically and at natural speech pauses for emotional expression and natural flow.
+it should always be enclosed in big brackets [] and not in parentheses ().
+This is an example of a request you could get and its expected output.
 
   Example request:
   ###
@@ -337,9 +352,9 @@ JSON response by you:
     {{
       "speaker": "speaker_1",
       "turn_nr": "1",
-      "target_language": "Who do you think is the best player in the upcoming EURO?",
-      "native_language": "Wer denkst du ist der beste Spieler bei der kommenden EURO?",
-      "narrator_explanation": "Jürgen fragt Maria, wen sie für den besten Spieler bei der kommenden EURO-Fußballmeisterschaft hält.",
+      "target_language": "[uhm] Who do you think [short pause] is the best player in the upcoming EURO?",
+      "native_language": "[uhm] Wer denkst du [short pause] ist der beste Spieler bei der kommenden EURO?",
+      "narrator_explanation": "Jürgen fragt Maria [uhm], wen sie für den besten Spieler bei der kommenden EURO-Fußballmeisterschaft hält.",
       "narrator_fun_fact": "Das englische Wort ||player|| bedeutet 'Spieler' auf Deutsch. Es kommt vom Verb ||play||, das 'spielen' bedeutet. ||Player|| kann für Menschen verwendet werden, die Spiele spielen, Musik machen oder schauspielern. Es wird auch oft für Ausdrücke wie ||team player|| genutzt, was jemanden beschreibt, der gut im Team arbeitet."
       "split_sentence": [
         {{
@@ -400,9 +415,9 @@ JSON response by you:
     {{
       "speaker": "speaker_2",
       "turn_nr": "2",
-      "target_language": "I believe that Mbappé is one of the best players alive at the moment.",
-      "native_language": "Ich glaube, dass Mbappé einer der besten Spieler ist, die momentan leben.",
-      "narrator_explanation": "Maria sagt, dass sie Mbappé für einen der besten Spieler hält. Hier verwendet sie den Satzanfang ||I believe||, um ihre Meinung auszudrücken.",
+      "target_language": "[sigh] I believe [medium pause] that Mbappé is one of the best players alive at the moment.",
+      "native_language": "[sigh] Ich glaube [medium pause], dass Mbappé einer der besten Spieler ist, die momentan leben.",
+      "narrator_explanation": "Maria sagt [sigh], dass sie Mbappé für einen der besten Spieler hält. Hier verwendet sie den Satzanfang ||I believe||, um ihre Meinung auszudrücken.",
       "narrator_fun_fact": "Das englische Wort ||believe|| bedeutet 'glauben' auf Deutsch. Es wird oft mit ||I|| (Ich) verwendet, um Meinungen oder Gedanken auszudrücken.",
       "split_sentence": [
         {{
@@ -479,7 +494,7 @@ def prompt_dialogue_w_transliteration(requested_scenario, category, native_langu
   else:
     keywords_instruction = "IMPORTANT: EVERY word in {keywords} list MUST be used in the dialogue."
 
-  return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the following content:
+  return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. Each dialogue should be between 8 and 12 words and should not be too long and to the point. You will be using the following content:
 
 requested_scenario: {requested_scenario}
 keywords: {keywords}
@@ -491,7 +506,15 @@ language_level: {language_level}
 If there are spelling mistakes in the content request, fix them. The title should be in the native_language: {native_language}. The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture to create the names. The main original dialogue happens in the target_language, {target_language}, the translations to native_language, {native_language} should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female. {chinese_korean_addition}. The target_language field should include the text in the {target_language} characters followed by the transliteration enclosed in double vertical lines (||).
 
 The "keywords_used" should be the keywords that are exactly used in the dialogue.
-Here is an example of data you could get and its expected output.
+
+IMPORTANT: Include natural speech markers and vocal markups throughout the dialogue to make it sound more natural and realistic. USE exactly these markers as defined below:
+- Non-speech sounds: [sigh], [laughing], [uhm]
+- Style modifiers: [sarcasm], [whispering], [extremely fast]
+- Pacing and pauses: [short pause], [medium pause], [long pause]
+There should NEVER be two markers one after the other. Place these markers strategically and at natural speech pauses for emotional expression and natural flow.
+it should always be enclosed in big brackets [] and not in parentheses ().
+
+This is an example of a request you could get and its expected output.
 
 Data:
 """
@@ -512,29 +535,29 @@ Expected JSON output:
         }},
     "dialogue": [
         {{
-            "target_language": "维韦卡 在 维韦卡·楚达马尼 的 背景 下 到底 是 什么 意思？ || wéiwéikǎ zài wéiwéikǎ·chǔdámǎní de bèijǐng xià dàodǐ shì shénme yìsi?",
-            "native_language": "What exactly does viveka mean in the context of Viveka Chudamani?",
+            "target_language": "[curious] 维韦卡 在 维韦卡·楚达马尼 的 背景 下 [short pause] 到底 是 什么 意思？ || [curious] wéiwéikǎ zài wéiwéikǎ·chǔdámǎní de bèijǐng xià [short pause] dàodǐ shì shénme yìsi?",
+            "native_language": "[curious] What exactly does viveka [short pause] mean in the context of Viveka Chudamani?",
             "turn_nr": "1",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "维韦卡 是 分辨 真实 与 非真实 的 能力。 || wéiwéikǎ shì fēnbiàn zhēnshí yǔ fēi zhēnshí de nénglì.",
-            "native_language": "Viveka is the ability to discriminate between the real and the unreal.",
+            "target_language": "[thoughtfully] 维韦卡 [medium pause] 是 分辨 真实 与 非真实 的 能力。 || [thoughtfully] wéiwéikǎ [medium pause] shì fēnbiàn zhēnshí yǔ fēi zhēnshí de nénglì.",
+            "native_language": "[thoughtfully] Viveka [medium pause] is the ability to discriminate between the real and the unreal.",
             "turn_nr": "2",
             "speaker": "speaker_2",
             "gender": "m"
         }},
         {{
-            "target_language": "这种 辨别 能力 是 如何 发展 的？ || zhè zhǒng biànbié nénglì shì rúhé fāzhǎn de?",
-            "native_language": "And how does one develop this discrimination?",
+            "target_language": "[excited] 这种 辨别 能力 [short pause] 是 如何 发展 的？ || [excited] zhè zhǒng biànbié nénglì [short pause] shì rúhé fāzhǎn de?",
+            "native_language": "[excited] And how [short pause] does one develop this discrimination?",
             "turn_nr": "3",
             "speaker": "speaker_1",
             "gender": "m"
         }},
         {{
-            "target_language": "通过 不断 的 练习 和 耐心 来 发展。 || tōngguò bùduàn de liànxí hé nàixīn lái fāzhǎn.",
-            "native_language": "It develops through constant practice and patience.",
+            "target_language": "[methodically] 通过 [short pause] 不断 的 练习 [medium pause] 和 耐心 来 发展。 || [methodically] tōngguò [short pause] bùduàn de liànxí [medium pause] hé nàixīn lái fāzhǎn.",
+            "native_language": "[methodically] It develops [short pause] through constant practice [medium pause] and patience.",
             "turn_nr": "4",
             "speaker": "speaker_2",
             "gender": "m"
@@ -551,7 +574,7 @@ def prompt_generate_lesson_topic(category, selected_words, target_language, nati
   extra_instructions = ""
 
   if funky_topic:
-    extra_instructions = "Because we will be generating many such lessons try to think outside the box and come up with a topic that is not too common, but still relevant to the category."
+    extra_instructions = "Because we will be generating many such lessons try to come up with a topic that is not too common, but still relevant for learning languages."
 
   # Define level-specific instructions
   level_mapping = {

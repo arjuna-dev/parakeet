@@ -14,6 +14,7 @@ class GPT_MODEL(Enum):
     GPT_4_1_nano = "gpt-4.1-nano"
     GPT_5_mini = "gpt-5-mini"
     GPT_5_nano = "gpt-5-nano"
+    GPT_5_1 = "gpt-5.1"
 
 class TTS_PROVIDERS(Enum):
     GOOGLE = 1

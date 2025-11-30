@@ -142,6 +142,7 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
                             document_id,
                             document,
                             target_language,
+                            language_level,
                             document_durations,
                             words_to_repeat=[],
                             mock=is_mock)
@@ -237,6 +238,7 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
                                 document_id,
                                 document,
                                 target_language,
+                                language_level,
                                 document_durations,
                                 words_to_repeat,
                                 document_target_phrases,
