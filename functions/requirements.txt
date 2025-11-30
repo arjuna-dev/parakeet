@@ -1,7 +1,7 @@
-firebase_functions>=0.4.2
+firebase_functions
 firebase-admin
 openai
-google-cloud-texttospeech
+google-cloud-texttospeech>=2.33.0
 python-dotenv
 partialjson
 mutagen
