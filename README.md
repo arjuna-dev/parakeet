@@ -4,142 +4,197 @@ Parakeet is a Flutter app for generating and practicing AI-powered language-lear
 
 ## Highlights
 
-- AI-generated dialogues with adjustable topic, level, and length
-- Multi-provider TTS: Google, OpenAI, ElevenLabs
-- Firebase-backed storage for generated content and audio
-- Mobile-first Flutter app with web support
+- **AI-Generated Dialogues**: Create custom lessons with adjustable topics, proficiency levels, and lengths.
+- **Multi-Provider TTS**: High-quality audio synthesis using Google, OpenAI, and ElevenLabs.
+- **Interactive Learning**: Practice with spaced repetition, active recall, and vocabulary reviews.
+- **Cross-Platform**: Mobile-first Flutter app (iOS/Android) with web support.
+- **Firebase Backend**: Robust serverless architecture using Cloud Functions, Firestore, and Storage.
 
-## Repository structure
+## Repository Structure
 
-- `lib/` – Flutter application code (screens, services, widgets, utils)
-- `functions/` – Cloud Functions (Python) for lesson generation and audio
-- `functions_plot_twist/` – Separate Cloud Functions (Python) codebase
-- `payment_verification_backend/` – Node/TypeScript backend for purchase verification
-- `assets/`, `narrator_audio/` – Static assets and pre-generated audio
-- `third_party/vosk_flutter/` – Vosk speech components (vendor code)
-- `data_analytics/` – Optional analytics utilities and scripts
+- `lib/`: Flutter application code (screens, services, widgets, utils).
+- `functions/`: Main Cloud Functions (Python) for lesson generation and audio processing.
+- `functions_plot_twist/`: Secondary Cloud Functions codebase for specific features (e.g., donations).
+- `payment_verification_backend/`: Node.js/TypeScript backend for in-app purchase verification.
+- `assets/`: Static assets (images, icons, sounds).
+- `narrator_audio/`: Pre-generated audio files for the narrator.
+- `third_party/`: External dependencies (e.g., Vosk for speech recognition).
+- `data_analytics/`: Analytics scripts and utilities.
 
 ## Prerequisites
 
-- Flutter SDK and a recent Dart toolchain
-- Firebase CLI (`firebase-tools`) and a Firebase project
-- Python 3.10+ for Python Cloud Functions
-- Node.js 18+ for `payment_verification_backend`
-- Google Cloud project with Text-to-Speech API enabled
+- **Flutter SDK**: Latest stable version.
+- **Dart SDK**: Compatible with the Flutter version.
+- **Firebase CLI**: For deploying functions and managing the project.
+- **Python 3.10+**: For running Cloud Functions locally or deploying them.
+- **Node.js 18+**: For the payment verification backend.
+- **Google Cloud Project**: With Text-to-Speech API enabled.
 
-## Environment configuration
+## Environment Configuration
 
-Some backends expect secrets via environment variables. Create a `.env` in each Python functions codebase or export env vars in your shell/session.
+The application relies on several environment variables for API keys and configuration. Create a `.env` file in the `functions/` directory (and `functions_plot_twist/` if needed).
 
-Required variables (by feature):
+**Required Variables:**
 
-- OpenAI (used in `functions/`):
-  - `OPEN_AI_API_KEY`
-- ElevenLabs (used in `functions/`):
-  - `ELEVENLABS_API_KEY`
-- Google Cloud Text-to-Speech (used in `functions/`):
-  - `GOOGLE_APPLICATION_CREDENTIALS` pointing to a service account JSON with TTS access
-- Plot Twist function (used in `functions_plot_twist/`):
-  - `KOFI_TOKEN` (optional if you use Ko‑fi webhook verification)
+| Variable | Description |
+|----------|-------------|
+| `OPEN_AI_API_KEY` | API key for OpenAI (GPT models and TTS). |
+| `ELEVENLABS_API_KEY` | API key for ElevenLabs TTS. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to the Google Cloud service account JSON key. |
+| `KOFI_TOKEN` | (Optional) Token for Ko-fi webhook verification in `functions_plot_twist`. |
 
-## Flutter app – run and build
+## Getting Started
 
-Install dependencies and run:
+### Flutter App
 
-```bash
-flutter pub get
-flutter run
-```
+1.  **Install Dependencies**:
+    ```bash
+    flutter pub get
+    ```
 
-Release builds:
+2.  **Run Locally**:
+    ```bash
+    flutter run
+    ```
 
-```bash
-# Android APK
-flutter build apk --release
+3.  **Build for Release**:
+    ```bash
+    # Android
+    flutter build appbundle --obfuscate --split-debug-info=build/app/outputs/symbols
 
-# Android App Bundle (recommended for Play Store)
-flutter build appbundle --obfuscate --split-debug-info=build/app/outputs/symbols
+    # iOS
+    flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
+    
+    # Web
+    flutter build web
+    ```
 
-# iOS IPA (upload via Transporter)
-flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols
+### Cloud Functions
 
-# Web
-flutter build web
-```
+1.  **Install Python Dependencies**:
+    ```bash
+    cd functions
+    pip install -r requirements.txt
+    ```
 
-Troubleshooting:
+2.  **Run Locally (using Functions Framework)**:
+    ```bash
+    functions-framework --target second_API_calls --debug
+    ```
 
-```bash
-flutter clean
-```
+3.  **Deploy to Firebase**:
+    ```bash
+    firebase deploy --only functions
+    ```
 
-## Cloud Functions (Python)
+4.  **Deploy Plot Twist Functions**:
+    The secondary codebase `functions_plot_twist/` can be deployed via Firebase or directly with gcloud:
+    ```bash
+    gcloud functions deploy handle_kofi_donation \
+      --region=europe-west1 \
+      --gen2 \
+      --set-env-vars KOFI_TOKEN=your_kofi_token_here \
+      --source functions_plot_twist/
+    ```
 
-This repo contains two Python Cloud Functions codebases: the main `functions/` and `functions_plot_twist/` (declared in `firebase.json` as codebase `plot_twist`).
+### Payment Verification Backend
 
-Install dependencies (example for `functions/`):
+1.  **Setup and Deploy**:
+    ```bash
+    cd payment_verification_backend
+    npm install
+    npm run deploy # runs: firebase deploy --only functions
+    ```
 
-```bash
-cd functions
-pip install -r requirements.txt
-```
+## API Documentation
 
-Key HTTP functions in `functions/main.py`:
+The backend logic is handled by Firebase Cloud Functions. Below are the primary endpoints defined in `functions/main.py`.
 
-- `first_API_calls` – creates a dialogue plan and reserves credits
-- `second_API_calls` – generates detailed lesson content and audio
-- `delete_audio_file` – deletes generated audio for a lesson/document
-- `generate_nickname_audio` – creates a nickname audio file for a user
-- `generate_lesson_topic` – suggests a lesson topic given category/words
-- `translate_keywords` – translates keywords into target language
-- `suggest_custom_lesson` – suggests custom lesson ideas
+### 1. Generate Initial Dialogue (`first_API_calls`)
+Generates the initial dialogue script based on user parameters and reserves lesson credits.
 
-Deploy all Python functions for the default codebase:
+- **Method**: `POST`
+- **Body Parameters**:
+    - `requested_scenario` (string): Description of the scenario (e.g., "Ordering coffee").
+    - `category` (string): Lesson category.
+    - `native_language` (string): User's native language.
+    - `target_language` (string): Language to learn.
+    - `length` (string): Length of the dialogue.
+    - `user_ID` (string): Firebase User ID.
+    - `document_id` (string): Unique ID for the lesson document.
+    - `tts_provider` (int): ID of the TTS provider (1: Google, 2: OpenAI, 3: ElevenLabs).
+    - `language_level` (string): Proficiency level (e.g., "A1", "C2").
+    - `keywords` (string, optional): Specific keywords to include.
 
-```bash
-firebase deploy --only functions
-```
+### 2. Generate Full Lesson (`second_API_calls`)
+Processes the generated dialogue, synthesizes audio for each turn, and constructs the full lesson structure with breakdowns and explanations.
 
-Deploy specific functions:
+- **Method**: `POST`
+- **Body Parameters**:
+    - `dialogue` (array): The dialogue objects generated by the first call.
+    - `document_id` (string): Lesson document ID.
+    - `user_ID` (string): Firebase User ID.
+    - `title` (string): Lesson title.
+    - `speakers` (object): Speaker details (name, gender).
+    - `native_language` (string): User's native language.
+    - `target_language` (string): Target language.
+    - `language_level` (string): Proficiency level.
+    - `length` (string): Lesson length.
+    - `voice_1_id` (string): Voice ID for Speaker 1.
+    - `voice_2_id` (string): Voice ID for Speaker 2.
+    - `words_to_repeat` (array): List of words for vocabulary practice.
+    - `tts_provider` (int): TTS provider ID.
 
-```bash
-firebase deploy --only functions:first_API_calls,functions:second_API_calls
-```
+### 3. Delete Audio Files (`delete_audio_file`)
+Deletes audio files associated with a specific lesson to manage storage usage.
 
-Run one function locally for testing (requires functions-framework):
+- **Method**: `POST`
+- **Body Parameters**:
+    - `document_id` (string): ID of the document/lesson.
+    - `user_id` (string): Firebase User ID.
 
-```bash
-functions-framework --target second_API_calls --debug
-```
+### 4. Generate Nickname Audio (`generate_nickname_audio`)
+Generates a spoken audio file for the user's nickname.
 
-### Plot Twist functions
+- **Method**: `POST`
+- **Body Parameters**:
+    - `text` (string): The nickname text.
+    - `user_id` (string): Firebase User ID.
+    - `user_id_N` (string): Normalized User ID or filename prefix.
+    - `language` (string): Language for the pronunciation.
 
-The secondary codebase `functions_plot_twist/` can be deployed via Firebase (see `firebase.json`) or directly with gcloud. Example with gcloud:
+### 5. Generate Lesson Topic (`generate_lesson_topic`)
+Suggests a specific lesson topic based on a category and selected words.
 
-```bash
-gcloud functions deploy handle_kofi_donation \
-  --region=europe-west1 \
-  --gen2 \
-  --set-env-vars KOFI_TOKEN=your_kofi_token_here \
-  --source functions_plot_twist/
-```
+- **Method**: `POST`
+- **Body Parameters**:
+    - `category` (string): General category.
+    - `selectedWords` (string): Words to incorporate.
+    - `target_language` (string): Target language.
+    - `native_language` (string): Native language.
+    - `level_number` (int): Difficulty level.
 
-## Payment verification backend (Node/TypeScript)
+### 6. Translate Keywords (`translate_keywords`)
+Translates a list of keywords into the target language.
 
-The `payment_verification_backend/` directory contains a separate backend. Common workflow:
+- **Method**: `POST`
+- **Body Parameters**:
+    - `keywords` (string): Comma-separated keywords.
+    - `target_language` (string): Target language.
 
-```bash
-cd payment_verification_backend
-npm install
-npm run build # if applicable
-npm run deploy # runs: firebase deploy --only functions
-```
+### 7. Suggest Custom Lesson (`suggest_custom_lesson`)
+Provides suggestions for custom lesson scenarios.
 
-## Development tips
+- **Method**: `POST`
+- **Body Parameters**:
+    - `target_language` (string): Target language.
+    - `native_language` (string): Native language.
 
-- Useful commands live in `dev-cheatsheet.md` (deploys, bundling, SHA-1, etc.)
-- Ensure your Firebase project is set: `firebase use <your-project>`
-- For Google TTS, enable the API and provide credentials via `GOOGLE_APPLICATION_CREDENTIALS`
+## Development Tips
+
+- **Cheatsheet**: Check `dev-cheatsheet.md` for useful commands (deploys, bundling, SHA-1, etc.).
+- **Firebase Project**: Ensure you are using the correct project with `firebase use <your-project>`.
+- **Google TTS**: Enable the API and provide credentials via `GOOGLE_APPLICATION_CREDENTIALS`.
 
 ## Contributing
 
