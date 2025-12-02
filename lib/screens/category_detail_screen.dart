@@ -68,14 +68,18 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   Future<void> _loadLevelProgress() async {
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
-      final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('script-$userId')
+          .get();
 
       final categoryLessons = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
 
         // Filter by category
         String lessonCategory;
-        if (data?.containsKey('category') == true && doc.get('category') != null && doc.get('category').toString().trim().isNotEmpty) {
+        if (data?.containsKey('category') == true &&
+            doc.get('category') != null &&
+            doc.get('category').toString().trim().isNotEmpty) {
           lessonCategory = doc.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
@@ -84,7 +88,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         // Filter by user's current target language
         final lessonTargetLanguage = data?['target_language']?.toString();
 
-        return lessonCategory == widget.category['name'] && lessonTargetLanguage == widget.targetLanguage;
+        return lessonCategory == widget.category['name'] &&
+            lessonTargetLanguage == widget.targetLanguage;
       }).toList();
 
       // Count completed lessons by level
@@ -93,14 +98,18 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       for (final doc in categoryLessons) {
         final parentDocId = doc.reference.parent.parent!.id;
         try {
-          final lessonDoc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+          final lessonDoc = await FirebaseFirestore.instance
+              .collection('chatGPT_responses')
+              .doc(parentDocId)
+              .get();
           if (lessonDoc.exists) {
             final lessonData = lessonDoc.data();
             final isCompleted = lessonData?['completed'] == true;
             final lessonLevel = lessonData?['categoryLevel'] ?? 1;
 
             if (isCompleted && lessonLevel >= 1 && lessonLevel <= 3) {
-              completedLessonsByLevel[lessonLevel] = (completedLessonsByLevel[lessonLevel] ?? 0) + 1;
+              completedLessonsByLevel[lessonLevel] =
+                  (completedLessonsByLevel[lessonLevel] ?? 0) + 1;
             }
           }
         } catch (e) {
@@ -111,7 +120,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       // Build level progress data
       final Map<int, CategoryLevel> levels = {};
       for (int level = 1; level <= 3; level++) {
-        final requiredLessons = CategoryLevelService.levelRequirements[level] ?? 3;
+        final requiredLessons =
+            CategoryLevelService.levelRequirements[level] ?? 3;
         final completedLessons = completedLessonsByLevel[level] ?? 0;
         final isLevelCompleted = completedLessons >= requiredLessons;
 
@@ -138,9 +148,17 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     setState(() => _isLoading = true);
     try {
       final userId = FirebaseAuth.instance.currentUser!.uid;
-      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${widget.targetLanguage}_words').doc(widget.category['name']).collection(widget.category['name']).get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('${widget.targetLanguage}_words')
+          .doc(widget.category['name'])
+          .collection(widget.category['name'])
+          .get();
 
-      final wordsData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
+      final wordsData = snapshot.docs
+          .map((doc) => Map<String, dynamic>.from(doc.data()))
+          .toList();
       if (mounted) {
         setState(() {
           _learningWords.addAll(wordsData);
@@ -185,12 +203,18 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
             return StatefulBuilder(
               builder: (BuildContext context, StateSetter setModalState) {
                 // Create a sorted list of word indices
-                final List<int> sortedIndices = List.generate((widget.category['words'] as List).length, (index) => index);
+                final List<int> sortedIndices = List.generate(
+                    (widget.category['words'] as List).length,
+                    (index) => index);
 
                 // Sort the indices based on mastery status
                 sortedIndices.sort((a, b) {
-                  final wordA = (widget.category['words'] as List)[a].toString().toLowerCase();
-                  final wordB = (widget.category['words'] as List)[b].toString().toLowerCase();
+                  final wordA = (widget.category['words'] as List)[a]
+                      .toString()
+                      .toLowerCase();
+                  final wordB = (widget.category['words'] as List)[b]
+                      .toString()
+                      .toLowerCase();
 
                   final matchingA = _learningWords.firstWhere(
                     (element) => element['word'] == wordA,
@@ -202,12 +226,22 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     orElse: () => {},
                   );
 
-                  final scheduledDaysA = matchingA.isEmpty ? 0.0 : (matchingA['scheduledDays'] is int ? (matchingA['scheduledDays'] as int).toDouble() : (matchingA['scheduledDays'] as double? ?? 0.0));
+                  final scheduledDaysA = matchingA.isEmpty
+                      ? 0.0
+                      : (matchingA['scheduledDays'] is int
+                          ? (matchingA['scheduledDays'] as int).toDouble()
+                          : (matchingA['scheduledDays'] as double? ?? 0.0));
 
-                  final scheduledDaysB = matchingB.isEmpty ? 0.0 : (matchingB['scheduledDays'] is int ? (matchingB['scheduledDays'] as int).toDouble() : (matchingB['scheduledDays'] as double? ?? 0.0));
+                  final scheduledDaysB = matchingB.isEmpty
+                      ? 0.0
+                      : (matchingB['scheduledDays'] is int
+                          ? (matchingB['scheduledDays'] as int).toDouble()
+                          : (matchingB['scheduledDays'] as double? ?? 0.0));
 
-                  final isMasteredA = scheduledDaysA >= 100 || scheduledDaysA == -1;
-                  final isMasteredB = scheduledDaysB >= 100 || scheduledDaysB == -1;
+                  final isMasteredA =
+                      scheduledDaysA >= 100 || scheduledDaysA == -1;
+                  final isMasteredB =
+                      scheduledDaysB >= 100 || scheduledDaysB == -1;
 
                   // Sort mastered words to the bottom
                   if (isMasteredA && !isMasteredB) {
@@ -244,7 +278,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         height: 4,
                         margin: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.4),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -255,7 +292,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              LessonConstants.getCategoryIcon(widget.category['name']),
+                              LessonConstants.getCategoryIcon(
+                                  widget.category['name']),
                               color: _getCategoryColor(widget.category['name']),
                               size: 24,
                             ),
@@ -266,7 +304,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -287,7 +326,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                           'Tap any word to see translation • Long press for options',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -299,9 +339,13 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.3),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -312,7 +356,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -324,7 +370,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -344,8 +392,12 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                           itemCount: sortedIndices.length,
                           itemBuilder: (context, i) {
                             final index = sortedIndices[i];
-                            final word = (widget.category['words'] as List)[index].toString();
-                            final nativeWord = (widget.nativeCategory['words'] as List)[index].toString();
+                            final word =
+                                (widget.category['words'] as List)[index]
+                                    .toString();
+                            final nativeWord =
+                                (widget.nativeCategory['words'] as List)[index]
+                                    .toString();
                             return _buildSimpleWordItem(
                               word,
                               nativeWord,
@@ -409,18 +461,22 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            _getCategoryColor(widget.category['name']).withOpacity(0.1),
-                            _getCategoryColor(widget.category['name']).withOpacity(0.05),
+                            _getCategoryColor(widget.category['name'])
+                                .withOpacity(0.1),
+                            _getCategoryColor(widget.category['name'])
+                                .withOpacity(0.05),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _getCategoryColor(widget.category['name']).withOpacity(0.2),
+                          color: _getCategoryColor(widget.category['name'])
+                              .withOpacity(0.2),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                            color: _getCategoryColor(widget.category['name'])
+                                .withOpacity(0.1),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -434,12 +490,16 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                  color:
+                                      _getCategoryColor(widget.category['name'])
+                                          .withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
-                                  LessonConstants.getCategoryIcon(widget.category['name']),
-                                  color: _getCategoryColor(widget.category['name']),
+                                  LessonConstants.getCategoryIcon(
+                                      widget.category['name']),
+                                  color: _getCategoryColor(
+                                      widget.category['name']),
                                   size: 32,
                                 ),
                               ),
@@ -483,12 +543,15 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: _getCategoryColor(widget.category['name']).withOpacity(0.1),
+                                  color:
+                                      _getCategoryColor(widget.category['name'])
+                                          .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   Icons.school_rounded,
-                                  color: _getCategoryColor(widget.category['name']),
+                                  color: _getCategoryColor(
+                                      widget.category['name']),
                                   size: 20,
                                 ),
                               ),
@@ -535,9 +598,12 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
         : levelNumber == 2
             ? 'Intermediate'
             : 'Advanced';
-    final requiredLessons = CategoryLevelService.levelRequirements[levelNumber] ?? 3;
+    final requiredLessons =
+        CategoryLevelService.levelRequirements[levelNumber] ?? 3;
     final completedLessons = level?.completedLessons ?? 0;
-    final progressPercentage = requiredLessons > 0 ? (completedLessons / requiredLessons * 100).clamp(0, 100) : 0;
+    final progressPercentage = requiredLessons > 0
+        ? (completedLessons / requiredLessons * 100).clamp(0, 100)
+        : 0;
 
     // Check if level is unlocked
     final isLocked = _isLevelLocked(levelNumber);
@@ -597,11 +663,15 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isLocked ? lockedColor.withOpacity(0.15) : levelColor.withOpacity(0.15),
+                        color: isLocked
+                            ? lockedColor.withOpacity(0.15)
+                            : levelColor.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        isLocked ? Icons.lock_rounded : CategoryLevelService.getLevelIcon(levelNumber),
+                        isLocked
+                            ? Icons.lock_rounded
+                            : CategoryLevelService.getLevelIcon(levelNumber),
                         color: isLocked ? lockedColor : levelColor,
                         size: 24,
                       ),
@@ -616,15 +686,21 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: isLocked ? lockedColor : colorScheme.onSurface,
+                              color: isLocked
+                                  ? lockedColor
+                                  : colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            isLocked ? 'Complete Level ${levelNumber - 1} to unlock' : '$completedLessons/$requiredLessons lessons completed',
+                            isLocked
+                                ? 'Complete Level ${levelNumber - 1} to unlock'
+                                : '$completedLessons/$requiredLessons lessons completed',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isLocked ? lockedColor : colorScheme.onSurfaceVariant,
+                              color: isLocked
+                                  ? lockedColor
+                                  : colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -632,7 +708,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       ),
                     ),
                     Icon(
-                      isLocked ? Icons.lock_rounded : Icons.arrow_forward_ios_rounded,
+                      isLocked
+                          ? Icons.lock_rounded
+                          : Icons.arrow_forward_ios_rounded,
                       color: isLocked ? lockedColor : levelColor,
                       size: 16,
                     ),
@@ -653,11 +731,15 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: isLocked ? lockedColor : colorScheme.onSurfaceVariant,
+                            color: isLocked
+                                ? lockedColor
+                                : colorScheme.onSurfaceVariant,
                           ),
                         ),
                         Text(
-                          isLocked ? 'Locked' : '${progressPercentage.round()}%',
+                          isLocked
+                              ? 'Locked'
+                              : '${progressPercentage.round()}%',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -672,8 +754,11 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       child: LinearProgressIndicator(
                         value: isLocked ? 0 : progressPercentage / 100,
                         minHeight: 8,
-                        backgroundColor: isLocked ? lockedColor.withOpacity(0.2) : levelColor.withOpacity(0.2),
-                        valueColor: AlwaysStoppedAnimation<Color>(isLocked ? lockedColor : levelColor),
+                        backgroundColor: isLocked
+                            ? lockedColor.withOpacity(0.2)
+                            : levelColor.withOpacity(0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            isLocked ? lockedColor : levelColor),
                       ),
                     ),
                   ],
@@ -805,7 +890,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        remainingLessons == 1 ? 'You need to complete 1 more lesson in Level $nextAvailableLevel' : 'You need to complete $remainingLessons more lessons in Level $nextAvailableLevel',
+                        remainingLessons == 1
+                            ? 'You need to complete 1 more lesson in Level $nextAvailableLevel'
+                            : 'You need to complete $remainingLessons more lessons in Level $nextAvailableLevel',
                         style: TextStyle(
                           fontSize: 14,
                           color: colorScheme.onSurfaceVariant,
@@ -900,9 +987,14 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildProgressStat('Mastered', _wordStats!.mastered, Colors.green.shade600),
-              _buildProgressStat('Learning', _wordStats!.learning, Colors.orange.shade600),
-              _buildProgressStat('New', totalWords - _wordStats!.mastered - _wordStats!.learning, colorScheme.onSurfaceVariant),
+              _buildProgressStat(
+                  'Mastered', _wordStats!.mastered, Colors.green.shade600),
+              _buildProgressStat(
+                  'Learning', _wordStats!.learning, Colors.orange.shade600),
+              _buildProgressStat(
+                  'New',
+                  totalWords - _wordStats!.mastered - _wordStats!.learning,
+                  colorScheme.onSurfaceVariant),
             ],
           ),
         ],
@@ -967,14 +1059,19 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     );
   }
 
-  Widget _buildSimpleWordItem(String word, String nativeWord, {required Function() onWordUpdated}) {
+  Widget _buildSimpleWordItem(String word, String nativeWord,
+      {required Function() onWordUpdated}) {
     final colorScheme = Theme.of(context).colorScheme;
     final matching = _learningWords.firstWhere(
       (element) => element['word'] == word.toLowerCase(),
       orElse: () => {},
     );
 
-    final scheduledDays = matching.isEmpty ? 0.0 : (matching['scheduledDays'] is int ? (matching['scheduledDays'] as int).toDouble() : (matching['scheduledDays'] as double));
+    final scheduledDays = matching.isEmpty
+        ? 0.0
+        : (matching['scheduledDays'] is int
+            ? (matching['scheduledDays'] as int).toDouble()
+            : (matching['scheduledDays'] as double));
     final reps = matching.isEmpty ? 0 : (matching['reps'] ?? 0);
 
     final isMastered = scheduledDays >= 100 || scheduledDays == -1;
@@ -1052,7 +1149,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                   CircularProgressIndicator(
                     value: 1.0,
                     strokeWidth: 3,
-                    backgroundColor: colorScheme.onSurfaceVariant.withOpacity(0.1),
+                    backgroundColor:
+                        colorScheme.onSurfaceVariant.withOpacity(0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       colorScheme.onSurfaceVariant.withOpacity(0.1),
                     ),
@@ -1069,7 +1167,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     isMastered ? '100%' : '${(progressValue * 100).round()}%',
                     style: TextStyle(
                       fontSize: isMastered ? 8 : 9,
-                      fontWeight: isMastered ? FontWeight.w700 : FontWeight.w600,
+                      fontWeight:
+                          isMastered ? FontWeight.w700 : FontWeight.w600,
                       color: progressColor,
                       height: 1.0,
                     ),
@@ -1084,7 +1183,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     );
   }
 
-  void _showTranslationSheet(BuildContext context, String word, String nativeWord) {
+  void _showTranslationSheet(
+      BuildContext context, String word, String nativeWord) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1242,7 +1342,7 @@ void showCenteredToast(BuildContext context, String message) {
             ),
             child: Text(
               message,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: colorScheme.onPrimary, fontSize: 16),
             ),
           ),
         ),

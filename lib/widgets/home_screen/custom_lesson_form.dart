@@ -107,9 +107,11 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     final normalizedWord = word.trim().toLowerCase();
     if (mounted) {
       setState(() {
-        if (_selectedWords.length < LessonConstants.maxWordsAllowed && !_selectedWords.contains(normalizedWord)) {
+        if (_selectedWords.length < LessonConstants.maxWordsAllowed &&
+            !_selectedWords.contains(normalizedWord)) {
           _selectedWords.add(normalizedWord);
-          analyticsManager.storeAction('custom_lesson_word_added', normalizedWord);
+          analyticsManager.storeAction(
+              'custom_lesson_word_added', normalizedWord);
         }
       });
     }
@@ -153,7 +155,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
   Future<void> _createCustomLesson() async {
     // Validate inputs
     if (_topicController.text.trim().isEmpty) {
-      analyticsManager.storeAction('custom_lesson_validation_failed_empty_topic');
+      analyticsManager
+          .storeAction('custom_lesson_validation_failed_empty_topic');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a topic for your lesson'),
@@ -175,7 +178,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
 
     // Track successful lesson creation
-    analyticsManager.storeAction('custom_lesson_generate_button_pressed', '${_topicController.text.trim()}|${_selectedWords.length} words');
+    analyticsManager.storeAction('custom_lesson_generate_button_pressed',
+        '${_topicController.text.trim()}|${_selectedWords.length} words');
 
     // Call the callback to start lesson creation in parent
     if (widget.onLessonStarted != null) {
@@ -212,7 +216,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
         });
       }
     } catch (e) {
-      analyticsManager.storeAction('custom_lesson_random_suggestion_failed', e.toString());
+      analyticsManager.storeAction(
+          'custom_lesson_random_suggestion_failed', e.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -255,10 +260,12 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                       // Topic Input
                       Container(
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          color: colorScheme.surfaceContainerHighest
+                              .withOpacity(0.3),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            color: colorScheme.surfaceContainerHighest
+                                .withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -281,7 +288,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   onPressed: _isSuggestingRandom
                                       ? null
                                       : () {
-                                          analyticsManager.storeAction('custom_lesson_generate_random_button_pressed');
+                                          analyticsManager.storeAction(
+                                              'custom_lesson_generate_random_button_pressed');
                                           _suggestRandomLesson();
                                         },
                                   icon: _isSuggestingRandom
@@ -290,15 +298,21 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                           height: 16,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    colorScheme.primary),
                                           ),
                                         )
-                                      : const Icon(Icons.auto_awesome, size: 16),
+                                      : const Icon(Icons.auto_awesome,
+                                          size: 16),
                                   label: const Text('Generate Random'),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                     visualDensity: VisualDensity.compact,
-                                    textStyle: TextStyle(fontSize: widget.isSmallScreen ? 12 : 14),
+                                    textStyle: TextStyle(
+                                        fontSize:
+                                            widget.isSmallScreen ? 12 : 14),
                                   ),
                                 ),
                               ],
@@ -307,18 +321,38 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                             TextField(
                               controller: _topicController,
                               focusNode: _topicFocusNode,
+                              cursorColor: colorScheme.primary,
                               decoration: InputDecoration(
                                 hintText: 'Enter a topic for your lesson',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: colorScheme.surfaceContainerHighest,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: colorScheme.surfaceContainerHighest,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
                                 ),
                                 filled: true,
-                                fillColor: colorScheme.surface,
+                                fillColor: colorScheme.surfaceContainerHighest,
+                                hoverColor:
+                                    colorScheme.primary.withOpacity(0.05),
                                 suffixIcon: _topicController.text.isNotEmpty
                                     ? IconButton(
                                         icon: const Icon(Icons.clear),
                                         onPressed: () {
-                                          analyticsManager.storeAction('custom_lesson_topic_clear_button_pressed');
+                                          analyticsManager.storeAction(
+                                              'custom_lesson_topic_clear_button_pressed');
                                           _topicController.clear();
                                           _updateButtonState();
                                         },
@@ -357,10 +391,12 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                       // Words to Learn
                       Container(
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          color: colorScheme.surfaceContainerHighest
+                              .withOpacity(0.3),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                            color: colorScheme.surfaceContainerHighest
+                                .withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -385,26 +421,38 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   IconButton(
                                     icon: Icon(
                                       Icons.add_circle,
-                                      color: _selectedWords.length >= LessonConstants.maxWordsAllowed ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.primary,
+                                      color: _selectedWords.length >=
+                                              LessonConstants.maxWordsAllowed
+                                          ? colorScheme.onSurfaceVariant
+                                              .withOpacity(0.5)
+                                          : colorScheme.primary,
                                       size: 24,
                                     ),
-                                    onPressed: _selectedWords.length >= LessonConstants.maxWordsAllowed
+                                    onPressed: _selectedWords.length >=
+                                            LessonConstants.maxWordsAllowed
                                         ? null
                                         : () {
-                                            analyticsManager.storeAction('custom_lesson_add_word_button_pressed');
+                                            analyticsManager.storeAction(
+                                                'custom_lesson_add_word_button_pressed');
                                             if (mounted) {
                                               setState(() {
                                                 _showWordInput = true;
                                               });
                                             }
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
                                               _wordFocusNode.requestFocus();
                                               // Ensure the input field scrolls into view
-                                              Future.delayed(const Duration(milliseconds: 300), () {
-                                                if (mounted && _wordFocusNode.context != null) {
+                                              Future.delayed(
+                                                  const Duration(
+                                                      milliseconds: 300), () {
+                                                if (mounted &&
+                                                    _wordFocusNode.context !=
+                                                        null) {
                                                   Scrollable.ensureVisible(
                                                     _wordFocusNode.context!,
-                                                    duration: const Duration(milliseconds: 300),
+                                                    duration: const Duration(
+                                                        milliseconds: 300),
                                                     curve: Curves.easeInOut,
                                                   );
                                                 }
@@ -432,26 +480,32 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                         decoration: InputDecoration(
                                           hintText: 'Enter a word',
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                           filled: true,
                                           fillColor: colorScheme.surface,
-                                          contentPadding: const EdgeInsets.symmetric(
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
                                             horizontal: 12,
                                             vertical: 8,
                                           ),
                                           isDense: true,
                                         ),
-                                        textCapitalization: TextCapitalization.none,
+                                        textCapitalization:
+                                            TextCapitalization.none,
                                         textInputAction: TextInputAction.done,
                                         onSubmitted: (_) => _addWordFromInput(),
                                         onTap: () {
                                           // Ensure the input field is visible when tapped
-                                          Future.delayed(const Duration(milliseconds: 300), () {
+                                          Future.delayed(
+                                              const Duration(milliseconds: 300),
+                                              () {
                                             if (mounted) {
                                               Scrollable.ensureVisible(
                                                 _wordFocusNode.context!,
-                                                duration: const Duration(milliseconds: 300),
+                                                duration: const Duration(
+                                                    milliseconds: 300),
                                                 curve: Curves.easeInOut,
                                               );
                                             }
@@ -461,25 +515,30 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
-                                      icon: const Icon(Icons.check, color: Colors.green),
+                                      icon: const Icon(Icons.check,
+                                          color: Colors.green),
                                       onPressed: () {
                                         _addWordFromInput();
                                       },
                                       tooltip: 'Add word',
                                       style: IconButton.styleFrom(
-                                        backgroundColor: Colors.green.withOpacity(0.1),
+                                        backgroundColor:
+                                            Colors.green.withOpacity(0.1),
                                         padding: const EdgeInsets.all(8),
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.close, color: Colors.red),
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.red),
                                       onPressed: () {
-                                        analyticsManager.storeAction('custom_lesson_cancel_word_input_button_pressed');
+                                        analyticsManager.storeAction(
+                                            'custom_lesson_cancel_word_input_button_pressed');
                                         _hideWordInput();
                                       },
                                       tooltip: 'Cancel',
                                       style: IconButton.styleFrom(
-                                        backgroundColor: Colors.red.withOpacity(0.1),
+                                        backgroundColor:
+                                            Colors.red.withOpacity(0.1),
                                         padding: const EdgeInsets.all(8),
                                       ),
                                     ),
@@ -490,7 +549,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                             if (_selectedWords.isEmpty && !_showWordInput)
                               Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   child: Text(
                                     'Add up to 5 words you want to learn',
                                     style: TextStyle(
@@ -514,21 +574,28 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
-                                    deleteIcon: const Icon(Icons.close, size: 18),
+                                    deleteIcon:
+                                        const Icon(Icons.close, size: 18),
                                     onDeleted: () {
-                                      analyticsManager.storeAction('custom_lesson_word_chip_deleted', word);
+                                      analyticsManager.storeAction(
+                                          'custom_lesson_word_chip_deleted',
+                                          word);
                                       _removeWord(word);
                                     },
-                                    backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                    backgroundColor:
+                                        colorScheme.primary.withOpacity(0.1),
                                     side: BorderSide(
-                                      color: colorScheme.primary.withOpacity(0.2),
+                                      color:
+                                          colorScheme.primary.withOpacity(0.2),
                                     ),
                                     labelStyle: TextStyle(
                                       color: colorScheme.primary,
                                     ),
                                     deleteIconColor: colorScheme.primary,
-                                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 2, vertical: 0),
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   );
                                 }).toList(),
                               ),
@@ -560,7 +627,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                               ? LinearGradient(
                                   colors: [
                                     colorScheme.primary,
-                                    colorScheme.primary.withOpacity(0.8),
+                                    colorScheme.primary.withOpacity(0.4),
+                                    colorScheme.secondary,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -572,15 +640,6 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   ],
                                 ),
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: _canCreateLesson && !widget.isLoading
-                              ? [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : [],
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -595,7 +654,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                               alignment: Alignment.center,
                               child: widget.isLoading
                                   ? Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         SizedBox(
@@ -603,7 +663,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                           height: 22,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2.5,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
                                               colorScheme.onPrimary,
                                             ),
                                           ),
@@ -612,7 +673,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                         Text(
                                           'Generating Lesson...',
                                           style: TextStyle(
-                                            fontSize: widget.isSmallScreen ? 16 : 18,
+                                            fontSize:
+                                                widget.isSmallScreen ? 16 : 18,
                                             fontWeight: FontWeight.w600,
                                             color: colorScheme.onPrimary,
                                             letterSpacing: 0.5,
@@ -621,21 +683,28 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                       ],
                                     )
                                   : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
                                           Icons.auto_awesome_rounded,
-                                          color: _canCreateLesson ? Colors.white : colorScheme.onSurface.withOpacity(0.38),
+                                          color: _canCreateLesson
+                                              ? Colors.white
+                                              : colorScheme.onSurface
+                                                  .withOpacity(0.38),
                                           size: widget.isSmallScreen ? 20 : 22,
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
                                           'Generate Lesson',
                                           style: TextStyle(
-                                            fontSize: widget.isSmallScreen ? 16 : 18,
-                                            fontWeight: FontWeight.w600,
-                                            color: _canCreateLesson ? Colors.white : colorScheme.onSurface.withOpacity(0.38),
+                                            fontSize:
+                                                widget.isSmallScreen ? 16 : 18,
+                                            color: _canCreateLesson
+                                                ? Colors.white
+                                                : colorScheme.onSurface
+                                                    .withOpacity(0.38),
                                             letterSpacing: 0.5,
                                           ),
                                         ),
@@ -647,7 +716,9 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                       ),
 
                       // Bottom padding to account for keyboard
-                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
+                      SizedBox(
+                          height:
+                              MediaQuery.of(context).viewInsets.bottom + 20),
                     ],
                   ),
                 ),

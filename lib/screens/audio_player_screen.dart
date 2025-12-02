@@ -650,7 +650,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           style: TextStyle(color: Colors.white),
         ),
         duration: Duration(seconds: 3),
-        backgroundColor: Colors.purple,
+        backgroundColor: const Color(0xFF1A4D3A),
       ),
     );
 
@@ -976,7 +976,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                 ),
                 body: Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xFF1E1E2E),
+                    color: Color(0xFF0A2F2A),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),

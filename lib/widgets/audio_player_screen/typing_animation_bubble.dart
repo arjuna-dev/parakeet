@@ -33,7 +33,8 @@ class TypingAnimationBubble extends StatefulWidget {
   State<TypingAnimationBubble> createState() => _TypingAnimationBubbleState();
 }
 
-class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with TickerProviderStateMixin {
+class _TypingAnimationBubbleState extends State<TypingAnimationBubble>
+    with TickerProviderStateMixin {
   String _displayedText = '';
   String _displayedSubtitle = '';
   bool _showTypingIndicator = false;
@@ -153,7 +154,8 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
 
       int charIndex = 0;
       // Use a slightly faster speed for subtitle animation
-      final subtitleSpeed = Duration(milliseconds: (widget.typingSpeed.inMilliseconds * 0.7).round());
+      final subtitleSpeed = Duration(
+          milliseconds: (widget.typingSpeed.inMilliseconds * 0.7).round());
 
       _subtitleTimer = Timer.periodic(subtitleSpeed, (timer) {
         if (charIndex < (widget.subtitle?.length ?? 0)) {
@@ -190,7 +192,8 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Avatar for other person (not shown for user)
@@ -199,7 +202,9 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
           // Message bubble
           Flexible(
             child: Column(
-              crossAxisAlignment: widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: widget.isUser
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 widget.isHighlighted
                     ? AnimatedBuilder(
@@ -213,25 +218,31 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                               left: widget.isUser ? 40 : 8,
                               right: widget.isUser ? 8 : 40,
                             ),
-                            padding: const EdgeInsets.all(3), // Padding for border effect
+                            padding: const EdgeInsets.all(
+                                3), // Padding for border effect
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.only(
                                 topLeft: const Radius.circular(21),
                                 topRight: const Radius.circular(21),
-                                bottomLeft: Radius.circular(widget.isUser ? 21 : 7),
-                                bottomRight: Radius.circular(widget.isUser ? 7 : 21),
+                                bottomLeft:
+                                    Radius.circular(widget.isUser ? 21 : 7),
+                                bottomRight:
+                                    Radius.circular(widget.isUser ? 7 : 21),
                               ),
                               gradient: LinearGradient(
                                 colors: [
-                                  colorScheme.primary.withOpacity(_highlightAnimation.value),
-                                  colorScheme.secondary.withOpacity(_highlightAnimation.value),
+                                  colorScheme.primary
+                                      .withOpacity(_highlightAnimation.value),
+                                  colorScheme.secondary
+                                      .withOpacity(_highlightAnimation.value),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colorScheme.primary.withOpacity(_highlightAnimation.value * 0.7),
+                                  color: colorScheme.primary.withOpacity(
+                                      _highlightAnimation.value * 0.7),
                                   spreadRadius: 2,
                                   blurRadius: 8,
                                   offset: const Offset(0, 0),
@@ -239,19 +250,30 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                               ],
                             ),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 color: widget.isUser
-                                    ? Color.lerp(const Color.fromARGB(255, 62, 59, 124), colorScheme.primaryContainer, _highlightAnimation.value * 0.3)
-                                    : Color.lerp(const Color.fromARGB(255, 85, 52, 115), colorScheme.primaryContainer, _highlightAnimation.value * 0.3),
+                                    ? Color.lerp(
+                                        const Color(0xFF1A4D3A),
+                                        colorScheme.primaryContainer,
+                                        _highlightAnimation.value * 0.3)
+                                    : Color.lerp(
+                                        const Color(0xFF0F3D37),
+                                        colorScheme.primaryContainer,
+                                        _highlightAnimation.value * 0.3),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(18),
                                   topRight: const Radius.circular(18),
-                                  bottomLeft: Radius.circular(widget.isUser ? 18 : 4),
-                                  bottomRight: Radius.circular(widget.isUser ? 4 : 18),
+                                  bottomLeft:
+                                      Radius.circular(widget.isUser ? 18 : 4),
+                                  bottomRight:
+                                      Radius.circular(widget.isUser ? 4 : 18),
                                 ),
                               ),
-                              child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
+                              child: _showTypingIndicator
+                                  ? _buildTypingIndicator()
+                                  : _buildTextContent(colorScheme),
                             ),
                           );
                         },
@@ -264,16 +286,20 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                           left: widget.isUser ? 40 : 8,
                           right: widget.isUser ? 8 : 40,
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: widget.isUser
-                              ? const Color.fromARGB(255, 62, 59, 124) // User bubble color
-                              : const Color.fromARGB(255, 85, 52, 115), // Other person bubble color
+                              ? const Color(
+                                  0xFF1A4D3A) // User bubble color - darker green
+                              : const Color(
+                                  0xFF0F3D37), // Other person bubble color - medium green
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(18),
                             topRight: const Radius.circular(18),
                             bottomLeft: Radius.circular(widget.isUser ? 18 : 4),
-                            bottomRight: Radius.circular(widget.isUser ? 4 : 18),
+                            bottomRight:
+                                Radius.circular(widget.isUser ? 4 : 18),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -284,11 +310,14 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                             ),
                           ],
                         ),
-                        child: _showTypingIndicator ? _buildTypingIndicator() : _buildTextContent(colorScheme),
+                        child: _showTypingIndicator
+                            ? _buildTypingIndicator()
+                            : _buildTextContent(colorScheme),
                       ),
 
                 // Timestamp - show breakdown start time
-                if (widget.breakdownStartTime != null && widget.breakdownStartTime! > Duration.zero)
+                if (widget.breakdownStartTime != null &&
+                    widget.breakdownStartTime! > Duration.zero)
                   Padding(
                     padding: EdgeInsets.only(
                       top: 6,
@@ -302,12 +331,13 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.2),
+                          color: const Color(0xFF3FFF8F).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.5),
+                            color: const Color(0xFF3FFF8F).withOpacity(0.5),
                             width: 1,
                           ),
                         ),
@@ -317,14 +347,14 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                             const Icon(
                               Icons.skip_next_rounded,
                               size: 14,
-                              color: Colors.blue,
+                              color: const Color(0xFF3FFF8F),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Jump to ${_formatDuration(widget.breakdownStartTime!)}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Colors.blue,
+                                color: const Color(0xFF3FFF8F),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -350,7 +380,8 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
       height: 32,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: widget.isUser ? const Color.fromARGB(255, 62, 59, 124) : const Color.fromARGB(255, 85, 52, 115),
+        color:
+            widget.isUser ? const Color(0xFF1A4D3A) : const Color(0xFF0F3D37),
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -410,24 +441,33 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble> with Tick
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
-                  fontWeight: widget.isHighlighted ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: widget.isHighlighted
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               )
             : Wrap(
                 children: _displayedText.split(' ').map<Widget>((word) {
-                  final cleanWord = word.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase();
+                  final cleanWord = word
+                      .replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '')
+                      .toLowerCase();
                   final match = widget.wordsToHighlight.contains(cleanWord);
 
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 0.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 2.0, vertical: 0.0),
                     margin: EdgeInsets.zero,
                     child: Text(
                       word,
                       style: TextStyle(
                         fontSize: 16,
                         color: match ? colorScheme.tertiary : Colors.white,
-                        fontWeight: widget.isHighlighted || match ? FontWeight.bold : FontWeight.normal,
-                        decoration: match ? TextDecoration.underline : TextDecoration.none,
+                        fontWeight: widget.isHighlighted || match
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        decoration: match
+                            ? TextDecoration.underline
+                            : TextDecoration.none,
                         decorationThickness: match ? 1.0 : null,
                       ),
                     ),

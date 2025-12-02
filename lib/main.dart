@@ -74,17 +74,22 @@ Future<void> checkForMandatoryUpdate() async {
   getAnalyticsManager()?.storeAction('mandatory_update_check_initiated');
 
   final firestore = FirebaseFirestore.instance;
-  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef =
+      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
   if (docSnapshot.exists) {
     final data = docSnapshot.data() as Map<String, dynamic>;
-    final String? firebaseShouldUpdateID = data['should_update_app_ID'] as String?;
+    final String? firebaseShouldUpdateID =
+        data['should_update_app_ID'] as String?;
     final String? updateMessage = data['should_update_app_message'] as String?;
 
-    if (firebaseShouldUpdateID == null || updateMessage == null || versionForTestFlight) {
-      getAnalyticsManager()?.storeAction('mandatory_update_check_skipped', 'missing_data_or_testflight');
+    if (firebaseShouldUpdateID == null ||
+        updateMessage == null ||
+        versionForTestFlight) {
+      getAnalyticsManager()?.storeAction(
+          'mandatory_update_check_skipped', 'missing_data_or_testflight');
       // Optionally log or handle missing fields
       return;
     }
@@ -96,7 +101,8 @@ Future<void> checkForMandatoryUpdate() async {
       getAnalyticsManager()?.storeAction('mandatory_update_not_required');
     }
   } else {
-    getAnalyticsManager()?.storeAction('mandatory_update_check_failed', 'document_not_found');
+    getAnalyticsManager()
+        ?.storeAction('mandatory_update_check_failed', 'document_not_found');
   }
 }
 
@@ -104,7 +110,8 @@ Future<void> checkForRecommendedUpdate() async {
   getAnalyticsManager()?.storeAction('recommended_update_check_initiated');
 
   final firestore = FirebaseFirestore.instance;
-  final docRef = firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
+  final docRef =
+      firestore.collection('should_update_app').doc('6h9D0BVJ9BSsbRj98tXx');
 
   final docSnapshot = await docRef.get();
 
@@ -120,18 +127,22 @@ Future<void> checkForRecommendedUpdate() async {
       getAnalyticsManager()?.storeAction('recommended_update_not_available');
     }
   } else {
-    getAnalyticsManager()?.storeAction('recommended_update_check_failed', 'document_not_found');
+    getAnalyticsManager()
+        ?.storeAction('recommended_update_check_failed', 'document_not_found');
   }
 }
 
 void _showUpdateDialog(String message, bool brickApp) {
-  getAnalyticsManager()?.storeAction('update_dialog_shown', brickApp ? 'mandatory' : 'recommended');
+  getAnalyticsManager()?.storeAction(
+      'update_dialog_shown', brickApp ? 'mandatory' : 'recommended');
   showDialog(
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // Prevent dialog dismissal
     builder: (BuildContext context) {
       return AlertDialog(
-        title: brickApp ? const Text('Update Required') : const Text('Update Available'),
+        title: brickApp
+            ? const Text('Update Required')
+            : const Text('Update Available'),
         content: Text(
           message, // Display message from Firebase
           style: const TextStyle(
@@ -143,7 +154,8 @@ void _showUpdateDialog(String message, bool brickApp) {
           TextButton(
             child: const Text('Update'),
             onPressed: () {
-              getAnalyticsManager()?.storeAction('update_dialog_update_button_pressed');
+              getAnalyticsManager()
+                  ?.storeAction('update_dialog_update_button_pressed');
               final appStoreUrl = Platform.isIOS ? urlIOS : urlAndroid;
               launchURL(appStoreUrl); // Redirect to App Store/Play Store
             },
@@ -152,10 +164,12 @@ void _showUpdateDialog(String message, bool brickApp) {
             child: brickApp ? const Text('Close App') : const Text('Continue'),
             onPressed: () {
               if (brickApp) {
-                getAnalyticsManager()?.storeAction('update_dialog_close_app_button_pressed');
+                getAnalyticsManager()
+                    ?.storeAction('update_dialog_close_app_button_pressed');
                 exit(0); // Close the app
               } else {
-                getAnalyticsManager()?.storeAction('update_dialog_continue_button_pressed');
+                getAnalyticsManager()
+                    ?.storeAction('update_dialog_continue_button_pressed');
                 // Close the dialog
                 Navigator.of(context).pop();
               }
@@ -169,7 +183,8 @@ void _showUpdateDialog(String message, bool brickApp) {
 
 Future<void> requestTrackingPermission() async {
   // Check if the tracking status has not been determined
-  if (await AppTrackingTransparency.trackingAuthorizationStatus == TrackingStatus.notDetermined) {
+  if (await AppTrackingTransparency.trackingAuthorizationStatus ==
+      TrackingStatus.notDetermined) {
     getAnalyticsManager()?.storeAction('tracking_permission_request_initiated');
 
     // Show an explainer dialog before the ATT prompt
@@ -180,16 +195,19 @@ Future<void> requestTrackingPermission() async {
 
     // Request tracking authorization
     final result = await AppTrackingTransparency.requestTrackingAuthorization();
-    getAnalyticsManager()?.storeAction('tracking_permission_result', result.toString());
+    getAnalyticsManager()
+        ?.storeAction('tracking_permission_result', result.toString());
   } else {
     final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-    getAnalyticsManager()?.storeAction('tracking_permission_already_determined', status.toString());
+    getAnalyticsManager()?.storeAction(
+        'tracking_permission_already_determined', status.toString());
   }
 }
 
 // Method to display the custom explainer dialog
 Future<void> showCustomTrackingDialog() async {
-  getAnalyticsManager()?.storeAction('tracking_permission_explainer_dialog_shown');
+  getAnalyticsManager()
+      ?.storeAction('tracking_permission_explainer_dialog_shown');
   return showDialog<void>(
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // User must explicitly interact with dialog
@@ -229,7 +247,8 @@ Future<void> showCustomTrackingDialog() async {
           TextButton(
             child: const Text('Continue'),
             onPressed: () {
-              getAnalyticsManager()?.storeAction('tracking_permission_dialog_continue_button_pressed');
+              getAnalyticsManager()?.storeAction(
+                  'tracking_permission_dialog_continue_button_pressed');
               Navigator.of(context).pop(); // Dismiss the dialog
             },
           ),
@@ -242,11 +261,17 @@ Future<void> showCustomTrackingDialog() async {
 Future<String> _getInitialRoute() async {
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser != null) {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
     if (userDoc.exists) {
       final userData = userDoc.data();
-      if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
-        getAnalyticsManager()?.storeAction('app_launched_with_incomplete_onboarding');
+      if (userData != null &&
+          (!userData.containsKey('onboarding_completed') ||
+              userData['onboarding_completed'] == false)) {
+        getAnalyticsManager()
+            ?.storeAction('app_launched_with_incomplete_onboarding');
         return '/onboarding';
       }
     }
@@ -267,7 +292,8 @@ class MyApp extends StatefulWidget {
 class ResponsiveScreenWrapper extends StatelessWidget {
   final Widget child;
 
-  const ResponsiveScreenWrapper({Key? key, required this.child}) : super(key: key);
+  const ResponsiveScreenWrapper({Key? key, required this.child})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +342,8 @@ class _MyAppState extends State<MyApp> {
     final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
 
     _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
-      IAPService(context.read<AuthService>().currentUser!.uid).listenToPurchaseUpdated(purchaseDetailsList);
+      IAPService(context.read<AuthService>().currentUser!.uid)
+          .listenToPurchaseUpdated(purchaseDetailsList);
     }, onDone: () {
       _iapSubscription.cancel();
     }, onError: (error) {
@@ -324,7 +351,8 @@ class _MyAppState extends State<MyApp> {
     }) as StreamSubscription<List<PurchaseDetails>>;
 
     // Monitor authentication state changes
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
         // Add a small delay to avoid race condition with auth_service._initializeUserDocument
         await Future.delayed(const Duration(milliseconds: 500));
@@ -332,12 +360,18 @@ class _MyAppState extends State<MyApp> {
         if (_navigatingToOnboarding) return;
 
         // Check onboarding completion for newly logged-in users
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (userDoc.exists) {
           final userData = userDoc.data();
-          if (userData != null && (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false)) {
+          if (userData != null &&
+              (!userData.containsKey('onboarding_completed') ||
+                  userData['onboarding_completed'] == false)) {
             if (mounted) {
-              getAnalyticsManager()?.storeAction('user_redirected_to_onboarding');
+              getAnalyticsManager()
+                  ?.storeAction('user_redirected_to_onboarding');
               setState(() {
                 _navigatingToOnboarding = true;
               });
@@ -369,19 +403,29 @@ class _MyAppState extends State<MyApp> {
               if (snapshot.connectionState == ConnectionState.active) {
                 if (snapshot.hasData) {
                   return FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance.collection('users').doc(snapshot.data!.uid).get(),
-                    builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> userSnapshot) {
-                      if (userSnapshot.connectionState == ConnectionState.done) {
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(snapshot.data!.uid)
+                        .get(),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                      if (userSnapshot.connectionState ==
+                          ConnectionState.done) {
                         if (userSnapshot.hasData && userSnapshot.data!.exists) {
-                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                          if (!userData.containsKey('onboarding_completed') || userData['onboarding_completed'] == false) {
+                          final userData =
+                              userSnapshot.data!.data() as Map<String, dynamic>;
+                          if (!userData.containsKey('onboarding_completed') ||
+                              userData['onboarding_completed'] == false) {
                             // Redirect to onboarding if not completed
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.pushReplacementNamed(context, '/onboarding');
+                              Navigator.pushReplacementNamed(
+                                  context, '/onboarding');
                             });
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(
+                                child: CircularProgressIndicator());
                           }
-                          return MainNavigationScreen(initialRoute: initialRoute);
+                          return MainNavigationScreen(
+                              initialRoute: initialRoute);
                         }
                       }
                       return const Center(child: CircularProgressIndicator());
@@ -428,7 +472,7 @@ class _MyAppState extends State<MyApp> {
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Parakeet',
-        theme: AppTheme.dark,
+        theme: AppTheme.customTheme(),
         initialRoute: _initialRoute,
         onGenerateRoute: (RouteSettings settings) {
           WidgetBuilder builder;
@@ -466,7 +510,8 @@ class _MyAppState extends State<MyApp> {
               break;
             case '/vocabulary_review':
               builder = (context) => ResponsiveScreenWrapper(
-                    child: _buildAuthenticatedMainNavigation('/vocabulary_review'),
+                    child:
+                        _buildAuthenticatedMainNavigation('/vocabulary_review'),
                   );
               break;
             case '/all_words':
@@ -492,8 +537,10 @@ class _MyAppState extends State<MyApp> {
           }
 
           return PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => builder(context),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                builder(context),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: animation,
                 child: child,

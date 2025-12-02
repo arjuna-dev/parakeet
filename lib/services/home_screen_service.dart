@@ -6,7 +6,8 @@ import 'package:parakeet/widgets/home_screen/lesson_card.dart';
 import 'package:parakeet/utils/category_icons.dart';
 
 class HomeScreenService {
-  static Widget buildAllLessonsList(BuildContext context, HomeScreenModel model, VoidCallback onReload) {
+  static Widget buildAllLessonsList(
+      BuildContext context, HomeScreenModel model, VoidCallback onReload) {
     return _AllLessonsListWidget(model: model, onReload: onReload);
   }
 }
@@ -202,8 +203,10 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                     width: 1,
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 isDense: true,
+                hoverColor: colorScheme.primary.withOpacity(0.05),
               ),
               style: TextStyle(
                 color: colorScheme.onSurface,
@@ -312,7 +315,10 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
           Expanded(
             child: widget.model.filteredLessons.isEmpty
                 ? EmptyStateView(
-                    icon: (widget.model.searchQuery.isNotEmpty || widget.model.selectedCategory != null) ? Icons.search_off_rounded : Icons.school_outlined,
+                    icon: (widget.model.searchQuery.isNotEmpty ||
+                            widget.model.selectedCategory != null)
+                        ? Icons.search_off_rounded
+                        : Icons.school_outlined,
                     message: _getEmptyStateMessage(),
                     additionalWidget: RichText(
                       textAlign: TextAlign.center,
@@ -346,7 +352,8 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                     isSmallScreen: isSmallScreen,
                   )
                 : ListView.builder(
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
+                    padding:
+                        EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
                     itemCount: widget.model.filteredLessons.length,
                     itemBuilder: (context, index) {
                       final audioFile = widget.model.filteredLessons[index];

@@ -26,7 +26,12 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   String _originalTargetLanguage = '';
   String _originalLanguageLevel = '';
 
-  final List<String> _languageLevels = ['Absolute beginner', 'Beginner', 'Intermediate', 'Advanced'];
+  final List<String> _languageLevels = [
+    'Absolute beginner',
+    'Beginner',
+    'Intermediate',
+    'Advanced'
+  ];
 
   late List<String> _languages;
 
@@ -53,7 +58,10 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
     }
 
     try {
-      final DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
       if (userDoc.exists) {
         final userData = userDoc.data() as Map<String, dynamic>;
@@ -77,7 +85,9 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   }
 
   bool get _hasChanges {
-    return _nativeLanguage != _originalNativeLanguage || _targetLanguage != _originalTargetLanguage || _languageLevel != _originalLanguageLevel;
+    return _nativeLanguage != _originalNativeLanguage ||
+        _targetLanguage != _originalTargetLanguage ||
+        _languageLevel != _originalLanguageLevel;
   }
 
   Future<void> _saveSettings() async {
@@ -95,7 +105,10 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
     try {
       // Update user preferences in Firestore
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'native_language': _nativeLanguage,
         'target_language': _targetLanguage,
         'language_level': _languageLevel,
@@ -108,7 +121,9 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
       // Show confirmation
       if (mounted) {
-        _trackUserAction('language_settings_saved_successfully', data: 'Native: $_nativeLanguage, Target: $_targetLanguage, Level: $_languageLevel');
+        _trackUserAction('language_settings_saved_successfully',
+            data:
+                'Native: $_nativeLanguage, Target: $_targetLanguage, Level: $_languageLevel');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Language settings updated')),
         );
@@ -118,7 +133,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       print('Error saving settings: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save settings. Please try again.')),
+          const SnackBar(
+              content: Text('Failed to save settings. Please try again.')),
         );
       }
     } finally {
@@ -126,10 +142,14 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
     }
   }
 
-  Future<void> _generateNativeLanguageGreetings(String userId, String nativeLanguage) async {
+  Future<void> _generateNativeLanguageGreetings(
+      String userId, String nativeLanguage) async {
     try {
       // Fetch the user's nickname
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       if (!userDoc.exists) return;
 
       final userData = userDoc.data() as Map<String, dynamic>;
@@ -148,7 +168,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
         final greeting = nativeGreetings[i];
         final userIdN = "${userId}_${nativeLanguage}_${i + 1}";
         // Generate the greeting audio
-        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nickname!", userId, userIdN, nativeLanguage));
+        unawaited(CloudFunctionService.generateNicknameAudio(
+            "$greeting $nickname!", userId, userIdN, nativeLanguage));
       }
     } catch (e) {
       print("Error generating native language greetings: $e");
@@ -183,14 +204,18 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.4),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
 
               // Title
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -214,7 +239,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                       title: Text(
                         language,
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                       trailing: isSelected
@@ -268,6 +294,15 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
                   // Native Language Card
                   Card(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: colorScheme.surfaceContainerHighest
+                            .withOpacity(0.2),
+                      ),
+                    ),
                     child: ListTile(
                       leading: Icon(
                         Icons.home_rounded,
@@ -283,13 +318,16 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        _trackUserAction('language_settings_native_language_selection_opened');
+                        _trackUserAction(
+                            'language_settings_native_language_selection_opened');
                         _selectLanguageFromList(
                           'Select Native Language',
                           _languages,
                           _nativeLanguage,
                           (selected) {
-                            _trackUserAction('language_settings_native_language_selected', data: selected);
+                            _trackUserAction(
+                                'language_settings_native_language_selected',
+                                data: selected);
                             setState(() => _nativeLanguage = selected);
                           },
                         );
@@ -301,6 +339,15 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
                   // Target Language Card
                   Card(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: colorScheme.surfaceContainerHighest
+                            .withOpacity(0.2),
+                      ),
+                    ),
                     child: ListTile(
                       leading: Icon(
                         Icons.translate_rounded,
@@ -316,13 +363,16 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        _trackUserAction('language_settings_target_language_selection_opened');
+                        _trackUserAction(
+                            'language_settings_target_language_selection_opened');
                         _selectLanguageFromList(
                           'Select Target Language',
                           _languages,
                           _targetLanguage,
                           (selected) {
-                            _trackUserAction('language_settings_target_language_selected', data: selected);
+                            _trackUserAction(
+                                'language_settings_target_language_selected',
+                                data: selected);
                             setState(() => _targetLanguage = selected);
                           },
                         );
@@ -334,6 +384,15 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
                   // Language Level Card
                   Card(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: colorScheme.surfaceContainerHighest
+                            .withOpacity(0.2),
+                      ),
+                    ),
                     child: ListTile(
                       leading: Icon(
                         Icons.school_rounded,
@@ -349,13 +408,16 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        _trackUserAction('language_settings_language_level_selection_opened');
+                        _trackUserAction(
+                            'language_settings_language_level_selection_opened');
                         _selectLanguageFromList(
                           'Select Language Level',
                           _languageLevels,
                           _languageLevel,
                           (selected) {
-                            _trackUserAction('language_settings_language_level_selected', data: selected);
+                            _trackUserAction(
+                                'language_settings_language_level_selected',
+                                data: selected);
                             setState(() => _languageLevel = selected);
                           },
                         );
@@ -369,7 +431,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: (_isSaving || !_hasChanges) ? null : _saveSettings,
+                      onPressed:
+                          (_isSaving || !_hasChanges) ? null : _saveSettings,
                       icon: _isSaving
                           ? const SizedBox(
                               width: 16,
