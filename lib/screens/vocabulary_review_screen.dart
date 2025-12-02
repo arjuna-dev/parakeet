@@ -7,10 +7,12 @@ import 'package:parakeet/utils/script_generator.dart' show getDocsAndRefsMaps;
 import 'package:parakeet/utils/spaced_repetition_fsrs.dart' show WordCard;
 import 'package:parakeet/widgets/home_screen/tab_content_view.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
-import 'package:parakeet/screens/category_detail_screen.dart' show showCenteredToast;
-import 'package:parakeet/utils/mark_as_mastered_modal.dart' show showMarkAsMasteredModal;
+import 'package:parakeet/screens/category_detail_screen.dart'
+    show showCenteredToast;
+
 import 'package:parakeet/utils/language_categories.dart';
 import 'package:parakeet/utils/save_analytics.dart';
+import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 
 class VocabularyReviewScreen extends StatefulWidget {
   final String? nativeLanguage;
@@ -24,7 +26,8 @@ class VocabularyReviewScreen extends StatefulWidget {
   State<VocabularyReviewScreen> createState() => _VocabularyReviewScreenState();
 }
 
-class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with TickerProviderStateMixin {
+class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
+    with TickerProviderStateMixin {
   late Map<String, DocumentReference> _allRefsMap;
   late bool _isLoadingAll;
   late bool _isLoadingDue;
@@ -40,7 +43,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
   final List<WordCard> _allWordsFull = [];
   final List<WordCard> _dueWordsFull = [];
   final Map<String, DocumentReference> _dueWordsRefs = {};
-  final Map<String, Map<String, dynamic>> _rawDocData = {}; // Store raw Firestore data
+  final Map<String, Map<String, dynamic>> _rawDocData =
+      {}; // Store raw Firestore data
   int _totalDueWordsCount = 0; // Track total words available for review
 
   // Track flipped state for each word
@@ -72,7 +76,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
 
       final userData = await ProfileService.fetchUserData();
       _targetLanguage = userData['target_language'] as String? ?? '';
-      _nativeLanguage = widget.nativeLanguage ?? userData['native_language'] as String? ?? 'English (US)';
+      _nativeLanguage = widget.nativeLanguage ??
+          userData['native_language'] as String? ??
+          'English (US)';
 
       // Load categories for both languages
       _targetLanguageCategories = getCategoriesForLanguage(_targetLanguage);
@@ -81,7 +87,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       await _loadAllWords();
       await _loadDueWords();
     } catch (e, stack) {
-      debugPrint('WordManagementScreen: Error in _initializeData: \n$e\n$stack');
+      debugPrint(
+          'WordManagementScreen: Error in _initializeData: \n$e\n$stack');
       setState(() {
         _isLoadingAll = false;
         _isLoadingDue = false;
@@ -92,7 +99,10 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
   Future<void> _loadAllWords() async {
     setState(() => _isLoadingAll = true);
     try {
-      final categoriesRef = FirebaseFirestore.instance.collection('users').doc(_userId).collection('${_targetLanguage}_words');
+      final categoriesRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('${_targetLanguage}_words');
       final categories = await categoriesRef.get();
       final refs = <DocumentReference>[];
       for (var cat in categories.docs) {
@@ -181,7 +191,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
       final dueWords = _allWordsFull.where((wordCard) {
         // Check if the word is due (due date <= now)
         final dueDate = wordCard.card.due;
-        final isOverdue = dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
+        final isOverdue =
+            dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now);
 
         // Only consider due date - no lastReview filtering
         return isOverdue;
@@ -264,35 +275,44 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     // First priority: Check if raw document data has native_language_translation field
     if (_rawDocData.containsKey(word)) {
       final rawData = _rawDocData[word]!;
-      debugPrint('VocabularyReview: Raw document data keys: ${rawData.keys.toList()}');
-      debugPrint('VocabularyReview: Has native_language_translation key: ${rawData.containsKey('native_language_translation')}');
+      debugPrint(
+          'VocabularyReview: Raw document data keys: ${rawData.keys.toList()}');
+      debugPrint(
+          'VocabularyReview: Has native_language_translation key: ${rawData.containsKey('native_language_translation')}');
 
       if (rawData.containsKey('native_language_translation')) {
         final translation = rawData['native_language_translation'];
-        debugPrint('VocabularyReview: native_language_translation value: "$translation" (type: ${translation.runtimeType})');
+        debugPrint(
+            'VocabularyReview: native_language_translation value: "$translation" (type: ${translation.runtimeType})');
         debugPrint('VocabularyReview: Is null: ${translation == null}');
-        debugPrint('VocabularyReview: Is empty: ${translation.toString().isEmpty}');
+        debugPrint(
+            'VocabularyReview: Is empty: ${translation.toString().isEmpty}');
 
         if (translation != null && translation.toString().isNotEmpty) {
-          debugPrint('VocabularyReview: Using native_language_translation: "${translation.toString()}"');
+          debugPrint(
+              'VocabularyReview: Using native_language_translation: "${translation.toString()}"');
           return translation.toString();
         }
       }
     } else {
-      debugPrint('VocabularyReview: No raw document data found for word "$word"');
+      debugPrint(
+          'VocabularyReview: No raw document data found for word "$word"');
     }
 
-    debugPrint('VocabularyReview: Falling back to category-based translation lookup');
+    debugPrint(
+        'VocabularyReview: Falling back to category-based translation lookup');
 
     // Fallback: Find the category and index of the word in target language
     for (final targetCategory in _targetLanguageCategories) {
       final List<dynamic> words = targetCategory['words'];
-      final int wordIndex = words.indexWhere((w) => w.toLowerCase() == word.toLowerCase());
+      final int wordIndex =
+          words.indexWhere((w) => w.toLowerCase() == word.toLowerCase());
 
       if (wordIndex != -1) {
         // Found the word, now find matching category in native language
         final String categoryName = targetCategory['name'];
-        debugPrint('VocabularyReview: Found word in category "$categoryName" at index $wordIndex');
+        debugPrint(
+            'VocabularyReview: Found word in category "$categoryName" at index $wordIndex');
 
         final matchingNativeCategory = _nativeLanguageCategories.firstWhere(
           (natCat) {
@@ -301,10 +321,12 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
           orElse: () => <String, Object>{'words': <Object>[]},
         );
         // Get the translation at the same index if available
-        final List<dynamic> nativeWords = matchingNativeCategory['words'] as List<dynamic>;
+        final List<dynamic> nativeWords =
+            matchingNativeCategory['words'] as List<dynamic>;
         if (nativeWords.isNotEmpty && wordIndex < nativeWords.length) {
           final translation = "${nativeWords[wordIndex]}";
-          debugPrint('VocabularyReview: Category-based translation: "$translation"');
+          debugPrint(
+              'VocabularyReview: Category-based translation: "$translation"');
           // Only return translation if it's different from the original word
           if (translation.toLowerCase() != word.toLowerCase()) {
             return translation;
@@ -323,12 +345,14 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     if (translation != null) {
       showCenteredToast(context, translation);
     } else {
-      showCenteredToast(context, "No translation available"); // Show message if no translation
+      showCenteredToast(context,
+          "No translation available"); // Show message if no translation
     }
   }
 
   // Helper method to show translation in a modal sheet
-  void _showTranslationSheet(BuildContext context, String word, String? nativeWord) {
+  void _showTranslationSheet(
+      BuildContext context, String word, String? nativeWord) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -387,11 +411,15 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
 
                 // Native language translation
                 Text(
-                  (nativeWord?.isNotEmpty == true) ? nativeWord! : "No translation available",
+                  (nativeWord?.isNotEmpty == true)
+                      ? nativeWord!
+                      : "No translation available",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: (nativeWord?.isNotEmpty == true) ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+                    color: (nativeWord?.isNotEmpty == true)
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
 
@@ -402,7 +430,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      analyticsManager.storeAction('vocabulary_review_translation_modal_closed', word);
+                      analyticsManager.storeAction(
+                          'vocabulary_review_translation_modal_closed', word);
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -446,7 +475,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     return GestureDetector(
       onTap: () {
         final wasFlipped = _flippedCards[card.word] ?? false;
-        analyticsManager.storeAction('vocabulary_review_card_flipped', '${card.word}|${wasFlipped ? 'to_front' : 'to_back'}');
+        analyticsManager.storeAction('vocabulary_review_card_flipped',
+            '${card.word}|${wasFlipped ? 'to_front' : 'to_back'}');
         setState(() {
           _flippedCards[card.word] = !isFlipped;
         });
@@ -472,7 +502,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
             },
           );
         },
-        child: isFlipped ? _buildCardBack(card.word, translation, colorScheme) : _buildCardFront(card.word, colorScheme),
+        child: isFlipped
+            ? _buildCardBack(card.word, translation, colorScheme)
+            : _buildCardFront(card.word, colorScheme),
       ),
     );
   }
@@ -511,7 +543,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     );
   }
 
-  Widget _buildCardBack(String word, String? translation, ColorScheme colorScheme) {
+  Widget _buildCardBack(
+      String word, String? translation, ColorScheme colorScheme) {
     return Container(
       key: const ValueKey(true),
       width: double.infinity,
@@ -541,7 +574,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: translation != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                  color: translation != null
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -558,15 +593,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Vocabulary Review',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: null, // Remove back button since we're in main navigation
-        automaticallyImplyLeading: false, // Disable automatic back button
+      appBar: const AppBarWithDrawer(
+        title: 'Vocabulary Review',
       ),
       body: Stack(
         children: [
@@ -588,7 +616,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                     end: Alignment.bottomRight,
                     colors: [
                       colorScheme.primary,
-                      colorScheme.primary.withOpacity(0.8),
+                      colorScheme.primary.withOpacity(0.4),
                       colorScheme.secondary,
                     ],
                   ),
@@ -608,14 +636,16 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    analyticsManager.storeAction('review_words_button_pressed', '${_dueWordsFull.length} words');
+                    analyticsManager.storeAction('review_words_button_pressed',
+                        '${_dueWordsFull.length} words');
                     showDialog(
                       context: context,
                       builder: (context) => ReviewWordsDialog(
                         words: _dueWordsRefs,
                         userID: _userId,
                         onReviewCompleted: () async {
-                          analyticsManager.storeAction('vocabulary_review_session_completed');
+                          analyticsManager.storeAction(
+                              'vocabulary_review_session_completed');
                           // Refresh the word lists after review is completed
                           await _loadAllWords();
                           await _loadDueWords();
@@ -633,22 +663,10 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: Container(
-                    padding: const EdgeInsets.all(1),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.school,
-                      size: 22,
-                      color: Colors.white,
-                    ),
-                  ),
+                  icon: const Icon(Icons.school),
                   label: const Text(
                     'Review Words',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
                       fontSize: 16,
                       color: Colors.white,
                       letterSpacing: 0.5,
@@ -679,7 +697,10 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                 fontSize: isSmallScreen ? 16 : 18,
               ),
               children: [
-                const TextSpan(text: 'You are up to speed with your learning! To continue on your journey ', style: TextStyle(fontStyle: FontStyle.italic)),
+                const TextSpan(
+                    text:
+                        'You are up to speed with your learning! To continue on your journey ',
+                    style: TextStyle(fontStyle: FontStyle.italic)),
                 TextSpan(
                   text: 'create a new lesson',
                   style: TextStyle(
@@ -690,7 +711,8 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
                   ),
                   recognizer: TapGestureRecognizer()
                     ..onTap = () {
-                      analyticsManager.storeAction('vocabulary_review_create_lesson_link_tapped');
+                      analyticsManager.storeAction(
+                          'vocabulary_review_create_lesson_link_tapped');
                       Navigator.pushReplacementNamed(context, '/custom_lesson');
                     },
                 )

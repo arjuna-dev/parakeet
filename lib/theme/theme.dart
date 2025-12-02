@@ -67,10 +67,89 @@ sealed class AppTheme {
   static ThemeData customTheme() {
     return dark.copyWith(
       colorScheme: dark.colorScheme.copyWith(
-        primary: const Color.fromARGB(255, 148, 146, 255),
-        primaryFixedDim: const Color.fromARGB(255, 148, 146, 255),
-        inversePrimary: const Color.fromARGB(255, 79, 75, 129),
-        surfaceTint: const Color.fromARGB(255, 136, 134, 252),
+        // Dark green background
+        surface: const Color(0xFF0A2F2A), // Deep forest green
+        surfaceContainerHighest:
+            const Color(0xFF0F3D37), // Slightly lighter green
+        surfaceBright: const Color(0xFF0A2F2A),
+        surfaceDim: const Color(0xFF061F1C),
+
+        // Bright green accents
+        primary: const Color(0xFF3FFF8F), // Vibrant lime green
+        primaryContainer:
+            const Color(0xFF1A4D3A), // Darker green for containers
+        primaryFixed: const Color(0xFF3FFF8F),
+        primaryFixedDim: const Color(0xFF2EE67D),
+
+        // Secondary colors
+        secondary: const Color(0xFF3FFF8F),
+        secondaryContainer: const Color(0xFF1A4D3A),
+
+        // Text colors
+        onSurface: const Color(0xFFFFFFFF), // White text
+        onSurfaceVariant:
+            const Color(0xFFB0B0B0), // Light gray for secondary text
+        onPrimary: const Color(0xFF0A2F2A), // Dark text on bright green
+
+        // Other colors
+        inversePrimary: const Color(0xFF1A4D3A),
+        surfaceTint: const Color(0xFF3FFF8F),
+        outline: const Color(0xFF2EE67D),
+      ),
+      scaffoldBackgroundColor: const Color(0xFF0A2F2A),
+      // Slider theme
+      sliderTheme: SliderThemeData(
+        activeTrackColor: const Color(0xFF3FFF8F),
+        inactiveTrackColor: const Color(0xFF1A4D3A),
+        thumbColor: const Color(0xFF3FFF8F),
+        overlayColor: const Color(0xFF3FFF8F).withOpacity(0.2),
+        valueIndicatorColor: const Color(0xFF3FFF8F),
+      ),
+      // Bottom navigation bar theme
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF0A2F2A),
+        selectedItemColor: Color(0xFF3FFF8F),
+        unselectedItemColor: Color(0xFFB0B0B0),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      // Outlined button theme
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF3FFF8F),
+          side: const BorderSide(color: Color(0xFF3FFF8F)),
+        ),
+      ),
+      // Elevated button theme
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF3FFF8F),
+          foregroundColor: const Color(0xFF0A2F2A),
+        ),
+      ),
+      // Progress indicator theme
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFF3FFF8F),
+        linearTrackColor: Color(0xFF1A4D3A),
+      ),
+      // Text selection theme
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: const Color(0xFF3FFF8F),
+        selectionColor: const Color(0xFF3FFF8F).withOpacity(0.3),
+        selectionHandleColor: const Color(0xFF3FFF8F),
+      ),
+      // AppBar theme
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF0A2F2A),
+        foregroundColor: Color(0xFFFFFFFF),
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: Color(0xFFFFFFFF)),
+        titleTextStyle: TextStyle(
+          color: Color(0xFFFFFFFF),
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

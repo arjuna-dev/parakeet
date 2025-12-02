@@ -37,7 +37,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
+      pageBuilder: (BuildContext buildContext, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
         return SafeArea(
           child: Align(
             alignment: Alignment.centerLeft,
@@ -71,7 +72,10 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                     Container(
                       padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
                       decoration: BoxDecoration(
-                        color: Theme.of(buildContext).colorScheme.primary.withOpacity(0.05),
+                        color: Theme.of(buildContext)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.05),
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(20),
                         ),
@@ -90,20 +94,26 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(buildContext).colorScheme.onSurface,
+                                color: Theme.of(buildContext)
+                                    .colorScheme
+                                    .onSurface,
                               ),
                             ),
                           ),
                           IconButton(
                             onPressed: () {
-                              _getAnalyticsManager()?.storeAction('app_drawer_close_button_tapped');
+                              _getAnalyticsManager()?.storeAction(
+                                  'app_drawer_close_button_tapped');
                               if (Navigator.canPop(buildContext)) {
                                 Navigator.pop(buildContext);
                               }
                             },
                             icon: const Icon(Icons.close, size: 14),
                             style: IconButton.styleFrom(
-                              backgroundColor: Theme.of(buildContext).colorScheme.surface.withOpacity(0.5),
+                              backgroundColor: Theme.of(buildContext)
+                                  .colorScheme
+                                  .surface
+                                  .withOpacity(0.5),
                               minimumSize: const Size(24, 24),
                               padding: const EdgeInsets.all(2),
                             ),
@@ -120,8 +130,15 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           Expanded(
                             child: SingleChildScrollView(
                               padding: EdgeInsets.symmetric(
-                                horizontal: MediaQuery.of(buildContext).size.width < 350 ? 16 : 20,
-                                vertical: MediaQuery.of(buildContext).size.height < 700 ? 8 : 12,
+                                horizontal:
+                                    MediaQuery.of(buildContext).size.width < 350
+                                        ? 16
+                                        : 20,
+                                vertical:
+                                    MediaQuery.of(buildContext).size.height <
+                                            700
+                                        ? 8
+                                        : 12,
                               ),
                               child: Column(
                                 children: [
@@ -165,42 +182,66 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     title: 'Language Settings',
                                     subtitle: 'Change your learning languages',
                                     onTap: () {
-                                      _getAnalyticsManager()?.storeAction('app_drawer_language_settings_tapped');
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_language_settings_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
-                                      ProfileScreen.showLanguageSettingsDialog(buildContext);
+                                      ProfileScreen.showLanguageSettingsDialog(
+                                          buildContext);
                                     },
                                   ),
-                                  SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 12
+                                          : 16),
                                   _buildMenuItem(
                                     buildContext,
                                     icon: Icons.shopping_bag,
                                     title: 'Store',
-                                    subtitle: 'View available packages and offers',
+                                    subtitle:
+                                        'View available packages and offers',
                                     onTap: () {
-                                      _getAnalyticsManager()?.storeAction('app_drawer_store_tapped');
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_store_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
                                       _handleStoreNavigation(buildContext);
                                     },
                                   ),
-                                  SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 12
+                                          : 16),
                                   _buildMenuItem(
                                     buildContext,
                                     icon: Icons.person,
                                     title: 'Profile',
                                     subtitle: 'Settings and account info',
                                     onTap: () {
-                                      _getAnalyticsManager()?.storeAction('app_drawer_profile_tapped');
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_profile_tapped');
                                       if (Navigator.canPop(buildContext)) {
                                         Navigator.pop(buildContext);
                                       }
-                                      Navigator.pushNamed(buildContext, '/profile');
+                                      Navigator.pushNamed(
+                                          buildContext, '/profile');
                                     },
                                   ),
-                                  SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 16 : 24),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 16
+                                          : 24),
                                 ],
                               ),
                             ),
@@ -209,13 +250,22 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           // Fixed bottom section
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(buildContext).size.width < 350 ? 16 : 20,
-                              vertical: MediaQuery.of(buildContext).size.height < 700 ? 8 : 12,
+                              horizontal:
+                                  MediaQuery.of(buildContext).size.width < 350
+                                      ? 16
+                                      : 20,
+                              vertical:
+                                  MediaQuery.of(buildContext).size.height < 700
+                                      ? 8
+                                      : 12,
                             ),
                             decoration: BoxDecoration(
                               border: Border(
                                 top: BorderSide(
-                                  color: Theme.of(buildContext).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                  color: Theme.of(buildContext)
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withOpacity(0.3),
                                   width: 1,
                                 ),
                               ),
@@ -223,9 +273,21 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                             child: Column(
                               children: [
                                 _buildStreakDisplay(buildContext),
-                                SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 8 : 12),
+                                SizedBox(
+                                    height: MediaQuery.of(buildContext)
+                                                .size
+                                                .height <
+                                            700
+                                        ? 8
+                                        : 12),
                                 _buildLessonProgressDisplay(buildContext),
-                                SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 12 : 16),
+                                SizedBox(
+                                    height: MediaQuery.of(buildContext)
+                                                .size
+                                                .height <
+                                            700
+                                        ? 12
+                                        : 16),
                                 _buildMenuItem(
                                   buildContext,
                                   icon: Icons.logout,
@@ -233,14 +295,22 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                   subtitle: 'Log out of your account',
                                   iconColor: Colors.red,
                                   onTap: () async {
-                                    _getAnalyticsManager()?.storeAction('app_drawer_sign_out_tapped');
+                                    _getAnalyticsManager()?.storeAction(
+                                        'app_drawer_sign_out_tapped');
                                     if (Navigator.canPop(buildContext)) {
                                       Navigator.pop(buildContext);
                                     }
-                                    await _showSignOutConfirmation(buildContext);
+                                    await _showSignOutConfirmation(
+                                        buildContext);
                                   },
                                 ),
-                                SizedBox(height: MediaQuery.of(buildContext).size.height < 700 ? 8 : 16),
+                                SizedBox(
+                                    height: MediaQuery.of(buildContext)
+                                                .size
+                                                .height <
+                                            700
+                                        ? 8
+                                        : 16),
                               ],
                             ),
                           ),
@@ -254,7 +324,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           ),
         );
       },
-      transitionBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+      transitionBuilder: (BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation, Widget child) {
         return SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(-1.0, 0.0),
@@ -359,7 +430,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                 children: List.generate(7, (index) {
                   final reversedIndex = 6 - index;
                   final isActive = activityList[reversedIndex];
-                  final date = DateTime.now().subtract(Duration(days: 6 - index));
+                  final date =
+                      DateTime.now().subtract(Duration(days: 6 - index));
                   final isToday = index == 6;
 
                   return Column(
@@ -369,7 +441,11 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
+                          color: isActive
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                           shape: BoxShape.circle,
                           border: isToday
                               ? Border.all(
@@ -391,8 +467,11 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         _getShortDayName(date),
                         style: TextStyle(
                           fontSize: 9,
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                          color: isToday ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight:
+                              isToday ? FontWeight.bold : FontWeight.normal,
+                          color: isToday
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -422,7 +501,10 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const SizedBox(
@@ -443,7 +525,10 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -482,7 +567,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -491,7 +577,9 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                     Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: FractionallySizedBox(
@@ -501,8 +589,25 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: lessonsRemaining > 0
-                                  ? (isPremium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
-                                  : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
+                                  ? (isPremium
+                                      ? [
+                                          Colors.amber.shade300,
+                                          Colors.amber.shade700
+                                        ]
+                                      : [
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.7),
+                                          Theme.of(context).colorScheme.primary
+                                        ])
+                                  : [
+                                      Theme.of(context)
+                                          .colorScheme
+                                          .error
+                                          .withOpacity(0.7),
+                                      Theme.of(context).colorScheme.error
+                                    ],
                             ),
                             borderRadius: BorderRadius.circular(2),
                           ),
@@ -516,10 +621,16 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh
+                              .withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -531,13 +642,18 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                 Container(
                                   padding: const EdgeInsets.all(2),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.6),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withOpacity(0.6),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Icon(
                                     isPremium ? Icons.schedule : Icons.lock,
                                     size: 12,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -546,7 +662,9 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -556,12 +674,19 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               // Show daily reset info for premium users
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.2),
                                     width: 1,
                                   ),
                                 ),
@@ -571,7 +696,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                     Icon(
                                       Icons.refresh,
                                       size: 14,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -579,7 +705,9 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: Theme.of(context).colorScheme.primary,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                       ),
                                     ),
                                   ],
@@ -589,7 +717,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                               // Show upgrade button for non-premium users
                               GestureDetector(
                                 onTap: () {
-                                  _getAnalyticsManager()?.storeAction('app_drawer_upgrade_button_tapped');
+                                  _getAnalyticsManager()?.storeAction(
+                                      'app_drawer_upgrade_button_tapped');
                                   // Close drawer first
                                   if (Navigator.canPop(context)) {
                                     Navigator.pop(context);
@@ -599,18 +728,25 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                 },
                                 child: Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
                                         Theme.of(context).colorScheme.primary,
-                                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.8),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.2),
                                         blurRadius: 4,
                                         offset: const Offset(0, 2),
                                       ),
@@ -640,10 +776,15 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                       ),
                                       const SizedBox(width: 6),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.25),
-                                          borderRadius: BorderRadius.circular(12),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
+                                              .withOpacity(0.25),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: const Text(
                                           '10/day',
@@ -705,7 +846,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           return AlertDialog(
             title: Row(
               children: [
-                Icon(Icons.phone_android, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.phone_android,
+                    color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 const Text('Mobile App Required'),
               ],
@@ -717,7 +859,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
             actions: [
               TextButton(
                 onPressed: () {
-                  _getAnalyticsManager()?.storeAction('app_store_web_dialog_closed');
+                  _getAnalyticsManager()
+                      ?.storeAction('app_store_web_dialog_closed');
                   Navigator.of(context).pop();
                 },
                 child: const Text('OK'),
@@ -842,14 +985,16 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
           actions: [
             TextButton(
               onPressed: () {
-                _getAnalyticsManager()?.storeAction('app_sign_out_dialog_cancelled');
+                _getAnalyticsManager()
+                    ?.storeAction('app_sign_out_dialog_cancelled');
                 Navigator.of(context).pop(false);
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                _getAnalyticsManager()?.storeAction('app_sign_out_dialog_confirmed');
+                _getAnalyticsManager()
+                    ?.storeAction('app_sign_out_dialog_confirmed');
                 Navigator.of(context).pop(true);
               },
               style: TextButton.styleFrom(

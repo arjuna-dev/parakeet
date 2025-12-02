@@ -75,7 +75,8 @@ class BottomMenuBar extends StatelessWidget {
     if (currentRoute != route) {
       Navigator.pushReplacementNamed(navigatorKey.currentContext!, route);
     } else {
-      _getAnalyticsManager()?.storeAction('bottom_nav_same_route_tapped', route);
+      _getAnalyticsManager()
+          ?.storeAction('bottom_nav_same_route_tapped', route);
     }
   }
 
@@ -89,10 +90,12 @@ class BottomMenuBar extends StatelessWidget {
           final dueCount = snapshot.data ?? 0;
 
           // Debug print to see what's happening
-          debugPrint('BottomMenuBar: Due words count = $dueCount, hasData = ${snapshot.hasData}, hasError = ${snapshot.hasError}');
+          debugPrint(
+              'BottomMenuBar: Due words count = $dueCount, hasData = ${snapshot.hasData}, hasError = ${snapshot.hasError}');
           if (snapshot.hasError) {
             debugPrint('BottomMenuBar: Error = ${snapshot.error}');
-            _getAnalyticsManager()?.storeAction('bottom_nav_due_words_error', snapshot.error.toString());
+            _getAnalyticsManager()?.storeAction(
+                'bottom_nav_due_words_error', snapshot.error.toString());
           }
 
           return BottomNavigationBar(
@@ -122,7 +125,7 @@ class BottomMenuBar extends StatelessWidget {
                           width: 12,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: Colors.red,
+                            color: Colors.green,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Colors.white,
