@@ -185,21 +185,8 @@ class _ExpandedPlayerWrapper extends StatelessWidget {
           generating: lesson.generating,
           wordsToRepeat: lesson.wordsToRepeat ?? [],
           numberOfTurns: lesson.numberOfTurns,
-          // We will add this parameter to AudioPlayerScreen
           existingService: manager.service,
-        ),
-
-        // Collapse button (top right)
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 8,
-          child: IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down,
-                size: 32, color: Colors.white), // Assuming dark bg or contrast
-            onPressed: () {
-              manager.collapse();
-            },
-          ),
+          isEmbedded: true,
         ),
       ],
     );
