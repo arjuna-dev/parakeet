@@ -5,10 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parakeet/utils/constants.dart';
-import 'package:parakeet/screens/audio_player_screen.dart';
+
 import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/daily_lesson_service.dart';
-import 'package:parakeet/utils/script_generator.dart' show storeKeywordTranslations, clearKeywordTranslations;
+import 'package:parakeet/utils/script_generator.dart'
+    show storeKeywordTranslations, clearKeywordTranslations;
+import 'package:provider/provider.dart';
+import 'package:parakeet/services/audio_player_manager.dart';
 
 class LessonService {
   static const int activeCreationAllowed = 20;
@@ -26,7 +29,8 @@ class LessonService {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(20),
@@ -171,7 +175,8 @@ class LessonService {
                             Navigator.pop(context, false);
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const StoreView()),
+                              MaterialPageRoute(
+                                  builder: (context) => const StoreView()),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -253,7 +258,8 @@ class LessonService {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 400),
               padding: const EdgeInsets.all(20),
@@ -398,7 +404,8 @@ class LessonService {
                               Navigator.pop(context, false);
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const StoreView()),
+                                MaterialPageRoute(
+                                    builder: (context) => const StoreView()),
                               );
                             },
                             style: ElevatedButton.styleFrom(
@@ -465,10 +472,12 @@ class LessonService {
     }
     // Check if there are too many users in active creation
     var usersInActiveCreation = await countUsersInActiveCreation();
-    if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
+    if (usersInActiveCreation != -1 &&
+        usersInActiveCreation > activeCreationAllowed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+          content: Text(
+              'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
           duration: Duration(seconds: 5),
         ),
       );
@@ -481,7 +490,10 @@ class LessonService {
   // Function to check premium status and API limits
   static Future<bool> checkPremiumAndAPILimits(BuildContext context) async {
     // Check premium status
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .get();
     final isPremium = userDoc.data()?['premium'] ?? false;
 
     final apiCalls = await countAPIcallsByUser();
@@ -497,7 +509,8 @@ class LessonService {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(20),
@@ -642,18 +655,21 @@ class LessonService {
                                 Navigator.pop(context, false);
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const StoreView()),
+                                  MaterialPageRoute(
+                                      builder: (context) => const StoreView()),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.primary,
                                 foregroundColor: colorScheme.onPrimary,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 elevation: 4,
-                                shadowColor: colorScheme.primary.withOpacity(0.3),
+                                shadowColor:
+                                    colorScheme.primary.withOpacity(0.3),
                               ),
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -686,7 +702,8 @@ class LessonService {
                               onPressed: () => Navigator.pop(context, false),
                               style: TextButton.styleFrom(
                                 foregroundColor: colorScheme.onSurfaceVariant,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -720,7 +737,8 @@ class LessonService {
       if (apiCalls >= premiumAPILimit) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Unfortunately, you have reached the maximum number of creation for today 🙃. Please come back tomorrow.'),
+            content: Text(
+                'Unfortunately, you have reached the maximum number of creation for today 🙃. Please come back tomorrow.'),
             duration: Duration(seconds: 5),
           ),
         );
@@ -730,10 +748,12 @@ class LessonService {
 
     // Check if there are too many users in active creation
     var usersInActiveCreation = await countUsersInActiveCreation();
-    if (usersInActiveCreation != -1 && usersInActiveCreation > activeCreationAllowed) {
+    if (usersInActiveCreation != -1 &&
+        usersInActiveCreation > activeCreationAllowed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
+          content: Text(
+              'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
           duration: Duration(seconds: 5),
         ),
       );
@@ -746,7 +766,8 @@ class LessonService {
   // Function to count users in active creation
   static Future<int> countUsersInActiveCreation() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+    final DocumentReference docRef =
+        firestore.collection('active_creation').doc('active_creation');
 
     try {
       final DocumentSnapshot doc = await docRef.get();
@@ -767,7 +788,11 @@ class LessonService {
   // Function to count API calls by user (keeps for backwards compatibility with call_count tracking)
   static Future<int> countAPIcallsByUser() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final DocumentReference userDocRef = firestore.collection('users').doc(FirebaseAuth.instance.currentUser!.uid.toString()).collection('api_call_count').doc('first_API_calls');
+    final DocumentReference userDocRef = firestore
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid.toString())
+        .collection('api_call_count')
+        .doc('first_API_calls');
 
     try {
       final DocumentSnapshot doc = await userDocRef.get();
@@ -831,11 +856,13 @@ class LessonService {
 
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final DocumentReference docRef = firestore.collection('chatGPT_responses').doc();
+      final DocumentReference docRef =
+          firestore.collection('chatGPT_responses').doc();
       final String documentId = docRef.id;
       final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
       final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        Uri.parse(
+            'https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -843,33 +870,46 @@ class LessonService {
         body: jsonEncode(<String, dynamic>{
           "keywords": selectedWords,
           "target_language": targetLanguage,
-          "native_language": nativeLanguage, // Add the missing native_language parameter
+          "native_language":
+              nativeLanguage, // Add the missing native_language parameter
         }),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
         // Extract target language words from the new keyword format
         final List<dynamic> keywordObjects = data['keywords'] as List<dynamic>;
         // Store the bilingual keyword objects in local storage
-        await storeKeywordTranslations(keywordObjects.cast<Map<String, dynamic>>(), targetLanguage, nativeLanguage);
+        await storeKeywordTranslations(
+            keywordObjects.cast<Map<String, dynamic>>(),
+            targetLanguage,
+            nativeLanguage);
 
         final List<dynamic> keywords = keywordObjects.map((keywordObj) {
-          final Map<String, dynamic> keywordMap = keywordObj as Map<String, dynamic>;
+          final Map<String, dynamic> keywordMap =
+              keywordObj as Map<String, dynamic>;
           // Get the target language word (not the native language one)
           final targetLanguageWord = keywordMap[targetLanguage] as String;
-          return targetLanguageWord.replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '').toLowerCase();
+          return targetLanguageWord
+              .replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), '')
+              .toLowerCase();
         }).toList();
         print("keywords: $keywords");
         selectedWords = keywords;
       }
 
       // Create an empty script document ID
-      DocumentReference scriptDocRef = firestore.collection('chatGPT_responses').doc(documentId).collection('script-$userId').doc();
+      DocumentReference scriptDocRef = firestore
+          .collection('chatGPT_responses')
+          .doc(documentId)
+          .collection('script-$userId')
+          .doc();
 
       // Make the API call
       http.post(
-        Uri.parse('http://127.0.0.1:8081'),
+        Uri.parse(
+            'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -883,38 +923,38 @@ class LessonService {
           "user_ID": userId,
           "language_level": languageLevel,
           "document_id": documentId,
-          "tts_provider": targetLanguage == 'Azerbaijani' ? TTSProvider.openAI.value.toString() : TTSProvider.googleTTS.value.toString(),
+          "tts_provider": targetLanguage == 'Azerbaijani'
+              ? TTSProvider.openAI.value.toString()
+              : TTSProvider.googleTTS.value.toString(),
         }),
       );
 
       // Check if context is still valid before navigation
       if (context.mounted) {
-        // Navigate directly to AudioPlayerScreen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AudioPlayerScreen(
-              dialogue: const [],
-              title: topic,
-              documentID: documentId,
-              userID: userId,
-              scriptDocumentId: scriptDocRef.id,
-              generating: true,
-              targetLanguage: targetLanguage,
-              nativeLanguage: nativeLanguage,
-              languageLevel: languageLevel,
-              wordsToRepeat: List<String>.from(selectedWords),
-              numberOfTurns: 4,
-            ),
-          ),
-        );
+        // Play lesson using AudioPlayerManager
+        final manager = Provider.of<AudioPlayerManager>(context, listen: false);
+        manager.playLesson(LessonData(
+          category: 'Custom Lesson',
+          dialogue: const [],
+          title: topic,
+          documentID: documentId,
+          userID: userId,
+          scriptDocumentId: scriptDocRef.id,
+          generating: true,
+          targetLanguage: targetLanguage,
+          nativeLanguage: nativeLanguage,
+          languageLevel: languageLevel,
+          wordsToRepeat: List<String>.from(selectedWords),
+          numberOfTurns: 4,
+        ));
       }
     } catch (e) {
       print(e);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+            content: Text(
+                'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
             duration: Duration(seconds: 3),
           ),
         );
@@ -931,7 +971,8 @@ class LessonService {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
+        Uri.parse(
+            'https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -953,10 +994,17 @@ class LessonService {
   }
 
   // create a function to select 5 words from the category according to certain criteria
-  static Future<List<dynamic>> selectWordsFromCategory(String category, List<String> allWords, String targetLanguage) async {
+  static Future<List<dynamic>> selectWordsFromCategory(
+      String category, List<String> allWords, String targetLanguage) async {
     // check if there are due words in the category stored in the firestore
     final userId = FirebaseAuth.instance.currentUser!.uid.toString();
-    final categoryDocs = await FirebaseFirestore.instance.collection('users').doc(userId).collection('${targetLanguage}_words').doc(category).collection(category).get();
+    final categoryDocs = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('${targetLanguage}_words')
+        .doc(category)
+        .collection(category)
+        .get();
 
     var words = <String>[];
     final existingWordsCard = <String>[];
@@ -1018,19 +1066,25 @@ class LessonService {
     }
 
     // PRIORITY 1: Add new words first (words not in existingWordsCard)
-    final lowerCaseAllWords = allWords.map((word) => word.toLowerCase()).toList();
-    final newWords = lowerCaseAllWords.where((word) => !existingWordsCard.contains(word)).toList();
+    final lowerCaseAllWords =
+        allWords.map((word) => word.toLowerCase()).toList();
+    final newWords = lowerCaseAllWords
+        .where((word) => !existingWordsCard.contains(word))
+        .toList();
     newWords.shuffle(); // randomize the newWords list
 
     if (newWords.isNotEmpty) {
-      final wordsToAdd = newWords.length >= 5 ? newWords.sublist(0, 5) : newWords;
+      final wordsToAdd =
+          newWords.length >= 5 ? newWords.sublist(0, 5) : newWords;
       words.addAll(wordsToAdd);
     }
 
     // PRIORITY 2: Add overdue words if we need more
     if (words.length < 5 && overdueWords.isNotEmpty) {
       final wordsNeeded = 5 - words.length;
-      final wordsToAdd = overdueWords.length >= wordsNeeded ? overdueWords.sublist(0, wordsNeeded) : overdueWords;
+      final wordsToAdd = overdueWords.length >= wordsNeeded
+          ? overdueWords.sublist(0, wordsNeeded)
+          : overdueWords;
       words.addAll(wordsToAdd);
     }
 
@@ -1038,7 +1092,9 @@ class LessonService {
     if (words.length < 5 && closestDueDateCard.isNotEmpty) {
       closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
       final wordsNeeded = 5 - words.length;
-      final wordsToAdd = closestDueDateCard.length >= wordsNeeded ? closestDueDateCard.sublist(0, wordsNeeded) : closestDueDateCard;
+      final wordsToAdd = closestDueDateCard.length >= wordsNeeded
+          ? closestDueDateCard.sublist(0, wordsNeeded)
+          : closestDueDateCard;
       words.addAll(wordsToAdd.map((item) => item['word'] as String));
     }
 
@@ -1048,7 +1104,9 @@ class LessonService {
       // randomize the allWords list
       final randomWords = allWords.toList();
       randomWords.shuffle();
-      final wordsToAdd = randomWords.length >= wordsNeeded ? randomWords.sublist(0, wordsNeeded) : randomWords;
+      final wordsToAdd = randomWords.length >= wordsNeeded
+          ? randomWords.sublist(0, wordsNeeded)
+          : randomWords;
       words.addAll(wordsToAdd);
     }
 

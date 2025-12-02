@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/utils/category_icons.dart';
-import 'package:parakeet/services/category_level_service.dart';
 import 'package:parakeet/utils/save_analytics.dart';
+import 'package:provider/provider.dart';
+import 'package:parakeet/services/audio_player_manager.dart';
 
 class LessonCard extends StatefulWidget {
   final DocumentSnapshot audioFile;
@@ -48,7 +48,10 @@ class _LessonCardState extends State<LessonCard> {
   Future<void> _checkCompletionStatus() async {
     try {
       final parentDocId = widget.audioFile.reference.parent.parent!.id;
-      final doc = await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('chatGPT_responses')
+          .doc(parentDocId)
+          .get();
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
@@ -81,7 +84,9 @@ class _LessonCardState extends State<LessonCard> {
 
   String getCategory() {
     final data = widget.audioFile.data() as Map<String, dynamic>?;
-    if (data?.containsKey('category') == true && widget.audioFile.get('category') != null && widget.audioFile.get('category').toString().trim().isNotEmpty) {
+    if (data?.containsKey('category') == true &&
+        widget.audioFile.get('category') != null &&
+        widget.audioFile.get('category').toString().trim().isNotEmpty) {
       return widget.audioFile.get('category');
     }
     return 'Custom Lesson';
@@ -98,11 +103,17 @@ class _LessonCardState extends State<LessonCard> {
       final months = (difference.inDays / 30).floor();
       return months == 1 ? '1 month ago' : '$months months ago';
     } else if (difference.inDays > 0) {
-      return difference.inDays == 1 ? '1 day ago' : '${difference.inDays} days ago';
+      return difference.inDays == 1
+          ? '1 day ago'
+          : '${difference.inDays} days ago';
     } else if (difference.inHours > 0) {
-      return difference.inHours == 1 ? '1 hour ago' : '${difference.inHours} hours ago';
+      return difference.inHours == 1
+          ? '1 hour ago'
+          : '${difference.inHours} hours ago';
     } else if (difference.inMinutes > 0) {
-      return difference.inMinutes == 1 ? '1 minute ago' : '${difference.inMinutes} minutes ago';
+      return difference.inMinutes == 1
+          ? '1 minute ago'
+          : '${difference.inMinutes} minutes ago';
     } else {
       return 'Just now';
     }
@@ -117,7 +128,8 @@ class _LessonCardState extends State<LessonCard> {
           // Each dialogue turn typically takes about 15-30 seconds
           // Including pauses, repetitions, and explanations, estimate ~2-3 minutes per turn
           final turns = dialogue.length;
-          final estimatedMinutes = (turns * 2.5).round(); // Average 2.5 minutes per turn
+          final estimatedMinutes =
+              (turns * 2.5).round(); // Average 2.5 minutes per turn
 
           if (estimatedMinutes < 60) {
             return '~$estimatedMinutes min';
@@ -198,8 +210,11 @@ class _LessonCardState extends State<LessonCard> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(newCompletionStatus ? 'Mark as Complete' : 'Mark as Incomplete'),
-          content: Text(newCompletionStatus ? 'Are you sure you want to mark "${widget.audioFile.get('title')}" as completed?' : 'Are you sure you want to mark "${widget.audioFile.get('title')}" as incomplete?'),
+          title: Text(
+              newCompletionStatus ? 'Mark as Complete' : 'Mark as Incomplete'),
+          content: Text(newCompletionStatus
+              ? 'Are you sure you want to mark "${widget.audioFile.get('title')}" as completed?'
+              : 'Are you sure you want to mark "${widget.audioFile.get('title')}" as incomplete?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -208,9 +223,11 @@ class _LessonCardState extends State<LessonCard> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(
-                foregroundColor: newCompletionStatus ? Colors.green : Colors.amber,
+                foregroundColor:
+                    newCompletionStatus ? Colors.green : Colors.amber,
               ),
-              child: Text(newCompletionStatus ? 'Mark Complete' : 'Mark Incomplete'),
+              child: Text(
+                  newCompletionStatus ? 'Mark Complete' : 'Mark Incomplete'),
             ),
           ],
         );
@@ -225,7 +242,10 @@ class _LessonCardState extends State<LessonCard> {
       try {
         final parentDocId = widget.audioFile.reference.parent.parent!.id;
 
-        await FirebaseFirestore.instance.collection('chatGPT_responses').doc(parentDocId).set({
+        await FirebaseFirestore.instance
+            .collection('chatGPT_responses')
+            .doc(parentDocId)
+            .set({
           'completed': newCompletionStatus,
         }, SetOptions(merge: true));
 
@@ -238,9 +258,12 @@ class _LessonCardState extends State<LessonCard> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                newCompletionStatus ? 'Lesson marked as completed!' : 'Lesson marked as incomplete',
+                newCompletionStatus
+                    ? 'Lesson marked as completed!'
+                    : 'Lesson marked as incomplete',
               ),
-              backgroundColor: newCompletionStatus ? Colors.green : Colors.amber,
+              backgroundColor:
+                  newCompletionStatus ? Colors.green : Colors.amber,
             ),
           );
 
@@ -274,18 +297,23 @@ class _LessonCardState extends State<LessonCard> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Lesson'),
-          content: Text('Are you sure you want to delete "${widget.audioFile.get('title')}"? This action cannot be undone.'),
+          content: Text(
+              'Are you sure you want to delete "${widget.audioFile.get('title')}"? This action cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () {
-                _getAnalyticsManager()?.storeAction('lesson_delete_dialog_cancelled', widget.audioFile.get('title'));
+                _getAnalyticsManager()?.storeAction(
+                    'lesson_delete_dialog_cancelled',
+                    widget.audioFile.get('title'));
                 Navigator.of(context).pop(false);
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                _getAnalyticsManager()?.storeAction('lesson_delete_dialog_confirmed', widget.audioFile.get('title'));
+                _getAnalyticsManager()?.storeAction(
+                    'lesson_delete_dialog_confirmed',
+                    widget.audioFile.get('title'));
                 Navigator.of(context).pop(true);
               },
               style: TextButton.styleFrom(
@@ -299,7 +327,8 @@ class _LessonCardState extends State<LessonCard> {
     );
 
     if (shouldDelete == true) {
-      _getAnalyticsManager()?.storeAction('lesson_deletion_initiated', widget.audioFile.get('title'));
+      _getAnalyticsManager()?.storeAction(
+          'lesson_deletion_initiated', widget.audioFile.get('title'));
       setState(() {
         _isDeleting = true;
       });
@@ -368,7 +397,10 @@ class _LessonCardState extends State<LessonCard> {
                   height: 4,
                   margin: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withOpacity(0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -420,7 +452,9 @@ class _LessonCardState extends State<LessonCard> {
                         ),
                         subtitle: const Text('This action cannot be undone'),
                         onTap: () {
-                          _getAnalyticsManager()?.storeAction('lesson_card_delete_option_tapped', widget.audioFile.get('title'));
+                          _getAnalyticsManager()?.storeAction(
+                              'lesson_card_delete_option_tapped',
+                              widget.audioFile.get('title'));
                           Navigator.pop(context);
                           _deleteLesson();
                         },
@@ -444,40 +478,42 @@ class _LessonCardState extends State<LessonCard> {
     final categoryColor = _getCategoryColor(category);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: widget.showCategoryBadge ? 16 : 0, vertical: widget.isSmallScreen ? 8 : 10),
+      margin: EdgeInsets.symmetric(
+          horizontal: widget.showCategoryBadge ? 16 : 0,
+          vertical: widget.isSmallScreen ? 8 : 10),
       child: GestureDetector(
         onTapDown: (_) => setState(() => _isPressed = true),
         onTapUp: (_) => setState(() => _isPressed = false),
         onTapCancel: () => setState(() => _isPressed = false),
         onTap: () async {
           final category = getCategory();
-          _getAnalyticsManager()?.storeAction('lesson_card_tapped', '${widget.audioFile.get('title')}|$category');
+          _getAnalyticsManager()?.storeAction('lesson_card_tapped',
+              '${widget.audioFile.get('title')}|$category');
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AudioPlayerScreen(
-                documentID: widget.audioFile.reference.parent.parent!.id,
-                dialogue: widget.audioFile.get('dialogue'),
-                category: category,
-                targetLanguage: widget.audioFile.get('target_language'),
-                nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)?.containsKey('native_language') == true ? widget.audioFile.get('native_language') : 'English (US)',
-                languageLevel: widget.audioFile.get('language_level'),
-                userID: FirebaseAuth.instance.currentUser!.uid,
-                title: widget.audioFile.get('title'),
-                scriptDocumentId: widget.audioFile.id,
-                generating: false,
-                wordsToRepeat: widget.audioFile.get('words_to_repeat'),
-                numberOfTurns: 4,
-              ),
-            ),
-          ).then((result) {
-            if (result == 'reload' && widget.onReload != null) {
-              widget.onReload!();
-            }
-            // Refresh completion status when returning from audio player
-            _checkCompletionStatus();
-          });
+          final manager =
+              Provider.of<AudioPlayerManager>(context, listen: false);
+          manager.playLesson(LessonData(
+            documentID: widget.audioFile.reference.parent.parent!.id,
+            dialogue: widget.audioFile.get('dialogue'),
+            category: category,
+            targetLanguage: widget.audioFile.get('target_language'),
+            nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
+                        ?.containsKey('native_language') ==
+                    true
+                ? widget.audioFile.get('native_language')
+                : 'English (US)',
+            languageLevel: widget.audioFile.get('language_level'),
+            userID: FirebaseAuth.instance.currentUser!.uid,
+            title: widget.audioFile.get('title'),
+            scriptDocumentId: widget.audioFile.id,
+            generating: false,
+            wordsToRepeat: widget.audioFile.get('words_to_repeat'),
+            numberOfTurns: 4,
+          ));
+
+          // We can't easily wait for result here since it's persistent.
+          // Ideally LessonCard should listen to Firestore changes for completion status.
+          // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -528,7 +564,9 @@ class _LessonCardState extends State<LessonCard> {
                   right: 0,
                   child: GestureDetector(
                     onTap: () {
-                      _getAnalyticsManager()?.storeAction('lesson_card_options_menu_tapped', widget.audioFile.get('title'));
+                      _getAnalyticsManager()?.storeAction(
+                          'lesson_card_options_menu_tapped',
+                          widget.audioFile.get('title'));
                       _showOptionsMenu();
                     },
                     child: Container(
@@ -587,12 +625,14 @@ class _LessonCardState extends State<LessonCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Header row with category (hidden for custom lessons or when showCategoryBadge is false)
-                      if (widget.showCategoryBadge && category.toLowerCase() != 'custom lesson')
+                      if (widget.showCategoryBadge &&
+                          category.toLowerCase() != 'custom lesson')
                         Row(
                           children: [
                             // Category badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
@@ -627,7 +667,10 @@ class _LessonCardState extends State<LessonCard> {
 
                       // Title
                       Container(
-                        padding: const EdgeInsets.only(left: 4, right: 40), // Increased right margin to avoid arrow icon overlap
+                        padding: const EdgeInsets.only(
+                            left: 4,
+                            right:
+                                40), // Increased right margin to avoid arrow icon overlap
                         child: Text(
                           widget.audioFile.get('title'),
                           style: TextStyle(

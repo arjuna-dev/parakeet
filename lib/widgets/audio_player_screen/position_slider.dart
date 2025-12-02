@@ -69,12 +69,16 @@ class _PositionSliderState extends State<PositionSlider> {
       stream: widget.positionDataStream,
       builder: (context, snapshot) {
         final positionData = snapshot.data;
-        if (widget.audioPlayerService.playlistInitialized == false && positionData == null) {
+        if (widget.audioPlayerService.playlistInitialized == false &&
+            positionData == null) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withOpacity(0.7),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -90,7 +94,10 @@ class _PositionSliderState extends State<PositionSlider> {
               ],
             ),
           );
-        } else if (widget.audioPlayerService.playlistInitialized == true && !widget.isPlaying && (_lastKnownPosition.inMilliseconds == 0 || widget.savedPosition == 0)) {
+        } else if (widget.audioPlayerService.playlistInitialized == true &&
+            !widget.isPlaying &&
+            _lastKnownPosition.inMilliseconds == 0 &&
+            widget.savedPosition == 0) {
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
@@ -99,7 +106,10 @@ class _PositionSliderState extends State<PositionSlider> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -108,7 +118,8 @@ class _PositionSliderState extends State<PositionSlider> {
                       Text(
                         "Lesson is ready. Click on the Play button!",
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -119,7 +130,10 @@ class _PositionSliderState extends State<PositionSlider> {
                 CustomPaint(
                   size: const Size(20, 10),
                   painter: TrianglePainter(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.7),
                   ),
                 ),
               ],
@@ -137,9 +151,13 @@ class _PositionSliderState extends State<PositionSlider> {
         } else if (widget.isPlaying) {
           // Use the most recent position from timer updates for smoother display
           currentPosition = _lastKnownPosition;
-          currentValue = currentPosition.inMilliseconds.clamp(0, widget.totalDuration.inMilliseconds).toDouble();
+          currentValue = currentPosition.inMilliseconds
+              .clamp(0, widget.totalDuration.inMilliseconds)
+              .toDouble();
         } else {
-          currentValue = widget.savedPosition.clamp(0, widget.totalDuration.inMilliseconds).toDouble();
+          currentValue = widget.savedPosition
+              .clamp(0, widget.totalDuration.inMilliseconds)
+              .toDouble();
           currentPosition = Duration(milliseconds: widget.savedPosition);
         }
 
@@ -147,7 +165,12 @@ class _PositionSliderState extends State<PositionSlider> {
           children: [
             Slider(
               min: 0.0,
-              max: widget.totalDuration.inMilliseconds.toDouble(),
+              max: (widget.totalDuration.inMilliseconds > 0
+                      ? widget.totalDuration.inMilliseconds
+                      : widget.finalTotalDuration.inMilliseconds > 0
+                          ? widget.finalTotalDuration.inMilliseconds
+                          : 1000)
+                  .toDouble(), // Fallback to 1 second if both are zero
               value: currentValue,
               onChanged: (value) {
                 setState(() {
@@ -163,7 +186,12 @@ class _PositionSliderState extends State<PositionSlider> {
               },
               onChangeEnd: (value) {
                 final trackIndex = widget.findTrackIndexForPosition(value);
-                final seekPosition = Duration(milliseconds: (value.toInt() - widget.cumulativeDurationUpTo(trackIndex).inMilliseconds).toInt());
+                final seekPosition = Duration(
+                    milliseconds: (value.toInt() -
+                            widget
+                                .cumulativeDurationUpTo(trackIndex)
+                                .inMilliseconds)
+                        .toInt());
 
                 widget.player.seek(seekPosition, index: trackIndex);
 
@@ -188,7 +216,19 @@ class _PositionSliderState extends State<PositionSlider> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    widget.finalTotalDuration == Duration.zero ? formatDuration(widget.totalDuration) : formatDuration(widget.finalTotalDuration),
+                    () {
+                      final duration =
+                          widget.finalTotalDuration != Duration.zero
+                              ? widget.finalTotalDuration
+                              : widget.totalDuration != Duration.zero
+                                  ? widget.totalDuration
+                                  : null;
+
+                      if (duration == null) {
+                        return '--:--'; // Loading state
+                      }
+                      return formatDuration(duration);
+                    }(),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

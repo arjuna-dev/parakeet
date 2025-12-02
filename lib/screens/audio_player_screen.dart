@@ -20,6 +20,8 @@ import 'package:parakeet/main.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_info.dart';
 import 'package:parakeet/services/category_level_service.dart';
+import 'package:provider/provider.dart';
+import 'package:parakeet/services/audio_player_manager.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -34,6 +36,8 @@ class AudioPlayerScreen extends StatefulWidget {
   final String scriptDocumentId;
   final bool generating;
   final int numberOfTurns;
+  final AudioPlayerService? existingService;
+  final bool isEmbedded;
 
   // Static method to ensure proper cleanup of any shared resources
   static void cleanupSharedResources() {
@@ -56,6 +60,8 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.scriptDocumentId,
     required this.generating,
     required this.numberOfTurns,
+    this.existingService,
+    this.isEmbedded = false,
   }) : super(key: key);
 
   @override
@@ -112,11 +118,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _wordsToRepeat = widget.wordsToRepeat;
 
     // Initialize services
-    _audioPlayerService = AudioPlayerService(
-      documentID: widget.documentID,
-      userID: widget.userID,
-      hasPremium: _hasPremium,
-    );
+    if (widget.existingService != null) {
+      _audioPlayerService = widget.existingService!;
+    } else {
+      _audioPlayerService = AudioPlayerService(
+        documentID: widget.documentID,
+        userID: widget.userID,
+        hasPremium: _hasPremium,
+      );
+    }
 
     _audioGenerationService = AudioGenerationService(
       documentID: widget.documentID,
@@ -218,6 +228,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           print("Error: _existingBigJson is null for non-generating mode");
         }
         await _initializePlaylist();
+
+        // Ensure durations are loaded even if playlist was already initialized
+        if (_audioPlayerService.trackDurations.isEmpty ||
+            _audioPlayerService.totalDuration == Duration.zero) {
+          print("Track durations not set, calculating now...");
+          List<dynamic> filteredScript =
+              _script.where((fileName) => !fileName.startsWith('\$')).toList();
+          List<Duration> trackDurations = await _audioDurationService
+              .calculateTrackDurations(filteredScript);
+          _audioPlayerService.setTrackDurations(trackDurations);
+          if (!widget.generating) {
+            _audioPlayerService.setFinalTotalDuration();
+          }
+          if (mounted) {
+            setState(() {}); // Trigger rebuild with updated durations
+          }
+        }
       } else {
         _createScriptAndMakeSecondApiCall();
       }
@@ -344,13 +371,13 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         await _audioDurationService.calculateTrackDurations(filteredScript);
     _audioPlayerService.setTrackDurations(trackDurations);
 
-    _audioPlayerService.setFinalTotalDuration();
-
     // Increment update number
     _updateNumber++;
 
     // Check if we've reached the numberOfTurns and set _generating to false if so
     if (_updateNumber >= widget.numberOfTurns) {
+      // Only set final total duration when all dialogue is complete
+      _audioPlayerService.setFinalTotalDuration();
       setState(() {
         _generating = false;
         _allDialogueGenerated = true;
@@ -933,6 +960,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               return;
             }
 
+            if (widget.isEmbedded) {
+              // If embedded, just collapse instead of popping
+              // But we should still respect the generating check if we want to prevent closing
+              if (widget.generating && !_allDialogueGenerated) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        "Please wait for the lesson to finish generating."),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
+
+              // Collapse the player
+              Provider.of<AudioPlayerManager>(context, listen: false)
+                  .collapse();
+              return;
+            }
+
             // Only allow pop if not generating or all dialogue is generated
             if (widget.generating && !_allDialogueGenerated) {
               // Optionally show a message to the user that they can't go back yet
@@ -971,8 +1018,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               return Scaffold(
                 appBar: AppBar(
                   title: AudioInfo(title: widget.title),
-                  automaticallyImplyLeading:
-                      !widget.generating || _allDialogueGenerated,
+                  automaticallyImplyLeading: widget.isEmbedded
+                      ? false
+                      : (!widget.generating || _allDialogueGenerated),
+                  leading: widget.isEmbedded
+                      ? IconButton(
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                          onPressed: () {
+                            Provider.of<AudioPlayerManager>(context,
+                                    listen: false)
+                                .collapse();
+                          },
+                        )
+                      : null,
                 ),
                 body: Container(
                   decoration: const BoxDecoration(
@@ -1052,6 +1110,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void dispose() {
     _isDisposing = true;
+    _repetitionsMode.removeListener(_updatePlaylistOnTheFly);
 
     // Dispose background audio service connection
     BackgroundAudioService.audioHandler?.dispose();
@@ -1060,8 +1119,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _firestoreService?.dispose();
     _fileDurationUpdate?.dispose();
 
-    // Dispose audio player service
-    _audioPlayerService.dispose();
+    // Only dispose the service if we created it (not embedded/injected)
+    // OR if we want to ensure cleanup when the screen is permanently closed.
+    // But if it's embedded, the Manager handles disposal.
+    if (widget.existingService == null) {
+      _audioPlayerService.dispose();
+    } else {
+      // If we are using an existing service, we should just remove our listeners
+      _audioPlayerService.onTrackChanged = null;
+      _audioPlayerService.onLessonCompleted = null;
+    }
 
     // Dispose value notifiers
     _repetitionsMode.dispose();

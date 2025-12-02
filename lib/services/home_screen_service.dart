@@ -365,6 +365,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                     },
                   ),
           ),
+          const SizedBox(height: 60),
         ],
       ),
     );

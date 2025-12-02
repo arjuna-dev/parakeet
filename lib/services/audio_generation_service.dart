@@ -27,26 +27,39 @@ class AudioGenerationService {
   Future<Map<String, dynamic>?> waitForFirstDialogue() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
     int attempts = 0;
-    const maxAttempts = 8; // 8 * 2 seconds = 16 seconds (slightly over 15 for safety)
+    const maxAttempts =
+        8; // 8 * 2 seconds = 16 seconds (slightly over 15 for safety)
 
     while (attempts < maxAttempts) {
       attempts++;
 
       try {
         // Get the latest dialogue from Firestore
-        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(documentID).collection('only_target_sentences').limit(1).get();
+        QuerySnapshot querySnapshot = await firestore
+            .collection('chatGPT_responses')
+            .doc(documentID)
+            .collection('only_target_sentences')
+            .limit(1)
+            .get();
 
         if (querySnapshot.docs.isNotEmpty) {
-          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+          Map<String, dynamic> data =
+              querySnapshot.docs.first.data() as Map<String, dynamic>;
 
           // Check if dialogue exists and has at least one entry
-          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
+          if (data.containsKey('dialogue') &&
+              data['dialogue'] is List &&
+              data['dialogue'].length > 0) {
             List<dynamic> dialogueData = data['dialogue'];
 
             // Check if the first dialogue entry is valid
             if (dialogueData.isNotEmpty) {
               var firstEntry = dialogueData[0];
-              if (firstEntry is Map && firstEntry.containsKey('target_language') && firstEntry.containsKey('native_language') && firstEntry['target_language'] != null && firstEntry['native_language'] != null) {
+              if (firstEntry is Map &&
+                  firstEntry.containsKey('target_language') &&
+                  firstEntry.containsKey('native_language') &&
+                  firstEntry['target_language'] != null &&
+                  firstEntry['native_language'] != null) {
                 print('First dialogue part found after $attempts attempts');
                 return data;
               }
@@ -71,7 +84,8 @@ class AudioGenerationService {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
     bool isDialogueComplete = false;
     int attempts = 0;
-    const maxAttempts = 60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
+    const maxAttempts =
+        60; // Maximum number of attempts (60 * 2 seconds = 2 minutes)
     Map<String, dynamic>? latestSnapshot;
 
     while (!isDialogueComplete && attempts < maxAttempts) {
@@ -79,13 +93,21 @@ class AudioGenerationService {
 
       try {
         // Get the latest dialogue from Firestore
-        QuerySnapshot querySnapshot = await firestore.collection('chatGPT_responses').doc(documentID).collection('only_target_sentences').limit(1).get();
+        QuerySnapshot querySnapshot = await firestore
+            .collection('chatGPT_responses')
+            .doc(documentID)
+            .collection('only_target_sentences')
+            .limit(1)
+            .get();
 
         if (querySnapshot.docs.isNotEmpty) {
-          Map<String, dynamic> data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+          Map<String, dynamic> data =
+              querySnapshot.docs.first.data() as Map<String, dynamic>;
 
           // Check if dialogue is complete (has the expected number of turns)
-          if (data.containsKey('dialogue') && data['dialogue'] is List && data['dialogue'].length > 0) {
+          if (data.containsKey('dialogue') &&
+              data['dialogue'] is List &&
+              data['dialogue'].length > 0) {
             List<dynamic> dialogueData = data['dialogue'];
 
             // Store the latest snapshot for later use
@@ -103,7 +125,11 @@ class AudioGenerationService {
             // Count only valid dialogue entries (non-empty)
             int validEntriesCount = 0;
             for (var entry in dialogueData) {
-              if (entry is Map && entry.containsKey('target_language') && entry.containsKey('native_language') && entry['target_language'] != null && entry['native_language'] != null) {
+              if (entry is Map &&
+                  entry.containsKey('target_language') &&
+                  entry.containsKey('native_language') &&
+                  entry['target_language'] != null &&
+                  entry['native_language'] != null) {
                 validEntriesCount++;
               }
             }
@@ -126,16 +152,25 @@ class AudioGenerationService {
     if (!isDialogueComplete) {
       print('Warning: Dialogue generation timed out after $attempts attempts');
     } else {
-      print('Dialogue generation completed successfully after $attempts attempts');
+      print(
+          'Dialogue generation completed successfully after $attempts attempts');
     }
 
     return latestSnapshot;
   }
 
   /// Creates the script document in Firestore
-  Future<void> saveScriptToFirestore(List<dynamic> script, List<dynamic> keywordsUsedInDialogue, List<dynamic> completeDialogue, String category) async {
+  Future<void> saveScriptToFirestore(
+      List<dynamic> script,
+      List<dynamic> keywordsUsedInDialogue,
+      List<dynamic> completeDialogue,
+      String category) async {
     // Save script to Firestore
-    DocumentReference docRef = FirebaseFirestore.instance.collection('chatGPT_responses').doc(documentID).collection('script-$userID').doc(scriptDocumentId);
+    DocumentReference docRef = FirebaseFirestore.instance
+        .collection('chatGPT_responses')
+        .doc(documentID)
+        .collection('script-$userID')
+        .doc(scriptDocumentId);
 
     await docRef.set({
       "script": script,
@@ -152,9 +187,11 @@ class AudioGenerationService {
   }
 
   /// Makes the second API call to generate audio
-  Future<void> makeSecondApiCall(Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
+  Future<void> makeSecondApiCall(
+      Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
     await http.post(
-      Uri.parse('http://127.0.0.1:8080'),
+      Uri.parse(
+          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         "Access-Control-Allow-Origin": "*",
@@ -180,10 +217,15 @@ class AudioGenerationService {
   /// Adds the current user to the active creation collection
   Future<void> addUserToActiveCreation() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+    DocumentReference docRef =
+        firestore.collection('active_creation').doc('active_creation');
     await firestore.runTransaction((transaction) async {
       DocumentSnapshot snapshot = await transaction.get(docRef);
-      var userData = {"userId": userID, "documentId": documentID, "timestamp": Timestamp.now()};
+      var userData = {
+        "userId": userID,
+        "documentId": documentID,
+        "timestamp": Timestamp.now()
+      };
       if (snapshot.exists) {
         transaction.update(docRef, {
           "users": FieldValue.arrayUnion([userData]),
@@ -201,7 +243,11 @@ class AudioGenerationService {
   /// Gets the existing big JSON from Firestore
   Future<Map<String, dynamic>?> getExistingBigJson() async {
     final firestore = FirebaseFirestore.instance;
-    final docRef = firestore.collection('chatGPT_responses').doc(documentID).collection('all_breakdowns').doc('updatable_big_json');
+    final docRef = firestore
+        .collection('chatGPT_responses')
+        .doc(documentID)
+        .collection('all_breakdowns')
+        .doc('updatable_big_json');
     final doc = await docRef.get();
     if (doc.exists) {
       return doc.data() as Map<String, dynamic>;
@@ -240,7 +286,8 @@ class AudioGenerationService {
   Future<void> removeFromActiveCreation() async {
     try {
       final firestore = FirebaseFirestore.instance;
-      DocumentReference docRef = firestore.collection('active_creation').doc('active_creation');
+      DocumentReference docRef =
+          firestore.collection('active_creation').doc('active_creation');
 
       await firestore.runTransaction((transaction) async {
         DocumentSnapshot snapshot = await transaction.get(docRef);
@@ -249,7 +296,10 @@ class AudioGenerationService {
           List<dynamic> users = data['users'] ?? [];
 
           // Find and remove the current user's entry
-          users.removeWhere((user) => user is Map<String, dynamic> && user['userId'] == userID && user['documentId'] == documentID);
+          users.removeWhere((user) =>
+              user is Map<String, dynamic> &&
+              user['userId'] == userID &&
+              user['documentId'] == documentID);
 
           transaction.update(docRef, {'users': users});
         }
