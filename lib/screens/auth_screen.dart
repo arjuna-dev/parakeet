@@ -62,9 +62,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5FF),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F5FF),
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
@@ -72,18 +72,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         children: [
           // Animated background
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFF8F5FF),
-                  Color(0xFFF0EBFF),
+                  colorScheme.surface,
+                  colorScheme.surfaceContainerHighest,
                 ],
               ),
             ),
           ),
-          // Floating circles
+          // Floating circles with green theme
           AnimatedBuilder(
             animation: _floatingAnimation,
             builder: (context, child) {
@@ -95,7 +95,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.blue.withOpacity(0.05),
+                    color: colorScheme.primary.withOpacity(0.1),
                   ),
                 ),
               );
@@ -112,7 +112,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.purple.withOpacity(0.03),
+                    color: colorScheme.primaryContainer.withOpacity(0.2),
                   ),
                 ),
               );
@@ -129,7 +129,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.green.withOpacity(0.04),
+                    color: colorScheme.primary.withOpacity(0.15),
                   ),
                 ),
               );
@@ -161,7 +161,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade800,
+                        color: colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -189,19 +189,16 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
+                            color: Colors.white,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.grey.shade800,
-                          elevation: 3,
-                          shadowColor: Colors.grey.shade300,
+                          backgroundColor: colorScheme.primary.withOpacity(0.6),
+                          foregroundColor: colorScheme.onPrimary.withOpacity(0.6),
+                          elevation: 2,
+                          shadowColor: colorScheme.primary.withOpacity(0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
-                            side: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
                           ),
                         ),
                       ),
@@ -232,8 +229,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             foregroundColor: Colors.white,
-                            elevation: 3,
-                            shadowColor: Colors.grey.shade300,
+                            elevation: 2,
+                            shadowColor: colorScheme.primary.withOpacity(0.2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(28),
                             ),
