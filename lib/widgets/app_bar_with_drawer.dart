@@ -218,28 +218,6 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                                   .size
                                                   .height <
                                               700
-                                          ? 12
-                                          : 16),
-                                  _buildMenuItem(
-                                    buildContext,
-                                    icon: Icons.person,
-                                    title: 'Profile',
-                                    subtitle: 'Settings and account info',
-                                    onTap: () {
-                                      _getAnalyticsManager()?.storeAction(
-                                          'app_drawer_profile_tapped');
-                                      if (Navigator.canPop(buildContext)) {
-                                        Navigator.pop(buildContext);
-                                      }
-                                      Navigator.pushNamed(
-                                          buildContext, '/profile');
-                                    },
-                                  ),
-                                  SizedBox(
-                                      height: MediaQuery.of(buildContext)
-                                                  .size
-                                                  .height <
-                                              700
                                           ? 16
                                           : 24),
                                 ],

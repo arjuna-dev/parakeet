@@ -23,6 +23,7 @@ class ProfileMenuItem extends StatelessWidget {
 
     return Card(
       elevation: 2,
+      color: colorScheme.surfaceContainerHighest,
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 4 : 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),

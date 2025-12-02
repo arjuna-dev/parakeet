@@ -41,8 +41,10 @@ class BottomMenuBar extends StatelessWidget {
         return 1;
       case '/vocabulary_review':
         return 2;
+      case '/profile':
+        return 3;
       default:
-        return 1; // Default to custom_lesson (middle tab)
+        return 0; // Default to home
     }
   }
 
@@ -53,18 +55,22 @@ class BottomMenuBar extends StatelessWidget {
     switch (index) {
       case 0:
         route = '/favorite';
-        analyticsAction = 'bottom_nav_all_lessons_tapped';
+        analyticsAction = 'bottom_nav_home_tapped';
         break;
       case 1:
         route = '/custom_lesson';
-        analyticsAction = 'bottom_nav_generate_tapped';
+        analyticsAction = 'bottom_nav_learn_tapped';
         break;
       case 2:
         route = '/vocabulary_review';
-        analyticsAction = 'bottom_nav_review_tapped';
+        analyticsAction = 'bottom_nav_progress_tapped';
+        break;
+      case 3:
+        route = '/profile';
+        analyticsAction = 'bottom_nav_profile_tapped';
         break;
       default:
-        route = '/custom_lesson'; // Default to custom_lesson
+        route = '/favorite'; // Default to home
         analyticsAction = 'bottom_nav_default_tapped';
     }
 
@@ -105,18 +111,18 @@ class BottomMenuBar extends StatelessWidget {
             backgroundColor: Colors.transparent,
             items: [
               const BottomNavigationBarItem(
-                icon: Icon(Icons.library_music),
-                label: 'All Lessons',
+                icon: Icon(Icons.home),
+                label: 'Home',
               ),
               const BottomNavigationBarItem(
-                icon: Icon(Icons.add_circle_outline),
-                label: 'Generate',
+                icon: Icon(Icons.school),
+                label: 'Learn',
               ),
               BottomNavigationBarItem(
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(Icons.text_snippet_sharp),
+                    const Icon(Icons.show_chart),
                     if (dueCount > 0)
                       Positioned(
                         right: -2,
@@ -136,12 +142,12 @@ class BottomMenuBar extends StatelessWidget {
                       ),
                   ],
                 ),
-                label: 'Review',
+                label: 'Progress',
               ),
-              // BottomNavigationBarItem(
-              //   icon: Icon(Icons.auto_stories),
-              //   label: 'Learning Track',
-              // ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: 'Profile',
+              ),
             ],
             onTap: _handleTap,
           );

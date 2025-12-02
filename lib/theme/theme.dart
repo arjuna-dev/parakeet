@@ -151,6 +151,19 @@ sealed class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
+      // SnackBar theme
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF0F3D37), // Dark green background
+        contentTextStyle: const TextStyle(
+          color: Color(0xFFFFFFFF), // White text
+          fontSize: 14,
+        ),
+        actionTextColor: const Color(0xFF3FFF8F), // Bright green for action buttons
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }

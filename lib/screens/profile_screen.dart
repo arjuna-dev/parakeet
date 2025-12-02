@@ -14,6 +14,7 @@ import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 import 'package:parakeet/utils/save_analytics.dart';
+import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 
@@ -211,15 +212,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isSmallScreen = MediaQuery.of(context).size.height < 700;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      appBar: const AppBarWithDrawer(
+        title: 'Profile',
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -228,6 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Combined account status and lesson generator card
             Card(
               elevation: 4,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 6 : 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -239,19 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: _premium
-                        ? [
-                            Colors.amber.withOpacity(0.05),
-                            Theme.of(context).cardColor,
-                          ]
-                        : [
-                            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
-                            Theme.of(context).cardColor,
-                          ],
-                  ),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -402,8 +385,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               _handleStoreNavigation();
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -479,6 +462,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+      bottomNavigationBar: const BottomMenuBar(
+        currentRoute: '/profile',
       ),
     );
   }
