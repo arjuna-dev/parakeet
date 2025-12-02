@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
-import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
@@ -107,8 +106,22 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
       builder: (context, loadingState, child) {
         final isGeneratingLesson = loadingState.isGeneratingLesson;
         return Scaffold(
-          appBar: const AppBarWithDrawer(
-            title: 'Custom Lessons',
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                // Navigate back to home screen
+                Navigator.pushReplacementNamed(context, '/favorite');
+              },
+            ),
+            title: const Text(
+              'Custom Lessons',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           body: Stack(
             children: [

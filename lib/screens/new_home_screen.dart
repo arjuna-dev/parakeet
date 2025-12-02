@@ -254,7 +254,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/custom_lesson');
+              Navigator.pushNamed(context, '/custom_lesson');
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: colorScheme.primary,

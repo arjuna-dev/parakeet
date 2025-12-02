@@ -521,6 +521,11 @@ class _MyAppState extends State<MyApp> {
                     child: _buildAuthenticatedMainNavigation('/favorite'),
                   );
               break;
+            case '/all_lessons':
+              builder = (context) => ResponsiveScreenWrapper(
+                    child: _buildAuthenticatedMainNavigation('/all_lessons'),
+                  );
+              break;
             case '/vocabulary_review':
               builder = (context) => ResponsiveScreenWrapper(
                     child:
