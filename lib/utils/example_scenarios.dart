@@ -1,5 +1,5 @@
 final Map<String, List<String>> scenarioKeywords = {
-  "Einstein has a philosophical conversation about life with a duckling.": ["einstein", "philosophical", "conversation", "about", "life"],
+  "Einstein has a philosophical conversation about life with a duckling.": ["universe", "philosophical", "conversation", "about", "life"],
   "Ordering a coffee": ["coffee", "order", "barista", "menu", "café"],
   "A conversation between 2 product managers about compliance and GDPR": ["conversation", "between", "product", "managers", "about"],
   "Two software engineers discuss the latest advancements in AI": ["technology", "code", "debug", "software", "update"],
