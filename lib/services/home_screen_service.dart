@@ -353,7 +353,7 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                   )
                 : ListView.builder(
                     padding:
-                        EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 8),
+                        EdgeInsets.fromLTRB(0, isSmallScreen ? 4 : 8, 0, 60),
                     itemCount: widget.model.filteredLessons.length,
                     itemBuilder: (context, index) {
                       final audioFile = widget.model.filteredLessons[index];
@@ -365,7 +365,6 @@ class _AllLessonsListWidgetState extends State<_AllLessonsListWidget> {
                     },
                   ),
           ),
-          const SizedBox(height: 60),
         ],
       ),
     );
