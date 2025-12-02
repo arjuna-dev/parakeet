@@ -8,6 +8,7 @@ import 'package:parakeet/screens/custom_lesson_screen.dart';
 import 'package:parakeet/screens/vocabulary_review_screen.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/services/loading_state_service.dart';
+import 'package:parakeet/widgets/persistent_audio_player.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String initialRoute;
@@ -58,11 +59,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         builder: (context, loadingState, child) {
           return AbsorbPointer(
             absorbing: loadingState.isGeneratingLesson,
-            child: Scaffold(
-              body: _getCurrentScreen(),
-              bottomNavigationBar: BottomMenuBar(
-                currentRoute: _currentRoute,
-              ),
+            child: Stack(
+              children: [
+                Scaffold(
+                  body: _getCurrentScreen(),
+                  bottomNavigationBar: BottomMenuBar(
+                    currentRoute: _currentRoute,
+                  ),
+                ),
+                // Hide persistent audio player on custom lesson screen
+                if (_currentRoute != '/custom_lesson')
+                  const PersistentAudioPlayer(),
+              ],
             ),
           );
         },

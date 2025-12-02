@@ -27,7 +27,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
   Future<void> _loadData() async {
     final userData = await ProfileService.fetchUserData();
     final progressData = await DailyLessonService.getDailyProgressData();
-    
+
     setState(() {
       _userData = userData;
       _progressData = progressData;
@@ -76,7 +76,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
           children: [
             // Top section with profile greeting
             _buildTopSection(context, userName, colorScheme),
-            
+
             // Main content
             Expanded(
               child: SingleChildScrollView(
@@ -85,28 +85,28 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 24),
-                    
-                    // Daily Goal section
-                    _buildDailyGoalSection(context, used, limit, progress, colorScheme),
-                    
-                    const SizedBox(height: 40),
-                    
+
                     // Audio visualization
                     const Center(
                       child: AudioWaveformWidget(),
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Lesson prompt
                     _buildLessonPrompt(context, targetLanguage, colorScheme),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Action buttons
                     _buildActionButtons(context, colorScheme),
-                    
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 80),
+                    // Daily Goal section
+                    // _buildDailyGoalSection(
+                    //     context, used, limit, progress, colorScheme),
+
+                    // const SizedBox(height: 60),
                   ],
                 ),
               ),
@@ -117,7 +117,8 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
     );
   }
 
-  Widget _buildTopSection(BuildContext context, String userName, ColorScheme colorScheme) {
+  Widget _buildTopSection(
+      BuildContext context, String userName, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Row(
@@ -133,7 +134,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          
+
           // Greeting
           Expanded(
             child: Text(
@@ -169,7 +170,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        
+
         // Progress bar
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -180,9 +181,9 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         // Progress text
         Text(
           '$used/$limit lessons completed',
@@ -195,7 +196,8 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
     );
   }
 
-  Widget _buildLessonPrompt(BuildContext context, String targetLanguage, ColorScheme colorScheme) {
+  Widget _buildLessonPrompt(
+      BuildContext context, String targetLanguage, ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -246,9 +248,9 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Customize Topic button
         SizedBox(
           width: double.infinity,
@@ -277,4 +279,3 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
     );
   }
 }
-
