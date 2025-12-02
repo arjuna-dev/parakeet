@@ -40,7 +40,9 @@ class _NicknameStepState extends State<NicknameStep> {
     String hintText = 'Enter your nickname';
 
     // Customize for Apple Sign In users
-    if (widget.isAppleSignIn && widget.appleUserName != null && widget.appleUserName!.isNotEmpty) {
+    if (widget.isAppleSignIn &&
+        widget.appleUserName != null &&
+        widget.appleUserName!.isNotEmpty) {
       title = 'Confirm your preferred name';
       hintText = 'Your first name from Apple ID';
     }
@@ -60,7 +62,9 @@ class _NicknameStepState extends State<NicknameStep> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          if (widget.isAppleSignIn && widget.appleUserName != null && widget.appleUserName!.isNotEmpty)
+          if (widget.isAppleSignIn &&
+              widget.appleUserName != null &&
+              widget.appleUserName!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: Text(
@@ -79,7 +83,11 @@ class _NicknameStepState extends State<NicknameStep> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              filled: true,
+              hoverColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
           ),
           const SizedBox(height: 60), // Bottom spacing

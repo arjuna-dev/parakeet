@@ -73,7 +73,10 @@ class _NicknamePopupState extends State<NicknamePopup> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (docSnapshot.exists) {
           final data = docSnapshot.data();
           if (data != null && data.containsKey('native_language')) {
@@ -112,7 +115,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
   // Check if any values have changed from their initial state
   void _checkForChanges() {
     final currentNickname = _nicknameController.text.trim();
-    final hasChanges = currentNickname != _initialNickname || _useName != _initialUseName;
+    final hasChanges =
+        currentNickname != _initialNickname || _useName != _initialUseName;
 
     setState(() {
       _isSubmitEnabled = hasChanges;
@@ -143,17 +147,24 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<bool> _checkAndUpdateCallCount() async {
     final userId = FirebaseAuth.instance.currentUser!.uid;
-    final today = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
+    final today =
+        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
 
     try {
-      return await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final userDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('api_call_count').doc('generate_nickname');
+      return await FirebaseFirestore.instance
+          .runTransaction((transaction) async {
+        final userDocRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('api_call_count')
+            .doc('generate_nickname');
 
         final userDocSnapshot = await transaction.get(userDocRef);
 
         if (!userDocSnapshot.exists) {
           // If document doesn't exist, create it with count 1
-          transaction.set(userDocRef, {'last_call_date': today, 'call_count': 1});
+          transaction
+              .set(userDocRef, {'last_call_date': today, 'call_count': 1});
           return true;
         } else {
           // Document exists, check count and date
@@ -163,12 +174,14 @@ class _NicknamePopupState extends State<NicknamePopup> {
               return false;
             } else {
               // Increment count
-              transaction.update(userDocRef, {'call_count': FieldValue.increment(1)});
+              transaction
+                  .update(userDocRef, {'call_count': FieldValue.increment(1)});
               return true;
             }
           } else {
             // New day, reset count
-            transaction.set(userDocRef, {'last_call_date': today, 'call_count': 1});
+            transaction
+                .set(userDocRef, {'last_call_date': today, 'call_count': 1});
             return true;
           }
         }
@@ -181,7 +194,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
   Future<void> _handleGenerate() async {
     String nicknameText = _nicknameController.text.trim();
-    _trackUserAction('nickname_popup_save_button_pressed', data: _getButtonText());
+    _trackUserAction('nickname_popup_save_button_pressed',
+        data: _getButtonText());
 
     setState(() {
       _isLoading = true;
@@ -215,7 +229,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Your name is officially trending! But it's time to pause and let it cool down. You can try again some other time!"),
+          content: Text(
+              "Your name is officially trending! But it's time to pause and let it cool down. You can try again some other time!"),
         ),
       );
       return;
@@ -226,13 +241,16 @@ class _NicknamePopupState extends State<NicknamePopup> {
       final selectedGreetings = greetingsList[_nativeLanguage]!;
       _usedGreetingIndex = Random().nextInt(selectedGreetings.length);
       final randomGreeting = selectedGreetings[_usedGreetingIndex!];
-      final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${_usedGreetingIndex! + 1}";
+      final userIdN =
+          "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${_usedGreetingIndex! + 1}";
 
-      await CloudFunctionService.generateNicknameAudio("$randomGreeting $nicknameText!", userId, userIdN, _nativeLanguage);
+      await CloudFunctionService.generateNicknameAudio(
+          "$randomGreeting $nicknameText!", userId, userIdN, _nativeLanguage);
       await _fetchAndPlayAudio(userIdN);
       await _saveNicknameToFirestore(nicknameText);
 
-      _trackUserAction('nickname_popup_nickname_generated_successfully', data: nicknameText);
+      _trackUserAction('nickname_popup_nickname_generated_successfully',
+          data: nicknameText);
 
       setState(() {
         _currentNickname = nicknameText;
@@ -266,7 +284,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
       print("Error generating nicknames: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("There was an error generating your nickname. Please try again."),
+          content: Text(
+              "There was an error generating your nickname. Please try again."),
         ),
       );
       setState(() {
@@ -278,10 +297,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
   Future<String?> fetchCurrentNickname() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
-        if (data != null && data.containsKey('nickname') && data['nickname'].isNotEmpty) {
+        if (data != null &&
+            data.containsKey('nickname') &&
+            data['nickname'].isNotEmpty) {
           return data['nickname'];
         }
       }
@@ -300,7 +324,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
         );
 
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        await player.setUrl('https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
+        await player.setUrl(
+            'https://storage.googleapis.com/user_nicknames/${useridN}_nickname.mp3?timestamp2=$timestamp2');
         audioFetched = true;
         player.play();
       } catch (e) {
@@ -312,7 +337,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
   Future<void> _saveNicknameToFirestore(String nickname) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDocRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
       await userDocRef.update({'nickname': nickname});
     }
   }
@@ -324,17 +350,21 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
       // Generate remaining greetings for native language, skipping the used one
       for (var i = 0; i < selectedGreetings.length; i++) {
-        if (i == _usedGreetingIndex) continue; // Skip the greeting we already generated
+        if (i == _usedGreetingIndex)
+          continue; // Skip the greeting we already generated
         final greeting = selectedGreetings[i];
-        final userIdN = "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${i + 1}";
-        unawaited(CloudFunctionService.generateNicknameAudio("$greeting $nicknameText!", userId, userIdN, _nativeLanguage));
+        final userIdN =
+            "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${i + 1}";
+        unawaited(CloudFunctionService.generateNicknameAudio(
+            "$greeting $nicknameText!", userId, userIdN, _nativeLanguage));
       }
     } catch (e) {
       print("Error queuing remaining greetings: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Some additional greetings could not be queued. The main greeting is still available."),
+            content: Text(
+                "Some additional greetings could not be queued. The main greeting is still available."),
           ),
         );
       }
@@ -350,7 +380,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
     final height = MediaQuery.of(context).size.height;
 
     // Improved sizing logic with better constraints
-    final dialogWidth = width < 350 ? width * 0.9 : (width < 500 ? 320.0 : 350.0);
+    final dialogWidth =
+        width < 350 ? width * 0.9 : (width < 500 ? 320.0 : 350.0);
     final maxDialogHeight = height * 0.8; // Max 80% of screen height
 
     return Dialog(
@@ -375,7 +406,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
             Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, isSmallScreen ? 12 : 16),
               child: Text(
-                _currentNickname != null ? "Hi, $_currentNickname!" : "Hi, there!",
+                _currentNickname != null
+                    ? "Hi, $_currentNickname!"
+                    : "Hi, there!",
                 style: TextStyle(
                   fontSize: isSmallScreen ? 18 : 22,
                   fontWeight: FontWeight.bold,
@@ -394,10 +427,12 @@ class _NicknamePopupState extends State<NicknamePopup> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        color: colorScheme.surfaceContainerHighest
+                            .withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                          color: colorScheme.surfaceContainerHighest
+                              .withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -425,10 +460,14 @@ class _NicknamePopupState extends State<NicknamePopup> {
                               hintText: "What should we call you?",
                               hintStyle: TextStyle(
                                 fontSize: isSmallScreen ? 12 : 14,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                color: colorScheme.onSurfaceVariant
+                                    .withOpacity(0.6),
                               ),
                               filled: true,
-                              fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              fillColor: colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.3),
+                              hoverColor: colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.3),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
@@ -471,7 +510,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
                           SizedBox(height: isSmallScreen ? 6 : 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              color: colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.3),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: colorScheme.outline.withOpacity(0.2),
@@ -487,8 +527,13 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                     children: [
                                       Switch(
                                         value: _useName,
+                                        focusColor: colorScheme.primary,
+                                        activeTrackColor: colorScheme.primary,
+                                        inactiveTrackColor: colorScheme.primary,
                                         onChanged: (value) {
-                                          _trackUserAction('nickname_popup_address_by_name_toggled', data: value.toString());
+                                          _trackUserAction(
+                                              'nickname_popup_address_by_name_toggled',
+                                              data: value.toString());
                                           setState(() {
                                             _useName = value;
                                           });
@@ -511,8 +556,16 @@ class _NicknamePopupState extends State<NicknamePopup> {
                                     children: [
                                       Switch(
                                         value: _useName,
+                                        activeThumbColor:
+                                            colorScheme.primary.withAlpha(400),
+                                        activeTrackColor:
+                                            colorScheme.primary.withAlpha(80),
+                                        inactiveTrackColor:
+                                            colorScheme.surfaceContainer,
                                         onChanged: (value) {
-                                          _trackUserAction('nickname_popup_address_by_name_toggled', data: value.toString());
+                                          _trackUserAction(
+                                              'nickname_popup_address_by_name_toggled',
+                                              data: value.toString());
                                           setState(() {
                                             _useName = value;
                                           });
@@ -568,11 +621,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
                           width: double.infinity,
                           height: isSmallScreen ? 40 : 44,
                           child: FilledButton(
-                            onPressed: _isSubmitEnabled && !_isLoading ? _handleGenerate : null,
+                            onPressed: _isSubmitEnabled && !_isLoading
+                                ? _handleGenerate
+                                : null,
                             style: FilledButton.styleFrom(
                               backgroundColor: colorScheme.primary,
                               foregroundColor: colorScheme.onPrimary,
-                              disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                              disabledBackgroundColor: colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -594,7 +651,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
                             onPressed: _isLoading
                                 ? null
                                 : () {
-                                    _trackUserAction('nickname_popup_close_button_pressed');
+                                    _trackUserAction(
+                                        'nickname_popup_close_button_pressed');
                                     Navigator.of(context).pop();
                                   },
                             style: TextButton.styleFrom(
@@ -617,7 +675,8 @@ class _NicknamePopupState extends State<NicknamePopup> {
                           onPressed: _isLoading
                               ? null
                               : () {
-                                  _trackUserAction('nickname_popup_close_button_pressed');
+                                  _trackUserAction(
+                                      'nickname_popup_close_button_pressed');
                                   Navigator.of(context).pop();
                                 },
                           style: TextButton.styleFrom(
@@ -632,11 +691,15 @@ class _NicknamePopupState extends State<NicknamePopup> {
                         ),
                         const SizedBox(width: 8),
                         FilledButton(
-                          onPressed: _isSubmitEnabled && !_isLoading ? _handleGenerate : null,
+                          onPressed: _isSubmitEnabled && !_isLoading
+                              ? _handleGenerate
+                              : null,
                           style: FilledButton.styleFrom(
                             backgroundColor: colorScheme.primary,
                             foregroundColor: colorScheme.onPrimary,
-                            disabledBackgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                            disabledBackgroundColor: colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

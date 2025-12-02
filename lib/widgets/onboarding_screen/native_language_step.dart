@@ -18,21 +18,63 @@ class NativeLanguageStep extends StatelessWidget {
     return OnboardingStep(
       icon: Icons.language,
       title: 'What is your native language?',
-      content: DropdownButtonFormField<String>(
-        value: selectedLanguage,
-        decoration: InputDecoration(
+      content: Theme(
+        data: Theme.of(context).copyWith(
+          dropdownMenuTheme: DropdownMenuThemeData(
+            menuStyle: MenuStyle(
+              backgroundColor: WidgetStateProperty.all(
+                const Color(0xFF0F3D37), // Explicit dark green color
+              ),
+            ),
+          ),
+        ),
+        child: DropdownButtonFormField<String>(
+          initialValue: selectedLanguage,
+          dropdownColor: const Color(0xFF0F3D37), // Explicit dark green color
+          iconEnabledColor: Theme.of(context).colorScheme.onSurface,
+          iconDisabledColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          decoration: InputDecoration(
+          fillColor: const Color(0xFF0F3D37), // Explicit dark green color
+          filled: true,
+          hoverColor: const Color(0xFF0F3D37), // Explicit dark green color
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 2,
+            ),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         items: supportedLanguages.map((String language) {
           return DropdownMenuItem<String>(
             value: language,
-            child: Text(language),
+            child: Text(
+              language,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
           );
         }).toList(),
-        onChanged: onLanguageChanged,
+          onChanged: onLanguageChanged,
+        ),
       ),
     );
   }
