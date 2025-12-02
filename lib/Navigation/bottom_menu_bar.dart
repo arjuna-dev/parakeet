@@ -37,7 +37,7 @@ class BottomMenuBar extends StatelessWidget {
     switch (currentRoute) {
       case '/favorite':
         return 0;
-      case '/custom_lesson':
+      case '/all_lessons':
         return 1;
       case '/vocabulary_review':
         return 2;
@@ -58,7 +58,7 @@ class BottomMenuBar extends StatelessWidget {
         analyticsAction = 'bottom_nav_home_tapped';
         break;
       case 1:
-        route = '/custom_lesson';
+        route = '/all_lessons';
         analyticsAction = 'bottom_nav_learn_tapped';
         break;
       case 2:

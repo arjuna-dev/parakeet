@@ -34,6 +34,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     switch (_currentRoute) {
       case '/favorite':
         return const NewHomeScreen();
+      case '/all_lessons':
+        return ChangeNotifierProvider(
+          create: (context) => HomeScreenModel(),
+          child: const Home(),
+        );
       case '/create_lesson':
         return const CreateLesson(title: "Categories");
       case '/custom_lesson':
