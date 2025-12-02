@@ -333,38 +333,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
 
                       const SizedBox(height: 12),
-                      Stack(
-                        children: [
-                          Container(
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          Container(
-                            height: 12,
-                            width: MediaQuery.of(context).size.width * (_apiCallsRemaining / (_premium ? 10 : 2)),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: _apiCallsRemaining > 0
-                                    ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
-                                    : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final limit = _premium ? 10 : 2;
+                          final progress = limit > 0 ? (_apiCallsRemaining / limit).clamp(0.0, 1.0) : 0.0;
+                          
+                          return Stack(
+                            children: [
+                              Container(
+                                height: 12,
+                                width: constraints.maxWidth,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: progress,
+                                child: Container(
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: _apiCallsRemaining > 0
+                                          ? (_premium ? [Colors.amber.shade300, Colors.amber.shade700] : [Theme.of(context).colorScheme.primary.withOpacity(0.7), Theme.of(context).colorScheme.primary])
+                                          : [Theme.of(context).colorScheme.error.withOpacity(0.7), Theme.of(context).colorScheme.error],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            _apiCallsRemaining > 0 ? (_premium ? Colors.amber.withOpacity(0.3) : Theme.of(context).colorScheme.primary.withOpacity(0.3)) : Theme.of(context).colorScheme.error.withOpacity(0.3),
+                                        blurRadius: 3,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 8),

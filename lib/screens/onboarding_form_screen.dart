@@ -115,7 +115,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/custom_lesson');
+      Navigator.pushReplacementNamed(context, '/favorite');
     }
   }
 
@@ -224,7 +224,7 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (_currentPage > 0)
-                        TextButton(
+                        OutlinedButton(
                           onPressed: () {
                             analyticsManager.storeAction('onboarding_form_previous_page_button', _currentPage.toString());
                             _pageController.previousPage(
@@ -232,6 +232,13 @@ class _OnboardingFormScreenState extends State<OnboardingFormScreen> {
                               curve: Curves.easeInOut,
                             );
                           },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.onSurface,
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
                           child: const Text('Back'),
                         )
                       else

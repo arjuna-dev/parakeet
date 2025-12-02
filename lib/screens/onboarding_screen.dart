@@ -83,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (_currentPage > 0)
-                    TextButton(
+                    OutlinedButton(
                       onPressed: () {
                         analyticsManager.storeAction('onboarding_screen_previous_page', _currentPage.toString());
                         _pageController.previousPage(
@@ -91,6 +91,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           curve: Curves.easeInOut,
                         );
                       },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.onSurface,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
                       child: const Text('Back'),
                     )
                   else
