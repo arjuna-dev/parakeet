@@ -82,7 +82,7 @@ class BackgroundAudioService {
       _audioHandler!.setCurrentMediaItem(
         lessonTitle,
         'Parakeet Language Learning',
-        audioPlayerService.totalDuration,
+        audioPlayerService.totalDuration.value,
         _artworkPath,
         category,
       );

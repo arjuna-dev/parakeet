@@ -84,7 +84,7 @@ class ParakeetAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
 
     final currentMediaItem = mediaItem.value;
     if (currentMediaItem != null) {
-      final totalDuration = _audioPlayerService!.totalDuration;
+      final totalDuration = _audioPlayerService!.totalDuration.value;
       mediaItem.add(currentMediaItem.copyWith(duration: totalDuration));
     }
   }
@@ -107,7 +107,7 @@ class ParakeetAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   // Update the current media item and queue
   void setCurrentMediaItem(String title, String? artist, Duration? duration, String? artUri, String? category) {
     // If no duration is provided, use the total duration from the audio player service
-    final totalDuration = duration ?? _audioPlayerService?.totalDuration ?? Duration.zero;
+    final totalDuration = duration ?? _audioPlayerService?.totalDuration.value ?? Duration.zero;
 
     final newMediaItem = MediaItem(
       id: 'parakeet_lesson',

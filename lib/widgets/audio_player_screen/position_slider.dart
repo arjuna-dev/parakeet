@@ -7,8 +7,6 @@ import 'package:parakeet/widgets/audio_player_screen/position_data.dart';
 class PositionSlider extends StatefulWidget {
   final AudioPlayerService audioPlayerService;
   final Stream<PositionData> positionDataStream;
-  final Duration totalDuration;
-  final Duration finalTotalDuration;
   final bool isPlaying;
   final int savedPosition;
   final Function(double) findTrackIndexForPosition;
@@ -22,8 +20,6 @@ class PositionSlider extends StatefulWidget {
     Key? key,
     required this.audioPlayerService,
     required this.positionDataStream,
-    required this.totalDuration,
-    required this.finalTotalDuration,
     required this.isPlaying,
     required this.savedPosition,
     required this.findTrackIndexForPosition,
@@ -141,100 +137,111 @@ class _PositionSliderState extends State<PositionSlider> {
           );
         }
 
-        // Use drag value when dragging, otherwise use stream data or saved position
-        double currentValue;
-        Duration currentPosition;
+        // Use ValueListenableBuilder to listen to duration changes
+        return ValueListenableBuilder<Duration>(
+          valueListenable: widget.audioPlayerService.totalDuration,
+          builder: (context, totalDuration, _) {
+            return ValueListenableBuilder<Duration>(
+              valueListenable: widget.audioPlayerService.finalTotalDuration,
+              builder: (context, finalTotalDuration, _) {
+                // Use drag value when dragging, otherwise use stream data or saved position
+                double currentValue;
+                Duration currentPosition;
 
-        if (_isDragging) {
-          currentValue = _dragValue;
-          currentPosition = Duration(milliseconds: _dragValue.toInt());
-        } else if (widget.isPlaying) {
-          // Use the most recent position from timer updates for smoother display
-          currentPosition = _lastKnownPosition;
-          currentValue = currentPosition.inMilliseconds
-              .clamp(0, widget.totalDuration.inMilliseconds)
-              .toDouble();
-        } else {
-          currentValue = widget.savedPosition
-              .clamp(0, widget.totalDuration.inMilliseconds)
-              .toDouble();
-          currentPosition = Duration(milliseconds: widget.savedPosition);
-        }
-
-        return Column(
-          children: [
-            Slider(
-              min: 0.0,
-              max: (widget.totalDuration.inMilliseconds > 0
-                      ? widget.totalDuration.inMilliseconds
-                      : widget.finalTotalDuration.inMilliseconds > 0
-                          ? widget.finalTotalDuration.inMilliseconds
-                          : 1000)
-                  .toDouble(), // Fallback to 1 second if both are zero
-              value: currentValue,
-              onChanged: (value) {
-                setState(() {
-                  _dragValue = value;
-                });
-              },
-              onChangeStart: (value) {
-                setState(() {
-                  _isDragging = true;
-                  _dragValue = value;
-                });
-                widget.onSliderChangeStart();
-              },
-              onChangeEnd: (value) {
-                final trackIndex = widget.findTrackIndexForPosition(value);
-                final seekPosition = Duration(
-                    milliseconds: (value.toInt() -
-                            widget
-                                .cumulativeDurationUpTo(trackIndex)
-                                .inMilliseconds)
-                        .toInt());
-
-                widget.player.seek(seekPosition, index: trackIndex);
-
-                if (!widget.isPlaying) {
-                  widget.pause(analyticsOn: false);
+                if (_isDragging) {
+                  currentValue = _dragValue;
+                  currentPosition = Duration(milliseconds: _dragValue.toInt());
+                } else if (widget.isPlaying) {
+                  // Use the most recent position from timer updates for smoother display
+                  currentPosition = _lastKnownPosition;
+                  currentValue = currentPosition.inMilliseconds
+                      .clamp(0, totalDuration.inMilliseconds)
+                      .toDouble();
+                } else {
+                  currentValue = widget.savedPosition
+                      .clamp(0, totalDuration.inMilliseconds)
+                      .toDouble();
+                  currentPosition = Duration(milliseconds: widget.savedPosition);
                 }
 
-                setState(() {
-                  _isDragging = false;
-                  _lastKnownPosition = Duration(milliseconds: value.toInt());
-                });
-                widget.onSliderChangeEnd();
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    formatDuration(currentPosition),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    () {
-                      final duration =
-                          widget.finalTotalDuration != Duration.zero
-                              ? widget.finalTotalDuration
-                              : widget.totalDuration != Duration.zero
-                                  ? widget.totalDuration
-                                  : null;
+                return Column(
+                  children: [
+                    Slider(
+                      min: 0.0,
+                      max: (totalDuration.inMilliseconds > 0
+                              ? totalDuration.inMilliseconds
+                              : finalTotalDuration.inMilliseconds > 0
+                                  ? finalTotalDuration.inMilliseconds
+                                  : 1000)
+                          .toDouble(), // Fallback to 1 second if both are zero
+                      value: currentValue,
+                      onChanged: (value) {
+                        setState(() {
+                          _dragValue = value;
+                        });
+                      },
+                      onChangeStart: (value) {
+                        setState(() {
+                          _isDragging = true;
+                          _dragValue = value;
+                        });
+                        widget.onSliderChangeStart();
+                      },
+                      onChangeEnd: (value) {
+                        final trackIndex = widget.findTrackIndexForPosition(value);
+                        final seekPosition = Duration(
+                            milliseconds: (value.toInt() -
+                                    widget
+                                        .cumulativeDurationUpTo(trackIndex)
+                                        .inMilliseconds)
+                                .toInt());
 
-                      if (duration == null) {
-                        return '--:--'; // Loading state
-                      }
-                      return formatDuration(duration);
-                    }(),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
+                        widget.player.seek(seekPosition, index: trackIndex);
+
+                        if (!widget.isPlaying) {
+                          widget.pause(analyticsOn: false);
+                        }
+
+                        setState(() {
+                          _isDragging = false;
+                          _lastKnownPosition = Duration(milliseconds: value.toInt());
+                        });
+                        widget.onSliderChangeEnd();
+                      },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            formatDuration(currentPosition),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            () {
+                              final duration =
+                                  finalTotalDuration != Duration.zero
+                                      ? finalTotalDuration
+                                      : totalDuration != Duration.zero
+                                          ? totalDuration
+                                          : null;
+
+                              if (duration == null) {
+                                return '--:--'; // Loading state
+                              }
+                              return formatDuration(duration);
+                            }(),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         );
       },
     );
