@@ -1019,7 +1019,24 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               int savedPosition = snapshot.data ?? 0;
               return Scaffold(
                 appBar: AppBar(
-                  title: AudioInfo(title: widget.title),
+                  title: widget.isEmbedded
+                      ? GestureDetector(
+                          onTap: () {
+                            Provider.of<AudioPlayerManager>(context,
+                                    listen: false)
+                                .collapse();
+                          },
+                          onPanUpdate: (details) {
+                            // Collapse when dragging down
+                            if (details.delta.dy > 0) {
+                              Provider.of<AudioPlayerManager>(context,
+                                      listen: false)
+                                  .collapse();
+                            }
+                          },
+                          child: AudioInfo(title: widget.title),
+                        )
+                      : AudioInfo(title: widget.title),
                   automaticallyImplyLeading: widget.isEmbedded
                       ? false
                       : (!widget.generating || _allDialogueGenerated),
