@@ -231,7 +231,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
         // Ensure durations are loaded even if playlist was already initialized
         if (_audioPlayerService.trackDurations.isEmpty ||
-            _audioPlayerService.totalDuration == Duration.zero) {
+            _audioPlayerService.totalDuration.value == Duration.zero) {
           print("Track durations not set, calculating now...");
           List<dynamic> filteredScript =
               _script.where((fileName) => !fileName.startsWith('\$')).toList();
@@ -306,7 +306,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       // Update background audio service with final duration
       BackgroundAudioService.updateLessonInfo(
         widget.title,
-        _audioPlayerService.finalTotalDuration,
+        _audioPlayerService.finalTotalDuration.value,
         null, // You can add artwork URL here if available
         widget.category,
       );
@@ -378,10 +378,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (_updateNumber >= widget.numberOfTurns) {
       // Only set final total duration when all dialogue is complete
       _audioPlayerService.setFinalTotalDuration();
-      setState(() {
-        _generating = false;
-        _allDialogueGenerated = true;
-      });
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _generating = false;
+          _allDialogueGenerated = true;
+        });
+      }
     }
   }
 
@@ -1069,9 +1071,6 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                             audioPlayerService: _audioPlayerService,
                             positionDataStream:
                                 _audioPlayerService.positionDataStream,
-                            totalDuration: _audioPlayerService.totalDuration,
-                            finalTotalDuration:
-                                _audioPlayerService.finalTotalDuration,
                             isPlaying: _audioPlayerService.isPlaying.value,
                             savedPosition: savedPosition,
                             findTrackIndexForPosition:

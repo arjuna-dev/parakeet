@@ -24,8 +24,8 @@ class AudioPlayerService {
   bool isDisposing = false;
 
   List<Duration> trackDurations = [];
-  Duration totalDuration = Duration.zero;
-  Duration finalTotalDuration = Duration.zero;
+  final ValueNotifier<Duration> totalDuration = ValueNotifier<Duration>(Duration.zero);
+  final ValueNotifier<Duration> finalTotalDuration = ValueNotifier<Duration>(Duration.zero);
   String? currentTrackName; // Track name of the current audio file
 
   StreamSubscription? playerStateSubscription;
@@ -348,7 +348,7 @@ class AudioPlayerService {
         Duration totalPosition = cumulativeDuration + position;
 
         if (position <= duration) {
-          return PositionData(position, totalDuration, totalPosition);
+          return PositionData(position, totalDuration.value, totalPosition);
         }
         return null;
       },
@@ -362,12 +362,12 @@ class AudioPlayerService {
   // Set track durations
   void setTrackDurations(List<Duration> durations) {
     trackDurations = durations;
-    totalDuration = durations.fold(Duration.zero, (total, d) => total + d);
+    totalDuration.value = durations.fold(Duration.zero, (total, d) => total + d);
   }
 
   // Set final total duration
   void setFinalTotalDuration() {
-    finalTotalDuration = trackDurations.fold(Duration.zero, (total, d) => total + d);
+    finalTotalDuration.value = trackDurations.fold(Duration.zero, (total, d) => total + d);
   }
 
   // Dispose resources
@@ -379,6 +379,8 @@ class AudioPlayerService {
 
     isPlaying.dispose();
     playbackSpeed.dispose();
+    totalDuration.dispose();
+    finalTotalDuration.dispose();
 
     player.dispose();
   }
