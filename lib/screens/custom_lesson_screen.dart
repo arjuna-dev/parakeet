@@ -79,6 +79,10 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
           }
         },
       );
+      // Navigate to home screen after successful lesson creation so audio player becomes visible
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/favorite');
+      }
     } catch (e) {
       // Show error message
       if (mounted) {
