@@ -139,19 +139,29 @@ void _showUpdateDialog(String message, bool brickApp) {
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // Prevent dialog dismissal
     builder: (BuildContext context) {
+      final colorScheme = Theme.of(context).colorScheme;
       return AlertDialog(
-        title: brickApp
-            ? const Text('Update Required')
-            : const Text('Update Available'),
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        title: Text(
+          brickApp ? 'Update Required' : 'Update Available',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Text(
           message, // Display message from Firebase
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18, // Set a larger font size
             fontWeight: FontWeight.bold, // Make the text bold
+            color: colorScheme.onSurface,
           ),
         ),
         actions: <Widget>[
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.primary,
+            ),
             child: const Text('Update'),
             onPressed: () {
               getAnalyticsManager()
@@ -161,7 +171,10 @@ void _showUpdateDialog(String message, bool brickApp) {
             },
           ),
           TextButton(
-            child: brickApp ? const Text('Close App') : const Text('Continue'),
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.onSurfaceVariant,
+            ),
+            child: Text(brickApp ? 'Close App' : 'Continue'),
             onPressed: () {
               if (brickApp) {
                 getAnalyticsManager()
@@ -279,7 +292,7 @@ Future<String> _getInitialRoute() async {
   } else {
     getAnalyticsManager()?.storeAction('app_launched_unauthenticated_user');
   }
-  return '/custom_lesson';
+  return '/favorite';
 }
 
 class MyApp extends StatefulWidget {

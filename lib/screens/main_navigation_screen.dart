@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/screens/home_screen.dart';
+import 'package:parakeet/screens/new_home_screen.dart';
 import 'package:parakeet/screens/create_lesson_screen.dart';
 import 'package:parakeet/screens/custom_lesson_screen.dart';
 import 'package:parakeet/screens/vocabulary_review_screen.dart';
@@ -13,7 +14,7 @@ class MainNavigationScreen extends StatefulWidget {
 
   const MainNavigationScreen({
     super.key,
-    this.initialRoute = '/custom_lesson',
+    this.initialRoute = '/favorite',
   });
 
   @override
@@ -32,10 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget _getCurrentScreen() {
     switch (_currentRoute) {
       case '/favorite':
-        return ChangeNotifierProvider(
-          create: (context) => HomeScreenModel(),
-          child: const Home(),
-        );
+        return const NewHomeScreen();
       case '/create_lesson':
         return const CreateLesson(title: "Categories");
       case '/custom_lesson':
@@ -43,10 +41,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       case '/vocabulary_review':
         return const VocabularyReviewScreen();
       default:
-        return ChangeNotifierProvider(
-          create: (context) => HomeScreenModel(),
-          child: const Home(),
-        );
+        return const NewHomeScreen();
     }
   }
 

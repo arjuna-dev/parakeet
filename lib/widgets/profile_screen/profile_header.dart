@@ -27,6 +27,7 @@ class ProfileHeader extends StatelessWidget {
 
     return Card(
       elevation: 3,
+      color: colorScheme.surfaceContainerHighest,
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 8 : 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -38,14 +39,7 @@ class ProfileHeader extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colorScheme.surface,
-              colorScheme.surfaceContainerLowest.withOpacity(0.6),
-            ],
-          ),
+          color: colorScheme.surfaceContainerHighest,
         ),
         padding: EdgeInsets.all(isSmallScreen ? 18 : 24),
         child: Row(
