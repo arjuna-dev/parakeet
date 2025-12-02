@@ -498,7 +498,8 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         final lessonsUsed = data['used'] as int;
         final isPremium = data['isPremium'] as bool;
         final limit = data['limit'] as int;
-        final progress = limit > 0 ? (limit - lessonsRemaining) / limit : 0.0;
+        // Progress based on remaining lessons (filled when more lessons available)
+        final progress = limit > 0 ? lessonsRemaining / limit : 0.0;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -533,7 +534,7 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Daily Lessons',
+                          'Daily Lessons Remaining',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
