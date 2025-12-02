@@ -1036,66 +1036,72 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   decoration: const BoxDecoration(
                     color: Color(0xFF0A2F2A),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        // SpeechRecognitionToggle(
-                        //   speechRecognitionService: _speechRecognitionService,
-                        //   isActive: _speechRecognitionActive,
-                        //   onToggle: _toggleSpeechRecognition,
-                        // ),
-                        AnimatedDialogueList(
-                          dialogue: _dialogue,
-                          currentTrack: _currentTrack,
-                          wordsToRepeat: _wordsToRepeat ?? [],
-                          documentID: widget.documentID,
-                          useStream: widget.generating,
-                          generating: widget.generating,
-                          onAllDialogueDisplayed: widget.generating
-                              ? _onAllDialogueDisplayed
-                              : null,
-                          script: _script,
-                          trackDurations: _audioPlayerService.trackDurations,
-                          onSeekToTime: _seekToTime,
-                        ),
-                        PositionSlider(
-                          audioPlayerService: _audioPlayerService,
-                          positionDataStream:
-                              _audioPlayerService.positionDataStream,
-                          totalDuration: _audioPlayerService.totalDuration,
-                          finalTotalDuration:
-                              _audioPlayerService.finalTotalDuration,
-                          isPlaying: _audioPlayerService.isPlaying.value,
-                          savedPosition: savedPosition,
-                          findTrackIndexForPosition:
-                              _audioPlayerService.findTrackIndexForPosition,
-                          player: _audioPlayerService.player,
-                          cumulativeDurationUpTo:
-                              _audioPlayerService.cumulativeDurationUpTo,
-                          pause: ({bool analyticsOn = true}) =>
-                              _audioPlayerService.pause(
-                                  analyticsOn: analyticsOn),
-                          onSliderChangeStart: () {
-                            // Slider interaction started
-                          },
-                          onSliderChangeEnd: () {
-                            // Slider interaction ended
-                          },
-                        ),
-                        AudioControls(
-                          audioPlayerService: _audioPlayerService,
-                          repetitionMode: _repetitionsMode,
-                          generating: _generating,
-                          hasWordsToReview:
-                              _allUsedWordsCardsRefsMap.isNotEmpty,
-                          onReviewWords: _showVocabularyReview,
-                          isCompleted: _isCompleted,
-                          onMarkCompleted: _markAsCompleted,
-                        ),
-                      ],
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          // SpeechRecognitionToggle(
+                          //   speechRecognitionService: _speechRecognitionService,
+                          //   isActive: _speechRecognitionActive,
+                          //   onToggle: _toggleSpeechRecognition,
+                          // ),
+                          // Dialogue list - Expanded to take available space
+                          Expanded(
+                            child: AnimatedDialogueList(
+                              dialogue: _dialogue,
+                              currentTrack: _currentTrack,
+                              wordsToRepeat: _wordsToRepeat ?? [],
+                              documentID: widget.documentID,
+                              useStream: widget.generating,
+                              generating: widget.generating,
+                              onAllDialogueDisplayed: widget.generating
+                                  ? _onAllDialogueDisplayed
+                                  : null,
+                              script: _script,
+                              trackDurations: _audioPlayerService.trackDurations,
+                              onSeekToTime: _seekToTime,
+                            ),
+                          ),
+                          // Position slider - fixed height
+                          PositionSlider(
+                            audioPlayerService: _audioPlayerService,
+                            positionDataStream:
+                                _audioPlayerService.positionDataStream,
+                            totalDuration: _audioPlayerService.totalDuration,
+                            finalTotalDuration:
+                                _audioPlayerService.finalTotalDuration,
+                            isPlaying: _audioPlayerService.isPlaying.value,
+                            savedPosition: savedPosition,
+                            findTrackIndexForPosition:
+                                _audioPlayerService.findTrackIndexForPosition,
+                            player: _audioPlayerService.player,
+                            cumulativeDurationUpTo:
+                                _audioPlayerService.cumulativeDurationUpTo,
+                            pause: ({bool analyticsOn = true}) =>
+                                _audioPlayerService.pause(
+                                    analyticsOn: analyticsOn),
+                            onSliderChangeStart: () {
+                              // Slider interaction started
+                            },
+                            onSliderChangeEnd: () {
+                              // Slider interaction ended
+                            },
+                          ),
+                          // Audio controls - fixed height
+                          AudioControls(
+                            audioPlayerService: _audioPlayerService,
+                            repetitionMode: _repetitionsMode,
+                            generating: _generating,
+                            hasWordsToReview:
+                                _allUsedWordsCardsRefsMap.isNotEmpty,
+                            onReviewWords: _showVocabularyReview,
+                            isCompleted: _isCompleted,
+                            onMarkCompleted: _markAsCompleted,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
