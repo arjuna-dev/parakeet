@@ -215,8 +215,10 @@ class RepetitionModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return PopupMenuButton<RepetitionMode>(
       offset: const Offset(0, 40),
+      color: colorScheme.surfaceContainerHighest,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -224,12 +226,12 @@ class RepetitionModeSelector extends StatelessWidget {
             'Repeat',
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.primary,
+              color: colorScheme.primary,
             ),
           ),
           Icon(
             Icons.arrow_drop_down,
-            color: Theme.of(context).colorScheme.primary,
+            color: colorScheme.primary,
             size: 20,
           ),
         ],
@@ -310,6 +312,7 @@ class SpeedSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ValueListenableBuilder<double>(
       valueListenable: playbackSpeed,
       builder: (context, speed, child) {
@@ -317,9 +320,10 @@ class SpeedSelector extends StatelessWidget {
           value: speed,
           isDense: true,
           underline: Container(), // Remove the default underline
+          dropdownColor: colorScheme.surfaceContainerHighest,
           icon: Icon(
             Icons.arrow_drop_down,
-            color: Theme.of(context).colorScheme.primary,
+            color: colorScheme.primary,
             size: 20,
           ),
           items: const [

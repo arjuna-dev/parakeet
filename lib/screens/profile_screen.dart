@@ -90,25 +90,157 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _showTimePickerDialog() async {
     _trackUserAction('profile_reminder_time_picker_opened');
 
-    await requestNotificationPermission();
-    if (Platform.isAndroid) {
-      bool? alarmPermissions = await requestExactAlarmPermission();
-      if (alarmPermissions == null || !alarmPermissions) {
-        return;
-      }
+    // Ensure NotificationService is initialized
+    try {
+      await _notificationService.initialize();
+    } catch (e) {
+      print('Error initializing notification service: $e');
     }
 
+    // Request permissions
+    try {
+      await requestNotificationPermission();
+      if (Platform.isAndroid) {
+        bool? alarmPermissions = await requestExactAlarmPermission();
+        if (alarmPermissions == null || !alarmPermissions) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Exact alarm permission is required for daily reminders. Please enable it in settings.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          // Still allow user to set time, but warn them
+        }
+      }
+    } catch (e) {
+      print('Error requesting permissions: $e');
+      // Continue anyway - user can still set the time
+    }
+
+    // Show time picker
+    final colorScheme = Theme.of(context).colorScheme;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _reminderTime ?? NotificationService.defaultReminderTime,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: colorScheme.copyWith(
+              primary: colorScheme.primary,
+              onPrimary: colorScheme.onPrimary,
+              surface: colorScheme.surfaceContainerHighest,
+              onSurface: colorScheme.onSurface,
+              onSurfaceVariant: colorScheme.onSurfaceVariant,
+              secondary: colorScheme.secondary,
+              onSecondary: colorScheme.onSecondary,
+              surfaceContainerHighest: colorScheme.surfaceContainerHighest,
+            ),
+            dialogTheme: DialogThemeData(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              titleTextStyle: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              contentTextStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 16,
+              ),
+            ),
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              hourMinuteColor: colorScheme.surfaceContainerHighest,
+              hourMinuteTextColor: colorScheme.onSurface,
+              dayPeriodColor: colorScheme.primaryContainer,
+              dayPeriodTextColor: colorScheme.onPrimaryContainer,
+              dialHandColor: colorScheme.primary,
+              dialBackgroundColor: colorScheme.surfaceContainerHighest,
+              dialTextColor: colorScheme.onSurface,
+              entryModeIconColor: colorScheme.primary,
+              dayPeriodTextStyle: TextStyle(
+                color: colorScheme.onPrimaryContainer,
+                fontSize: 12,
+              ),
+              hourMinuteTextStyle: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              helpTextStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+              inputDecorationTheme: InputDecorationTheme(
+                fillColor: colorScheme.surfaceContainerHighest,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: colorScheme.outline.withOpacity(0.5),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: colorScheme.outline.withOpacity(0.5),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
       _trackUserAction('profile_reminder_time_selected', data: '${picked.hour}:${picked.minute}');
-      setState(() {
-        _reminderTime = picked;
-      });
-      await _notificationService.scheduleDailyReminder(picked);
+      try {
+        await _notificationService.scheduleDailyReminder(picked);
+        setState(() {
+          _reminderTime = picked;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Daily reminder set for ${picked.format(context)}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        print('Error scheduling reminder: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to set reminder: ${e.toString()}'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -122,29 +254,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _deleteAccount() async {
     _trackUserAction('profile_delete_account_button_pressed');
+    final colorScheme = Theme.of(context).colorScheme;
 
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Account'),
-          content: const Text('Are you sure you want to delete your account? This action cannot be undone.'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                _trackUserAction('profile_delete_account_cancelled');
-                Navigator.of(context).pop(false);
-              },
-              child: const Text('Cancel'),
+        return Dialog(
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+              width: 1,
             ),
-            TextButton(
-              onPressed: () {
-                _trackUserAction('profile_delete_account_confirmed');
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Delete'),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Are you sure you want to delete your account? This action cannot be undone.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        _trackUserAction('profile_delete_account_cancelled');
+                        Navigator.of(context).pop(false);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurfaceVariant,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () {
+                        _trackUserAction('profile_delete_account_confirmed');
+                        Navigator.of(context).pop(true);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -468,6 +649,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onClear: _reminderTime != null ? _cancelReminder : null,
             ),
             const SizedBox(height: 40),
+            const Divider(),
+            const SizedBox(height: 24),
             DeleteAccountButton(onDelete: _deleteAccount),
             const SizedBox(height: 32),
           ],

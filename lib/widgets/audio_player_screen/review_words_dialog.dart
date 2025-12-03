@@ -8,6 +8,8 @@ import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/utils/language_categories.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:parakeet/services/audio_player_manager.dart';
 
 class ReviewWordsDialog extends StatefulWidget {
   final Map<String, DocumentReference> words;
@@ -621,8 +623,11 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
                       _trackUserAction('review_words_dialog_continue_learning_pressed', data: '${widget.words.length}_words_completed');
+                      // Collapse the audio player before navigating
+                      Provider.of<AudioPlayerManager>(context, listen: false).collapse();
+                      // Navigate to home page instead of custom lesson screen
                       Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/custom_lesson',
+                        '/favorite',
                         (route) => false,
                       );
                     },
