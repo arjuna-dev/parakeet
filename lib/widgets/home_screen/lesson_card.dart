@@ -386,7 +386,7 @@ class _LessonCardState extends State<LessonCard> {
         return Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: SafeArea(
             child: Column(
@@ -481,88 +481,81 @@ class _LessonCardState extends State<LessonCard> {
       margin: EdgeInsets.symmetric(
           horizontal: widget.showCategoryBadge ? 16 : 0,
           vertical: widget.isSmallScreen ? 8 : 10),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        onTap: () async {
-          final category = getCategory();
-          _getAnalyticsManager()?.storeAction('lesson_card_tapped',
-              '${widget.audioFile.get('title')}|$category');
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          onTap: () async {
+            final category = getCategory();
+            _getAnalyticsManager()?.storeAction('lesson_card_tapped',
+                '${widget.audioFile.get('title')}|$category');
 
-          final manager =
-              Provider.of<AudioPlayerManager>(context, listen: false);
-          manager.playLesson(LessonData(
-            documentID: widget.audioFile.reference.parent.parent!.id,
-            dialogue: widget.audioFile.get('dialogue'),
-            category: category,
-            targetLanguage: widget.audioFile.get('target_language'),
-            nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
-                        ?.containsKey('native_language') ==
-                    true
-                ? widget.audioFile.get('native_language')
-                : 'English (US)',
-            languageLevel: widget.audioFile.get('language_level'),
-            userID: FirebaseAuth.instance.currentUser!.uid,
-            title: widget.audioFile.get('title'),
-            scriptDocumentId: widget.audioFile.id,
-            generating: false,
-            wordsToRepeat: widget.audioFile.get('words_to_repeat'),
-            numberOfTurns: 4,
-          ));
+            final manager =
+                Provider.of<AudioPlayerManager>(context, listen: false);
+            manager.playLesson(LessonData(
+              documentID: widget.audioFile.reference.parent.parent!.id,
+              dialogue: widget.audioFile.get('dialogue'),
+              category: category,
+              targetLanguage: widget.audioFile.get('target_language'),
+              nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
+                          ?.containsKey('native_language') ==
+                      true
+                  ? widget.audioFile.get('native_language')
+                  : 'English (US)',
+              languageLevel: widget.audioFile.get('language_level'),
+              userID: FirebaseAuth.instance.currentUser!.uid,
+              title: widget.audioFile.get('title'),
+              scriptDocumentId: widget.audioFile.id,
+              generating: false,
+              wordsToRepeat: widget.audioFile.get('words_to_repeat'),
+              numberOfTurns: 4,
+            ));
 
-          // We can't easily wait for result here since it's persistent.
-          // Ideally LessonCard should listen to Firestore changes for completion status.
-          // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
-          transform: Matrix4.identity()
-            ..scale(_isPressed ? 0.95 : 1.0)
-            ..rotateZ(_isPressed ? -0.01 : 0.0),
-          child: Container(
+            // We can't easily wait for result here since it's persistent.
+            // Ideally LessonCard should listen to Firestore changes for completion status.
+            // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            transform: Matrix4.identity()
+              ..scale(_isPressed ? 0.95 : 1.0)
+              ..rotateZ(_isPressed ? -0.01 : 0.0),
+            child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  colorScheme.primary.withOpacity(0.09),
-                  colorScheme.tertiary.withOpacity(0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: categoryColor.withOpacity(0.15),
-                width: 1.5,
+                color: colorScheme.outline.withOpacity(0.12),
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.02),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                  spreadRadius: 2,
+                  color: colorScheme.shadow.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 0,
                 ),
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.08),
-                  blurRadius: 8,
-                  offset: const Offset(-2, -2),
-                ),
-                BoxShadow(
-                  color: colorScheme.tertiary.withOpacity(0.03),
-                  // color: colorScheme.shadow.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: colorScheme.shadow.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                  spreadRadius: 0,
                 ),
               ],
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 // Top right corner menu button
                 Positioned(
                   top: 0,
                   right: 0,
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       _getAnalyticsManager()?.storeAction(
                           'lesson_card_options_menu_tapped',
@@ -594,99 +587,102 @@ class _LessonCardState extends State<LessonCard> {
                   ),
                 ),
 
-                // Right side arrow icon spanning across info rows
+                // Right side arrow icon
                 Positioned(
-                  bottom: 36, // Position to align with the two info rows
+                  bottom: 20,
                   right: 20,
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 32,
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                  ),
-                ),
-
-                Positioned(
-                  bottom: -30,
-                  left: -30,
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: categoryColor.withOpacity(0.03),
+                      color: colorScheme.primaryContainer.withOpacity(0.5),
                       shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 20,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
 
                 // Main content
                 Padding(
-                  padding: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header row with category (hidden for custom lessons or when showCategoryBadge is false)
-                      if (widget.showCategoryBadge &&
-                          category.toLowerCase() != 'custom lesson')
-                        Row(
-                          children: [
-                            // Category badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    categoryColor,
-                                    categoryColor.withOpacity(0.8),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    CategoryIcons.getCategoryIcon(category),
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    category,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
                       // Title
-                      Container(
-                        padding: const EdgeInsets.only(
-                            left: 4,
-                            right:
-                                40), // Increased right margin to avoid arrow icon overlap
+                      Padding(
+                        padding: const EdgeInsets.only(right: 50),
                         child: Text(
                           widget.audioFile.get('title'),
                           style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 19,
+                            height: 1.3,
                             color: colorScheme.onSurface,
+                            letterSpacing: -0.3,
                           ),
-                          maxLines: 4,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      
                       const SizedBox(height: 16),
+                      
+                      // Bottom info row
+                      Row(
+                        children: [
+                          // Duration
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 16,
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                getEstimatedDuration(),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(width: 16),
+                          
+                          // Completion status indicator
+                          if (!_isLoadingCompletion && _isCompleted)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 16,
+                                  color: Colors.green.withOpacity(0.8),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Completed',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.green.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),

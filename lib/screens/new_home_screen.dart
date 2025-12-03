@@ -54,6 +54,20 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
     }
   }
 
+  IconData _getTimeBasedIcon() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      // Morning: sunrise icon
+      return Icons.wb_sunny;
+    } else if (hour < 20) {
+      // Afternoon/Evening: sunset icon
+      return Icons.wb_twilight;
+    } else {
+      // Night: moon icon
+      return Icons.nightlight_round;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -128,20 +142,20 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
   Widget _buildTopSection(
       BuildContext context, String userName, ColorScheme colorScheme) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
       child: Row(
         children: [
-          // Profile picture
+          // Time-based icon
           CircleAvatar(
-            radius: 24,
+            radius: 18,
             backgroundColor: colorScheme.primaryContainer,
             child: Icon(
-              Icons.person,
+              _getTimeBasedIcon(),
               color: colorScheme.primary,
-              size: 28,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // Greeting
           Expanded(
@@ -149,7 +163,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
               '${_getGreeting()}, $userName!',
               style: TextStyle(
                 color: colorScheme.onSurface,
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
