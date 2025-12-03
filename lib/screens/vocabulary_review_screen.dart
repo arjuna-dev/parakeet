@@ -606,7 +606,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
           // Floating Review Button
           if (!_isLoadingDue && _dueWordsFull.isNotEmpty)
             Positioned(
-              top: 120, // Position almost touching the bottom navigation bar
+              top: 140, // Position almost touching the bottom navigation bar
               left: 20,
               right: 20,
               child: Container(

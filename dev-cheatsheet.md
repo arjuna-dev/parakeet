@@ -152,6 +152,12 @@ Then use the Transporter macOS app to upload it.
 
 Then choose that new version on appstoreconnect.
 
+ALTERNATIVE
+```
+flutter build ios --no-codesign --obfuscate --split-debug-info=build/app/outputs/symbols
+```
+then Product > Archive
+
 ### Build for web
 
 ```
