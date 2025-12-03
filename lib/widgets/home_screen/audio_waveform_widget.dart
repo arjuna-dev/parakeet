@@ -20,7 +20,7 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
     // Generate random heights for the waveform bars
     final random = math.Random();
     for (int i = 0; i < 40; i++) {
-      _heights.add(20 + random.nextDouble() * 60);
+      _heights.add(10 + random.nextDouble() * 30);
     }
     
     _controller = AnimationController(
@@ -43,7 +43,7 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
       animation: _controller,
       builder: (context, child) {
         return SizedBox(
-          height: 100,
+          height: 60,
           width: double.infinity,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -57,7 +57,7 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
               
               return Container(
                 width: 3,
-                height: animatedHeight.clamp(20.0, 80.0),
+                height: animatedHeight.clamp(10.0, 50.0),
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
