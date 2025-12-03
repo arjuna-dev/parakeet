@@ -60,7 +60,7 @@ async def generate_audio(key, value, narrator_voice, lang_code):
     file_path = f"google_tts/narrator_{language_name}/{file_name}"
 
     # Generate the audio file
-    await google_synthesize_text(
+    google_synthesize_text(
         value,
         narrator_voice,
         file_path,
@@ -77,7 +77,7 @@ async def generate_audio(key, value, narrator_voice, lang_code):
         return {}
 
 async def process_language(lang_code):
-    narrator_voice = create_google_voice(lang_code, 'Zephyr', narrator_voice=True)
+    narrator_voice = create_google_voice(lang_code, 'Zephyr')
     narrator_file_durations = {}
     language_name = LANGUAGE_NAMES.get(lang_code)
 

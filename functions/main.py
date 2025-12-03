@@ -8,7 +8,7 @@ from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_tr
 from utils.utilities import TTS_PROVIDERS, GPT_MODEL
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
-from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice, google_synthesize_text
+from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice, google_synthesize_text, voice_finder_google
 from utils.openai_tts.openai_tts import language_to_language_code_openai
 from models.pydantic_models import FirstAPIRequest, SecondAPIRequest
 from services.api_calls import APICalls
@@ -344,13 +344,7 @@ def delete_audio_file (req: https_fn.Request) -> https_fn.Response:
 
 def generate_audio_and_store(text, user_id_N, language):
     file_name = f"{user_id_N}_nickname.mp3"
-    language_code = language_to_language_code(language)
-    for voice in google_tts_voices:
-        if voice['language_code'] == language_code:
-            narrator_voice = create_google_voice(language_code, voice['voice_id'])
-            break
-    else:
-        raise Exception(f"No matching voice found for language: {language}")
+    narrator_voice, _ = voice_finder_google("f", language)  # Use female voice as default for nickname
 
     google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", make_public= False)
 
@@ -376,13 +370,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
         )
 
     file_name = f"{user_id_N}_nickname.mp3"
-    language_code = language_to_language_code(language)
-    for voice in google_tts_voices:
-        if voice['language_code'] == language_code:
-            narrator_voice = create_google_voice(language_code, voice['voice_id'])
-            break
-    else:
-        raise Exception(f"No matching voice found for language: {language}")
+    narrator_voice, _ = voice_finder_google("f", language)  # Use female voice as default for nickname
 
     google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
 
