@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:parakeet/screens/profile_screen.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
@@ -540,14 +539,6 @@ class _MyAppState extends State<MyApp> {
             case '/login':
               builder = (context) => const ResponsiveScreenWrapper(
                     child: AuthScreen(),
-                  );
-              break;
-            case '/profile':
-              builder = (context) => ResponsiveScreenWrapper(
-                    child: ChangeNotifierProvider(
-                      create: (context) => HomeScreenModel(),
-                      child: const ProfileScreen(),
-                    ),
                   );
               break;
             default:

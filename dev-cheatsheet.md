@@ -100,12 +100,14 @@ dart run flutter_launcher_icons:main
 ```
 
 ### How to bundle an Android bundle and apks file
+Update version number first
 
 Run:
 
 ```bash
-flutter build appbundle  --obfuscate --split-debug-info=build/app/outputs/symbols
+flutter build appbundle --release   --obfuscate --split-debug-info=build/app/outputs/symbols
 ```
+
 
 #### How te test an apk from the bundle on a device
 

@@ -104,16 +104,16 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Audio visualization
                     const Center(
                       child: AudioWaveformWidget(),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
 
                     // Lesson prompt
                     _buildLessonPrompt(context, targetLanguage, colorScheme),
@@ -221,10 +221,11 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
   Widget _buildLessonPrompt(
       BuildContext context, String targetLanguage, ColorScheme colorScheme) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Ready for your daily $targetLanguage lesson?',
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: colorScheme.onSurface,
             fontSize: 24,
@@ -234,6 +235,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
         const SizedBox(height: 8),
         Text(
           'Just 10 minutes to sound more like a local.',
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: colorScheme.onSurfaceVariant,
             fontSize: 16,

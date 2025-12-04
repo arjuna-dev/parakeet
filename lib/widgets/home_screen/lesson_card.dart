@@ -119,6 +119,67 @@ class _LessonCardState extends State<LessonCard> {
     }
   }
 
+  String _getCreationDateText() {
+    try {
+      // Try to get creation time from document metadata
+      final metadata = widget.audioFile.metadata;
+      if (metadata.hasPendingWrites == false) {
+        // Try to get from document data first
+        final data = widget.audioFile.data() as Map<String, dynamic>?;
+        if (data != null) {
+          // Check for common date fields
+          if (data.containsKey('created_at')) {
+            final createdAt = data['created_at'];
+            if (createdAt is Timestamp) {
+              return _formatDate(createdAt.toDate());
+            }
+          }
+          if (data.containsKey('timestamp')) {
+            final timestamp = data['timestamp'];
+            if (timestamp is Timestamp) {
+              return _formatDate(timestamp.toDate());
+            }
+          }
+          if (data.containsKey('createdAt')) {
+            final createdAt = data['createdAt'];
+            if (createdAt is Timestamp) {
+              return _formatDate(createdAt.toDate());
+            }
+          }
+        }
+      }
+      
+      // Fallback: use current time or a default
+      return 'Recently created';
+    } catch (e) {
+      return 'Recently created';
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    // If less than a day, show time ago
+    if (difference.inDays == 0) {
+      return getTimeAgo(date);
+    }
+    
+    // Format as date
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final month = months[date.month - 1];
+    final day = date.day;
+    final year = date.year;
+    
+    // If same year, don't show year
+    if (date.year == now.year) {
+      return '$month $day';
+    } else {
+      return '$month $day, $year';
+    }
+  }
+
   String getEstimatedDuration() {
     try {
       final data = widget.audioFile.data() as Map<String, dynamic>?;
@@ -587,7 +648,7 @@ class _LessonCardState extends State<LessonCard> {
                   ),
                 ),
 
-                // Right side arrow icon
+                // Right side play icon
                 Positioned(
                   bottom: 20,
                   right: 20,
@@ -598,8 +659,8 @@ class _LessonCardState extends State<LessonCard> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 20,
+                      Icons.play_arrow_rounded,
+                      size: 24,
                       color: colorScheme.primary,
                     ),
                   ),
@@ -612,6 +673,18 @@ class _LessonCardState extends State<LessonCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Creation date
+                      Text(
+                        _getCreationDateText(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
                       // Title
                       Padding(
                         padding: const EdgeInsets.only(right: 50),

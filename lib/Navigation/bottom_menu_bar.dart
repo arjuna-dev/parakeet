@@ -41,8 +41,6 @@ class BottomMenuBar extends StatelessWidget {
         return 1;
       case '/vocabulary_review':
         return 2;
-      case '/profile':
-        return 3;
       default:
         return 0; // Default to home
     }
@@ -63,11 +61,7 @@ class BottomMenuBar extends StatelessWidget {
         break;
       case 2:
         route = '/vocabulary_review';
-        analyticsAction = 'bottom_nav_progress_tapped';
-        break;
-      case 3:
-        route = '/profile';
-        analyticsAction = 'bottom_nav_profile_tapped';
+        analyticsAction = 'bottom_nav_review_tapped';
         break;
       default:
         route = '/favorite'; // Default to home
@@ -142,11 +136,7 @@ class BottomMenuBar extends StatelessWidget {
                       ),
                   ],
                 ),
-                label: 'Progress',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
+                label: 'Review',
               ),
             ],
             onTap: _handleTap,
