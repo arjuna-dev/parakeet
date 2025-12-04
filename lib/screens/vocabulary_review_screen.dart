@@ -548,14 +548,14 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
       child: Center(
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(
-            word,
-            style: TextStyle(
+        child: Text(
+          word,
+          style: TextStyle(
               fontSize: _getFontSize(word),
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-            textAlign: TextAlign.center,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+          textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -590,13 +590,13 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
           fit: BoxFit.scaleDown,
           child: Text(
             translation ?? "N/A",
-            style: TextStyle(
+                style: TextStyle(
               fontSize: _getFontSize(translation ?? "N/A"),
-              fontWeight: FontWeight.w600,
-              color: translation != null
-                  ? colorScheme.primary
-                  : colorScheme.onSurfaceVariant,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: translation != null
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -615,10 +615,11 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
     return Scaffold(
       appBar: const AppBarWithDrawer(
         title: 'Vocabulary Review',
+        icon: Icons.show_chart,
       ),
       body: TabContentView(
-        isSmallScreen: isSmallScreen,
-        child: _buildDueWordsTab(isSmallScreen, colorScheme),
+            isSmallScreen: isSmallScreen,
+            child: _buildDueWordsTab(isSmallScreen, colorScheme),
       ),
     );
   }
@@ -740,7 +741,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
             ),
           ),
         ],
-        
+
         // Words Grid
         Expanded(
           child: Padding(

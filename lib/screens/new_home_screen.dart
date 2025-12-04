@@ -92,48 +92,47 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
       backgroundColor: colorScheme.surface,
       appBar: const AppBarWithDrawer(
         title: 'Home',
+        icon: Icons.home,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Top section with profile greeting
-            _buildTopSection(context, userName, colorScheme),
-
-            // Main content
-            Expanded(
-              child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+              return SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: constraints.maxHeight * 0.08),
 
-                    // Audio visualization
-                    const Center(
-                      child: AudioWaveformWidget(),
-                    ),
+                      // Greeting section
+                      _buildTopSection(context, userName, colorScheme),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
-                    // Lesson prompt
-                    _buildLessonPrompt(context, targetLanguage, colorScheme),
+                      // Audio visualization
+                      const Center(
+                        child: AudioWaveformWidget(),
+                      ),
 
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 20),
 
-                    // Action buttons
-                    _buildActionButtons(context, colorScheme),
+                      // Lesson prompt
+                      _buildLessonPrompt(context, targetLanguage, colorScheme),
 
-                    const SizedBox(height: 80),
-                    // Daily Goal section
-                    // _buildDailyGoalSection(
-                    //     context, used, limit, progress, colorScheme),
+                      const SizedBox(height: 28),
 
-                    // const SizedBox(height: 60),
-                  ],
+                      // Action buttons
+                      _buildActionButtons(context, colorScheme),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              );
+          },
         ),
       ),
     );
@@ -141,35 +140,32 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
 
   Widget _buildTopSection(
       BuildContext context, String userName, ColorScheme colorScheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-      child: Row(
-        children: [
-          // Time-based icon
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: colorScheme.primaryContainer,
-            child: Icon(
-              _getTimeBasedIcon(),
-              color: colorScheme.primary,
-              size: 22,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Time-based icon
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: colorScheme.primaryContainer,
+          child: Icon(
+            _getTimeBasedIcon(),
+            color: colorScheme.primary,
+            size: 20,
           ),
-          const SizedBox(width: 10),
+        ),
+        const SizedBox(width: 8),
 
-          // Greeting
-          Expanded(
-            child: Text(
-              '${_getGreeting()}, $userName!',
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        // Greeting
+        Text(
+          '${_getGreeting()}, $userName!',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -369,19 +365,29 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text(
-                    'Start Daily Lesson',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 20,
+                        color: colorScheme.onPrimary,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Start Daily Lesson',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // Customize Topic button
+        // Design Lesson button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
@@ -390,18 +396,30 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: colorScheme.primary,
-              side: BorderSide(color: colorScheme.primary, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: BorderSide(color: colorScheme.primary, width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'Customize Topic',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.design_services,
+                  size: 18,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Design Lesson',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

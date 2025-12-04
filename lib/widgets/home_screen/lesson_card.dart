@@ -545,47 +545,47 @@ class _LessonCardState extends State<LessonCard> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTapDown: (_) => setState(() => _isPressed = true),
-          onTapUp: (_) => setState(() => _isPressed = false),
-          onTapCancel: () => setState(() => _isPressed = false),
-          onTap: () async {
-            final category = getCategory();
-            _getAnalyticsManager()?.storeAction('lesson_card_tapped',
-                '${widget.audioFile.get('title')}|$category');
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: () async {
+          final category = getCategory();
+          _getAnalyticsManager()?.storeAction('lesson_card_tapped',
+              '${widget.audioFile.get('title')}|$category');
 
-            final manager =
-                Provider.of<AudioPlayerManager>(context, listen: false);
-            manager.playLesson(LessonData(
-              documentID: widget.audioFile.reference.parent.parent!.id,
-              dialogue: widget.audioFile.get('dialogue'),
-              category: category,
-              targetLanguage: widget.audioFile.get('target_language'),
-              nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
-                          ?.containsKey('native_language') ==
-                      true
-                  ? widget.audioFile.get('native_language')
-                  : 'English (US)',
-              languageLevel: widget.audioFile.get('language_level'),
-              userID: FirebaseAuth.instance.currentUser!.uid,
-              title: widget.audioFile.get('title'),
-              scriptDocumentId: widget.audioFile.id,
-              generating: false,
-              wordsToRepeat: widget.audioFile.get('words_to_repeat'),
-              numberOfTurns: 4,
-            ));
+          final manager =
+              Provider.of<AudioPlayerManager>(context, listen: false);
+          manager.playLesson(LessonData(
+            documentID: widget.audioFile.reference.parent.parent!.id,
+            dialogue: widget.audioFile.get('dialogue'),
+            category: category,
+            targetLanguage: widget.audioFile.get('target_language'),
+            nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
+                        ?.containsKey('native_language') ==
+                    true
+                ? widget.audioFile.get('native_language')
+                : 'English (US)',
+            languageLevel: widget.audioFile.get('language_level'),
+            userID: FirebaseAuth.instance.currentUser!.uid,
+            title: widget.audioFile.get('title'),
+            scriptDocumentId: widget.audioFile.id,
+            generating: false,
+            wordsToRepeat: widget.audioFile.get('words_to_repeat'),
+            numberOfTurns: 4,
+          ));
 
-            // We can't easily wait for result here since it's persistent.
-            // Ideally LessonCard should listen to Firestore changes for completion status.
-            // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
-          },
+          // We can't easily wait for result here since it's persistent.
+          // Ideally LessonCard should listen to Firestore changes for completion status.
+          // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
+        },
           borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutBack,
-            transform: Matrix4.identity()
-              ..scale(_isPressed ? 0.95 : 1.0)
-              ..rotateZ(_isPressed ? -0.01 : 0.0),
-            child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          transform: Matrix4.identity()
+            ..scale(_isPressed ? 0.95 : 1.0)
+            ..rotateZ(_isPressed ? -0.01 : 0.0),
+          child: Container(
             decoration: BoxDecoration(
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
@@ -674,17 +674,17 @@ class _LessonCardState extends State<LessonCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Creation date
-                      Text(
+                                  Text(
                         _getCreationDateText(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                           color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                           letterSpacing: 0.2,
-                        ),
-                      ),
+                              ),
+                            ),
                       const SizedBox(height: 8),
-                      
+
                       // Title
                       Padding(
                         padding: const EdgeInsets.only(right: 50),

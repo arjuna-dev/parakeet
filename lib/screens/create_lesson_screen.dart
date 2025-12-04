@@ -94,6 +94,7 @@ class _CreateLessonState extends State<CreateLesson> {
     return Scaffold(
       appBar: AppBarWithDrawer(
         title: widget.title!,
+        icon: Icons.add_circle,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

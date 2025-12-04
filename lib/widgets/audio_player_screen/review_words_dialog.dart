@@ -948,7 +948,10 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
       _ReviewButtonData(
         label: 'Remembered with Effort',
         icon: Icons.check,
-        gradient: [colorScheme.primary, colorScheme.secondary],
+        gradient: [
+          Color.lerp(colorScheme.primary, Colors.black, 0.15) ?? colorScheme.primary,
+          Color.lerp(colorScheme.secondary, Colors.black, 0.15) ?? colorScheme.secondary,
+        ],
         rating: fsrs.Rating.good,
       ),
       _ReviewButtonData(
@@ -959,60 +962,16 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
       ),
     ];
 
-    if (isSmallScreen) {
-      return Column(
-        children: buttons
-            .map((button) => Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: _buildReviewButton(button, colorScheme, isSmallScreen, isTablet),
-                  ),
-                ))
-            .toList(),
-      );
-    } else {
-      return Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _buildReviewButton(buttons[0], colorScheme, isSmallScreen, isTablet),
-                  ),
+    return Column(
+      children: buttons
+          .map((button) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: _buildReviewButton(button, colorScheme, isSmallScreen, isTablet),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: _buildReviewButton(buttons[1], colorScheme, isSmallScreen, isTablet),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _buildReviewButton(buttons[2], colorScheme, isSmallScreen, isTablet),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: _buildReviewButton(buttons[3], colorScheme, isSmallScreen, isTablet),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
+              ))
+          .toList(),
+    );
   }
 
   Widget _buildReviewButton(_ReviewButtonData data, ColorScheme colorScheme, bool isSmallScreen, bool isTablet) {
@@ -1026,9 +985,8 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
           scale: scale,
           child: Container(
             width: double.infinity,
-            height: double.infinity,
             constraints: BoxConstraints(
-              minHeight: isTablet ? 80 : (isSmallScreen ? 56 : 68),
+              minHeight: isTablet ? 80 : (isSmallScreen ? 60 : 72),
             ),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: data.gradient),
@@ -1061,13 +1019,16 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                   });
                 },
                 onTap: () => _handleReview(data.rating),
-                child: Padding(
+                child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: isTablet ? 20 : (isSmallScreen ? 12 : 16),
-                    vertical: isTablet ? 20 : (isSmallScreen ? 12 : 16),
+                    vertical: isTablet ? 20 : (isSmallScreen ? 16 : 20),
                   ),
+                  alignment: Alignment.center,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         data.icon,
@@ -1082,8 +1043,11 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                             fontSize: isTablet ? 19 : (isSmallScreen ? 15 : 17),
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
+                            height: 1.3,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
                         ),
                       ),
                     ],
