@@ -105,7 +105,7 @@ Update version number first
 Run:
 
 ```bash
-flutter build appbundle --release   --obfuscate --split-debug-info=build/app/outputs/symbols
+flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols
 ```
 
 
