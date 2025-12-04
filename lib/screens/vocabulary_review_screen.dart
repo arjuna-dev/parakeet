@@ -468,6 +468,22 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
     return null;
   }
 
+  double _getFontSize(String text) {
+    // Adjust font size based on text length to fit in boxes
+    final length = text.length;
+    if (length <= 10) {
+      return 16;
+    } else if (length <= 20) {
+      return 14;
+    } else if (length <= 30) {
+      return 12;
+    } else if (length <= 40) {
+      return 10;
+    } else {
+      return 8;
+    }
+  }
+
   Widget _buildWordCard(WordCard card, ColorScheme colorScheme) {
     final translation = findWordTranslation(card.word, card);
     final isFlipped = _flippedCards[card.word] ?? false;
@@ -530,14 +546,19 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
         ],
       ),
       child: Center(
-        child: Text(
-          word,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            word,
+            style: TextStyle(
+              fontSize: _getFontSize(word),
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -565,21 +586,20 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
         ],
       ),
       child: Center(
-        child: RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: translation ?? "N/A",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: translation != null
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            translation ?? "N/A",
+            style: TextStyle(
+              fontSize: _getFontSize(translation ?? "N/A"),
+              fontWeight: FontWeight.w600,
+              color: translation != null
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -596,75 +616,9 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
       appBar: const AppBarWithDrawer(
         title: 'Vocabulary Review',
       ),
-      body: Stack(
-        children: [
-          TabContentView(
-            isSmallScreen: isSmallScreen,
-            child: _buildDueWordsTab(isSmallScreen, colorScheme),
-          ),
-
-          // Floating Review Button
-          if (!_isLoadingDue && _dueWordsFull.isNotEmpty)
-            Positioned(
-              top: 140, // Position almost touching the bottom navigation bar
-              left: 20,
-              right: 20,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.primary.withOpacity(0.4),
-                      colorScheme.secondary,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    analyticsManager.storeAction('review_words_button_pressed',
-                        '${_dueWordsFull.length} words');
-                    showDialog(
-                      context: context,
-                      builder: (context) => ReviewWordsDialog(
-                        words: _dueWordsRefs,
-                        userID: _userId,
-                        onReviewCompleted: () async {
-                          analyticsManager.storeAction(
-                              'vocabulary_review_session_completed');
-                          // Refresh the word lists after review is completed
-                          await _loadAllWords();
-                          await _loadDueWords();
-                        },
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  icon: const Icon(Icons.school),
-                  label: const Text(
-                    'Review Words',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 200),
-        ],
+      body: TabContentView(
+        isSmallScreen: isSmallScreen,
+        child: _buildDueWordsTab(isSmallScreen, colorScheme),
       ),
     );
   }
@@ -786,8 +740,7 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen>
             ),
           ),
         ],
-        const SizedBox(height: 80),
-
+        
         // Words Grid
         Expanded(
           child: Padding(

@@ -6,6 +6,13 @@ import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/daily_lesson_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/screens/profile_screen.dart';
+import 'package:parakeet/screens/nickname_popup.dart';
+import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
+import 'package:parakeet/widgets/profile_screen/delete_account_button.dart';
+import 'package:parakeet/services/notification_service.dart';
+import 'package:parakeet/services/auth_service.dart';
+import 'dart:io';
+import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -68,58 +75,87 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Compact Header
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(buildContext)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.05),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.menu,
-                            color: Theme.of(buildContext).colorScheme.primary,
-                            size: 16,
+                    // User Info Header
+                    FutureBuilder<Map<String, dynamic>>(
+                      future: _getUserInfo(),
+                      builder: (context, snapshot) {
+                        final user = FirebaseAuth.instance.currentUser;
+                        final name = snapshot.data?['name'] ?? user?.displayName ?? 'User';
+                        final email = snapshot.data?['email'] ?? user?.email ?? '';
+                        
+                        return Container(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(buildContext)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.05),
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(20),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Menu',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(buildContext)
-                                    .colorScheme
-                                    .onSurface,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: Theme.of(buildContext)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (email.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            email,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(buildContext)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_close_button_tapped');
+                                      if (Navigator.canPop(buildContext)) {
+                                        Navigator.pop(buildContext);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.close, size: 18),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(buildContext)
+                                          .colorScheme
+                                          .surface
+                                          .withOpacity(0.5),
+                                      minimumSize: const Size(32, 32),
+                                      padding: const EdgeInsets.all(4),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ),
-                          IconButton(
-                            onPressed: () {
-                              _getAnalyticsManager()?.storeAction(
-                                  'app_drawer_close_button_tapped');
-                              if (Navigator.canPop(buildContext)) {
-                                Navigator.pop(buildContext);
-                              }
-                            },
-                            icon: const Icon(Icons.close, size: 14),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Theme.of(buildContext)
-                                  .colorScheme
-                                  .surface
-                                  .withOpacity(0.5),
-                              minimumSize: const Size(24, 24),
-                              padding: const EdgeInsets.all(2),
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
 
                     // Menu items - Scrollable
@@ -218,6 +254,128 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                                   .size
                                                   .height <
                                               700
+                                          ? 12
+                                          : 16),
+                                  _buildMenuItem(
+                                    buildContext,
+                                    icon: Icons.edit,
+                                    title: 'Edit Nickname',
+                                    subtitle: 'Change how the app addresses you',
+                                    onTap: () {
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_edit_nickname_tapped');
+                                      if (Navigator.canPop(buildContext)) {
+                                        Navigator.pop(buildContext);
+                                      }
+                                      showDialog(
+                                        context: buildContext,
+                                        builder: (context) {
+                                          return const NicknamePopup();
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 12
+                                          : 16),
+                                  _buildMenuItem(
+                                    buildContext,
+                                    icon: Icons.help_outline,
+                                    title: 'Help & Support',
+                                    subtitle: 'FAQs and contact information',
+                                    onTap: () {
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_help_support_tapped');
+                                      if (Navigator.canPop(buildContext)) {
+                                        Navigator.pop(buildContext);
+                                      }
+                                      ProfileService.launchURL(Uri(scheme: "https", host: "gregarious-giant-4a5.notion.site", path: "/Terms-and-Conditions-107df60af3ed80d18e4fc94e05333a26"));
+                                    },
+                                  ),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 12
+                                          : 16),
+                                  _buildMenuItem(
+                                    buildContext,
+                                    icon: Icons.privacy_tip_outlined,
+                                    title: 'Privacy Policy',
+                                    subtitle: 'View our privacy policy',
+                                    onTap: () {
+                                      _getAnalyticsManager()?.storeAction(
+                                          'app_drawer_privacy_policy_tapped');
+                                      if (Navigator.canPop(buildContext)) {
+                                        Navigator.pop(buildContext);
+                                      }
+                                      ProfileService.launchURL(Uri.parse("https://parakeet.world/privacypolicy"));
+                                    },
+                                  ),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 16
+                                          : 24),
+                                  const Divider(),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
+                                          ? 8
+                                          : 12),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: InkWell(
+                                      onTap: () async {
+                                        if (Navigator.canPop(buildContext)) {
+                                          Navigator.pop(buildContext);
+                                        }
+                                        await _showDeleteAccountConfirmation(buildContext);
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.delete_outline,
+                                              size: 16,
+                                              color: Theme.of(buildContext).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                'Delete Account',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Theme.of(buildContext).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                      height: MediaQuery.of(buildContext)
+                                                  .size
+                                                  .height <
+                                              700
                                           ? 16
                                           : 24),
                                 ],
@@ -259,6 +417,14 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                         ? 8
                                         : 12),
                                 _buildLessonProgressDisplay(buildContext),
+                                SizedBox(
+                                    height: MediaQuery.of(buildContext)
+                                                .size
+                                                .height <
+                                            700
+                                        ? 12
+                                        : 16),
+                                _buildReminderTile(buildContext),
                                 SizedBox(
                                     height: MediaQuery.of(buildContext)
                                                 .size
@@ -791,6 +957,268 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
         );
       },
     );
+  }
+
+  Future<Map<String, dynamic>> _getUserInfo() async {
+    try {
+      final userData = await ProfileService.fetchUserData();
+      return {
+        'name': userData['name'] ?? '',
+        'email': userData['email'] ?? '',
+      };
+    } catch (e) {
+      final user = FirebaseAuth.instance.currentUser;
+      return {
+        'name': user?.displayName ?? 'User',
+        'email': user?.email ?? '',
+      };
+    }
+  }
+
+  Widget _buildReminderTile(BuildContext context) {
+    return FutureBuilder<TimeOfDay?>(
+      future: NotificationService().getScheduledReminderTime(),
+      builder: (context, snapshot) {
+        final reminderTime = snapshot.data;
+        final notificationService = NotificationService();
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Card(
+            elevation: 0,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              leading: Icon(
+                Icons.notifications,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                'Daily Practice Reminder',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              subtitle: Text(
+                reminderTime != null 
+                    ? 'Set for ${reminderTime.format(context)}' 
+                    : 'No reminder set',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              trailing: reminderTime != null
+                  ? IconButton(
+                      icon: Icon(
+                        Icons.clear,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () async {
+                        await notificationService.cancelDailyReminder();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Reminder cancelled'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                    )
+                  : null,
+              onTap: () async {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+                await _showTimePickerDialog(context);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTimePickerDialog(BuildContext context) async {
+    final notificationService = NotificationService();
+    final currentTime = await notificationService.getScheduledReminderTime();
+    
+    try {
+      await notificationService.initialize();
+    } catch (e) {
+      print('Error initializing notification service: $e');
+    }
+
+    try {
+      await requestNotificationPermission();
+      if (Platform.isAndroid) {
+        bool? alarmPermissions = await requestExactAlarmPermission();
+        if (alarmPermissions == null || !alarmPermissions) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Exact alarm permission is required for daily reminders. Please enable it in settings.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Error requesting permissions: $e');
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: currentTime ?? NotificationService.defaultReminderTime,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: colorScheme,
+            dialogTheme: DialogThemeData(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && context.mounted) {
+      try {
+        await notificationService.scheduleDailyReminder(picked);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Daily reminder set for ${picked.format(context)}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to set reminder: ${e.toString()}'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showDeleteAccountConfirmation(BuildContext context) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Are you sure you want to delete your account? This action cannot be undone.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(false);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurfaceVariant,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(true);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      try {
+        final authService = AuthService();
+        await authService.deleteAccount();
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete account: $e')),
+          );
+        }
+      }
+    }
   }
 
   Future<Map<String, dynamic>> _getLessonProgressData(String userId) async {
