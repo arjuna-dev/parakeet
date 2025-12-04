@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import 'package:parakeet/services/audio_player_manager.dart';
 
 class AudioWaveformWidget extends StatefulWidget {
   const AudioWaveformWidget({super.key});
@@ -12,6 +14,8 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   final List<double> _heights = [];
+  ValueNotifier<bool>? _currentPlayingNotifier;
+  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -26,18 +30,61 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    
+    // Start animation initially
+    _controller.repeat(reverse: true);
   }
 
   @override
   void dispose() {
+    _currentPlayingNotifier?.removeListener(_onPlayingStateChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onPlayingStateChanged() {
+    if (!mounted) return;
+    final isPlaying = _currentPlayingNotifier?.value ?? false;
+    setState(() {
+      _isPlaying = isPlaying;
+    });
+    _updateAnimationState(isPlaying);
+  }
+
+  void _updateAnimationState(bool isPlaying) {
+    if (isPlaying) {
+      // Stop animation if audio is playing
+      _controller.stop();
+    } else {
+      // Start animation if audio is paused or not present
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final manager = context.watch<AudioPlayerManager>();
+    final service = manager.service;
+    final isPlayingNotifier = service?.isPlaying;
+    
+    // Update listener if notifier changed
+    if (_currentPlayingNotifier != isPlayingNotifier) {
+      _currentPlayingNotifier?.removeListener(_onPlayingStateChanged);
+      _currentPlayingNotifier = isPlayingNotifier;
+      if (isPlayingNotifier != null) {
+        isPlayingNotifier.addListener(_onPlayingStateChanged);
+        _isPlaying = isPlayingNotifier.value;
+        _updateAnimationState(_isPlaying);
+      } else {
+        // No active player, start animation
+        _isPlaying = false;
+        _updateAnimationState(false);
+      }
+    }
     
     return AnimatedBuilder(
       animation: _controller,
@@ -49,10 +96,12 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(_heights.length, (index) {
-              // Create a subtle animation effect
-              final animationValue = math.sin(
-                (_controller.value * 2 * math.pi) + (index * 0.2),
-              );
+              // Create a subtle animation effect only when not playing
+              final animationValue = _isPlaying 
+                  ? 0.0 // No animation when playing
+                  : math.sin(
+                      (_controller.value * 2 * math.pi) + (index * 0.2),
+                    );
               final animatedHeight = _heights[index] * (0.7 + 0.3 * animationValue.abs());
               
               return Container(
