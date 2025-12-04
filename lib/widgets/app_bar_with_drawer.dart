@@ -20,10 +20,12 @@ import 'package:parakeet/utils/save_analytics.dart';
 
 class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final IconData? icon;
 
   const AppBarWithDrawer({
     Key? key,
     required this.title,
+    this.icon,
   }) : super(key: key);
 
   @override
@@ -85,33 +87,33 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                         
                         return Container(
                           padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(buildContext)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.05),
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(20),
-                            ),
-                          ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(buildContext)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.05),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                        children: [
                               Row(
                                 children: [
-                                  Expanded(
+                          Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           name,
-                                          style: TextStyle(
+                              style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,
-                                            color: Theme.of(buildContext)
-                                                .colorScheme
-                                                .onSurface,
-                                          ),
+                                color: Theme.of(buildContext)
+                                    .colorScheme
+                                    .onSurface,
+                              ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -130,28 +132,28 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
                                           ),
                                         ],
                                       ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      _getAnalyticsManager()?.storeAction(
-                                          'app_drawer_close_button_tapped');
-                                      if (Navigator.canPop(buildContext)) {
-                                        Navigator.pop(buildContext);
-                                      }
-                                    },
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              _getAnalyticsManager()?.storeAction(
+                                  'app_drawer_close_button_tapped');
+                              if (Navigator.canPop(buildContext)) {
+                                Navigator.pop(buildContext);
+                              }
+                            },
                                     icon: const Icon(Icons.close, size: 18),
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Theme.of(buildContext)
-                                          .colorScheme
-                                          .surface
-                                          .withOpacity(0.5),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Theme.of(buildContext)
+                                  .colorScheme
+                                  .surface
+                                  .withOpacity(0.5),
                                       minimumSize: const Size(32, 32),
                                       padding: const EdgeInsets.all(4),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                             ],
                           ),
                         );
@@ -1474,14 +1476,27 @@ class AppBarWithDrawer extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-        ),
+      title: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              color: colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
       leading: IconButton(
         icon: const Icon(Icons.menu),

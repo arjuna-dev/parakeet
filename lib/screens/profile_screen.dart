@@ -395,6 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: const AppBarWithDrawer(
         title: 'Profile',
+        icon: Icons.person,
       ),
       body: SingleChildScrollView(
         child: Column(

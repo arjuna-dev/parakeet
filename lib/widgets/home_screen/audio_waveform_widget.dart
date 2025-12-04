@@ -100,8 +100,8 @@ class _AudioWaveformWidgetState extends State<AudioWaveformWidget>
               final animationValue = _isPlaying 
                   ? 0.0 // No animation when playing
                   : math.sin(
-                      (_controller.value * 2 * math.pi) + (index * 0.2),
-                    );
+                (_controller.value * 2 * math.pi) + (index * 0.2),
+              );
               final animatedHeight = _heights[index] * (0.7 + 0.3 * animationValue.abs());
               
               return Container(

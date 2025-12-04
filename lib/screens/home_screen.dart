@@ -29,6 +29,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: const AppBarWithDrawer(
         title: 'All Lessons',
+        icon: Icons.school,
       ),
       body: Consumer<HomeScreenModel>(
         builder: (context, model, _) {

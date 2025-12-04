@@ -47,7 +47,7 @@ class PersistentAudioPlayer extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-          child: GestureDetector(
+        child: GestureDetector(
           onTap: () {
             if (!manager.isExpanded) {
               manager.expand();
@@ -77,7 +77,7 @@ class PersistentAudioPlayer extends StatelessWidget {
               ),
             ],
           ),
-        ),
+          ),
         ),
       ),
     );
@@ -108,8 +108,8 @@ class _MiniPlayer extends StatelessWidget {
                     return Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isPlaying
@@ -117,7 +117,7 @@ class _MiniPlayer extends StatelessWidget {
                               : Theme.of(context).colorScheme.outline.withOpacity(0.3),
                           width: isPlaying ? 2 : 1,
                         ),
-                      ),
+            ),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -137,30 +137,30 @@ class _MiniPlayer extends StatelessWidget {
                       ),
                     );
                   },
-                ),
-                const SizedBox(width: 12),
+          ),
+          const SizedBox(width: 12),
 
                 // Title and category
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        lesson.title,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lesson.title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                       const SizedBox(height: 2),
-                      Text(
-                        lesson.category,
+                Text(
+                  lesson.category,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 12,
                               color: Theme.of(context)
@@ -168,17 +168,17 @@ class _MiniPlayer extends StatelessWidget {
                                   .onSurface
                                   .withOpacity(0.6),
                             ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ],
+            ),
+          ),
 
                 // Play/Pause button - more prominent
                 ValueListenableBuilder<bool>(
                   valueListenable: isPlayingNotifier,
-                  builder: (context, isPlaying, _) {
+              builder: (context, isPlaying, _) {
                     return Container(
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primary,
@@ -193,15 +193,15 @@ class _MiniPlayer extends StatelessWidget {
                             offset: const Offset(0, 2),
                           ),
                         ],
-                      ),
+            ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () {
-                            if (service != null) {
-                              service.isPlaying.value = !service.isPlaying.value;
-                            }
-                          },
+              if (service != null) {
+                service.isPlaying.value = !service.isPlaying.value;
+              }
+            },
                           borderRadius: BorderRadius.circular(24),
                           child: Container(
                             width: 40,
@@ -221,7 +221,7 @@ class _MiniPlayer extends StatelessWidget {
                 const SizedBox(width: 8),
 
                 // Close button
-                IconButton(
+          IconButton(
                   icon: Icon(
                     Icons.close,
                     size: 20,
@@ -232,10 +232,10 @@ class _MiniPlayer extends StatelessWidget {
                     minWidth: 32,
                     minHeight: 32,
                   ),
-                  onPressed: () {
-                    manager.close();
-                  },
-                ),
+            onPressed: () {
+              manager.close();
+            },
+          ),
         ],
       ),
     );
