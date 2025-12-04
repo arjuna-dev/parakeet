@@ -92,12 +92,20 @@ class _DialogueListState extends State<DialogueList> {
     return true;
   }
 
+  // Helper method to filter expressions within square brackets [...]
+  String _filterBracketedExpressions(String text) {
+    // Remove text within square brackets, including the brackets themselves
+    return text.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+  }
+
   Widget _buildDialogueItem(
       BuildContext context, dynamic dialogueItem, int index) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    String dialogueTarget = dialogueItem["target_language"] ?? "";
-    String dialogueNative = dialogueItem["native_language"] ?? "";
+    String dialogueTarget = _filterBracketedExpressions(
+        dialogueItem["target_language"] ?? "");
+    String dialogueNative = _filterBracketedExpressions(
+        dialogueItem["native_language"] ?? "");
 
     // Check if this dialogue should be highlighted based on the last known dialogue index
     bool shouldHighlight = index == _lastHighlightedIndex;
