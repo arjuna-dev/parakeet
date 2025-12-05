@@ -346,7 +346,7 @@ def generate_audio_and_store(text, user_id_N, language):
     file_name = f"{user_id_N}_nickname.mp3"
     narrator_voice, _ = voice_finder_google("f", language, narrator_voice=True)  # Use female voice as default for nickname
 
-    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
+    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", narrator_voice=True)
 
     return f"Audio content written to and uploaded to bucket."
 
@@ -372,7 +372,7 @@ def generate_nickname_audio(req: https_fn.Request) -> https_fn.Response:
     file_name = f"{user_id_N}_nickname.mp3"
     narrator_voice, _ = voice_finder_google("f", language, narrator_voice=True)  # Use female voice as default for nickname
 
-    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames")
+    google_synthesize_text(text, narrator_voice, file_name, bucket_name="user_nicknames", narrator_voice=True)
 
     return https_fn.Response(
         json.dumps({"message": "Audio content written to and uploaded to bucket."}),
