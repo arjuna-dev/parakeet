@@ -455,6 +455,12 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
     }
   }
 
+  // Helper method to filter expressions within square brackets [...]
+  String _filterBracketedExpressions(String text) {
+    // Remove text within square brackets, including the brackets themselves
+    return text.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+  }
+
   // Helper method to check if two dialogue lists are equal
   bool areDialoguesEqual(List<dynamic> list1, List<dynamic> list2) {
     try {
@@ -499,8 +505,12 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
     try {
       // Safely extract dialogue text with null checks
-      final String dialogueTarget = dialogueItem["target_language"] as String? ?? "";
-      final String dialogueNative = dialogueItem["native_language"] as String? ?? "";
+      String dialogueTarget = dialogueItem["target_language"] as String? ?? "";
+      String dialogueNative = dialogueItem["native_language"] as String? ?? "";
+
+      // Filter out expressions in square brackets
+      dialogueTarget = _filterBracketedExpressions(dialogueTarget);
+      dialogueNative = _filterBracketedExpressions(dialogueNative);
 
       // Skip empty dialogue items
       if (dialogueTarget.trim().isEmpty) {
