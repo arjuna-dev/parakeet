@@ -240,6 +240,26 @@ class _MiniPlayer extends StatelessWidget {
       ),
     );
   }
+  
+  Widget _buildWaveformIcon(BuildContext context, bool isPlaying) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Animated waveform when playing
+        if (isPlaying)
+          _AnimatedWaveform(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        // Static icon when paused
+        if (!isPlaying)
+          Icon(
+            Icons.graphic_eq,
+            color: Theme.of(context).colorScheme.primary,
+            size: 24,
+          ),
+      ],
+    );
+  }
 }
 
 // Animated waveform widget

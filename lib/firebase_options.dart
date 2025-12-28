@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyACluIm0NV4m_R_3Ba146Ywf8OALzYzACs',
+    apiKey: 'AIzaSyAx51Sh1F0IQsr3lQd_Ys3s8oDIc3BrZyY',
     appId: '1:104439269977:web:c4ad1b9f6d77a66e64bf48',
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
@@ -59,7 +59,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBu_oYpQrK_b2asbvJzVOtxf8S1fXEFEwk',
+    apiKey: 'AIzaSyC-rtIVTZUU-qezz5hgZpI3Zee6oZDm7SI',
     appId: '1:104439269977:ios:3c0f1c2cb49afef064bf48',
     messagingSenderId: '104439269977',
     projectId: 'noble-descent-420612',
