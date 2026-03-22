@@ -1022,13 +1022,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   title: widget.isEmbedded
                       ? GestureDetector(
                           onTap: () {
-                            Provider.of<AudioPlayerManager>(context,
-                                    listen: false)
-                                .collapse();
+                            // Only allow collapse if dialogue is fully generated
+                            if (_allDialogueGenerated) {
+                              Provider.of<AudioPlayerManager>(context,
+                                      listen: false)
+                                  .collapse();
+                            }
                           },
                           onPanUpdate: (details) {
-                            // Collapse when dragging down
-                            if (details.delta.dy > 0) {
+                            // Collapse when dragging down, only if dialogue is fully generated
+                            if (details.delta.dy > 0 && _allDialogueGenerated) {
                               Provider.of<AudioPlayerManager>(context,
                                       listen: false)
                                   .collapse();
@@ -1043,11 +1046,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                   leading: widget.isEmbedded
                       ? IconButton(
                           icon: const Icon(Icons.keyboard_arrow_down),
-                          onPressed: () {
+                          onPressed: _allDialogueGenerated ? () {
                             Provider.of<AudioPlayerManager>(context,
                                     listen: false)
                                 .collapse();
-                          },
+                          } : null,  // Disable button if dialogue not fully generated
                         )
                       : null,
                 ),
@@ -1074,7 +1077,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                               wordsToRepeat: _wordsToRepeat ?? [],
                               documentID: widget.documentID,
                               useStream: widget.generating,
-                              generating: widget.generating,
+                              // If embedded (persistent player), never animate - always show all immediately
+                              generating: widget.isEmbedded ? false : widget.generating,
                               onAllDialogueDisplayed: widget.generating
                                   ? _onAllDialogueDisplayed
                                   : null,

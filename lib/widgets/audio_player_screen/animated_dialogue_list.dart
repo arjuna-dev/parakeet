@@ -33,7 +33,7 @@ class AnimatedDialogueList extends StatefulWidget {
   State<AnimatedDialogueList> createState() => _AnimatedDialogueListState();
 }
 
-class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
+class _AnimatedDialogueListState extends State<AnimatedDialogueList> with AutomaticKeepAliveClientMixin {
   int _lastHighlightedIndex = -1;
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<List<dynamic>> _dialogueNotifier = ValueNotifier<List<dynamic>>([]);
@@ -50,6 +50,9 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
   // Flag to track if we've already notified the parent
   bool _hasNotifiedAllDisplayed = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   // Calculate when a dialogue's breakdown starts in the audio timeline
   Duration _calculateDialogueBreakdownStartTime(int dialogueIndex) {
@@ -106,17 +109,51 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
   @override
   void initState() {
     super.initState();
+    
+    print('[AnimatedDialogueList] initState called');
+    print('[AnimatedDialogueList] _animatedMessages length: ${_animatedMessages.length}');
+    print('[AnimatedDialogueList] _visibleMessages length: ${_visibleMessages.length}');
+    
     _dialogueNotifier.value = List.from(widget.dialogue);
+
+    // If we already have animated messages, it means we're rebuilding after collapse/expand
+    // In this case, don't re-initialize anything
+    if (_animatedMessages.isNotEmpty) {
+      print('[AnimatedDialogueList] Already have animated messages, skipping initialization');
+      return;
+    }
 
     if (widget.useStream && widget.documentID.isNotEmpty) {
       _dialogueStream = FirebaseFirestore.instance.collection('chatGPT_responses').doc(widget.documentID).collection('only_target_sentences').snapshots();
-    } else if (widget.generating) {
-      // If generating, show initial messages with animation
+    } else if (widget.generating && !_isDialogueFullyGenerated()) {
+      // If generating and dialogue is not fully generated, show initial messages with animation
+      print('[AnimatedDialogueList] Starting animation (generating and not fully generated)');
       _initializeVisibleMessages();
     } else {
-      // If not generating, show all messages immediately without animation
+      // If not generating or dialogue is already fully generated, show all messages immediately without animation
+      print('[AnimatedDialogueList] Showing all messages immediately (not generating or fully generated)');
       showAllMessagesImmediately();
     }
+  }
+
+  // Check if all dialogue items are fully generated
+  bool _isDialogueFullyGenerated() {
+    if (widget.dialogue.isEmpty) return false;
+    
+    // Check if all dialogue items have both target and native language
+    for (var item in widget.dialogue) {
+      if (item == null) continue;
+      
+      final String target = item["target_language"]?.toString() ?? "";
+      final String native = item["native_language"]?.toString() ?? "";
+      
+      // If any item is missing content, dialogue is not fully generated
+      if (target.trim().isEmpty || (item.containsKey("native_language") && native.trim().isEmpty)) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   void _initializeVisibleMessages() {
@@ -550,8 +587,9 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
         isUser: isUserMessage,
         isHighlighted: shouldHighlight,
         wordsToHighlight: List<String>.from(widget.wordsToRepeat),
-        // Only animate if we're generating content and the current message should be animated
-        animate: widget.generating && isCurrentlyAnimating && !hasBeenAnimated && dialogueTarget.trim().isNotEmpty && isFullyGenerated,
+        // CRITICAL: Only animate if this message has NOT been animated before
+        // Once animated, it should NEVER animate again, even on rebuild
+        animate: !hasBeenAnimated && widget.generating && isCurrentlyAnimating && dialogueTarget.trim().isNotEmpty && isFullyGenerated,
         initialDelay: initialDelay,
         typingSpeed: const Duration(milliseconds: 30),
         breakdownStartTime: breakdownStartTime, // Pass the breakdown start time
@@ -586,6 +624,8 @@ class _AnimatedDialogueListState extends State<AnimatedDialogueList> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     try {
       // If streaming is enabled and we have a document ID, use StreamBuilder
       if (widget.useStream && widget.documentID.isNotEmpty && _dialogueStream != null) {

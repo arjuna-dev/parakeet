@@ -351,41 +351,48 @@ class _WaveformPainter extends CustomPainter {
   }
 }
 
-class _ExpandedPlayerWrapper extends StatelessWidget {
+class _ExpandedPlayerWrapper extends StatefulWidget {
   final AudioPlayerManager manager;
 
   const _ExpandedPlayerWrapper({required this.manager});
 
   @override
+  State<_ExpandedPlayerWrapper> createState() => _ExpandedPlayerWrapperState();
+}
+
+class _ExpandedPlayerWrapperState extends State<_ExpandedPlayerWrapper> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    // We need to wrap the AudioPlayerScreen or modify it to support being embedded.
-    // For now, let's assume we can pass the existing service or just use the parameters.
-    // Since AudioPlayerScreen creates its own service, we need to REFACTOR AudioPlayerScreen first.
-    // But for this step, I'll put a placeholder or try to use it as is (which will double-init service).
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
 
-    // Ideally, AudioPlayerScreen should accept an existing service.
-    // I will modify AudioPlayerScreen to accept 'audioPlayerService' as an optional parameter.
+    final lesson = widget.manager.currentLesson;
+    if (lesson == null) return const SizedBox.shrink();
 
-    final lesson = manager.currentLesson!;
-
+    // Use a unique key based on documentID to preserve widget state
+    // This ensures the AudioPlayerScreen widget is NOT recreated on rebuild
     return Stack(
       children: [
-        // The actual player screen
-        AudioPlayerScreen(
-          documentID: lesson.documentID,
-          dialogue: lesson.dialogue ?? [],
-          category: lesson.category,
-          targetLanguage: lesson.targetLanguage,
-          nativeLanguage: lesson.nativeLanguage,
-          languageLevel: lesson.languageLevel,
-          userID: lesson.userID,
-          title: lesson.title,
-          scriptDocumentId: lesson.scriptDocumentId,
-          generating: lesson.generating,
-          wordsToRepeat: lesson.wordsToRepeat ?? [],
-          numberOfTurns: lesson.numberOfTurns,
-          existingService: manager.service,
-          isEmbedded: true,
+        KeyedSubtree(
+          key: ValueKey('audio_player_${lesson.documentID}'),
+          child: AudioPlayerScreen(
+            documentID: lesson.documentID,
+            dialogue: lesson.dialogue ?? [],
+            category: lesson.category,
+            targetLanguage: lesson.targetLanguage,
+            nativeLanguage: lesson.nativeLanguage,
+            languageLevel: lesson.languageLevel,
+            userID: lesson.userID,
+            title: lesson.title,
+            scriptDocumentId: lesson.scriptDocumentId,
+            generating: lesson.generating,
+            wordsToRepeat: lesson.wordsToRepeat ?? [],
+            numberOfTurns: lesson.numberOfTurns,
+            existingService: widget.manager.service,
+            isEmbedded: true,
+          ),
         ),
       ],
     );
