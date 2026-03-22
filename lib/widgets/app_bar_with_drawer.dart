@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:parakeet/services/streak_service.dart';
-import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/screens/profile_screen.dart';

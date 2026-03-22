@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/main.dart';

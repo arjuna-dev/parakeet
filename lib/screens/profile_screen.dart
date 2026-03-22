@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:parakeet/screens/store_view.dart';
-import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/screens/nickname_popup.dart';
 
 import 'package:parakeet/services/auth_service.dart';

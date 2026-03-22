@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/screens/category_detail_screen.dart';
 import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/word_stats_service.dart';
