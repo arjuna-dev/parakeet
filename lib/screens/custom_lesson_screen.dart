@@ -6,7 +6,6 @@ import 'package:parakeet/widgets/home_screen/empty_state_view.dart';
 import 'package:parakeet/widgets/home_screen/lesson_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parakeet/screens/audio_player_screen.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/lesson_credit_service.dart';

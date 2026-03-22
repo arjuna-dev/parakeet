@@ -19,7 +19,7 @@ class TargetLanguageStep extends StatelessWidget {
       icon: Icons.translate,
       title: 'What language do you want to learn?',
       content: DropdownButtonFormField<String>(
-        value: selectedLanguage,
+        initialValue: selectedLanguage,
         decoration: InputDecoration(
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

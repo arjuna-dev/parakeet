@@ -201,15 +201,15 @@ class _VocabularyReviewScreenState extends State<VocabularyReviewScreen> with Ti
         int categoryA = 0;
         int categoryB = 0;
 
-        if (learningA && !isMasteredA)
+        if (learningA && !isMasteredA) {
           categoryA = 0;
-        else if (!learningA)
+        } else if (!learningA)
           categoryA = 1;
         else if (isMasteredA) categoryA = 2;
 
-        if (learningB && !isMasteredB)
+        if (learningB && !isMasteredB) {
           categoryB = 0;
-        else if (!learningB)
+        } else if (!learningB)
           categoryB = 1;
         else if (isMasteredB) categoryB = 2;
 

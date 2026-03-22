@@ -19,7 +19,7 @@ class NativeLanguageStep extends StatelessWidget {
       icon: Icons.language,
       title: 'What is your native language?',
       content: DropdownButtonFormField<String>(
-        value: selectedLanguage,
+        initialValue: selectedLanguage,
         decoration: InputDecoration(
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
