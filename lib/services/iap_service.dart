@@ -1,6 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:parakeet/services/firebase_service.dart';
-import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 class IAPService {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:parakeet/widgets/onboarding_screen/onboarding_step.dart';
 
 class NicknameStep extends StatefulWidget {
   final String? initialNickname;

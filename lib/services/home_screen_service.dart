@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:parakeet/services/home_screen_model.dart';
 import 'package:parakeet/widgets/home_screen/empty_state_view.dart';
 import 'package:parakeet/widgets/home_screen/lesson_card.dart';
-import 'package:parakeet/utils/category_icons.dart';
 
 class HomeScreenService {
   static Widget buildAllLessonsList(
