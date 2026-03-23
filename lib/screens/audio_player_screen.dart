@@ -151,6 +151,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
       targetLanguage: widget.targetLanguage,
+      languageLevel: widget.languageLevel,
       hasNicknameAudio: false, // Will be updated later
       addressByNickname: true, // Will be updated later
       wordsToRepeat: widget.wordsToRepeat,
@@ -264,6 +265,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       userID: widget.userID,
       nativeLanguage: widget.nativeLanguage,
       targetLanguage: widget.targetLanguage,
+      languageLevel: widget.languageLevel,
       hasNicknameAudio: _hasNicknameAudio,
       addressByNickname: _addressByNickname,
       wordsToRepeat: widget.wordsToRepeat,
@@ -605,7 +607,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
       // Ensure script is created with the complete dialogue
       if (_script.isEmpty) {
-        _script = createFirstScript(completeDialogue);
+        _script = createFirstScript(completeDialogue, widget.languageLevel);
         if (mounted) {
           setState(() {
             _currentTrack = _script.isNotEmpty ? _script[0] : '';

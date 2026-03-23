@@ -9,6 +9,7 @@ class PlaylistGenerator {
   final String userID;
   final String nativeLanguage;
   final String targetLanguage;
+  final String languageLevel;
   final bool hasNicknameAudio;
   final bool addressByNickname;
   final List<dynamic> wordsToRepeat;
@@ -20,6 +21,7 @@ class PlaylistGenerator {
     required this.userID,
     required this.nativeLanguage,
     required this.targetLanguage,
+    required this.languageLevel,
     required this.hasNicknameAudio,
     required this.addressByNickname,
     required this.wordsToRepeat,
@@ -53,6 +55,7 @@ class PlaylistGenerator {
       targetLanguage,
       nativeLanguage,
       category,
+      languageLevel: languageLevel,
     );
 
     // Dispose the ValueNotifier

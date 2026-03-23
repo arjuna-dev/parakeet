@@ -1,3 +1,59 @@
+def _dialogue_level_instructions(language_level: str) -> str:
+   """Extra constraints so dialogue complexity matches the learner profile."""
+   s = (language_level or "").strip().lower()
+   if "absolute" in s or "a1" in s:
+      return (
+         "LANGUAGE LEVEL (dialogue) — ABSOLUTE BEGINNER / A1: Use only very common vocabulary and simple grammar in the target language. "
+         "Keep each turn toward the shorter end of 6–12 words; one clear idea per turn. Avoid idioms and slang unless required by keywords. "
+         "Prefer clear, predictable sentence patterns."
+      )
+   if ("beginner" in s and "absolute" not in s) or "a2" in s:
+      return (
+         "LANGUAGE LEVEL (dialogue) — BEGINNER / A2: Mostly simple structures; allow slightly richer vocabulary where natural. "
+         "Keep turns concise; avoid rare or literary words unless they appear in keywords."
+      )
+   if "intermediate" in s or "b1" in s or "b2" in s:
+      return (
+         "LANGUAGE LEVEL (dialogue) — INTERMEDIATE / B1–B2: Natural everyday language; some longer or layered sentences are fine. "
+         "Common colloquialisms are OK when they fit the scenario."
+      )
+   if "advanced" in s or "c1" in s or "c2" in s:
+      return (
+         "LANGUAGE LEVEL (dialogue) — ADVANCED / C1–C2: Authentic, nuanced language; varied sentence length and register. "
+         "Idioms and subtle humor are allowed when they fit the scenario."
+      )
+   return (
+      "LANGUAGE LEVEL (dialogue): Match complexity to the stated level; default to clear, natural speech."
+   )
+
+
+def _narrator_level_instructions(language_level: str) -> str:
+   """How much scaffolding narrator_explanation / fun facts / splits should provide."""
+   s = (language_level or "").strip().lower()
+   if "absolute" in s or "a1" in s:
+      return (
+         "NARRATION FOR THIS LEVEL — A1: Keep narrator_explanation short and concrete; focus on meaning, not grammar terminology. "
+         "narrator_fun_fact should be one simple memorable fact or literal gloss—avoid long etymological digressions. "
+         "Prefer shorter split_sentence chunks and straightforward narrator_translation lines."
+      )
+   if ("beginner" in s and "absolute" not in s) or "a2" in s:
+      return (
+         "NARRATION FOR THIS LEVEL — A2: Brief explanations; introduce light tips only when they aid comprehension. "
+         "Fun facts can be slightly richer but stay accessible."
+      )
+   if "intermediate" in s or "b1" in s or "b2" in s:
+      return (
+         "NARRATION FOR THIS LEVEL — B1–B2: Balance explanation with fluency-building; you may note useful patterns briefly. "
+         "Fun facts can include etymology or idioms when helpful."
+      )
+   if "advanced" in s or "c1" in s or "c2" in s:
+      return (
+         "NARRATION FOR THIS LEVEL — C1–C2: Prefer concise narration; skip oversimplified word-by-word breakdowns unless pedagogically useful. "
+         "Fun facts can focus on nuance, register, collocations, or cultural subtext."
+      )
+   return "NARRATION: Match explanation depth to the learner level; default to clear, efficient commentary."
+
+
 def prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length):
    keywords_instruction = ""
    if category == 'Custom Lesson':
@@ -12,6 +68,8 @@ keywords: {keywords}
 target_language: {target_language}
 native_language: {native_language}
 language_level: {language_level}
+
+{_dialogue_level_instructions(language_level)}
 
 {keywords_instruction}
 If there are spelling mistakes in the content request, fix them. The title should be in {native_language} (native_language). The names of the speakers should be matching the speakers mentioned in the requested scenario, if no names are provided use the target_language language and culture associated with that language to create the names. The translations should be as literal as possible. Make sure never to include names in the actual dialogues and skip introductions between speakers unless specified and go straight to the topic of conversation. Specify gender with "m" for male and "f" for female.
@@ -164,6 +222,8 @@ Expected output in JSON format:
 
 def prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers):
    return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}.
+
+   {_narrator_level_instructions(language_level)}
 
    - You will write turns from 1 to {length}.
 
