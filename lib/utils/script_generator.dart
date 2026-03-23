@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'script_sequences.dart' as sequences;
+import 'script_level_profile.dart';
 import 'constants.dart';
 import 'script_generator_to_urls.dart' show constructUrl;
 import 'package:fsrs/fsrs.dart' as fsrs;
@@ -238,10 +239,11 @@ List<Map<String, dynamic>> getWordKeys(List splitSentenceWords, int i, int j, Li
   return wordKeys;
 }
 
-List<String> createFirstScript(List<dynamic> data) {
+List<String> createFirstScript(List<dynamic> data, [String languageLevel = '']) {
   List<String> script = [];
-  int randomI = Random().nextInt(sequences.introSequences.length);
-  List<String> introSequence = sequences.introSequences[randomI]();
+  final tier = parseLanguageLearnerTier(languageLevel);
+  final int introIndex = _pickIntroSequenceIndex(tier);
+  List<String> introSequence = sequences.introSequences[introIndex]();
   script.addAll(introSequence);
 
   if (data.length < 2) {
@@ -254,6 +256,21 @@ List<String> createFirstScript(List<dynamic> data) {
 
   script.addAll(sequences.introOutroSequence1());
   return script;
+}
+
+int _pickIntroSequenceIndex(LanguageLearnerTier tier) {
+  final rng = Random();
+  switch (tier) {
+    case LanguageLearnerTier.absoluteBeginner:
+    case LanguageLearnerTier.beginner:
+      // More narrator setup before the full dialogue (indices 0, 3, 4).
+      return [0, 3, 4][rng.nextInt(3)];
+    case LanguageLearnerTier.intermediate:
+      return rng.nextInt(sequences.introSequences.length);
+    case LanguageLearnerTier.advanced:
+      // Shorter intros — get to content faster (indices 1, 2, 4).
+      return [1, 2, 4][rng.nextInt(3)];
+  }
 }
 
 Future<Map<String, dynamic>?> getDocumentDataFromRef(DocumentReference docRef) async {
@@ -342,13 +359,20 @@ Future<Map<String, dynamic>> parseAndCreateScript(
   String documentId,
   String targetLanguage,
   String nativeLanguage,
-  String category,
-) async {
+  String category, {
+  String languageLevel = '',
+}) async {
   print("parseAndCreateScript called with userId: $userId, targetLanguage: $targetLanguage, category: $category, selectedWords: $selectedWords");
   Map<String, dynamic> bigJsonMap = bigJson;
   List<dynamic> bigJsonList = bigJson["dialogue"] as List<dynamic>;
 
-  List<String> script = createFirstScript(dialogue);
+  final LanguageLearnerTier tier = parseLanguageLearnerTier(languageLevel);
+  final bool useFullChunkSequence =
+      repetitionMode.value == RepetitionMode.normal && tier != LanguageLearnerTier.advanced;
+  final bool useFullActiveRecall =
+      tier == LanguageLearnerTier.absoluteBeginner || tier == LanguageLearnerTier.beginner;
+
+  List<String> script = createFirstScript(dialogue, languageLevel);
 
   // Get the selected words references
   List<DocumentReference> selectedWordCardsRefs = await getSelectedWordCardDocRefs(userId, targetLanguage, category, selectedWords);
@@ -427,8 +451,9 @@ Future<Map<String, dynamic>> parseAndCreateScript(
         narratorFunFact.add(narratorFunFactChunks);
       }
 
-      // Construct sentence-level sequence
-      List<String> sentenceSequence = sequences.sentenceSequence1(
+      // Construct sentence-level sequence (tier adjusts pacing for advanced learners)
+      List<String> sentenceSequence = sequences.sentenceSequenceForTier(
+        tier,
         nativeSentence,
         targetSentence,
         narratorExplanationChunks,
@@ -458,7 +483,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             chunkKeysForThisSentence.add({'nativeChunkKey': nativeChunkKey, 'targetChunkKey': targetChunkKey});
 
             // Insert the chunk sequence with normal or reduced repetition
-            if (repetitionMode.value == RepetitionMode.normal) {
+            if (useFullChunkSequence) {
               List<String> chunkSequence = sequences.chunkSequence1(
                 narratorTranslationsChunk,
                 nativeChunkKey,
@@ -468,7 +493,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
               );
               script.addAll(chunkSequence);
             } else {
-              // repetitionMode.value == RepetitionMode.less
+              // Reduced repetition mode, or advanced tier (lighter chunk practice)
               List<String> chunkSequence = sequences.chunkSequence1Less(
                 narratorTranslationsChunk,
                 nativeChunkKey,
@@ -501,11 +526,16 @@ Future<Map<String, dynamic>> parseAndCreateScript(
 
       // Add overdue words to the script
       if (i < overdueListCards.length && overdueListCards[i]['audio_urls'] != null && overdueListCards[i]['audio_urls']['native_chunk'] != null && overdueListCards[i]['audio_urls']['target_chunk'] != null) {
-        List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
-          overdueListCards[i]['audio_urls']['native_chunk'],
-          overdueListCards[i]['audio_urls']['target_chunk'],
-          sequences.RecallType.overdueWord,
-        );
+        final List<String> overdueChunkSequence = useFullActiveRecall
+            ? sequences.activeRecallSequence1(
+                overdueListCards[i]['audio_urls']['native_chunk'],
+                overdueListCards[i]['audio_urls']['target_chunk'],
+              )
+            : sequences.activeRecallSequence1Less(
+                overdueListCards[i]['audio_urls']['native_chunk'],
+                overdueListCards[i]['audio_urls']['target_chunk'],
+                sequences.RecallType.overdueWord,
+              );
         script.addAll(overdueChunkSequence);
       }
 
@@ -513,11 +543,16 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       for (var keys in chunkKeysForThisSentence) {
         // Only create sequences if we have valid keys
         if (keys['nativeChunkKey']!.isNotEmpty && keys['targetChunkKey']!.isNotEmpty) {
-          List<String> activeRecallSequence = sequences.activeRecallSequence1Less(
-            keys['nativeChunkKey']!,
-            keys['targetChunkKey']!,
-            sequences.RecallType.thisConversation,
-          );
+          final List<String> activeRecallSequence = useFullActiveRecall
+              ? sequences.activeRecallSequence1(
+                  keys['nativeChunkKey']!,
+                  keys['targetChunkKey']!,
+                )
+              : sequences.activeRecallSequence1Less(
+                  keys['nativeChunkKey']!,
+                  keys['targetChunkKey']!,
+                  sequences.RecallType.thisConversation,
+                );
           nextTurnRecallSequences.add(activeRecallSequence);
         }
       }
@@ -529,11 +564,16 @@ Future<Map<String, dynamic>> parseAndCreateScript(
             overdueListCards[iPlus1]['audio_urls'] != null &&
             overdueListCards[iPlus1]['audio_urls']['native_chunk'] != null &&
             overdueListCards[iPlus1]['audio_urls']['target_chunk'] != null) {
-          List<String> overdueChunkSequence = sequences.activeRecallSequence1Less(
-            overdueListCards[iPlus1]['audio_urls']['native_chunk'],
-            overdueListCards[iPlus1]['audio_urls']['target_chunk'],
-            sequences.RecallType.overdueWord,
-          );
+          final List<String> overdueChunkSequence = useFullActiveRecall
+              ? sequences.activeRecallSequence1(
+                  overdueListCards[iPlus1]['audio_urls']['native_chunk'],
+                  overdueListCards[iPlus1]['audio_urls']['target_chunk'],
+                )
+              : sequences.activeRecallSequence1Less(
+                  overdueListCards[iPlus1]['audio_urls']['native_chunk'],
+                  overdueListCards[iPlus1]['audio_urls']['target_chunk'],
+                  sequences.RecallType.overdueWord,
+                );
           script.addAll(overdueChunkSequence);
         }
         // If we have any remaining delayed sequences at the end, add them too

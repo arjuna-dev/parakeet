@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:parakeet/utils/script_level_profile.dart';
+
 enum RecallType {
   overdueWord,
   thisConversation,
@@ -90,6 +92,34 @@ List<String> sentenceSequence1(String native, String target, List<String> narrat
     "one_second_break",
   ];
   return scriptPart;
+}
+
+/// Tighter sentence flow for advanced learners: one fewer full target replay
+/// before fun-fact narration.
+List<String> sentenceSequence2(String native, String target, List<String> narratorExplanationChunks, List<String> narratorFunFact, {bool isFirstSentence = false}) {
+  String firstPhrase = isFirstSentence ? "narrator_navigation_phrases_20" : "narrator_navigation_phrases_21";
+  return [
+    firstPhrase,
+    "one_second_break",
+    target,
+    ...narratorExplanationChunks,
+    ...narratorFunFact,
+    "one_second_break",
+  ];
+}
+
+List<String> sentenceSequenceForTier(
+  LanguageLearnerTier tier,
+  String native,
+  String target,
+  List<String> narratorExplanationChunks,
+  List<String> narratorFunFact, {
+  bool isFirstSentence = false,
+}) {
+  if (tier == LanguageLearnerTier.advanced) {
+    return sentenceSequence2(native, target, narratorExplanationChunks, narratorFunFact, isFirstSentence: isFirstSentence);
+  }
+  return sentenceSequence1(native, target, narratorExplanationChunks, narratorFunFact, isFirstSentence: isFirstSentence);
 }
 
 List<Function> activeRecallSequences = [activeRecallSequence1];
