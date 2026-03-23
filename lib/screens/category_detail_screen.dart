@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:math';
 import 'package:parakeet/utils/mark_as_mastered_modal.dart';
-import 'package:parakeet/Navigation/bottom_menu_bar.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/services/word_stats_service.dart';

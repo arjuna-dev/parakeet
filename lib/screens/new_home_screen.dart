@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
 import 'package:parakeet/services/daily_lesson_service.dart';
@@ -8,7 +6,6 @@ import 'package:parakeet/services/profile_service.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
-import 'package:parakeet/services/audio_player_manager.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/widgets/home_screen/audio_waveform_widget.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';

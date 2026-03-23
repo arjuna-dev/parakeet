@@ -31,7 +31,7 @@ def find_matching_voice_google(gender, exclude_voice_id=None, narrator_voice = F
 
 def create_google_voice(language_code, voice_id):
     
-    voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id, model_name='gemini-2.5-flash-tts')
+    voice = texttospeech.VoiceSelectionParams(language_code=language_code, name=voice_id, model_name='gemini-2.5-flash-lite-preview-tts')
     return voice
 
 
@@ -44,7 +44,9 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None, narrator
     return speaker_voice, speaker_voice_id
 
 def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", first_API_call=False, language_level="A1", narrator_voice=False, max_retries=5):
-    client = texttospeech.TextToSpeechClient()
+    client = texttospeech.TextToSpeechClient( client_options=ClientOptions(
+        region="us-central1",
+    ))
     if narrator_voice == False:
         print("speaker_voice: ", voice)
         if first_API_call == False:

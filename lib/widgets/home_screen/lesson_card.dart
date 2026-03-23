@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parakeet/utils/category_icons.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';

@@ -323,8 +323,8 @@ class _WaveformPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final centerY = size.height / 2;
-    final barWidth = 3.0;
-    final spacing = 2.5;
+    const barWidth = 3.0;
+    const spacing = 2.5;
     final maxHeight = size.height * 0.7;
 
     // Draw animated waveform bars

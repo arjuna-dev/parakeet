@@ -682,7 +682,7 @@ class _ReviewWordsDialogState extends State<ReviewWordsDialog> with TickerProvid
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
                         onTap: () {
-                          _trackUserAction('review_words_dialog_close_button_pressed', data: '${_currentWordIndex}/${widget.words.keys.toList().length}');
+                          _trackUserAction('review_words_dialog_close_button_pressed', data: '$_currentWordIndex/${widget.words.keys.toList().length}');
                           Navigator.of(context).pop();
                           // Call the callback to refresh parent screen
                           if (widget.onReviewCompleted != null) {

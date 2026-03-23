@@ -350,8 +350,9 @@ class _NicknamePopupState extends State<NicknamePopup> {
 
       // Generate remaining greetings for native language, skipping the used one
       for (var i = 0; i < selectedGreetings.length; i++) {
-        if (i == _usedGreetingIndex)
+        if (i == _usedGreetingIndex) {
           continue; // Skip the greeting we already generated
+        }
         final greeting = selectedGreetings[i];
         final userIdN =
             "${FirebaseAuth.instance.currentUser!.uid}_${_nativeLanguage}_${i + 1}";

@@ -12,7 +12,6 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/save_analytics.dart';
 
 class OnboardingFormScreen extends StatefulWidget {

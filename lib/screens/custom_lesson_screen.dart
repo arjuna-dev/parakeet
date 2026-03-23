@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
 import 'package:parakeet/services/lesson_service.dart';
-import 'package:parakeet/services/lesson_credit_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
 
 class CustomLessonScreen extends StatefulWidget {

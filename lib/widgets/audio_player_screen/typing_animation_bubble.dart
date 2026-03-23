@@ -347,14 +347,14 @@ class _TypingAnimationBubbleState extends State<TypingAnimationBubble>
                             const Icon(
                               Icons.skip_next_rounded,
                               size: 14,
-                              color: const Color(0xFF3FFF8F),
+                              color: Color(0xFF3FFF8F),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Jump to ${_formatDuration(widget.breakdownStartTime!)}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: const Color(0xFF3FFF8F),
+                                color: Color(0xFF3FFF8F),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
