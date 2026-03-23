@@ -15,13 +15,14 @@ import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/main.dart';
 import 'package:parakeet/widgets/audio_player_screen/review_words_dialog.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_info.dart';
 import 'package:parakeet/services/category_level_service.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
+import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/theme/theme.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final String? category;
@@ -235,9 +236,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           print("Track durations not set, calculating now...");
           List<dynamic> filteredScript =
               _script.where((fileName) => !fileName.startsWith('\$')).toList();
-          List<Duration> trackDurations = await _audioDurationService
-              .calculateTrackDurations(filteredScript);
-          _audioPlayerService.setTrackDurations(trackDurations);
+          final resolved = await _playlistGenerator
+              .resolveScriptEntriesWithUrls(filteredScript);
+          List<Duration> trackDurations =
+              await _audioDurationService.calculateTrackDurations(resolved);
+          _audioPlayerService.setTrackDurations(trackDurations,
+              alignedFileNames: resolved);
           if (!widget.generating) {
             _audioPlayerService.setFinalTotalDuration();
           }
@@ -275,30 +279,14 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<dynamic> filteredScript =
         _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
-    // Generate audio sources
-    List<AudioSource> audioSources =
-        await _playlistGenerator.generateAudioSources(filteredScript);
+    // One pass: playlist skips entries with empty URLs; durations must match indices.
+    final built =
+        await _playlistGenerator.buildAudioSourcesFromScript(filteredScript);
 
-    // Initialize playlist
-    await _audioPlayerService.initializePlaylist(audioSources);
-
-    // Connect to background audio service
-    BackgroundAudioService.connectAudioPlayerService(
-        _audioPlayerService, widget.title, widget.category);
-
-    // Play first track only for non-generating mode
-    if (!widget.generating) {
-      await _audioPlayerService.playFirstTrack();
-    } else {
-      await _audioPlayerService.loadFirstTrack();
-    }
-    _audioPlayerService.playlistInitialized = true;
-    setState(() {});
-
-    //Calculate track durations
-    List<Duration> trackDurations =
-        await _audioDurationService.calculateTrackDurations(filteredScript);
-    _audioPlayerService.setTrackDurations(trackDurations);
+    List<Duration> trackDurations = await _audioDurationService
+        .calculateTrackDurations(built.resolvedScript);
+    _audioPlayerService.setTrackDurations(trackDurations,
+        alignedFileNames: built.resolvedScript);
 
     if (!widget.generating) {
       _audioPlayerService.setFinalTotalDuration();
@@ -310,6 +298,33 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         null, // You can add artwork URL here if available
         widget.category,
       );
+    }
+
+    // Initialize playlist
+    await _audioPlayerService.initializePlaylist(built.sources);
+
+    if (!_audioPlayerService.playlistInitialized) {
+      print('Playlist not initialized (no audio sources or player skipped).');
+      return;
+    }
+
+    // Connect to background audio service
+    BackgroundAudioService.connectAudioPlayerService(
+        _audioPlayerService, widget.title, widget.category);
+
+    // Rebuild before playFirstTrack: that call waits for ProcessingState.ready
+    // (buffering). Without setState here, PositionSlider keeps "Loading lesson..."
+    // until the player is ready because StreamBuilder does not rebuild when only
+    // playlistInitialized flips on the service.
+    if (mounted) {
+      setState(() {});
+    }
+
+    // Start playback as soon as sources are ready (generating: first-API audio;
+    // second API appends more tracks via _updatePlaylist).
+    await _audioPlayerService.playFirstTrack();
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -356,20 +371,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<dynamic> filteredScript =
         _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
-    // Get new script items that aren't already in the playlist
-    var newScript = List.from(filteredScript);
-    newScript.removeRange(0, _audioPlayerService.playlist.children.length);
+    // Resolved script is 1:1 with playlist rows (empty URLs omitted).
+    final fullResolved =
+        await _playlistGenerator.resolveScriptEntriesWithUrls(filteredScript);
+    final playlistLen = _audioPlayerService.playlist.children.length;
+    if (playlistLen > fullResolved.length) {
+      return;
+    }
+    final newNames = fullResolved.sublist(playlistLen);
+    final newAudioSources =
+        await _playlistGenerator.audioSourcesForNames(newNames);
 
-    // Generate audio sources for new items
-    List<AudioSource> newAudioSources =
-        await _playlistGenerator.generateAudioSources(newScript);
-
-    // Update playlist
-    await _audioPlayerService.addToPlaylist(newAudioSources);
-    // Calculate track durations
     List<Duration> trackDurations =
-        await _audioDurationService.calculateTrackDurations(filteredScript);
-    _audioPlayerService.setTrackDurations(trackDurations);
+        await _audioDurationService.calculateTrackDurations(fullResolved);
+    _audioPlayerService.setTrackDurations(trackDurations,
+        alignedFileNames: fullResolved);
+
+    await _audioPlayerService.addToPlaylist(newAudioSources);
 
     // Increment update number
     _updateNumber++;
@@ -419,10 +437,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     List<dynamic> filteredScript =
         _script.where((fileName) => !fileName.startsWith('\$')).toList();
 
-    // Calculate track durations
+    final resolved =
+        await _playlistGenerator.resolveScriptEntriesWithUrls(filteredScript);
     List<Duration> trackDurations =
-        await _audioDurationService.calculateTrackDurations(filteredScript);
-    _audioPlayerService.setTrackDurations(trackDurations);
+        await _audioDurationService.calculateTrackDurations(resolved);
+    _audioPlayerService.setTrackDurations(trackDurations,
+        alignedFileNames: resolved);
 
     // Set final total duration after reaching numberOfTurns or if not generating
     if ((_updateNumber >= widget.numberOfTurns || !widget.generating) &&
@@ -464,17 +484,16 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     // Filter script
     List<dynamic> filteredScript = _playlistGenerator.filterScript(_script);
 
-    // Generate audio sources
-    List<AudioSource> audioSources =
-        await _playlistGenerator.generateAudioSources(filteredScript);
+    final built =
+        await _playlistGenerator.buildAudioSourcesFromScript(filteredScript);
 
     // Update playlist
-    await _audioPlayerService.updatePlaylist(audioSources);
+    await _audioPlayerService.updatePlaylist(built.sources);
 
-    // Calculate track durations
-    List<Duration> trackDurations =
-        await _audioDurationService.calculateTrackDurations(filteredScript);
-    _audioPlayerService.setTrackDurations(trackDurations);
+    List<Duration> trackDurations = await _audioDurationService
+        .calculateTrackDurations(built.resolvedScript);
+    _audioPlayerService.setTrackDurations(trackDurations,
+        alignedFileNames: built.resolvedScript);
 
     _audioPlayerService.setFinalTotalDuration();
 
@@ -503,17 +522,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         // Get the current track index based on position
         final positionBasedIndex = _audioPlayerService.getCurrentTrackIndex();
 
-        // Only update if the track actually changed and is valid
-        if (positionBasedIndex >= 0 && positionBasedIndex < _script.length) {
-          final newTrack = _script[positionBasedIndex];
-
-          // Only trigger update if track actually changed
-          if (newTrack != _currentTrack) {
-            if (mounted) {
-              setState(() {
-                _currentTrack = newTrack;
-              });
-            }
+        final newTrack = _pickTrackNameForPlaylistIndex(positionBasedIndex);
+        if (newTrack != null && newTrack != _currentTrack) {
+          if (mounted) {
+            setState(() {
+              _currentTrack = newTrack;
+            });
           }
         }
       } catch (e) {
@@ -523,14 +537,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     });
   }
 
+  String? _pickTrackNameForPlaylistIndex(int index) {
+    if (index < 0) return null;
+    final names = _audioPlayerService.playlistFileNames;
+    if (index < names.length) {
+      return names[index].toString();
+    }
+    if (index < _script.length) {
+      return _script[index].toString();
+    }
+    return null;
+  }
+
   void _handleTrackChange(int index) {
     if (_isDisposing) return;
 
-    if (index < _script.length && mounted) {
-      String newTrack = _script[index];
-
+    final name = _pickTrackNameForPlaylistIndex(index);
+    if (name != null && mounted) {
       setState(() {
-        _currentTrack = newTrack;
+        _currentTrack = name;
       });
     }
   }
@@ -615,17 +640,26 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           completeDialogue,
           widget.category ?? 'Custom Lesson');
 
-      // Add user to active creation
-      await _audioGenerationService.addUserToActiveCreation();
+      // Slot was reserved when the lesson started (tryReserveActiveCreationSlot).
 
-      // Make the second API call
-      await _audioGenerationService.makeSecondApiCall(
-          _latestSnapshot!, keywordsUsedInDialogue);
-
-      // Initialize playlist after a delay to allow audio files to be generated
+      // Start playback from first-API audio (intro + dialogue lines) immediately.
+      // The second API runs in the background; Firestore snapshots extend the playlist.
       if (mounted && !_audioPlayerService.playlistInitialized) {
-        _initializePlaylist();
+        await _initializePlaylist();
       }
+
+      if (!mounted || _isDisposing) return;
+
+      // Do not await: second API can take minutes (full TTS + big JSON). Waiting here
+      // left playlistInitialized false and hid controls ("stuck on loading").
+      unawaited(() async {
+        try {
+          await _audioGenerationService.makeSecondApiCall(
+              _latestSnapshot!, keywordsUsedInDialogue);
+        } catch (e) {
+          debugPrint('Second API call failed: $e');
+        }
+      }());
     } catch (e) {
       print('Error creating script and making second API call: $e');
     }
@@ -750,20 +784,33 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     bool? shouldComplete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
         return AlertDialog(
-          title: const Text('Complete Lesson'),
-          content: const Text(
-              'Are you sure you want to mark this lesson as completed?'),
+          backgroundColor: ParakeetDialogTheme.background(cs),
+          surfaceTintColor: Colors.transparent,
+          shape: ParakeetDialogTheme.alertShape(cs),
+          title: Text(
+            'Complete Lesson',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to mark this lesson as completed?',
+            style: TextStyle(color: cs.onSurfaceVariant),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(foregroundColor: cs.onSurfaceVariant),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
               ),
               child: const Text('Complete'),
             ),
@@ -828,12 +875,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              completionMessage,
-              style: const TextStyle(color: Colors.white),
-            ),
+            content: Text(completionMessage),
             duration: const Duration(seconds: 3),
-            backgroundColor: Colors.green,
           ),
         );
       }
@@ -844,10 +887,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           const SnackBar(
             content: Text(
               'Failed to mark lesson as completed. Please try again.',
-              style: TextStyle(color: Colors.white),
             ),
             duration: Duration(seconds: 3),
-            backgroundColor: Colors.red,
           ),
         );
       }
@@ -1013,120 +1054,111 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               navigator.pop('reload');
             }
           },
-          child: FutureBuilder<int>(
-            future: _audioPlayerService.getSavedPosition(),
-            builder: (context, snapshot) {
-              int savedPosition = snapshot.data ?? 0;
-              return Scaffold(
-                appBar: AppBar(
-                  title: widget.isEmbedded
-                      ? GestureDetector(
-                          onTap: () {
-                            // Only allow collapse if dialogue is fully generated
-                            if (_allDialogueGenerated) {
+          child: Scaffold(
+            appBar: AppBar(
+              title: widget.isEmbedded
+                  ? GestureDetector(
+                      onTap: () {
+                        // Only allow collapse if dialogue is fully generated
+                        if (_allDialogueGenerated) {
+                          Provider.of<AudioPlayerManager>(context,
+                                  listen: false)
+                              .collapse();
+                        }
+                      },
+                      onPanUpdate: (details) {
+                        // Collapse when dragging down, only if dialogue is fully generated
+                        if (details.delta.dy > 0 && _allDialogueGenerated) {
+                          Provider.of<AudioPlayerManager>(context,
+                                  listen: false)
+                              .collapse();
+                        }
+                      },
+                      child: AudioInfo(title: widget.title),
+                    )
+                  : AudioInfo(title: widget.title),
+              automaticallyImplyLeading: widget.isEmbedded
+                  ? false
+                  : (!widget.generating || _allDialogueGenerated),
+              leading: widget.isEmbedded
+                  ? IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      onPressed: _allDialogueGenerated
+                          ? () {
                               Provider.of<AudioPlayerManager>(context,
                                       listen: false)
                                   .collapse();
                             }
-                          },
-                          onPanUpdate: (details) {
-                            // Collapse when dragging down, only if dialogue is fully generated
-                            if (details.delta.dy > 0 && _allDialogueGenerated) {
-                              Provider.of<AudioPlayerManager>(context,
-                                      listen: false)
-                                  .collapse();
-                            }
-                          },
-                          child: AudioInfo(title: widget.title),
-                        )
-                      : AudioInfo(title: widget.title),
-                  automaticallyImplyLeading: widget.isEmbedded
-                      ? false
-                      : (!widget.generating || _allDialogueGenerated),
-                  leading: widget.isEmbedded
-                      ? IconButton(
-                          icon: const Icon(Icons.keyboard_arrow_down),
-                          onPressed: _allDialogueGenerated ? () {
-                            Provider.of<AudioPlayerManager>(context,
-                                    listen: false)
-                                .collapse();
-                          } : null,  // Disable button if dialogue not fully generated
-                        )
-                      : null,
-                ),
-                body: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0A2F2A),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          // SpeechRecognitionToggle(
-                          //   speechRecognitionService: _speechRecognitionService,
-                          //   isActive: _speechRecognitionActive,
-                          //   onToggle: _toggleSpeechRecognition,
-                          // ),
-                          // Dialogue list - Expanded to take available space
-                          Expanded(
-                            child: AnimatedDialogueList(
-                              dialogue: _dialogue,
-                              currentTrack: _currentTrack,
-                              wordsToRepeat: _wordsToRepeat ?? [],
-                              documentID: widget.documentID,
-                              useStream: widget.generating,
-                              // If embedded (persistent player), never animate - always show all immediately
-                              generating: widget.isEmbedded ? false : widget.generating,
-                              onAllDialogueDisplayed: widget.generating
-                                  ? _onAllDialogueDisplayed
-                                  : null,
-                              script: _script,
-                              trackDurations: _audioPlayerService.trackDurations,
-                              onSeekToTime: _seekToTime,
-                            ),
-                          ),
-                          // Position slider - fixed height
-                          PositionSlider(
-                            audioPlayerService: _audioPlayerService,
-                            positionDataStream:
-                                _audioPlayerService.positionDataStream,
-                            isPlaying: _audioPlayerService.isPlaying.value,
-                            savedPosition: savedPosition,
-                            findTrackIndexForPosition:
-                                _audioPlayerService.findTrackIndexForPosition,
-                            player: _audioPlayerService.player,
-                            cumulativeDurationUpTo:
-                                _audioPlayerService.cumulativeDurationUpTo,
-                            pause: ({bool analyticsOn = true}) =>
-                                _audioPlayerService.pause(
-                                    analyticsOn: analyticsOn),
-                            onSliderChangeStart: () {
-                              // Slider interaction started
-                            },
-                            onSliderChangeEnd: () {
-                              // Slider interaction ended
-                            },
-                          ),
-                          // Audio controls - fixed height
-                          AudioControls(
-                            audioPlayerService: _audioPlayerService,
-                            repetitionMode: _repetitionsMode,
-                            generating: _generating,
-                            hasWordsToReview:
-                                _allUsedWordsCardsRefsMap.isNotEmpty,
-                            onReviewWords: _showVocabularyReview,
-                            isCompleted: _isCompleted,
-                            onMarkCompleted: _markAsCompleted,
-                          ),
-                        ],
+                          : null, // Disable button if dialogue not fully generated
+                    )
+                  : null,
+            ),
+            body: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF0A2F2A),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      // SpeechRecognitionToggle(
+                      //   speechRecognitionService: _speechRecognitionService,
+                      //   isActive: _speechRecognitionActive,
+                      //   onToggle: _toggleSpeechRecognition,
+                      // ),
+                      // Dialogue list - Expanded to take available space
+                      Expanded(
+                        child: AnimatedDialogueList(
+                          dialogue: _dialogue,
+                          currentTrack: _currentTrack,
+                          wordsToRepeat: _wordsToRepeat ?? [],
+                          documentID: widget.documentID,
+                          useStream: widget.generating,
+                          // If embedded (persistent player), never animate - always show all immediately
+                          generating:
+                              widget.isEmbedded ? false : widget.generating,
+                          onAllDialogueDisplayed: widget.generating
+                              ? _onAllDialogueDisplayed
+                              : null,
+                          script: _script,
+                          trackDurations: _audioPlayerService.trackDurations,
+                          onSeekToTime: _seekToTime,
+                        ),
                       ),
-                    ),
+                      // Position slider - fixed height
+                      PositionSlider(
+                        audioPlayerService: _audioPlayerService,
+                        findTrackIndexForPosition:
+                            _audioPlayerService.findTrackIndexForPosition,
+                        player: _audioPlayerService.player,
+                        cumulativeDurationUpTo:
+                            _audioPlayerService.cumulativeDurationUpTo,
+                        pause: ({bool analyticsOn = true}) =>
+                            _audioPlayerService.pause(analyticsOn: analyticsOn),
+                        onSliderChangeStart: () {
+                          // Slider interaction started
+                        },
+                        onSliderChangeEnd: () {
+                          // Slider interaction ended
+                        },
+                      ),
+                      // Audio controls - fixed height
+                      AudioControls(
+                        audioPlayerService: _audioPlayerService,
+                        repetitionMode: _repetitionsMode,
+                        generating: _generating,
+                        hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
+                        onReviewWords: _showVocabularyReview,
+                        isCompleted: _isCompleted,
+                        onMarkCompleted: _markAsCompleted,
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ],
@@ -1136,6 +1168,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void dispose() {
     _isDisposing = true;
+    if (widget.generating) {
+      LessonService.releaseActiveCreationSlot(widget.userID, widget.documentID);
+    }
     _repetitionsMode.removeListener(_updatePlaylistOnTheFly);
 
     // Dispose background audio service connection

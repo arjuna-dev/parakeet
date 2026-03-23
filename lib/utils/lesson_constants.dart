@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class LessonConstants {
-  static const int maxWordsAllowed = 5;
+  static const int maxWordsAllowed = 3;
+
+  /// Dialogue turns requested from the script / first API (matches JSON "length").
+  static const int defaultDialogueTurns = 3;
 
   // Function to get category icon
   static IconData getCategoryIcon(String categoryName) {

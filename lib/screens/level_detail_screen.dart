@@ -8,8 +8,10 @@ import 'package:parakeet/widgets/home_screen/lesson_card.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
+import 'package:parakeet/services/recent_lesson_topics_service.dart';
 
 class LevelDetailScreen extends StatefulWidget {
   final Map<String, dynamic> category;
@@ -200,11 +202,18 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
 
     setState(() => _isGeneratingLesson = true);
 
+    String? documentId;
+    String? userId;
+
     try {
       final selectedWords = await LessonService.selectWordsFromCategory(
           widget.category['name'],
           widget.category['words'],
           widget.targetLanguage);
+
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final recentTopics =
+          await RecentLessonTopicsService.getRecentTopics(uid, widget.targetLanguage);
 
       final response = await http.post(
         Uri.parse(
@@ -219,6 +228,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           "target_language": widget.targetLanguage,
           "native_language": widget.nativeLanguage,
           "level_number": widget.levelNumber,
+          if (recentTopics.isNotEmpty) "recent_topics": recentTopics,
         }),
       );
 
@@ -233,8 +243,24 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final DocumentReference docRef =
           firestore.collection('chatGPT_responses').doc();
-      final String documentId = docRef.id;
-      final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
+      documentId = docRef.id;
+      userId = uid;
+
+      final reserved =
+          await LessonService.tryReserveActiveCreationSlot(userId, documentId);
+      if (!reserved) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Too many lessons are generating right now. Please try again in a moment.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+
       final TTSProvider ttsProvider = widget.targetLanguage == 'Azerbaijani'
           ? TTSProvider.openAI
           : TTSProvider.googleTTS;
@@ -258,7 +284,7 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           "keywords": selectedWords,
           "native_language": widget.nativeLanguage,
           "target_language": widget.targetLanguage,
-          "length": '4',
+          "length": '${LessonConstants.defaultDialogueTurns}',
           "user_ID": userId,
           "language_level": widget.languageLevel,
           "document_id": documentId,
@@ -287,8 +313,11 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
         nativeLanguage: widget.nativeLanguage,
         languageLevel: widget.languageLevel,
         wordsToRepeat: selectedWords,
-        numberOfTurns: 4,
+        numberOfTurns: LessonConstants.defaultDialogueTurns,
       ));
+
+      await RecentLessonTopicsService.recordTopic(
+          userId, widget.targetLanguage, topic);
 
       // We don't await navigation anymore.
       // We can reload the list, but the new lesson might not be ready yet.
@@ -296,13 +325,18 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
       _loadLevelLessons();
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (userId != null && documentId != null) {
+        await LessonService.releaseActiveCreationSlot(userId, documentId);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       setState(() => _isGeneratingLesson = false);
       _loadGenerationsRemaining();

@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
+import 'package:parakeet/utils/lesson_constants.dart';
+import 'package:parakeet/theme/theme.dart';
 
 class LessonCard extends StatefulWidget {
   final DocumentSnapshot audioFile;
@@ -147,7 +149,7 @@ class _LessonCardState extends State<LessonCard> {
           }
         }
       }
-      
+
       // Fallback: use current time or a default
       return 'Recently created';
     } catch (e) {
@@ -158,19 +160,31 @@ class _LessonCardState extends State<LessonCard> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     // If less than a day, show time ago
     if (difference.inDays == 0) {
       return getTimeAgo(date);
     }
-    
+
     // Format as date
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     final month = months[date.month - 1];
     final day = date.day;
     final year = date.year;
-    
+
     // If same year, don't show year
     if (date.year == now.year) {
       return '$month $day';
@@ -269,23 +283,33 @@ class _LessonCardState extends State<LessonCard> {
     final bool? shouldUpdate = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
         return AlertDialog(
+          backgroundColor: ParakeetDialogTheme.background(cs),
+          surfaceTintColor: Colors.transparent,
+          shape: ParakeetDialogTheme.alertShape(cs),
           title: Text(
-              newCompletionStatus ? 'Mark as Complete' : 'Mark as Incomplete'),
-          content: Text(newCompletionStatus
-              ? 'Are you sure you want to mark "${widget.audioFile.get('title')}" as completed?'
-              : 'Are you sure you want to mark "${widget.audioFile.get('title')}" as incomplete?'),
+            newCompletionStatus ? 'Mark as Complete' : 'Mark as Incomplete',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            newCompletionStatus
+                ? 'Are you sure you want to mark "${widget.audioFile.get('title')}" as completed?'
+                : 'Are you sure you want to mark "${widget.audioFile.get('title')}" as incomplete?',
+            style: TextStyle(color: cs.onSurfaceVariant),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(foregroundColor: cs.onSurfaceVariant),
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor:
-                    newCompletionStatus ? Colors.green : Colors.amber,
-              ),
+              style: TextButton.styleFrom(foregroundColor: cs.primary),
               child: Text(
                   newCompletionStatus ? 'Mark Complete' : 'Mark Incomplete'),
             ),
@@ -322,8 +346,6 @@ class _LessonCardState extends State<LessonCard> {
                     ? 'Lesson marked as completed!'
                     : 'Lesson marked as incomplete',
               ),
-              backgroundColor:
-                  newCompletionStatus ? Colors.green : Colors.amber,
             ),
           );
 
@@ -342,7 +364,6 @@ class _LessonCardState extends State<LessonCard> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to update lesson status: $e'),
-              backgroundColor: Colors.red,
             ),
           );
         }
@@ -355,10 +376,22 @@ class _LessonCardState extends State<LessonCard> {
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
         return AlertDialog(
-          title: const Text('Delete Lesson'),
+          backgroundColor: ParakeetDialogTheme.background(cs),
+          surfaceTintColor: Colors.transparent,
+          shape: ParakeetDialogTheme.alertShape(cs),
+          title: Text(
+            'Delete Lesson',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           content: Text(
-              'Are you sure you want to delete "${widget.audioFile.get('title')}"? This action cannot be undone.'),
+            'Are you sure you want to delete "${widget.audioFile.get('title')}"? This action cannot be undone.',
+            style: TextStyle(color: cs.onSurfaceVariant),
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -367,6 +400,7 @@ class _LessonCardState extends State<LessonCard> {
                     widget.audioFile.get('title'));
                 Navigator.of(context).pop(false);
               },
+              style: TextButton.styleFrom(foregroundColor: cs.onSurfaceVariant),
               child: const Text('Cancel'),
             ),
             TextButton(
@@ -376,9 +410,7 @@ class _LessonCardState extends State<LessonCard> {
                     widget.audioFile.get('title'));
                 Navigator.of(context).pop(true);
               },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: cs.error),
               child: const Text('Delete'),
             ),
           ],
@@ -410,7 +442,6 @@ class _LessonCardState extends State<LessonCard> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Lesson deleted successfully'),
-              backgroundColor: Colors.green,
             ),
           );
 
@@ -424,7 +455,6 @@ class _LessonCardState extends State<LessonCard> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to delete lesson: $e'),
-              backgroundColor: Colors.red,
             ),
           );
         }
@@ -544,217 +574,224 @@ class _LessonCardState extends State<LessonCard> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        onTap: () async {
-          final category = getCategory();
-          _getAnalyticsManager()?.storeAction('lesson_card_tapped',
-              '${widget.audioFile.get('title')}|$category');
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          onTap: () async {
+            final category = getCategory();
+            _getAnalyticsManager()?.storeAction('lesson_card_tapped',
+                '${widget.audioFile.get('title')}|$category');
 
-          final manager =
-              Provider.of<AudioPlayerManager>(context, listen: false);
-          manager.playLesson(LessonData(
-            documentID: widget.audioFile.reference.parent.parent!.id,
-            dialogue: widget.audioFile.get('dialogue'),
-            category: category,
-            targetLanguage: widget.audioFile.get('target_language'),
-            nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
-                        ?.containsKey('native_language') ==
-                    true
-                ? widget.audioFile.get('native_language')
-                : 'English (US)',
-            languageLevel: widget.audioFile.get('language_level'),
-            userID: FirebaseAuth.instance.currentUser!.uid,
-            title: widget.audioFile.get('title'),
-            scriptDocumentId: widget.audioFile.id,
-            generating: false,
-            wordsToRepeat: widget.audioFile.get('words_to_repeat'),
-            numberOfTurns: 4,
-          ));
+            final manager =
+                Provider.of<AudioPlayerManager>(context, listen: false);
+            final dialogueRaw = widget.audioFile.get('dialogue');
+            final turnCount = dialogueRaw is List && dialogueRaw.isNotEmpty
+                ? dialogueRaw.length
+                : LessonConstants.defaultDialogueTurns;
+            manager.playLesson(LessonData(
+              documentID: widget.audioFile.reference.parent.parent!.id,
+              dialogue: widget.audioFile.get('dialogue'),
+              category: category,
+              targetLanguage: widget.audioFile.get('target_language'),
+              nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
+                          ?.containsKey('native_language') ==
+                      true
+                  ? widget.audioFile.get('native_language')
+                  : 'English (US)',
+              languageLevel: widget.audioFile.get('language_level'),
+              userID: FirebaseAuth.instance.currentUser!.uid,
+              title: widget.audioFile.get('title'),
+              scriptDocumentId: widget.audioFile.id,
+              generating: false,
+              wordsToRepeat: widget.audioFile.get('words_to_repeat'),
+              numberOfTurns: turnCount,
+            ));
 
-          // We can't easily wait for result here since it's persistent.
-          // Ideally LessonCard should listen to Firestore changes for completion status.
-          // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
-        },
+            // We can't easily wait for result here since it's persistent.
+            // Ideally LessonCard should listen to Firestore changes for completion status.
+            // For now, we'll just let it be. The user can manually reload or we can rely on future stream updates.
+          },
           borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
-          transform: Matrix4.identity()
-            ..scale(_isPressed ? 0.95 : 1.0)
-            ..rotateZ(_isPressed ? -0.01 : 0.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: colorScheme.outline.withOpacity(0.12),
-                width: 1,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            transform: Matrix4.identity()
+              ..scale(_isPressed ? 0.95 : 1.0)
+              ..rotateZ(_isPressed ? -0.01 : 0.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: colorScheme.outline.withOpacity(0.12),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                    spreadRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                    spreadRadius: 0,
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                  spreadRadius: 0,
-                ),
-                BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Top right corner menu button
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      _getAnalyticsManager()?.storeAction(
-                          'lesson_card_options_menu_tapped',
-                          widget.audioFile.get('title'));
-                      _showOptionsMenu();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(20),
-                          bottomLeft: Radius.circular(14),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.shadow.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Top right corner menu button
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        _getAnalyticsManager()?.storeAction(
+                            'lesson_card_options_menu_tapped',
+                            widget.audioFile.get('title'));
+                        _showOptionsMenu();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomLeft: Radius.circular(14),
                           ),
-                        ],
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.shadow.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.more_vert_rounded,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Right side play icon
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withOpacity(0.5),
+                        shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.more_vert_rounded,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                        Icons.play_arrow_rounded,
+                        size: 24,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
-                ),
 
-                // Right side play icon
-                Positioned(
-                  bottom: 20,
-                  right: 20,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      size: 24,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ),
-
-                // Main content
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Creation date
-                                  Text(
-                        _getCreationDateText(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          letterSpacing: 0.2,
-                              ),
-                            ),
-                      const SizedBox(height: 8),
-
-                      // Title
-                      Padding(
-                        padding: const EdgeInsets.only(right: 50),
-                        child: Text(
-                          widget.audioFile.get('title'),
+                  // Main content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Creation date
+                        Text(
+                          _getCreationDateText(),
                           style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 19,
-                            height: 1.3,
-                            color: colorScheme.onSurface,
-                            letterSpacing: -0.3,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color:
+                                colorScheme.onSurfaceVariant.withOpacity(0.6),
+                            letterSpacing: 0.2,
                           ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Bottom info row
-                      Row(
-                        children: [
-                          // Duration
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time_rounded,
-                                size: 16,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                getEstimatedDuration(),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.8),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 8),
+
+                        // Title
+                        Padding(
+                          padding: const EdgeInsets.only(right: 50),
+                          child: Text(
+                            widget.audioFile.get('title'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 19,
+                              height: 1.3,
+                              color: colorScheme.onSurface,
+                              letterSpacing: -0.3,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          
-                          const SizedBox(width: 16),
-                          
-                          // Completion status indicator
-                          if (!_isLoadingCompletion && _isCompleted)
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Bottom info row
+                        Row(
+                          children: [
+                            // Duration
                             Row(
                               children: [
                                 Icon(
-                                  Icons.check_circle_rounded,
+                                  Icons.access_time_rounded,
                                   size: 16,
-                                  color: Colors.green.withOpacity(0.8),
+                                  color: colorScheme.onSurfaceVariant
+                                      .withOpacity(0.7),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Completed',
+                                  getEstimatedDuration(),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.green.withOpacity(0.8),
+                                    color: colorScheme.onSurfaceVariant
+                                        .withOpacity(0.8),
                                   ),
                                 ),
                               ],
                             ),
-                        ],
-                      ),
-                    ],
+
+                            const SizedBox(width: 16),
+
+                            // Completion status indicator
+                            if (!_isLoadingCompletion && _isCompleted)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    size: 16,
+                                    color: Colors.green.withOpacity(0.8),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Completed',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.green.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ),
           ),
         ),

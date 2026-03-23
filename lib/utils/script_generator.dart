@@ -405,7 +405,18 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       String nativeSentence = "dialogue_${i}_native_language";
       String targetSentence = "dialogue_${i}_target_language";
 
-      String narratorExplanation = "dialogue_${i}_narrator_explanation";
+      String narratorExplanationText = bigJsonList[i]["narrator_explanation"] ?? "";
+      List<Map<String, dynamic>> classifiedNarratorExplanation =
+          extractAndClassifyEnclosedWords(narratorExplanationText);
+      List<String> narratorExplanationChunks = [];
+      for (int index = 0; index < classifiedNarratorExplanation.length; index++) {
+        if (classifiedNarratorExplanation.length == 1) {
+          narratorExplanationChunks.add("dialogue_${i}_narrator_explanation");
+        } else {
+          narratorExplanationChunks.add("dialogue_${i}_narrator_explanation_$index");
+        }
+      }
+
       String narratorFunFactText = bigJsonList[i]["narrator_fun_fact"] ?? "";
 
       // Extract enclosed text
@@ -420,7 +431,7 @@ Future<Map<String, dynamic>> parseAndCreateScript(
       List<String> sentenceSequence = sequences.sentenceSequence1(
         nativeSentence,
         targetSentence,
-        narratorExplanation,
+        narratorExplanationChunks,
         narratorFunFact,
         isFirstSentence: i == 0,
       );

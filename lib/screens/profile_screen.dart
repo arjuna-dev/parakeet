@@ -14,6 +14,7 @@ import 'package:parakeet/widgets/profile_screen/reminder_tile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:parakeet/widgets/onboarding_screen/notifications_step.dart';
 import 'package:parakeet/utils/save_analytics.dart';
+import 'package:parakeet/theme/theme.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
@@ -260,15 +261,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: colorScheme.surfaceContainerHighest,
+          backgroundColor: ParakeetDialogTheme.background(colorScheme),
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
+          shape: ParakeetDialogTheme.alertShape(colorScheme),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(24),
@@ -316,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.of(context).pop(true);
                       },
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
+                        foregroundColor: colorScheme.error,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
                       child: const Text('Delete'),
@@ -350,21 +345,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final cs = Theme.of(context).colorScheme;
           return AlertDialog(
+            backgroundColor: ParakeetDialogTheme.background(cs),
+            surfaceTintColor: Colors.transparent,
+            shape: ParakeetDialogTheme.alertShape(cs),
             title: Row(
               children: [
-                Icon(Icons.phone_android, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.phone_android, color: cs.primary),
                 const SizedBox(width: 8),
-                const Text('Mobile App Required'),
+                Text(
+                  'Mobile App Required',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
-            content: const Text(
+            content: Text(
               'Please use the Parakeet mobile app to view and purchase premium features.',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: cs.onSurfaceVariant),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(foregroundColor: cs.primary),
                 child: const Text('OK'),
               ),
             ],

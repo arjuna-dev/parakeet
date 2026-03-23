@@ -29,7 +29,7 @@ class TargetLanguageStep extends StatelessWidget {
           ),
         ),
         child: DropdownButtonFormField<String>(
-          value: selectedLanguage,
+          initialValue: selectedLanguage,
           dropdownColor: const Color(0xFF0F3D37), // Explicit dark green color
           iconEnabledColor: Theme.of(context).colorScheme.onSurface,
           iconDisabledColor: Theme.of(context).colorScheme.onSurfaceVariant,

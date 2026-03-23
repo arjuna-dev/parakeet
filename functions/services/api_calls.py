@@ -10,6 +10,55 @@ import re
 import time
 from threading import Timer, Lock
 
+
+def strip_transliteration_segment(text):
+    """Use only the spoken target-language part before || (transliteration / pinyin follows)."""
+    if not text or not isinstance(text, str):
+        return text
+    if "||" in text:
+        return text.split("||", 1)[0].strip()
+    return text.strip()
+
+
+def normalize_for_vocab_match(text):
+    """Match Dart lesson_service normalization: lowercase, strip markers, unicode letters."""
+    if not text:
+        return ""
+    t = strip_transliteration_segment(text)
+    t = re.sub(r"\[[^\]]+\]", " ", t)
+    t = t.lower()
+    t = re.sub(r"[^\w\s]", "", t, flags=re.UNICODE)
+    t = " ".join(t.split())
+    return t
+
+
+def line_matches_words_to_repeat(line, words_to_repeat):
+    """
+    words_to_repeat comes from translate_keywords (may be multi-word phrases).
+    Legacy code used whitespace tokens only, so phrases like 'guten tag' never matched.
+    Empty list means: do not filter — generate audio for every chunk.
+    """
+    if not words_to_repeat:
+        return True
+    norm_line = normalize_for_vocab_match(line)
+    if not norm_line:
+        return False
+    for w in words_to_repeat:
+        if not w:
+            continue
+        nw = normalize_for_vocab_match(str(w))
+        if nw and nw in norm_line:
+            return True
+    # Single-token fallback (exact set membership)
+    tokens = norm_line.split()
+    wanted = {normalize_for_vocab_match(str(x)) for x in words_to_repeat if x}
+    wanted.discard("")
+    for t in tokens:
+        if t in wanted:
+            return True
+    return False
+
+
 class APICalls:
     def __init__(self, native_language, tts_provider, document_id, document, target_language, language_level, document_durations, words_to_repeat, document_target_phrases=None,  voice_1=None, voice_2=None, mock=False):
         self.turn_nr = 0
@@ -42,7 +91,8 @@ class APICalls:
         self.futures = []
         self.slow_speaking_rate = 0.73
         self.medium_speaking_rate = 0.85
-        self.executor = concurrent.futures.ThreadPoolExecutor()
+        # Cap parallel TTS work per invocation; global TTS quota is enforced in google_synthesize_text.
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=6)
         os.makedirs(document_id, exist_ok=True)
         if self.mock:
             self.tts_function = self.mock_tts
@@ -50,6 +100,30 @@ class APICalls:
             self.mock_voice_1, self.voice_1_id = voice_finder_google("m", "German")
             self.mock_voice_2, self.voice_2_id = voice_finder_google("f", "German", self.voice_1_id)
             self.mock_narrator_voice, voice_3_id = voice_finder_google("f", "English", narrator_voice = True)
+
+    def dialogue_turn_index_from_path(self, full_json, last_value_path):
+        """Index in dialogue[] for the leaf at last_value_path, or None if not under dialogue."""
+        if not last_value_path or len(last_value_path) < 2:
+            return None
+        if last_value_path[0] != "dialogue":
+            return None
+        idx = last_value_path[1]
+        if not isinstance(idx, int):
+            return None
+        dialogue = full_json.get("dialogue")
+        if not isinstance(dialogue, list) or not (0 <= idx < len(dialogue)):
+            return None
+        return idx
+
+    def voice_for_dialogue_turn(self, full_json, last_value_path):
+        """
+        Speaker A/B voice for target-language audio. Prefer dialogue index from the JSON path
+        so streaming does not flip voices mid-turn when turn_nr catches up to len(dialogue).
+        """
+        d_idx = self.dialogue_turn_index_from_path(full_json, last_value_path)
+        if d_idx is not None:
+            return self.voice_1 if d_idx % 2 == 0 else self.voice_2
+        return self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
 
     def select_tts_provider(self):
         if self.tts_provider == TTS_PROVIDERS.GOOGLE.value:
@@ -87,7 +161,8 @@ class APICalls:
         elif '"target_language":' in current_line:
             classified_text = self.extract_and_classify_enclosed_words(last_value)
             text_w_o_transliteration = next((text_part for text_part in classified_text if not text_part["enclosed"]), None)["text"]
-            if self.turn_nr % 2 == 0:
+            voice_for_turn = self.voice_for_dialogue_turn(full_json, last_value_path)
+            if voice_for_turn == self.voice_1:
                 if self.voice_1:
                     self.futures.append(self.executor.submit(self.tts_function, text_w_o_transliteration, self.voice_1, filename, self.document_durations, first_API_call=True, language_level=self.language_level))
                 else:
@@ -131,6 +206,8 @@ class APICalls:
         last_value_path_string = "_".join(map(str, last_value_path))
         filename = self.document_id + "/" + last_value_path_string + ".mp3"
 
+        voice_for_turn = self.voice_for_dialogue_turn(full_json, last_value_path)
+
         if self.turn_nr + 1 < len(full_json.get('dialogue', [])):
             self.turn_nr += 1
             print("full_json: ", full_json)
@@ -142,25 +219,36 @@ class APICalls:
                 for index, text_part in enumerate(enclosed_words_objects):
                     filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                     if text_part['enclosed']:
-                        # text_words = [re.sub(r'[^\w\s]', '', word) for word in text_part['text'].lower().split()]
-                        # if not found:
-                        #     if not any(element.lower() in text_words for element in self.words_to_repeat):
-                        #         break
-                        #     else:
-                        #         found = True
-                        voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-                        self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value.split()[0].replace('||', '')}, self.document_target_phrases, operation="add")
+                        voice_to_use = voice_for_turn
+                        phrase_for_store = text_part["text"].strip()
+                        self.push_to_firestore(
+                            {filename.split("/")[-1].replace(".mp3", ""): phrase_for_store},
+                            self.document_target_phrases,
+                            operation="add",
+                        )
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations))
                     else:
                         self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations, narrator_voice=True))
         elif '"narrator_explanation":' in current_line:
-            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations, narrator_voice=True))
+            # Same as narrator_fun_fact: native narrator outside ||...||, target speaker voices inside ||...||
+            enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
+            multi_chunk = len(enclosed_words_objects) > 1
+            for index, text_part in enumerate(enclosed_words_objects):
+                if multi_chunk:
+                    chunk_filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
+                else:
+                    chunk_filename = self.document_id + "/" + last_value_path_string + ".mp3"
+                if text_part['enclosed']:
+                    voice_to_use = voice_for_turn
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, chunk_filename, self.document_durations, language_level=self.language_level))
+                else:
+                    self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, chunk_filename, self.document_durations, narrator_voice=True))
         elif '"narrator_fun_fact":' in current_line:
             enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
             for index, text_part in enumerate(enclosed_words_objects):
                 filename = self.document_id + "/" + last_value_path_string + f'_{index}' + ".mp3"
                 if text_part['enclosed']:
-                    voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
+                    voice_to_use = voice_for_turn
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], voice_to_use, filename, self.document_durations, language_level=self.language_level))
                 else:
                     self.futures.append(self.executor.submit(self.tts_function, text_part['text'], self.narrator_voice, filename, self.document_durations, narrator_voice=True))
@@ -168,13 +256,13 @@ class APICalls:
             if (not self.skip):
                 self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations, narrator_voice=True))
         elif '"target_language":' in current_line:
-            words = [re.sub(r'[^\w\s]', '', word).lower() for word in last_value.split()]
-            if not any(word in self.words_to_repeat for word in words):
+            if not line_matches_words_to_repeat(last_value, self.words_to_repeat or []):
                 self.skip = True
                 return
-            voice_to_use = self.voice_1 if self.turn_nr % 2 == 0 else self.voice_2
-            self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): last_value}, self.document_target_phrases, operation="add")
-            self.futures.append(self.executor.submit(self.tts_function, last_value, voice_to_use, filename, self.document_durations, language_level=self.language_level))
+            tts_text = strip_transliteration_segment(last_value)
+            voice_to_use = voice_for_turn
+            self.push_to_firestore({filename.split('/')[-1].replace('.mp3', ''): tts_text}, self.document_target_phrases, operation="add")
+            self.futures.append(self.executor.submit(self.tts_function, tts_text, voice_to_use, filename, self.document_durations, language_level=self.language_level))
             self.skip = False
         elif '"speaker":' in current_line:
             self.skip = False
@@ -260,6 +348,8 @@ class APICalls:
         return rectified_JSON
 
     def extract_and_classify_enclosed_words(self, input_string):
+        if not input_string:
+            return []
         parts = input_string.split('||')
         result = []
         is_enclosed = False
@@ -269,7 +359,20 @@ class APICalls:
                 result.append({'text': part, 'enclosed': is_enclosed})
             is_enclosed = not is_enclosed
 
-        return result
+        # Unbalanced || (odd count): alternating split mis-tags; recover ||...|| pairs.
+        if '||' in input_string and result and not any(x['enclosed'] for x in result):
+            pairs = re.findall(r'\|\|([^|]+?)\|\|', input_string)
+            if pairs:
+                remainder = re.sub(r'\|\|[^|]+\|\|', ' ', input_string)
+                remainder = ' '.join(remainder.split())
+                out = []
+                if remainder:
+                    out.append({'text': remainder, 'enclosed': False})
+                for p in pairs:
+                    out.append({'text': p.strip(), 'enclosed': True})
+                return out
+
+        return result if result else [{'text': input_string.strip(), 'enclosed': False}]
 
     def use_mock_voices(self):
         self.voice_1 = self.mock_voice_1

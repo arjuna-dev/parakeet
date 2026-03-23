@@ -2,11 +2,13 @@ import os
 import sys
 import time
 from pathlib import Path
+from google.api_core.client_options import ClientOptions
 from google.cloud import texttospeech, storage, firestore
 from mutagen.mp3 import MP3
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utilities import push_to_firestore
 from .language_names import LANGUAGE_NAMES
+from .tts_rate_limiter import tts_synthesis_slot
 
 
 def language_to_language_code(language):
@@ -44,17 +46,19 @@ def voice_finder_google(gender, target_language, exclude_voice_id=None, narrator
     return speaker_voice, speaker_voice_id
 
 def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=False, bucket_name="conversations_audio_files", first_API_call=False, language_level="A1", narrator_voice=False, max_retries=5):
-    client = texttospeech.TextToSpeechClient( client_options=ClientOptions(
-        region="us-central1",
-    ))
+    client = texttospeech.TextToSpeechClient(
+        client_options=ClientOptions(
+            api_endpoint="us-central1-texttospeech.googleapis.com",
+        ),
+    )
     if narrator_voice == False:
         print("speaker_voice: ", voice)
         if first_API_call == False:
-            synthesis_input = texttospeech.SynthesisInput(text=text, prompt=f'This is for practicing conversation while learning languages, so speak clearly and at a {language_level} pace. Also adjust the speed according to the number of words in the text.')
+            synthesis_input = texttospeech.SynthesisInput(text=text, prompt=f'Speak clearly and at a {language_level} pace.')
         else:
-            synthesis_input = texttospeech.SynthesisInput(text=text, prompt=f'This is for practicing conversation while learning languages, it is part of conversation between two speakers so speak naturally and in a friendly tone.')
+            synthesis_input = texttospeech.SynthesisInput(text=text, prompt=f'Speak naturally and in a friendly tone.')
     else:
-        synthesis_input = texttospeech.SynthesisInput(text=text, prompt='This is narrator voice guiding the user through the language lesson. Speak naturally and in a friendly tone.')
+        synthesis_input = texttospeech.SynthesisInput(text=text, prompt='Speak naturally and in a friendly tone with a narrator voice.')
         print("narrator_voice: ", voice)
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3
@@ -65,9 +69,10 @@ def google_synthesize_text(text, voice, output_path, doc_ref = None, local_run=F
     
     while retry_count < max_retries:
         try:
-            response = client.synthesize_speech(
-                input=synthesis_input, voice=voice, audio_config=audio_config
-            )
+            with tts_synthesis_slot():
+                response = client.synthesize_speech(
+                    input=synthesis_input, voice=voice, audio_config=audio_config
+                )
             break  # Success, exit retry loop
         except Exception as e:
             retry_count += 1

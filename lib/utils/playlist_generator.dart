@@ -66,18 +66,52 @@ class PlaylistGenerator {
     return script.where((fileName) => !fileName.startsWith('\$')).toList();
   }
 
-  /// Generate audio sources from script
-  Future<List<AudioSource>> generateAudioSources(List<dynamic> script) async {
-    List<String> fileUrls = [];
+  /// Script entries that actually get a playlist item ([generateAudioSources] skips empty URLs).
+  /// Track durations must use this list so indices match [ConcatenatingAudioSource] children.
+  Future<List<dynamic>> resolveScriptEntriesWithUrls(List<dynamic> script) async {
+    final List<dynamic> out = [];
     for (var fileName in script) {
-      String url = await audioUrlBuilder.constructUrl(fileName);
+      final String url = await audioUrlBuilder.constructUrl(fileName);
       if (url.isNotEmpty) {
-        fileUrls.add(url);
+        out.add(fileName);
       } else {
         print("Empty string URL for $fileName");
       }
     }
+    return out;
+  }
 
-    return fileUrls.where((url) => url.isNotEmpty).map((url) => AudioSource.uri(Uri.parse(url))).toList();
+  /// Build sources and the resolved script in one pass (single URL resolution per file).
+  Future<({List<AudioSource> sources, List<dynamic> resolvedScript})>
+      buildAudioSourcesFromScript(List<dynamic> script) async {
+    final List<AudioSource> sources = [];
+    final List<dynamic> resolvedScript = [];
+    for (var fileName in script) {
+      final String url = await audioUrlBuilder.constructUrl(fileName);
+      if (url.isNotEmpty) {
+        resolvedScript.add(fileName);
+        sources.add(AudioSource.uri(Uri.parse(url)));
+      } else {
+        print("Empty string URL for $fileName");
+      }
+    }
+    return (sources: sources, resolvedScript: resolvedScript);
+  }
+
+  Future<List<AudioSource>> audioSourcesForNames(List<dynamic> names) async {
+    final List<AudioSource> sources = [];
+    for (var fileName in names) {
+      final String url = await audioUrlBuilder.constructUrl(fileName);
+      if (url.isNotEmpty) {
+        sources.add(AudioSource.uri(Uri.parse(url)));
+      }
+    }
+    return sources;
+  }
+
+  /// Generate audio sources from script
+  Future<List<AudioSource>> generateAudioSources(List<dynamic> script) async {
+    final r = await buildAudioSourcesFromScript(script);
+    return r.sources;
   }
 }

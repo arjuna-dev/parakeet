@@ -51,18 +51,25 @@ def push_to_firestore(data, document, operation='update'):
 
 
 def remove_user_from_active_creation_by_id(user_ID, document_id):
+    """Remove one slot; uses a transaction so concurrent updates do not drop entries."""
     db = firestore.client()
     doc_ref = db.collection('active_creation').document('active_creation')
-    doc = doc_ref.get()
 
-    if doc.exists:
-        # Extract the users array from the document
-        users = doc.to_dict().get('users', [])
+    @firestore.transactional
+    def _remove_in_transaction(transaction, ref, uid, did):
+        snap = ref.get(transaction=transaction)
+        if not snap.exists:
+            return
+        users = snap.to_dict().get('users', [])
+        updated_users = [
+            u
+            for u in users
+            if not (u.get('userId') == uid and u.get('documentId') == did)
+        ]
+        transaction.set(ref, {'users': updated_users}, merge=True)
 
-        # Filter out the user with the matching userId and documentId
-        updated_users = [user for user in users if not (user.get('userId') == user_ID and user.get('documentId') == document_id)]
-
-        # Update the document with the filtered users array
-        doc_ref.update({"users": updated_users})
-    else:
-        print("Document does not exist.")
+    transaction = db.transaction()
+    try:
+        _remove_in_transaction(transaction, doc_ref, user_ID, document_id)
+    except Exception as e:
+        print(f'remove_user_from_active_creation_by_id: {e}')

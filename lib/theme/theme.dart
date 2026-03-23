@@ -167,3 +167,18 @@ sealed class AppTheme {
     );
   }
 }
+
+/// Shared dialog styling for [AppTheme.customTheme] (forest surface + lime accent).
+class ParakeetDialogTheme {
+  ParakeetDialogTheme._();
+
+  static Color background(ColorScheme scheme) => scheme.surfaceContainerHighest;
+
+  static ShapeBorder alertShape(ColorScheme scheme) => RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: scheme.outline.withOpacity(0.35),
+          width: 1,
+        ),
+      );
+}

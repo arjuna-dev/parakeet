@@ -7,6 +7,9 @@ import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
+import 'package:parakeet/utils/lesson_constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parakeet/services/recent_lesson_topics_service.dart';
 import 'package:parakeet/widgets/home_screen/audio_waveform_widget.dart';
 import 'package:parakeet/widgets/app_bar_with_drawer.dart';
 
@@ -267,22 +270,28 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
       final targetLanguage = settings['targetLanguage']!;
       final languageLevel = settings['languageLevel']!;
 
-      // Get random lesson suggestion with fallback to local scenarios
-      Map<String, dynamic> suggestion;
-    
-      final random = Random();
+      // Pick a scenario not used recently (same user + target language).
       final scenarios = scenarioKeywords.keys.toList();
       if (scenarios.isEmpty) {
         throw Exception('No scenarios available');
       }
-      final randomScenario = scenarios[random.nextInt(scenarios.length)];
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final String randomScenario;
+      if (uid != null) {
+        randomScenario = await RecentLessonTopicsService.pickUnusedScenarioKey(
+          scenarios,
+          uid,
+          targetLanguage,
+        );
+      } else {
+        randomScenario = scenarios[Random().nextInt(scenarios.length)];
+      }
       final scenarioWords = scenarioKeywords[randomScenario]!;
-      
-      suggestion = {
+      final suggestion = {
         'topic': randomScenario,
-        'words_to_learn': scenarioWords.take(5).toList(),
+        'words_to_learn':
+            scenarioWords.take(LessonConstants.maxWordsAllowed).toList(),
       };
-      
 
       if (!mounted) return;
 
@@ -317,10 +326,10 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
         await Future.delayed(const Duration(milliseconds: 100));
       }
     } catch (e) {
-      // Show error message
       print('Error starting daily lesson: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        LessonService.safeShowSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to start lesson: ${e.toString()}'),
             duration: const Duration(seconds: 3),
@@ -328,11 +337,12 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
         );
       }
     } finally {
+      // Always clear global loading; otherwise a hung await or !mounted leaves the UI stuck.
+      loadingState.setGeneratingLesson(false);
       if (mounted) {
         setState(() {
           _isStartingLesson = false;
         });
-        loadingState.setGeneratingLesson(false);
       }
     }
   }

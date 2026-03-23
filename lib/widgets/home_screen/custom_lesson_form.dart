@@ -3,6 +3,7 @@ import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:parakeet/utils/example_scenarios.dart';
 import 'package:parakeet/utils/save_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parakeet/services/recent_lesson_topics_service.dart';
 import 'dart:math';
 
 class CustomLessonForm extends StatefulWidget {
@@ -45,8 +46,8 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     _initializeAnalytics();
     // Listen to topic changes to update button state
     _topicController.addListener(_updateButtonState);
-    // Populate fields with a random scenario on load
-    _populateRandomScenario();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _populateRandomScenarioAsync());
   }
 
   void _initializeAnalytics() {
@@ -56,26 +57,33 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
   }
 
-  void _populateRandomScenario() {
+  Future<void> _populateRandomScenarioAsync() async {
     try {
-      // Get a random scenario from the dictionary
-      final random = Random();
       final scenarios = scenarioKeywords.keys.toList();
-      final randomScenario = scenarios[random.nextInt(scenarios.length)];
-      final words = scenarioKeywords[randomScenario]!;
-
-      // Populate the topic field
-      _topicController.text = randomScenario;
-
-      // Populate the words to learn (up to the max allowed)
-      _selectedWords.clear();
-      for (var word in words) {
-        if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
-          _selectedWords.add(word);
-        }
+      if (scenarios.isEmpty) return;
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final String key;
+      if (uid != null) {
+        key = await RecentLessonTopicsService.pickUnusedScenarioKey(
+          scenarios,
+          uid,
+          widget.targetLanguage,
+        );
+      } else {
+        key = scenarios[Random().nextInt(scenarios.length)];
       }
+      final words = scenarioKeywords[key]!;
+      if (!mounted) return;
+      setState(() {
+        _topicController.text = key;
+        _selectedWords.clear();
+        for (var word in words) {
+          if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
+            _selectedWords.add(word);
+          }
+        }
+      });
     } catch (e) {
-      // If there's an error, just leave the fields empty
       debugPrint('Failed to populate random scenario: $e');
     }
   }
@@ -195,19 +203,25 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
     }
 
     try {
-      // Get a random scenario from the dictionary
-      final random = Random();
       final scenarios = scenarioKeywords.keys.toList();
-      final randomScenario = scenarios[random.nextInt(scenarios.length)];
+      if (scenarios.isEmpty) return;
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final String randomScenario;
+      if (uid != null) {
+        randomScenario = await RecentLessonTopicsService.pickUnusedScenarioKey(
+          scenarios,
+          uid,
+          widget.targetLanguage,
+        );
+      } else {
+        randomScenario = scenarios[Random().nextInt(scenarios.length)];
+      }
       final words = scenarioKeywords[randomScenario]!;
 
       if (mounted) {
         setState(() {
-          // Clear existing data
           _topicController.text = randomScenario;
           _selectedWords.clear();
-
-          // Add words from the scenario (up to the max allowed)
           for (var word in words) {
             if (_selectedWords.length < LessonConstants.maxWordsAllowed) {
               _selectedWords.add(word);
@@ -552,7 +566,7 @@ class _CustomLessonFormState extends State<CustomLessonForm> {
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 16),
                                   child: Text(
-                                    'Add up to 5 words you want to learn',
+                                    'Add up to ${LessonConstants.maxWordsAllowed} words you want to learn',
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontStyle: FontStyle.italic,
