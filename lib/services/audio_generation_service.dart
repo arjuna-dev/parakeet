@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:parakeet/services/lesson_service.dart';
+import 'package:parakeet/utils/lesson_constants.dart';
 
 class AudioGenerationService {
   final String documentID;
@@ -119,7 +121,7 @@ class AudioGenerationService {
 
             // If no expected length is found, try to use a default value
             if (expectedLength <= 0) {
-              expectedLength = 4; // Default expected length
+              expectedLength = LessonConstants.defaultDialogueTurns;
             }
 
             // Count only valid dialogue entries (non-empty)
@@ -190,8 +192,7 @@ class AudioGenerationService {
   Future<void> makeSecondApiCall(
       Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
     await http.post(
-      Uri.parse(
-          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
+      Uri.parse('http://127.0.0.1:8080'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         "Access-Control-Allow-Origin": "*",
@@ -212,32 +213,6 @@ class AudioGenerationService {
         "words_to_repeat": keywordsUsedInDialogue,
       }),
     );
-  }
-
-  /// Adds the current user to the active creation collection
-  Future<void> addUserToActiveCreation() async {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    DocumentReference docRef =
-        firestore.collection('active_creation').doc('active_creation');
-    await firestore.runTransaction((transaction) async {
-      DocumentSnapshot snapshot = await transaction.get(docRef);
-      var userData = {
-        "userId": userID,
-        "documentId": documentID,
-        "timestamp": Timestamp.now()
-      };
-      if (snapshot.exists) {
-        transaction.update(docRef, {
-          "users": FieldValue.arrayUnion([userData]),
-        });
-      } else {
-        transaction.set(docRef, {
-          "users": FieldValue.arrayUnion([userData]),
-        });
-      }
-    }).catchError((error) {
-      print('Failed to add user to active creation: $error');
-    });
   }
 
   /// Gets the existing big JSON from Firestore
@@ -282,30 +257,8 @@ class AudioGenerationService {
     return currentMap;
   }
 
-  /// Removes the user from the active creation collection
+  /// Removes the user from the active creation collection (same logic as [LessonService.releaseActiveCreationSlot]).
   Future<void> removeFromActiveCreation() async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      DocumentReference docRef =
-          firestore.collection('active_creation').doc('active_creation');
-
-      await firestore.runTransaction((transaction) async {
-        DocumentSnapshot snapshot = await transaction.get(docRef);
-        if (snapshot.exists) {
-          Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-          List<dynamic> users = data['users'] ?? [];
-
-          // Find and remove the current user's entry
-          users.removeWhere((user) =>
-              user is Map<String, dynamic> &&
-              user['userId'] == userID &&
-              user['documentId'] == documentID);
-
-          transaction.update(docRef, {'users': users});
-        }
-      });
-    } catch (e) {
-      print("Error removing user from active creation: $e");
-    }
+    await LessonService.releaseActiveCreationSlot(userID, documentID);
   }
 }

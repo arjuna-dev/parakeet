@@ -140,7 +140,9 @@ void _showUpdateDialog(String message, bool brickApp) {
     builder: (BuildContext context) {
       final colorScheme = Theme.of(context).colorScheme;
       return AlertDialog(
-        backgroundColor: colorScheme.surfaceContainerHighest,
+        backgroundColor: ParakeetDialogTheme.background(colorScheme),
+        surfaceTintColor: Colors.transparent,
+        shape: ParakeetDialogTheme.alertShape(colorScheme),
         title: Text(
           brickApp ? 'Update Required' : 'Update Available',
           style: TextStyle(
@@ -224,31 +226,37 @@ Future<void> showCustomTrackingDialog() async {
     context: navigatorKey.currentContext!,
     barrierDismissible: false, // User must explicitly interact with dialog
     builder: (BuildContext context) {
+      final cs = Theme.of(context).colorScheme;
       return AlertDialog(
-        title: const Text(
+        backgroundColor: ParakeetDialogTheme.background(cs),
+        surfaceTintColor: Colors.transparent,
+        shape: ParakeetDialogTheme.alertShape(cs),
+        title: Text(
           'Hi, there! 👋',
           style: TextStyle(
-            fontSize: 24, // Increase font size
-            fontWeight: FontWeight.bold, // Make text bold
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: cs.onSurface,
           ),
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'We kindly ask you to allow use of tracking data.\n\nYour permission helps us deliver a better and even more tailored experience!',
               style: TextStyle(
-                fontSize: 18, // Increase font size for content
-                fontWeight: FontWeight.bold, // Make text bold
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: cs.onSurfaceVariant,
               ),
             ),
-            SizedBox(height: 10), // Add some spacing before the emoji line
-            Center(
+            const SizedBox(height: 10),
+            const Center(
               child: Text(
                 '🤗',
                 style: TextStyle(
-                  fontSize: 40, // Make the emoji larger
+                  fontSize: 40,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -257,6 +265,7 @@ Future<void> showCustomTrackingDialog() async {
         ),
         actions: <Widget>[
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: cs.primary),
             child: const Text('Continue'),
             onPressed: () {
               getAnalyticsManager()?.storeAction(
@@ -329,7 +338,7 @@ class ResponsiveScreenWrapper extends StatelessWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late StreamSubscription<List<PurchaseDetails>> _iapSubscription;
+  StreamSubscription<List<PurchaseDetails>>? _iapSubscription;
   late StreamSubscription<User?> _authSubscription;
   String? _initialRoute;
 
@@ -351,16 +360,20 @@ class _MyAppState extends State<MyApp> {
       if (!kIsWeb && (Platform.isIOS)) await requestTrackingPermission();
     });
 
-    final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
+    // InAppPurchase uses StoreKit on Apple; accessing it on web throws
+    // PlatformException(channel-error, ... startObservingPaymentQueue ...).
+    if (!kIsWeb) {
+      final Stream purchaseUpdated = InAppPurchase.instance.purchaseStream;
 
-    _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
-      IAPService(context.read<AuthService>().currentUser!.uid)
-          .listenToPurchaseUpdated(purchaseDetailsList);
-    }, onDone: () {
-      _iapSubscription.cancel();
-    }, onError: (error) {
-      _iapSubscription.cancel();
-    }) as StreamSubscription<List<PurchaseDetails>>;
+      _iapSubscription = purchaseUpdated.listen((purchaseDetailsList) {
+        IAPService(context.read<AuthService>().currentUser!.uid)
+            .listenToPurchaseUpdated(purchaseDetailsList);
+      }, onDone: () {
+        _iapSubscription?.cancel();
+      }, onError: (error) {
+        _iapSubscription?.cancel();
+      }) as StreamSubscription<List<PurchaseDetails>>;
+    }
 
     // Monitor authentication state changes
     _authSubscription =
@@ -400,7 +413,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _iapSubscription.cancel();
+    _iapSubscription?.cancel();
     _authSubscription.cancel();
     super.dispose();
   }

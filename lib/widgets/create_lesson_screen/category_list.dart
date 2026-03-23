@@ -5,6 +5,7 @@ import 'package:parakeet/services/word_stats_service.dart';
 import 'package:parakeet/services/category_level_service.dart';
 import 'package:parakeet/utils/lesson_constants.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parakeet/theme/theme.dart';
 
 class CategoryList extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -223,21 +224,32 @@ class _CategoryListState extends State<CategoryList> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final cs = Theme.of(context).colorScheme;
           return AlertDialog(
+            backgroundColor: ParakeetDialogTheme.background(cs),
+            surfaceTintColor: Colors.transparent,
+            shape: ParakeetDialogTheme.alertShape(cs),
             title: Row(
               children: [
-                Icon(Icons.phone_android, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.phone_android, color: cs.primary),
                 const SizedBox(width: 8),
-                const Text('Mobile App Required'),
+                Text(
+                  'Mobile App Required',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
-            content: const Text(
+            content: Text(
               'Please use the Parakeet mobile app to view and purchase premium features.',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: cs.onSurfaceVariant),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(foregroundColor: cs.primary),
                 child: const Text('OK'),
               ),
             ],

@@ -5,7 +5,7 @@ import json
 import datetime
 import time
 from utils.prompts import prompt_dialogue, prompt_big_JSON, prompt_dialogue_w_transliteration, prompt_generate_lesson_topic, prompt_suggest_custom_lesson, prompt_translate_keywords
-from utils.utilities import TTS_PROVIDERS, GPT_MODEL
+from utils.utilities import TTS_PROVIDERS, GPT_MODEL, remove_user_from_active_creation_by_id
 from utils.chatGPT_API_call import chatGPT_API_call
 from utils.mock_responses import mock_response_first_API, mock_response_second_API
 from utils.google_tts.gcloud_text_to_speech_api import language_to_language_code, create_google_voice, google_synthesize_text, voice_finder_google
@@ -166,6 +166,8 @@ def first_API_calls(req: https_fn.Request) -> https_fn.Response:
     final_response["document_id"] = document_id
     final_response["voice_1_id"] = first_API_calls.voice_1_id
     final_response["voice_2_id"] = first_API_calls.voice_2_id
+    # Client + completion checks use this; do not let the model override with a different count.
+    final_response["length"] = str(length)
 
     first_API_calls.push_to_firestore(final_response, document, operation="overwrite")
 
@@ -183,106 +185,119 @@ def second_API_calls(req: https_fn.Request) -> https_fn.Response:
         request_data = SecondAPIRequest.parse_obj(req.get_json()).dict()
         print(type(request_data))
     except Exception as e:
-        second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
+        body = req.get_json(silent=True) or {}
+        uid = body.get("user_ID")
+        did = body.get("document_id")
+        if uid and did:
+            remove_user_from_active_creation_by_id(uid, did)
         return https_fn.Response(
             json.dumps({"error": str(e)}),
             status=400,
         )
-    dialogue = request_data.get("dialogue")
-    document_id = request_data.get("document_id")
-    user_ID = request_data.get("user_ID")
-    title = request_data.get("title")
-    speakers = request_data.get("speakers")
-    native_language = request_data.get("native_language")
-    target_language = request_data.get("target_language")
-    language_level = request_data.get("language_level")
-    length = request_data.get("length")
-    voice_1_id = request_data.get("voice_1_id")
-    voice_2_id = request_data.get("voice_2_id")
-    words_to_repeat = request_data.get("words_to_repeat")
-    tts_provider = request_data.get("tts_provider")
-    tts_provider = int(tts_provider)
-    assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
+    api_runner = None
+    user_ID = None
+    document_id = None
+    try:
+        dialogue = request_data.get("dialogue")
+        document_id = request_data.get("document_id")
+        user_ID = request_data.get("user_ID")
+        title = request_data.get("title")
+        speakers = request_data.get("speakers")
+        native_language = request_data.get("native_language")
+        target_language = request_data.get("target_language")
+        language_level = request_data.get("language_level")
+        length = request_data.get("length")
+        voice_1_id = request_data.get("voice_1_id")
+        voice_2_id = request_data.get("voice_2_id")
+        words_to_repeat = request_data.get("words_to_repeat")
+        tts_provider = request_data.get("tts_provider")
+        tts_provider = int(tts_provider)
+        assert tts_provider in [TTS_PROVIDERS.ELEVENLABS.value, TTS_PROVIDERS.GOOGLE.value, TTS_PROVIDERS.OPENAI.value]
 
-    print("request_data:", request_data)
+        print("request_data:", request_data)
 
-    is_mock = False
+        is_mock = False
 
-    if is_mock == True:
-        document = "Mock doc"
-        document_durations = "Mock doc 2"
-    else:
-        db = firestore.client()
-        doc_ref = db.collection('chatGPT_responses').document(document_id)
-        subcollection_ref = doc_ref.collection('all_breakdowns')
-        subcollection_ref_target_phrases = doc_ref.collection('target_phrases')
-        document = subcollection_ref.document('updatable_big_json')
-        document_target_phrases = subcollection_ref_target_phrases.document('updatable_target_phrases')
+        if is_mock == True:
+            document = "Mock doc"
+            document_durations = "Mock doc 2"
+        else:
+            db = firestore.client()
+            doc_ref = db.collection('chatGPT_responses').document(document_id)
+            subcollection_ref = doc_ref.collection('all_breakdowns')
+            subcollection_ref_target_phrases = doc_ref.collection('target_phrases')
+            document = subcollection_ref.document('updatable_big_json')
+            document_target_phrases = subcollection_ref_target_phrases.document('updatable_target_phrases')
 
-        subcollection_ref_durations = doc_ref.collection('file_durations')
-        document_durations = subcollection_ref_durations.document('file_durations')
+            subcollection_ref_durations = doc_ref.collection('file_durations')
+            document_durations = subcollection_ref_durations.document('file_durations')
 
-    if tts_provider == TTS_PROVIDERS.GOOGLE.value:
-        language_code = language_to_language_code(target_language)
+        if tts_provider == TTS_PROVIDERS.GOOGLE.value:
+            language_code = language_to_language_code(target_language)
 
-        voice_1 = create_google_voice(language_code, voice_1_id)
-        voice_2 = create_google_voice(language_code, voice_2_id)
-    elif tts_provider == TTS_PROVIDERS.OPENAI.value:
-        language_code = language_to_language_code_openai(target_language)
-        voice_1 = voice_1_id
-        voice_2 = voice_2_id
+            voice_1 = create_google_voice(language_code, voice_1_id)
+            voice_2 = create_google_voice(language_code, voice_2_id)
+        elif tts_provider == TTS_PROVIDERS.OPENAI.value:
+            language_code = language_to_language_code_openai(target_language)
+            voice_1 = voice_1_id
+            voice_2 = voice_2_id
 
-    second_API_calls = APICalls(native_language,
-                                tts_provider,
-                                document_id,
-                                document,
-                                target_language,
-                                language_level,
-                                document_durations,
-                                words_to_repeat,
-                                document_target_phrases,
-                                voice_1,
-                                voice_2,
-                                mock=is_mock
-                                )
-    second_API_calls.line_handler = second_API_calls.handle_line_2nd_API
+        api_runner = APICalls(native_language,
+                                    tts_provider,
+                                    document_id,
+                                    document,
+                                    target_language,
+                                    language_level,
+                                    document_durations,
+                                    words_to_repeat,
+                                    document_target_phrases,
+                                    voice_1,
+                                    voice_2,
+                                    mock=is_mock
+                                    )
+        api_runner.line_handler = api_runner.handle_line_2nd_API
 
-
-    if target_language in ["Mandarin Chinese", "Korean", "Arabic", "Japanese"]:
+        # Spoken target text only (before ||); transliteration/pinyin must not go into big-JSON prompt.
         for turn in dialogue:
-            if '||' in turn["target_language"]:
-                turn["target_language"] = turn["target_language"].split('||')[0]
+            if isinstance(turn, dict) and "target_language" in turn and "||" in turn["target_language"]:
+                turn["target_language"] = turn["target_language"].split("||", 1)[0].strip()
 
-    prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
+        prompt = prompt_big_JSON(dialogue, native_language, target_language, language_level, length, speakers)
 
-    if second_API_calls.mock == True:
-        chatGPT_response = mock_response_second_API
-    else:
-        chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
+        if api_runner.mock == True:
+            chatGPT_response = mock_response_second_API
+        else:
+            chatGPT_response = chatGPT_API_call(prompt, use_stream=True)
 
-    final_response = second_API_calls.process_response(chatGPT_response)
+        final_response = api_runner.process_response(chatGPT_response)
 
-    final_response["user_ID"] = user_ID
-    final_response["document_id"] = document_id
-    final_response["native_language"] = native_language
-    final_response["target_language"] = target_language
-    final_response["language_level"] = language_level
-    final_response["title"] = title
-    final_response["speakers"] = speakers
-    final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        final_response["user_ID"] = user_ID
+        final_response["document_id"] = document_id
+        final_response["native_language"] = native_language
+        final_response["target_language"] = target_language
+        final_response["language_level"] = language_level
+        final_response["title"] = title
+        final_response["speakers"] = speakers
+        final_response["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    print("final_response: ", final_response)
-    second_API_calls.push_to_firestore(final_response, document, operation="overwrite")
+        print("final_response: ", final_response)
+        api_runner.push_to_firestore(final_response, document, operation="overwrite")
 
-    second_API_calls.executor.shutdown(wait=True)
-
-    # remove user ID from active_creation db in the firebase
-    second_API_calls.remove_user_from_active_creation_by_id(user_ID, document_id)
-
-    return https_fn.Response(
-        final_response,
-        status=200,
-    )
+        return https_fn.Response(
+            final_response,
+            status=200,
+        )
+    except Exception as e:
+        print(f"second_API_calls error: {e}")
+        return https_fn.Response(
+            json.dumps({"error": str(e)}),
+            status=500,
+        )
+    finally:
+        if api_runner is not None:
+            api_runner.executor.shutdown(wait=True)
+        if user_ID and document_id:
+            remove_user_from_active_creation_by_id(user_ID, document_id)
 
 
 
@@ -405,7 +420,8 @@ def generate_lesson_topic(req: https_fn.Request) -> https_fn.Response:
                 status=400
             )
 
-        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number)
+        recent_topics = request_data.get("recent_topics") or []
+        prompt = prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number, recent_topics)
 
         response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_5_nano.value)
 
@@ -474,7 +490,8 @@ def suggest_custom_lesson(req: https_fn.Request) -> https_fn.Response:
                 status=400
             )
 
-        prompt = prompt_suggest_custom_lesson(target_language, native_language)
+        recent_topics = request_data.get("recent_topics") or []
+        prompt = prompt_suggest_custom_lesson(target_language, native_language, recent_topics)
 
         response = chatGPT_API_call(prompt, use_stream=False, model=GPT_MODEL.GPT_5_nano.value)
 

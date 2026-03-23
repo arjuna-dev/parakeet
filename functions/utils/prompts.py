@@ -1,5 +1,3 @@
-import random
-
 def prompt_dialogue(requested_scenario, category, native_language, target_language, language_level, keywords, length):
    keywords_instruction = ""
    if category == 'Custom Lesson':
@@ -7,7 +5,7 @@ def prompt_dialogue(requested_scenario, category, native_language, target_langua
    else:
       keywords_instruction = "IMPORTANT: ALL the words in {keywords} list MUST be used in the dialogue in their exact form without declination."
 
-   return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. You will be using the the following content:
+   return f'''Please generate a JSON file with a dialogue containing EXACTLY {length} turns—no more, no fewer—so that turn_nr should go from 1 to {length}. The "dialogue" array must have exactly {length} objects. Include always 2 speakers. You will be using the the following content:
 
 requested_scenario: {requested_scenario}
 keywords: {keywords}
@@ -106,18 +104,11 @@ Expected output in JSON format:
             "gender": "f"
         }},
         {{
-            "target_language": "[sarcasm]But can I still [uhm] eat peanut butter?",
+            "target_language": "[sarcasm] But can I still [uhm] eat peanut butter?",
             "native_language": "[sarcasm] Aber kann ich [uhm] trotzdem Erdnussbutter essen?",
             "turn_nr": "3",
             "speaker": "speaker_1",
             "gender": "m"
-        }},
-        {{
-            "target_language": "[laughing] Yes, peanut butter is vegetarian [sarcasm]!",
-            "native_language": "[laughing] Ja, Erdnussbutter ist vegetarisch [sarcasm], und sogar Astronauten essen sie!",
-            "turn_nr": "4",
-            "speaker": "speaker_2",
-            "gender": "f"
         }}
     ],
     "keywords_used": ["Gesundheit", "Mitgefühl", "Erdnussbutter"]
@@ -127,6 +118,10 @@ Expected output in JSON format:
 
 def prompt_translate_keywords(keywords, target_language, native_language):
    return f'''Please translate the following keywords {keywords} to {target_language}. Return an array of objects where each object contains the word in both {native_language} (native_language) and {target_language} (target_language). If a keyword is already in {target_language}, keep it as is for the target_language value, but provide the {native_language} translation for the native_language value.
+
+CRITICAL (used to match vocabulary in the lesson and generate audio):
+- The "{target_language}" value for each item must be the exact surface form that will appear in the spoken lesson (same spelling, word boundaries, and spacing as in the dialogue). Multi-word phrases must be a single JSON string (e.g. "guten tag").
+- Do not put pipe characters (|) or double pipes (||) inside these values.
 
 Example request:
 ###
@@ -171,6 +166,14 @@ def prompt_big_JSON(dialogue, native_language, target_language, language_level, 
    return f'''Please generate a JSON using this conversation:\n{speakers}\n{dialogue}\n The language level is {language_level}.
 
    - You will write turns from 1 to {length}.
+
+   STRICT LANGUAGE RULES for "narrator_explanation" and "narrator_fun_fact" (MUST follow):
+   - Write the main narration in {native_language} only. The learner hears the native-language narrator voice for all non-quoted text.
+   - Only words or short phrases that are actually in {target_language} may appear in {target_language}, and they MUST be wrapped in ||double vertical bars||. Do not write full sentences in {target_language} outside of ||...||.
+   - Do NOT write entire explanations in {target_language}. Wrong: a Spanish paragraph when native_language is English. Right: English sentences with ||hola|| or ||¿cómo estás?|| where the target form is cited.
+   - If you need to refer to a target phrase, paraphrase in {native_language} and put only the literal target phrase inside ||...||.
+   - Speech markers like [sigh] belong in {native_language} narration, not inside ||...|| unless they are part of the quoted target phrase.
+
    - You will write the narrator_explanation and narrator_fun_fact keys of the JSON file in the native_language: {native_language}, when quoting from the target_language, {target_language}, the text should be enclosed in double vertical bars (||).
    - If the target_language ({target_language}) sentence of a turn is contains sub-sentences it should be split in these smaller sub-sentences that have grammatical cohesion and make sense.
     - Then these sub-sentences should be translated as literally as possible to the native_language ({native_language}) taking as context the sub-sentence and NOT the full sentence or conversation.
@@ -494,7 +497,7 @@ def prompt_dialogue_w_transliteration(requested_scenario, category, native_langu
   else:
     keywords_instruction = "IMPORTANT: EVERY word in {keywords} list MUST be used in the dialogue."
 
-  return f'''Please generate a JSON file with a dialogue containing {length} turns, so that turn_nr should go from 1 to {length}. Include always 2 speakers. Each dialogue should be between 8 and 12 words and should not be too long and to the point. You will be using the following content:
+  return f'''Please generate a JSON file with a dialogue containing EXACTLY {length} turns—no more, no fewer—so that turn_nr should go from 1 to {length}. The "dialogue" array must have exactly {length} objects. Include always 2 speakers. Each dialogue should be between 8 and 12 words and should not be too long and to the point. You will be using the following content:
 
 requested_scenario: {requested_scenario}
 keywords: {keywords}
@@ -549,17 +552,10 @@ Expected JSON output:
             "gender": "m"
         }},
         {{
-            "target_language": "[excited] 这种 辨别 能力 [short pause] 是 如何 发展 的？ || [excited] zhè zhǒng biànbié nénglì [short pause] shì rúhé fāzhǎn de?",
-            "native_language": "[excited] And how [short pause] does one develop this discrimination?",
+            "target_language": "[excited] 这种 辨别 能力 [short pause] 是 如何 借 耐心 来 发展 的？ || [excited] zhè zhǒng biànbié nénglì [short pause] shì rúhé jiè nàixīn lái fāzhǎn de?",
+            "native_language": "[excited] And how [short pause] does one develop this discrimination [short pause] through patience?",
             "turn_nr": "3",
             "speaker": "speaker_1",
-            "gender": "m"
-        }},
-        {{
-            "target_language": "[methodically] 通过 [short pause] 不断 的 练习 [medium pause] 和 耐心 来 发展。 || [methodically] tōngguò [short pause] bùduàn de liànxí [medium pause] hé nàixīn lái fāzhǎn.",
-            "native_language": "[methodically] It develops [short pause] through constant practice [medium pause] and patience.",
-            "turn_nr": "4",
-            "speaker": "speaker_2",
             "gender": "m"
         }}
     ],
@@ -568,14 +564,7 @@ Expected JSON output:
 """
 '''
 
-def prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number):
-  # Generate a boolean variable that is 50% chances false
-  funky_topic = random.choice([True, False])
-  extra_instructions = ""
-
-  if funky_topic:
-    extra_instructions = "Because we will be generating many such lessons try to come up with a topic that is not too common, but still relevant for learning languages."
-
+def prompt_generate_lesson_topic(category, selected_words, target_language, native_language, level_number, recent_topics=None):
   # Define level-specific instructions
   level_mapping = {
     1: "beginner",
@@ -586,19 +575,31 @@ def prompt_generate_lesson_topic(category, selected_words, target_language, nati
   level_name = level_mapping.get(level_number, "beginner")
 
   level_instructions = {
-    1: "The topic should be simple, practical, and focus on everyday situations that beginners would encounter.",
-    2: "The topic should be moderately complex, covering more nuanced situations and concepts.",
-    3: "The topic should be sophisticated, covering abstract concepts, professional situations, or specialized topics."
+    1: "Use simple, familiar situations: greetings, food, directions, shopping, weather, family, or a typical day.",
+    2: "Use situations adults actually run into: making plans, travel, work basics, health, hobbies, services (bank, doctor, phone), or social chat.",
+    3: "Use richer but still realistic contexts: work or studies, news and opinions, travel problems, relationships, or modern life (apps, subscriptions, routines)—natural contemporary language, not academic or archaic themes."
   }
 
   level_instruction = level_instructions.get(level_number, level_instructions[1])
 
-  return f'''Generate a language lesson topic that fits the category '{category}' that can be taught with the words in {selected_words}.
-        {extra_instructions}
+  avoid_block = ""
+  if recent_topics:
+    avoid_block = f"""
+        AVOID REPEATING THESE (the learner already had lessons with these topics):
+        {recent_topics}
+        Your new "title" and "topic" must be clearly different — do not repeat, translate, or closely paraphrase any of the above.
+        """
+
+  return f'''Generate a language lesson topic that fits the category '{category}' and can be taught with the words in {selected_words}.
+        {avoid_block}
+        TOPIC STYLE (very important):
+        - Prefer relatable, modern, everyday life: routines, travel, food, friends, work/school, health, shopping, tech/apps, making plans, small talk.
+        - Avoid obscure, quirky, or "random for the sake of it" scenarios (no odd historical figures, niche philosophy, surreal plots, or contrived gimmicks).
+        - The learner should think "I could need this sentence this week."
 
         IMPORTANT: This lesson is for {level_name} level learners. {level_instruction}
 
-        The topic should be fun, engaging and practical for language learning at the {level_name} level.
+        The title and topic should sound natural and useful for language learning at the {level_name} level.
         Return the response in this exact JSON format:
         {{
             "title": "The lesson title in {native_language}",
@@ -606,14 +607,23 @@ def prompt_generate_lesson_topic(category, selected_words, target_language, nati
         }}
         '''
 
-def prompt_suggest_custom_lesson(target_language, native_language):
+def prompt_suggest_custom_lesson(target_language, native_language, recent_topics=None):
+  avoid_block = ""
+  if recent_topics:
+    avoid_block = f"""
+        Do not repeat or closely paraphrase these recently used topics (titles or scenarios):
+        {recent_topics}
+        """
   return f'''Generate topic and words for a custom language lesson.
-        The topic should be engaging, fun and practical for language learning and includes exactly 5 relevant words related to the topic.
+        {avoid_block}
+        The topic must feel relatable and modern—situations people actually encounter (daily life, travel, work or study, social plans, food, health, shopping, using apps or services, small talk).
+        Avoid weird, overly niche, or gimmicky scenarios; keep it practical and something a learner might use soon.
+        Include exactly 3 relevant words related to the topic.
         Return the response in this exact JSON format:
         {{
             "title": "The lesson title in {native_language}",
             "topic": "The lesson topic in {native_language}",
-            "words_to_learn": ["word1", "word2", "word3", "word4", "word5"]
+            "words_to_learn": ["word1", "word2", "word3"]
         }}
         The words should be in {target_language} and in lower case.
         '''

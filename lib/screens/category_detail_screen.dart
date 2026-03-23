@@ -7,6 +7,7 @@ import 'package:parakeet/main.dart';
 import 'package:parakeet/services/word_stats_service.dart';
 import 'package:parakeet/services/category_level_service.dart';
 import 'package:parakeet/screens/level_detail_screen.dart';
+import 'package:parakeet/theme/theme.dart';
 
 // Global variable to track active toast
 OverlayEntry? _activeToastEntry;
@@ -839,10 +840,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          backgroundColor: ParakeetDialogTheme.background(colorScheme),
+          surfaceTintColor: Colors.transparent,
+          shape: ParakeetDialogTheme.alertShape(colorScheme),
           title: Row(
             children: [
               Icon(

@@ -19,7 +19,7 @@ requested_scenario = "Mother complimenting cereal selection"
 native_language = "English (UK)"
 target_language = "German"
 language_level = "A1"
-length = "4"
+length = "3"
 keywords = "shark, roller coaster, ants, ping-pong, shaquille oneal, heavy investments"
 
 prompt1 = prompt_dialogue(requested_scenario, native_language, target_language, "Absolute Beginner", keywords, length)

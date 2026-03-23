@@ -1,20 +1,37 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parakeet/utils/constants.dart';
+import 'package:parakeet/utils/lesson_constants.dart';
 
 import 'package:parakeet/screens/store_view.dart';
 import 'package:parakeet/services/daily_lesson_service.dart';
+import 'package:parakeet/services/recent_lesson_topics_service.dart';
 import 'package:parakeet/utils/script_generator.dart'
     show storeKeywordTranslations, clearKeywordTranslations;
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
 
 class LessonService {
-  static const int activeCreationAllowed = 20;
+  /// Shows a snackbar without throwing if [context] was deactivated after an await.
+  static void safeShowSnackBar(BuildContext context, SnackBar snackBar) {
+    if (!context.mounted) return;
+    try {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(snackBar);
+    } catch (_) {
+      // Context may be inactive while a Future completes (e.g. user navigated away).
+    }
+  }
+
+  /// Concurrent lesson-generation slots (second API / TTS). Enforced atomically in
+  /// [tryReserveActiveCreationSlot]; keep aligned with TTS quota (~500 RPM project limit).
+  static const int activeCreationAllowed = 12;
+
+  /// Drop queue entries older than this so stuck jobs free a slot (server also removes on completion).
+  static const int activeCreationStaleMinutes = 45;
   static const int freeAPILimit = 2;
   static const int premiumAPILimit = 10;
 
@@ -470,19 +487,7 @@ class LessonService {
 
       return shouldEnablePremium ?? false;
     }
-    // Check if there are too many users in active creation
-    var usersInActiveCreation = await countUsersInActiveCreation();
-    if (usersInActiveCreation != -1 &&
-        usersInActiveCreation > activeCreationAllowed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
-          duration: Duration(seconds: 5),
-        ),
-      );
-      return false;
-    }
+    // Concurrent slots are enforced atomically when starting a lesson (tryReserveActiveCreationSlot).
 
     return true;
   }
@@ -746,21 +751,142 @@ class LessonService {
       }
     }
 
-    // Check if there are too many users in active creation
-    var usersInActiveCreation = await countUsersInActiveCreation();
-    if (usersInActiveCreation != -1 &&
-        usersInActiveCreation > activeCreationAllowed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Oops, this is embarrassing 😅 Too many users are creating lessons right now. Please try again in a moment.'),
-          duration: Duration(seconds: 5),
-        ),
-      );
-      return false;
-    }
+    // Concurrent slots are enforced atomically when starting a lesson (tryReserveActiveCreationSlot).
 
     return true;
+  }
+
+  /// Normalizes Firestore users array: drops stale entries, dedupes by (userId, documentId).
+  static List<Map<String, dynamic>> _normalizeActiveCreationUsers(
+      DocumentSnapshot snap) {
+    if (!snap.exists) return [];
+    final raw = snap.data();
+    if (raw is! Map<String, dynamic>) return [];
+    final list = raw['users'];
+    if (list is! List) return [];
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> rows = [];
+    for (final item in list) {
+      if (item is! Map) continue;
+      final m = Map<String, dynamic>.from(item);
+      final ts = m['timestamp'];
+      if (ts is Timestamp) {
+        if (now.difference(ts.toDate()).inMinutes > activeCreationStaleMinutes) {
+          continue;
+        }
+      }
+      rows.add(m);
+    }
+    final Map<String, Map<String, dynamic>> byKey = {};
+    for (final m in rows) {
+      final uid = m['userId']?.toString() ?? '';
+      final did = m['documentId']?.toString() ?? '';
+      final key = '$uid|$did';
+      final existing = byKey[key];
+      if (existing == null) {
+        byKey[key] = m;
+        continue;
+      }
+      final t1 = existing['timestamp'];
+      final t2 = m['timestamp'];
+      if (t1 is Timestamp && t2 is Timestamp) {
+        if (t2.toDate().isAfter(t1.toDate())) {
+          byKey[key] = m;
+        }
+      } else {
+        byKey[key] = m;
+      }
+    }
+    return byKey.values.toList();
+  }
+
+  /// Atomically reserve a slot if under the cap. Call once when starting generation (before first API).
+  static Future<bool> tryReserveActiveCreationSlot(
+      String userId, String documentId) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('active_creation')
+        .doc('active_creation');
+
+    Future<bool> runOnce() {
+      return FirebaseFirestore.instance.runTransaction(
+        (transaction) async {
+          final snap = await transaction.get(docRef);
+          var users = _normalizeActiveCreationUsers(snap);
+
+          final existingIdx = users.indexWhere((u) =>
+              u['userId'] == userId && u['documentId'] == documentId);
+          // Use [Timestamp.now] here, not [FieldValue.serverTimestamp]: nested
+          // serverTimestamp in transaction writes breaks Firestore web interop
+          // ("Attempting to box non-Dart object") and blocks lesson start on web.
+          final ts = Timestamp.now();
+          if (existingIdx >= 0) {
+            users[existingIdx] = {
+              'userId': userId,
+              'documentId': documentId,
+              'timestamp': ts,
+            };
+            transaction.set(docRef, {'users': users}, SetOptions(merge: true));
+            return true;
+          }
+          if (users.length >= activeCreationAllowed) {
+            return false;
+          }
+          users.add({
+            'userId': userId,
+            'documentId': documentId,
+            'timestamp': ts,
+          });
+          transaction.set(docRef, {'users': users}, SetOptions(merge: true));
+          return true;
+        },
+        timeout: const Duration(seconds: 60),
+        maxAttempts: 5,
+      );
+    }
+
+    const maxOuterAttempts = 3;
+    for (var attempt = 0; attempt < maxOuterAttempts; attempt++) {
+      try {
+        return await runOnce().timeout(
+          const Duration(seconds: 90),
+          onTimeout: () {
+            throw TimeoutException('active_creation transaction');
+          },
+        );
+      } catch (e) {
+        print(
+            'tryReserveActiveCreationSlot (attempt ${attempt + 1}/$maxOuterAttempts): $e');
+        if (attempt == maxOuterAttempts - 1) {
+          return false;
+        }
+        await Future<void>.delayed(
+            Duration(milliseconds: 400 * (attempt + 1)));
+      }
+    }
+    return false;
+  }
+
+  /// Remove one slot (client leaving early or error path). Safe if already removed.
+  static Future<void> releaseActiveCreationSlot(
+      String userId, String documentId) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('active_creation')
+        .doc('active_creation');
+    try {
+      await FirebaseFirestore.instance.runTransaction(
+        (transaction) async {
+          final snap = await transaction.get(docRef);
+          var users = _normalizeActiveCreationUsers(snap);
+          users.removeWhere((u) =>
+              u['userId'] == userId && u['documentId'] == documentId);
+          transaction.set(docRef, {'users': users}, SetOptions(merge: true));
+        },
+        timeout: const Duration(seconds: 60),
+        maxAttempts: 5,
+      );
+    } catch (e) {
+      print('releaseActiveCreationSlot: $e');
+    }
   }
 
   // Function to count users in active creation
@@ -827,7 +953,8 @@ class LessonService {
   ) async {
     // Validate inputs
     if (topic.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      safeShowSnackBar(
+        context,
         const SnackBar(
           content: Text('Please enter a topic for your lesson'),
           duration: Duration(seconds: 2),
@@ -837,7 +964,8 @@ class LessonService {
     }
 
     if (selectedWords.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      safeShowSnackBar(
+        context,
         const SnackBar(
           content: Text('Please add at least one word to learn'),
           duration: Duration(seconds: 2),
@@ -854,26 +982,51 @@ class LessonService {
       return;
     }
 
+    String? documentId;
+    String? userId;
+
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final DocumentReference docRef =
           firestore.collection('chatGPT_responses').doc();
-      final String documentId = docRef.id;
-      final String userId = FirebaseAuth.instance.currentUser!.uid.toString();
-      final response = await http.post(
-        Uri.parse(
-            'https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: jsonEncode(<String, dynamic>{
-          "keywords": selectedWords,
-          "target_language": targetLanguage,
-          "native_language":
-              nativeLanguage, // Add the missing native_language parameter
-        }),
-      );
+      documentId = docRef.id;
+      userId = FirebaseAuth.instance.currentUser!.uid.toString();
+
+      final reserved =
+          await tryReserveActiveCreationSlot(userId, documentId);
+      if (!reserved) {
+        safeShowSnackBar(
+          context,
+          const SnackBar(
+            content: Text(
+                'Too many lessons are generating right now. Please try again in a moment.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
+      final response = await http
+          .post(
+            Uri.parse(
+                'https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+            headers: <String, String>{
+              'Content-Type': 'application/json; charset=UTF-8',
+              "Access-Control-Allow-Origin": "*",
+            },
+            body: jsonEncode(<String, dynamic>{
+              "keywords": selectedWords,
+              "target_language": targetLanguage,
+              "native_language":
+                  nativeLanguage, // Add the missing native_language parameter
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {
+              throw TimeoutException('translate_keywords request');
+            },
+          );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data =
@@ -908,8 +1061,7 @@ class LessonService {
 
       // Make the API call
       http.post(
-        Uri.parse(
-            'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
+        Uri.parse('http://127.0.0.1:8081'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -919,7 +1071,7 @@ class LessonService {
           "keywords": selectedWords,
           "native_language": nativeLanguage,
           "target_language": targetLanguage,
-          "length": '4',
+          "length": '${LessonConstants.defaultDialogueTurns}',
           "user_ID": userId,
           "language_level": languageLevel,
           "document_id": documentId,
@@ -945,20 +1097,28 @@ class LessonService {
           nativeLanguage: nativeLanguage,
           languageLevel: languageLevel,
           wordsToRepeat: List<String>.from(selectedWords),
-          numberOfTurns: 4,
+          numberOfTurns: LessonConstants.defaultDialogueTurns,
         ));
+        await RecentLessonTopicsService.recordTopic(userId, targetLanguage, topic);
       }
     } catch (e) {
       print(e);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+      if (userId != null && documentId != null) {
+        try {
+          await releaseActiveCreationSlot(userId, documentId).timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {},
+          );
+        } catch (_) {}
       }
+      safeShowSnackBar(
+        context,
+        const SnackBar(
+          content: Text(
+              'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     } finally {
       setIsCreatingCustomLesson(false);
     }
@@ -967,9 +1127,17 @@ class LessonService {
   // Function to suggest a random lesson
   static Future<Map<String, dynamic>> suggestRandomLesson(
     String targetLanguage,
-    String nativeLanguage,
-  ) async {
+    String nativeLanguage, {
+    List<String>? recentTopics,
+  }) async {
     try {
+      final body = <String, dynamic>{
+        "target_language": targetLanguage,
+        "native_language": nativeLanguage,
+      };
+      if (recentTopics != null && recentTopics.isNotEmpty) {
+        body["recent_topics"] = recentTopics;
+      }
       final response = await http.post(
         Uri.parse(
             'https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_custom_lesson'),
@@ -977,10 +1145,7 @@ class LessonService {
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
         },
-        body: jsonEncode(<String, dynamic>{
-          "target_language": targetLanguage,
-          "native_language": nativeLanguage,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
@@ -993,7 +1158,7 @@ class LessonService {
     }
   }
 
-  // create a function to select 5 words from the category according to certain criteria
+  // create a function to select words from the category according to certain criteria
   static Future<List<dynamic>> selectWordsFromCategory(
       String category, List<String> allWords, String targetLanguage) async {
     // check if there are due words in the category stored in the firestore
@@ -1074,14 +1239,15 @@ class LessonService {
     newWords.shuffle(); // randomize the newWords list
 
     if (newWords.isNotEmpty) {
+      const cap = LessonConstants.maxWordsAllowed;
       final wordsToAdd =
-          newWords.length >= 5 ? newWords.sublist(0, 5) : newWords;
+          newWords.length >= cap ? newWords.sublist(0, cap) : newWords;
       words.addAll(wordsToAdd);
     }
 
     // PRIORITY 2: Add overdue words if we need more
-    if (words.length < 5 && overdueWords.isNotEmpty) {
-      final wordsNeeded = 5 - words.length;
+    if (words.length < LessonConstants.maxWordsAllowed && overdueWords.isNotEmpty) {
+      final wordsNeeded = LessonConstants.maxWordsAllowed - words.length;
       final wordsToAdd = overdueWords.length >= wordsNeeded
           ? overdueWords.sublist(0, wordsNeeded)
           : overdueWords;
@@ -1089,9 +1255,9 @@ class LessonService {
     }
 
     // PRIORITY 3: Add closest to overdue words if we still need more
-    if (words.length < 5 && closestDueDateCard.isNotEmpty) {
+    if (words.length < LessonConstants.maxWordsAllowed && closestDueDateCard.isNotEmpty) {
       closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
-      final wordsNeeded = 5 - words.length;
+      final wordsNeeded = LessonConstants.maxWordsAllowed - words.length;
       final wordsToAdd = closestDueDateCard.length >= wordsNeeded
           ? closestDueDateCard.sublist(0, wordsNeeded)
           : closestDueDateCard;
@@ -1099,8 +1265,8 @@ class LessonService {
     }
 
     // PRIORITY 4: just add random words if we still need more
-    if (words.length < 5) {
-      final wordsNeeded = 5 - words.length;
+    if (words.length < LessonConstants.maxWordsAllowed) {
+      final wordsNeeded = LessonConstants.maxWordsAllowed - words.length;
       // randomize the allWords list
       final randomWords = allWords.toList();
       randomWords.shuffle();
