@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -10,6 +11,10 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
+
+  /// For web, `google_sign_in_web.renderButton()` updates the current user via
+  /// `onCurrentUserChanged`. Expose the stream so UI can finish Firebase auth.
+  Stream<GoogleSignInAccount?> get googleUserChanges => _googleSignIn.onCurrentUserChanged;
 
   Future<void> _initializeUserDocument(User user, BuildContext context, {String? signInProvider, String? appleFirstName}) async {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
@@ -69,25 +74,47 @@ class AuthService {
     }
   }
 
+  Future<User?> signInWithGoogleAccount(BuildContext context, GoogleSignInAccount googleSignInAccount) async {
+    try {
+      final GoogleSignInAuthentication googleSignInAuthentication =
+          await googleSignInAccount.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleSignInAuthentication.accessToken,
+        idToken: googleSignInAuthentication.idToken,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+
+      final User? signedInUser = userCredential.user;
+      if (signedInUser != null) {
+        await _initializeUserDocument(
+          signedInUser,
+          context,
+          signInProvider: 'google.com',
+        );
+      }
+
+      return signedInUser;
+    } catch (e) {
+      print('Error signing in with Google account: $e');
+      return null;
+    }
+  }
+
   Future<User?> signInWithGoogle(BuildContext context) async {
     try {
-      final GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
-      if (googleSignInAccount != null) {
-        final GoogleSignInAuthentication googleSignInAuthentication = await googleSignInAccount.authentication;
+      // On web, `signIn()` is discouraged because it can't reliably provide an
+      // `idToken`. The correct approach is to render the GIS button
+      // (`google_sign_in_web.renderButton()`) and then complete via
+      // `signInSilently` / `onCurrentUserChanged`.
+      final GoogleSignInAccount? googleSignInAccount = kIsWeb
+          ? await _googleSignIn.signInSilently()
+          : await _googleSignIn.signIn();
+      if (googleSignInAccount == null) return null;
 
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleSignInAuthentication.accessToken,
-          idToken: googleSignInAuthentication.idToken,
-        );
-
-        final UserCredential userCredential = await _auth.signInWithCredential(credential);
-
-        if (userCredential.user != null) {
-          await _initializeUserDocument(userCredential.user!, context, signInProvider: 'google.com');
-        }
-
-        return userCredential.user;
-      }
+      return signInWithGoogleAccount(context, googleSignInAccount);
     } catch (e) {
       print('Error signing in with Google: $e');
     }

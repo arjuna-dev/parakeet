@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class AudioUrlBuilder {
@@ -90,6 +91,9 @@ class AudioUrlBuilder {
 
   /// Checks if a URL exists by making a HEAD request
   static Future<bool> urlExists(String url) async {
+    if (kIsWeb && url.contains('storage.googleapis.com/user_nicknames/')) {
+      return false;
+    }
     try {
       final response = await http.head(Uri.parse(url));
       return response.statusCode >= 200 && response.statusCode < 300;

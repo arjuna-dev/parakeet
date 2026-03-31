@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:parakeet/services/user_service.dart';
 import 'package:parakeet/widgets/home_screen/custom_lesson_form.dart';
+import 'package:parakeet/widgets/home_screen/grammar_lesson_form.dart';
 import 'package:parakeet/services/lesson_service.dart';
 import 'package:parakeet/services/loading_state_service.dart';
 
@@ -48,13 +49,15 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
   }
 
   Future<void> _handleLessonCreation(String topic, List<String> words) async {
-    final loadingState = Provider.of<LoadingStateService>(context, listen: false);
+    final loadingState =
+        Provider.of<LoadingStateService>(context, listen: false);
 
     // Check daily lessons remaining first before setting loading state (but don't deduct yet - server will handle deduction)
     final remainingLessons = await LessonService.getCurrentCredits();
     if (remainingLessons <= 0) {
       // Show premium dialog and navigate to store if user wants to upgrade
-      final shouldEnablePremium = await LessonService.showPremiumDialog(context);
+      final shouldEnablePremium =
+          await LessonService.showPremiumDialog(context);
       if (!shouldEnablePremium) {
         return;
       }
@@ -99,6 +102,53 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     }
   }
 
+  Future<void> _handleGrammarLessonCreation(String topic) async {
+    final loadingState =
+        Provider.of<LoadingStateService>(context, listen: false);
+
+    final remainingLessons = await LessonService.getCurrentCredits();
+    if (remainingLessons <= 0) {
+      final shouldEnablePremium =
+          await LessonService.showPremiumDialog(context);
+      if (!shouldEnablePremium) {
+        return;
+      }
+    }
+
+    loadingState.setGeneratingLesson(true);
+
+    try {
+      await LessonService.createCustomGrammarLesson(
+        context,
+        topic,
+        nativeLanguage,
+        targetLanguage,
+        languageLevel,
+        (bool value) {
+          if (mounted) {
+            loadingState.setGeneratingLesson(value);
+          }
+        },
+      );
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/favorite');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create grammar lesson: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        loadingState.setGeneratingLesson(false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -108,87 +158,105 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
     return Consumer<LoadingStateService>(
       builder: (context, loadingState, child) {
         final isGeneratingLesson = loadingState.isGeneratingLesson;
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                // Navigate back to home screen
-                Navigator.pushReplacementNamed(context, '/favorite');
-              },
-            ),
-            title: const Text(
-              'Custom Lessons',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          body: Stack(
-            children: [
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
-                      children: [
-                        // Header with title and icon
-                        Container(
-                          width: double.infinity,
-                          color: colorScheme.surface,
-                          padding: const EdgeInsets.fromLTRB(
-                            20,
-                            10,
-                            20,
-                            10,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome_rounded,
-                                color: colorScheme.primary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Text(
-                                  'Create personalized lessons with your own topics and words',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Custom lesson form
-                        Expanded(
-                          child: CustomLessonForm(
-                            nativeLanguage: nativeLanguage,
-                            targetLanguage: targetLanguage,
-                            languageLevel: languageLevel,
-                            isSmallScreen: isSmallScreen,
-                            isLoading: isGeneratingLesson,
-                            onLessonStarted: (topic, words) {
-                              _handleLessonCreation(topic, words); // Start lesson creation
-                            },
-                            onLessonCreated: () {
-                              // Lesson created successfully
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-              // Loading overlay to block interactions
-              if (isGeneratingLesson)
-                Container(
-                  color: Colors.black.withOpacity(0.3),
+        return DefaultTabController(
+            length: 2,
+            child: Scaffold(
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    // Navigate back to home screen
+                    Navigator.pushReplacementNamed(context, '/favorite');
+                  },
                 ),
-            ],
-          ),
-        );
+                title: const Text(
+                  'Design Lesson',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(text: 'Conversation'),
+                    Tab(text: 'Grammar'),
+                  ],
+                ),
+              ),
+              body: Stack(
+                children: [
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Column(
+                          children: [
+                            // Header with title and icon
+                            Container(
+                              width: double.infinity,
+                              color: colorScheme.surface,
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                10,
+                                20,
+                                10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: colorScheme.primary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'Create personalized conversation or grammar lessons tailored to your level',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Expanded(
+                              child: TabBarView(
+                                children: [
+                                  CustomLessonForm(
+                                    nativeLanguage: nativeLanguage,
+                                    targetLanguage: targetLanguage,
+                                    languageLevel: languageLevel,
+                                    isSmallScreen: isSmallScreen,
+                                    isLoading: isGeneratingLesson,
+                                    onLessonStarted: (topic, words) {
+                                      _handleLessonCreation(topic, words);
+                                    },
+                                    onLessonCreated: () {},
+                                  ),
+                                  GrammarLessonForm(
+                                    nativeLanguage: nativeLanguage,
+                                    targetLanguage: targetLanguage,
+                                    languageLevel: languageLevel,
+                                    isSmallScreen: isSmallScreen,
+                                    isLoading: isGeneratingLesson,
+                                    onLessonStarted:
+                                        _handleGrammarLessonCreation,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                  // Loading overlay to block interactions
+                  if (isGeneratingLesson)
+                    Container(
+                      color: Colors.black.withOpacity(0.3),
+                    ),
+                ],
+              ),
+            ));
       },
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,8 @@ class AudioGenerationService {
   final String languageLevel;
   final List<dynamic> wordsToRepeat;
   final String scriptDocumentId;
+  final String lessonType;
+  final String? requestedTopic;
 
   AudioGenerationService({
     required this.documentID,
@@ -23,6 +26,8 @@ class AudioGenerationService {
     required this.languageLevel,
     required this.wordsToRepeat,
     required this.scriptDocumentId,
+    this.lessonType = 'conversation',
+    this.requestedTopic,
   });
 
   /// Waits for the first dialogue part to appear (15 second timeout)
@@ -161,12 +166,166 @@ class AudioGenerationService {
     return latestSnapshot;
   }
 
+  Future<Map<String, dynamic>?> waitForCompleteGrammarLesson() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    int attempts = 0;
+    const maxAttempts = 60;
+    Map<String, dynamic>? latestSnapshot;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        final querySnapshot = await firestore
+            .collection('chatGPT_responses')
+            .doc(documentID)
+            .collection('only_target_sentences')
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+          if (data.containsKey('audio_parts') && data['audio_parts'] is List) {
+            latestSnapshot = data;
+            if (data['part_2_complete'] == true &&
+                data.containsKey('timestamp')) {
+              break;
+            }
+          }
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        print('Error checking grammar completion: $e');
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    return latestSnapshot;
+  }
+
+  Future<Map<String, dynamic>?> waitForInitialGrammarLessonPlayback() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final completer = Completer<Map<String, dynamic>?>();
+    StreamSubscription<DocumentSnapshot>? subscription;
+
+    Future<void> completeWithSnapshot(Map<String, dynamic> data) async {
+      final availablePart1Audio = (data['audio_parts'] as List<dynamic>? ?? const [])
+          .map((part) => part.toString())
+          .where((part) => part.startsWith('grammar_part_1_batch_'))
+          .toList()
+        ..sort();
+
+      if (data['part_1_complete'] != true || availablePart1Audio.isEmpty) {
+        return;
+      }
+
+      final merged = Map<String, dynamic>.from(data);
+      merged['audio_parts'] = availablePart1Audio;
+      merged['title_audio_ready'] = true;
+      print(
+          'Initial grammar playback data found with ${availablePart1Audio.length} batch(es)');
+      if (!completer.isCompleted) {
+        completer.complete(merged);
+      }
+      await subscription?.cancel();
+    }
+
+    subscription = firestore
+        .collection('chatGPT_responses')
+        .doc(documentID)
+        .collection('only_target_sentences')
+        .doc('updatable_json')
+        .snapshots()
+        .listen((snapshot) async {
+      if (!snapshot.exists) {
+        return;
+      }
+      try {
+        final data = snapshot.data() as Map<String, dynamic>? ?? {};
+        await completeWithSnapshot(data);
+      } catch (e) {
+        print('Error checking initial grammar playback data: $e');
+      }
+    });
+
+    try {
+      final initialDoc = await firestore
+          .collection('chatGPT_responses')
+          .doc(documentID)
+          .collection('only_target_sentences')
+          .doc('updatable_json')
+          .get();
+      if (initialDoc.exists) {
+        final data = initialDoc.data() as Map<String, dynamic>? ?? {};
+        await completeWithSnapshot(data);
+      }
+    } catch (e) {
+      print('Error checking initial grammar playback data: $e');
+    }
+
+    return completer.future;
+  }
+
+  Future<void> makeSecondGrammarApiCall(Map<String, dynamic> data) async {
+    final body = jsonEncode(<String, dynamic>{
+      "requested_topic": data['requested_topic'] ?? requestedTopic ?? title,
+      "title": data['title'] ?? title,
+      "segments": data['segments'] ?? const [],
+      "speakers": data['speakers'] ?? const {},
+      "audio_parts": data['audio_parts'] ?? const [],
+      "native_language": nativeLanguage,
+      "target_language": targetLanguage,
+      "user_ID": userID,
+      "document_id": documentID,
+      "language_level": languageLevel,
+      "length_minutes": data['length_minutes'] ?? "7",
+      "tts_provider": "1",
+    });
+
+    final candidateUris = <Uri>[
+      Uri.parse('http://127.0.0.1:8081'),
+      Uri.parse('http://127.0.0.1:8080/second_API_calls_grammar'),
+      Uri.parse(
+          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls_grammar'),
+    ];
+
+    Object? lastError;
+
+    for (final uri in candidateUris) {
+      try {
+        final response = await http.post(
+          uri,
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: body,
+        );
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          print('Second grammar API call succeeded via $uri');
+          return;
+        }
+
+        lastError =
+            'HTTP ${response.statusCode} from $uri: ${response.body}';
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    throw Exception(
+        'Unable to trigger second grammar API call. Last error: $lastError');
+  }
+
   /// Creates the script document in Firestore
   Future<void> saveScriptToFirestore(
       List<dynamic> script,
       List<dynamic> keywordsUsedInDialogue,
       List<dynamic> completeDialogue,
-      String category) async {
+      String category,
+      {List<dynamic>? segments,
+      List<dynamic>? audioParts,
+      int? part1SegmentCount}) async {
     // Save script to Firestore
     DocumentReference docRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
@@ -177,8 +336,12 @@ class AudioGenerationService {
     await docRef.set({
       "script": script,
       "category": category,
+      "lesson_type": lessonType,
       "title": title,
       "dialogue": completeDialogue,
+      "segments": segments ?? const [],
+      "audio_parts": audioParts ?? const [],
+      "part_1_segment_count": part1SegmentCount,
       "native_language": nativeLanguage,
       "target_language": targetLanguage,
       "language_level": languageLevel,
@@ -192,7 +355,8 @@ class AudioGenerationService {
   Future<void> makeSecondApiCall(
       Map<String, dynamic> data, List<dynamic> keywordsUsedInDialogue) async {
     await http.post(
-      Uri.parse('http://127.0.0.1:8080'),
+      Uri.parse(
+          'https://europe-west1-noble-descent-420612.cloudfunctions.net/second_API_calls'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         "Access-Control-Allow-Origin": "*",
@@ -218,6 +382,49 @@ class AudioGenerationService {
   /// Gets the existing big JSON from Firestore
   Future<Map<String, dynamic>?> getExistingBigJson() async {
     final firestore = FirebaseFirestore.instance;
+    if (lessonType == 'grammar') {
+      final savedScriptDoc = await firestore
+          .collection('chatGPT_responses')
+          .doc(documentID)
+          .collection('script-$userID')
+          .doc(scriptDocumentId)
+          .get();
+      final liveLessonDoc = await firestore
+          .collection('chatGPT_responses')
+          .doc(documentID)
+          .collection('only_target_sentences')
+          .doc('updatable_json')
+          .get();
+
+      final savedData = savedScriptDoc.exists
+          ? savedScriptDoc.data() as Map<String, dynamic>
+          : null;
+      final liveData = liveLessonDoc.exists
+          ? liveLessonDoc.data() as Map<String, dynamic>
+          : null;
+
+      if (savedData == null) {
+        return liveData;
+      }
+      if (liveData == null) {
+        return savedData;
+      }
+
+      final savedAudioParts =
+          savedData['audio_parts'] as List<dynamic>? ?? const [];
+      final liveAudioParts =
+          liveData['audio_parts'] as List<dynamic>? ?? const [];
+
+      if (liveData['part_2_complete'] == true &&
+          savedData['part_2_complete'] != true) {
+        return liveData;
+      }
+      if (liveAudioParts.length > savedAudioParts.length) {
+        return liveData;
+      }
+      return savedData;
+    }
+
     final docRef = firestore
         .collection('chatGPT_responses')
         .doc(documentID)
@@ -227,6 +434,7 @@ class AudioGenerationService {
     if (doc.exists) {
       return doc.data() as Map<String, dynamic>;
     }
+
     return null;
   }
 

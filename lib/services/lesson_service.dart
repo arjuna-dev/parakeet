@@ -771,7 +771,8 @@ class LessonService {
       final m = Map<String, dynamic>.from(item);
       final ts = m['timestamp'];
       if (ts is Timestamp) {
-        if (now.difference(ts.toDate()).inMinutes > activeCreationStaleMinutes) {
+        if (now.difference(ts.toDate()).inMinutes >
+            activeCreationStaleMinutes) {
           continue;
         }
       }
@@ -813,8 +814,8 @@ class LessonService {
           final snap = await transaction.get(docRef);
           var users = _normalizeActiveCreationUsers(snap);
 
-          final existingIdx = users.indexWhere((u) =>
-              u['userId'] == userId && u['documentId'] == documentId);
+          final existingIdx = users.indexWhere(
+              (u) => u['userId'] == userId && u['documentId'] == documentId);
           // Use [Timestamp.now] here, not [FieldValue.serverTimestamp]: nested
           // serverTimestamp in transaction writes breaks Firestore web interop
           // ("Attempting to box non-Dart object") and blocks lesson start on web.
@@ -859,8 +860,7 @@ class LessonService {
         if (attempt == maxOuterAttempts - 1) {
           return false;
         }
-        await Future<void>.delayed(
-            Duration(milliseconds: 400 * (attempt + 1)));
+        await Future<void>.delayed(Duration(milliseconds: 400 * (attempt + 1)));
       }
     }
     return false;
@@ -877,8 +877,8 @@ class LessonService {
         (transaction) async {
           final snap = await transaction.get(docRef);
           var users = _normalizeActiveCreationUsers(snap);
-          users.removeWhere((u) =>
-              u['userId'] == userId && u['documentId'] == documentId);
+          users.removeWhere(
+              (u) => u['userId'] == userId && u['documentId'] == documentId);
           transaction.set(docRef, {'users': users}, SetOptions(merge: true));
         },
         timeout: const Duration(seconds: 60),
@@ -992,8 +992,16 @@ class LessonService {
       documentId = docRef.id;
       userId = FirebaseAuth.instance.currentUser!.uid.toString();
 
-      final reserved =
-          await tryReserveActiveCreationSlot(userId, documentId);
+      await docRef.set({
+        'lesson_type': 'conversation',
+        'title': topic,
+        'native_language': nativeLanguage,
+        'target_language': targetLanguage,
+        'language_level': languageLevel,
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final reserved = await tryReserveActiveCreationSlot(userId, documentId);
       if (!reserved) {
         safeShowSnackBar(
           context,
@@ -1008,25 +1016,25 @@ class LessonService {
 
       final response = await http
           .post(
-            Uri.parse(
-                'https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
-            headers: <String, String>{
-              'Content-Type': 'application/json; charset=UTF-8',
-              "Access-Control-Allow-Origin": "*",
-            },
-            body: jsonEncode(<String, dynamic>{
-              "keywords": selectedWords,
-              "target_language": targetLanguage,
-              "native_language":
-                  nativeLanguage, // Add the missing native_language parameter
-            }),
-          )
+        Uri.parse(
+            'https://europe-west1-noble-descent-420612.cloudfunctions.net/translate_keywords'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "keywords": selectedWords,
+          "target_language": targetLanguage,
+          "native_language":
+              nativeLanguage, // Add the missing native_language parameter
+        }),
+      )
           .timeout(
-            const Duration(seconds: 45),
-            onTimeout: () {
-              throw TimeoutException('translate_keywords request');
-            },
-          );
+        const Duration(seconds: 45),
+        onTimeout: () {
+          throw TimeoutException('translate_keywords request');
+        },
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data =
@@ -1061,7 +1069,8 @@ class LessonService {
 
       // Make the API call
       http.post(
-        Uri.parse('http://127.0.0.1:8081'),
+        Uri.parse(
+            'https://europe-west1-noble-descent-420612.cloudfunctions.net/first_API_calls'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           "Access-Control-Allow-Origin": "*",
@@ -1088,6 +1097,8 @@ class LessonService {
         manager.playLesson(LessonData(
           category: 'Custom Lesson',
           dialogue: const [],
+          segments: const [],
+          lessonType: 'conversation',
           title: topic,
           documentID: documentId,
           userID: userId,
@@ -1099,7 +1110,8 @@ class LessonService {
           wordsToRepeat: List<String>.from(selectedWords),
           numberOfTurns: LessonConstants.defaultDialogueTurns,
         ));
-        await RecentLessonTopicsService.recordTopic(userId, targetLanguage, topic);
+        await RecentLessonTopicsService.recordTopic(
+            userId, targetLanguage, topic);
       }
     } catch (e) {
       print(e);
@@ -1119,6 +1131,188 @@ class LessonService {
           duration: Duration(seconds: 3),
         ),
       );
+    } finally {
+      setIsCreatingCustomLesson(false);
+    }
+  }
+
+  static Future<Map<String, String>> suggestGrammarLessonTopic({
+    required String targetLanguage,
+    required String nativeLanguage,
+    required String languageLevel,
+  }) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final recentTopics = userId == null
+        ? <String>[]
+        : await RecentLessonTopicsService.getRecentTopics(
+            userId,
+            targetLanguage,
+            lessonType: RecentLessonTopicsService.grammarLessonType,
+          );
+
+    final response = await http
+        .post(
+          Uri.parse(
+              'https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_grammar_lesson_topic'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: jsonEncode(<String, dynamic>{
+            "target_language": targetLanguage,
+            "native_language": nativeLanguage,
+            "language_level": languageLevel,
+            "recent_topics": recentTopics,
+          }),
+        )
+        .timeout(
+          const Duration(seconds: 45),
+          onTimeout: () =>
+              throw TimeoutException('suggest_grammar_lesson_topic request'),
+        );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to suggest grammar topic');
+    }
+
+    final Map<String, dynamic> data =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    return {
+      'title': (data['title'] ?? '').toString(),
+      'topic': (data['topic'] ?? '').toString(),
+    };
+  }
+
+  static Future<void> createCustomGrammarLesson(
+    BuildContext context,
+    String topic,
+    String nativeLanguage,
+    String targetLanguage,
+    String languageLevel,
+    Function setIsCreatingCustomLesson,
+  ) async {
+    if (topic.trim().isEmpty) {
+      safeShowSnackBar(
+        context,
+        const SnackBar(
+          content: Text('Please enter a grammar topic for your lesson'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setIsCreatingCustomLesson(true);
+
+    if (!context.mounted) {
+      setIsCreatingCustomLesson(false);
+      return;
+    }
+
+    String? documentId;
+    String? userId;
+
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final DocumentReference docRef =
+          firestore.collection('chatGPT_responses').doc();
+      documentId = docRef.id;
+      userId = FirebaseAuth.instance.currentUser!.uid.toString();
+
+      await docRef.set({
+        'lesson_type': 'grammar',
+        'title': topic,
+        'requested_topic': topic,
+        'category': 'Custom Lesson',
+        'native_language': nativeLanguage,
+        'target_language': targetLanguage,
+        'language_level': languageLevel,
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final reserved = await tryReserveActiveCreationSlot(userId, documentId);
+      if (!reserved) {
+        safeShowSnackBar(
+          context,
+          const SnackBar(
+            content: Text(
+                'Too many lessons are generating right now. Please try again in a moment.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
+      final DocumentReference scriptDocRef = firestore
+          .collection('chatGPT_responses')
+          .doc(documentId)
+          .collection('script-$userId')
+          .doc();
+
+      http.post(
+        Uri.parse('http://127.0.0.1:8080'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: jsonEncode(<String, dynamic>{
+          "requested_topic": topic,
+          "native_language": nativeLanguage,
+          "target_language": targetLanguage,
+          "user_ID": userId,
+          "language_level": languageLevel,
+          "document_id": documentId,
+          "length_minutes": "7",
+          "tts_provider": targetLanguage == 'Azerbaijani'
+              ? TTSProvider.openAI.value.toString()
+              : TTSProvider.googleTTS.value.toString(),
+        }),
+      );
+
+      if (context.mounted) {
+        final manager = Provider.of<AudioPlayerManager>(context, listen: false);
+        manager.playLesson(LessonData(
+          category: 'Custom Lesson',
+          dialogue: const [],
+          segments: const [],
+          lessonType: 'grammar',
+          title: topic,
+          documentID: documentId,
+          userID: userId,
+          scriptDocumentId: scriptDocRef.id,
+          generating: true,
+          targetLanguage: targetLanguage,
+          nativeLanguage: nativeLanguage,
+          languageLevel: languageLevel,
+          wordsToRepeat: const [],
+          numberOfTurns: 2,
+        ));
+        await RecentLessonTopicsService.recordTopic(
+          userId,
+          targetLanguage,
+          topic,
+          lessonType: RecentLessonTopicsService.grammarLessonType,
+        );
+      }
+    } catch (e) {
+      print(e);
+      if (userId != null && documentId != null) {
+        try {
+          await releaseActiveCreationSlot(userId, documentId).timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {},
+          );
+        } catch (_) {}
+      }
+      safeShowSnackBar(
+        context,
+        const SnackBar(
+          content: Text(
+              'Oops, this is embarrassing 😅 Something went wrong! Please try again.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      rethrow;
     } finally {
       setIsCreatingCustomLesson(false);
     }
@@ -1246,7 +1440,8 @@ class LessonService {
     }
 
     // PRIORITY 2: Add overdue words if we need more
-    if (words.length < LessonConstants.maxWordsAllowed && overdueWords.isNotEmpty) {
+    if (words.length < LessonConstants.maxWordsAllowed &&
+        overdueWords.isNotEmpty) {
       final wordsNeeded = LessonConstants.maxWordsAllowed - words.length;
       final wordsToAdd = overdueWords.length >= wordsNeeded
           ? overdueWords.sublist(0, wordsNeeded)
@@ -1255,7 +1450,8 @@ class LessonService {
     }
 
     // PRIORITY 3: Add closest to overdue words if we still need more
-    if (words.length < LessonConstants.maxWordsAllowed && closestDueDateCard.isNotEmpty) {
+    if (words.length < LessonConstants.maxWordsAllowed &&
+        closestDueDateCard.isNotEmpty) {
       closestDueDateCard.sort((a, b) => a['due_date'].compareTo(b['due_date']));
       final wordsNeeded = LessonConstants.maxWordsAllowed - words.length;
       final wordsToAdd = closestDueDateCard.length >= wordsNeeded

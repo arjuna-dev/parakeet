@@ -35,7 +35,9 @@ class HomeScreenModel extends ChangeNotifier {
     final userSettings = await UserService.getUserLanguageSettings();
     final userTargetLanguage = userSettings['targetLanguage']!;
 
-    final snapshot = await FirebaseFirestore.instance.collectionGroup('script-$userId').get();
+    final snapshot = await FirebaseFirestore.instance
+        .collectionGroup('script-$userId')
+        .get();
 
     // Filter lessons by user's current target language
     final lessonsForCurrentLanguage = snapshot.docs.where((doc) {
@@ -63,7 +65,9 @@ class HomeScreenModel extends ChangeNotifier {
     Set<String> categories = {};
     for (var lesson in allLessons) {
       final data = lesson.data() as Map<String, dynamic>?;
-      if (data?.containsKey('category') == true && lesson.get('category') != null && lesson.get('category').toString().trim().isNotEmpty) {
+      if (data?.containsKey('category') == true &&
+          lesson.get('category') != null &&
+          lesson.get('category').toString().trim().isNotEmpty) {
         categories.add(lesson.get('category'));
       } else {
         categories.add('Custom Lesson');
@@ -98,7 +102,9 @@ class HomeScreenModel extends ChangeNotifier {
       lessonsToFilter = lessonsToFilter.where((lesson) {
         final data = lesson.data() as Map<String, dynamic>?;
         String lessonCategory;
-        if (data?.containsKey('category') == true && lesson.get('category') != null && lesson.get('category').toString().trim().isNotEmpty) {
+        if (data?.containsKey('category') == true &&
+            lesson.get('category') != null &&
+            lesson.get('category').toString().trim().isNotEmpty) {
           lessonCategory = lesson.get('category');
         } else {
           lessonCategory = 'Custom Lesson';
@@ -119,15 +125,21 @@ class HomeScreenModel extends ChangeNotifier {
         if (title.contains(query)) return true;
 
         // Search in category
-        final category = data['category']?.toString().toLowerCase() ?? 'custom lesson';
+        final category =
+            data['category']?.toString().toLowerCase() ?? 'custom lesson';
         if (category.contains(query)) return true;
 
         // Search in target language
-        final targetLanguage = data['target_language']?.toString().toLowerCase() ?? '';
+        final targetLanguage =
+            data['target_language']?.toString().toLowerCase() ?? '';
         if (targetLanguage.contains(query)) return true;
 
+        final lessonType = data['lesson_type']?.toString().toLowerCase() ?? '';
+        if (lessonType.contains(query)) return true;
+
         // Search in native language
-        final nativeLanguage = data['native_language']?.toString().toLowerCase() ?? '';
+        final nativeLanguage =
+            data['native_language']?.toString().toLowerCase() ?? '';
         if (nativeLanguage.contains(query)) return true;
 
         // Search in words to repeat
@@ -143,9 +155,33 @@ class HomeScreenModel extends ChangeNotifier {
         if (dialogue != null) {
           for (var turn in dialogue) {
             if (turn is Map<String, dynamic>) {
-              final speakerText = turn['speaker']?.toString().toLowerCase() ?? '';
-              final text = turn['text']?.toString().toLowerCase() ?? '';
-              if (speakerText.contains(query) || text.contains(query)) return true;
+              final nativeText =
+                  turn['native_language']?.toString().toLowerCase() ?? '';
+              final targetText =
+                  turn['target_language']?.toString().toLowerCase() ?? '';
+              if (nativeText.contains(query) || targetText.contains(query)) {
+                return true;
+              }
+            }
+          }
+        }
+
+        final segments = data['segments'] as List<dynamic>?;
+        if (segments != null) {
+          for (var segment in segments) {
+            if (segment is Map<String, dynamic>) {
+              final title = segment['title']?.toString().toLowerCase() ?? '';
+              final text = segment['text']?.toString().toLowerCase() ?? '';
+              final nativeText =
+                  segment['native_language']?.toString().toLowerCase() ?? '';
+              final targetText =
+                  segment['target_language']?.toString().toLowerCase() ?? '';
+              if (title.contains(query) ||
+                  text.contains(query) ||
+                  nativeText.contains(query) ||
+                  targetText.contains(query)) {
+                return true;
+              }
             }
           }
         }

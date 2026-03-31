@@ -10,16 +10,24 @@ class RecentLessonTopicsService {
 
   static const int _maxStored = 80;
   static const String _prefsKeyPrefix = 'recent_lesson_topics_v1_';
+  static const String conversationLessonType = 'conversation';
+  static const String grammarLessonType = 'grammar';
 
-  static String _storageKey(String userId, String targetLanguage) =>
-      '$_prefsKeyPrefix${userId}_${targetLanguage.hashCode}';
+  static String _storageKey(
+    String userId,
+    String targetLanguage,
+    String lessonType,
+  ) =>
+      '$_prefsKeyPrefix${userId}_${targetLanguage.hashCode}_$lessonType';
 
   static String normalize(String topic) => topic.trim().toLowerCase();
 
   static Future<List<String>> getRecentTopics(
-      String userId, String targetLanguage) async {
+      String userId, String targetLanguage,
+      {String lessonType = conversationLessonType}) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey(userId, targetLanguage));
+    final raw =
+        prefs.getString(_storageKey(userId, targetLanguage, lessonType));
     if (raw == null || raw.isEmpty) return [];
     try {
       final list = jsonDecode(raw) as List<dynamic>;
@@ -29,20 +37,22 @@ class RecentLessonTopicsService {
     }
   }
 
-  static Future<void> clearRecentTopics(
-      String userId, String targetLanguage) async {
+  static Future<void> clearRecentTopics(String userId, String targetLanguage,
+      {String lessonType = conversationLessonType}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey(userId, targetLanguage));
+    await prefs.remove(_storageKey(userId, targetLanguage, lessonType));
   }
 
   /// Call after a lesson successfully starts with the scenario / topic string.
   static Future<void> recordTopic(
-      String userId, String targetLanguage, String topic) async {
+      String userId, String targetLanguage, String topic,
+      {String lessonType = conversationLessonType}) async {
     final t = topic.trim();
     if (t.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    final key = _storageKey(userId, targetLanguage);
-    var recent = await getRecentTopics(userId, targetLanguage);
+    final key = _storageKey(userId, targetLanguage, lessonType);
+    var recent =
+        await getRecentTopics(userId, targetLanguage, lessonType: lessonType);
     final norm = normalize(t);
     recent.removeWhere((x) => normalize(x) == norm);
     recent.insert(0, t);
@@ -55,22 +65,19 @@ class RecentLessonTopicsService {
   /// Picks from [allKeys] avoiding topics in storage; if all are used, clears
   /// history and picks randomly so the user can cycle through scenarios again.
   static Future<String> pickUnusedScenarioKey(
-    List<String> allKeys,
-    String userId,
-    String targetLanguage,
-  ) async {
+      List<String> allKeys, String userId, String targetLanguage,
+      {String lessonType = conversationLessonType}) async {
     if (allKeys.isEmpty) {
       throw Exception('No scenarios available');
     }
-    final recent = await getRecentTopics(userId, targetLanguage);
+    final recent =
+        await getRecentTopics(userId, targetLanguage, lessonType: lessonType);
     final used = recent.map(normalize).toSet();
-    var available =
-        allKeys.where((k) => !used.contains(normalize(k))).toList();
+    var available = allKeys.where((k) => !used.contains(normalize(k))).toList();
     if (available.isEmpty) {
-      await clearRecentTopics(userId, targetLanguage);
+      await clearRecentTopics(userId, targetLanguage, lessonType: lessonType);
       available = allKeys;
     }
     return available[Random().nextInt(available.length)];
   }
-
 }

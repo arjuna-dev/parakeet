@@ -12,6 +12,7 @@ import 'package:parakeet/utils/playlist_generator.dart';
 import 'package:parakeet/utils/constants.dart';
 import 'package:parakeet/utils/script_generator.dart';
 import 'package:parakeet/widgets/audio_player_screen/animated_dialogue_list.dart';
+import 'package:parakeet/widgets/audio_player_screen/animated_grammar_section_list.dart';
 import 'package:parakeet/widgets/audio_player_screen/position_slider.dart';
 import 'package:parakeet/widgets/audio_player_screen/audio_controls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,6 +29,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String? category;
   final String documentID;
   final List<dynamic> dialogue;
+  final List<dynamic> segments;
   final String userID;
   final String title;
   final String targetLanguage;
@@ -37,6 +39,7 @@ class AudioPlayerScreen extends StatefulWidget {
   final String scriptDocumentId;
   final bool generating;
   final int numberOfTurns;
+  final String lessonType;
   final AudioPlayerService? existingService;
   final bool isEmbedded;
 
@@ -52,6 +55,7 @@ class AudioPlayerScreen extends StatefulWidget {
     this.category,
     required this.documentID,
     required this.dialogue,
+    this.segments = const [],
     required this.userID,
     required this.title,
     required this.targetLanguage,
@@ -61,6 +65,7 @@ class AudioPlayerScreen extends StatefulWidget {
     required this.scriptDocumentId,
     required this.generating,
     required this.numberOfTurns,
+    this.lessonType = 'conversation',
     this.existingService,
     this.isEmbedded = false,
   }) : super(key: key);
@@ -92,9 +97,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   late bool _generating;
   bool _isCompleted = false;
   bool _allDialogueGenerated = false;
+  Timer? _positionMonitorTimer;
 
   // Data variables
   late List<dynamic> _dialogue;
+  late List<dynamic> _segments;
   List<dynamic> _script = [];
   Map<String, dynamic> _scriptAndWordCards = {};
   Map<String, DocumentReference> _allUsedWordsCardsRefsMap = {};
@@ -103,6 +110,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   Map<String, dynamic>? _existingBigJson;
   bool _hasPremium = false;
+  int _grammarPart1SegmentCount = 0;
+  bool _hasAutoStartedGrammarPlayback = false;
+
+  bool _hasReadyGrammarPart1Batch(Map<String, dynamic>? data) {
+    final audioParts = data?['audio_parts'] as List<dynamic>? ?? const [];
+    return audioParts.any(
+      (part) => part.toString().startsWith('grammar_part_1_batch_'),
+    );
+  }
 
   @override
   void initState() {
@@ -115,6 +131,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Make a mutable copy of the initial dialogue that we can update over time
     _dialogue = List<dynamic>.from(widget.dialogue);
+    _segments = List<dynamic>.from(widget.segments);
 
     _wordsToRepeat = widget.wordsToRepeat;
 
@@ -138,6 +155,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       languageLevel: widget.languageLevel,
       wordsToRepeat: widget.wordsToRepeat,
       scriptDocumentId: widget.scriptDocumentId,
+      lessonType: widget.lessonType,
+      requestedTopic: widget.title,
     );
 
     _audioDurationService = AudioDurationService(
@@ -155,11 +174,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       hasNicknameAudio: false, // Will be updated later
       addressByNickname: true, // Will be updated later
       wordsToRepeat: widget.wordsToRepeat,
+      lessonType: widget.lessonType,
     );
 
     // Initialize Firestore services
-    _firestoreService = UpdateFirestoreService.getInstance(widget.documentID,
-        widget.generating, _updatePlaylist, _updateTrackLength, _saveSnapshot);
+    _firestoreService = UpdateFirestoreService.getInstance(
+      widget.documentID,
+      widget.generating,
+      widget.lessonType,
+      _updatePlaylist,
+      _updateTrackLength,
+      _saveSnapshot,
+    );
 
     _fileDurationUpdate = FileDurationUpdate.getInstance(
         widget.documentID, _calculateTotalDurationAndUpdateTrackDurations);
@@ -202,6 +228,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         await _getExistingBigJson();
         // For non-generating mode, we need to wait for script creation
         if (_existingBigJson != null) {
+          if (widget.lessonType == 'grammar') {
+            _segments =
+                List<dynamic>.from(_existingBigJson!['segments'] ?? _segments);
+            _dialogue =
+                List<dynamic>.from(_existingBigJson!['dialogue'] ?? _dialogue);
+            _grammarPart1SegmentCount =
+                (_existingBigJson!['part_1_segment_count'] as num?)?.toInt() ??
+                    _grammarPart1SegmentCount;
+          }
           // Convert to a properly handled Future chain
           _scriptAndWordCards =
               await _playlistGenerator.generateScriptWithRepetitionMode(
@@ -209,6 +244,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
             _dialogue,
             _repetitionsMode.value,
             widget.category ?? 'Custom Lesson',
+            segments: _segments,
           );
 
           _script = _scriptAndWordCards['script'] ?? [];
@@ -251,7 +287,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           }
         }
       } else {
-        _createScriptAndMakeSecondApiCall();
+        if (widget.lessonType == 'grammar') {
+          _createGrammarScriptFromFirstApiOnly();
+        } else {
+          _createScriptAndMakeSecondApiCall();
+        }
       }
     } catch (e) {
       print("Error in sequential initialization: $e");
@@ -269,6 +309,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       hasNicknameAudio: _hasNicknameAudio,
       addressByNickname: _addressByNickname,
       wordsToRepeat: widget.wordsToRepeat,
+      lessonType: widget.lessonType,
+      availabilityChecker: _audioDurationService.hasAudioForFile,
     );
   }
 
@@ -322,9 +364,24 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       setState(() {});
     }
 
-    // Start playback as soon as sources are ready (generating: first-API audio;
-    // second API appends more tracks via _updatePlaylist).
-    await _audioPlayerService.playFirstTrack();
+    final shouldAutoStartGrammar = widget.lessonType == 'grammar' &&
+        _generating &&
+        !_hasAutoStartedGrammarPlayback &&
+        (_latestSnapshot?['part_1_complete'] == true) &&
+        _hasReadyGrammarPart1Batch(_latestSnapshot);
+
+    final shouldAutoStart =
+        widget.lessonType != 'grammar' || shouldAutoStartGrammar;
+
+    // For grammar, auto-start only once: right after Part 1 is fully complete
+    // and the player is first initialized. Later batch updates must not restart
+    // playback if the user has paused manually.
+    if (shouldAutoStart) {
+      await _audioPlayerService.playFirstTrack();
+      if (shouldAutoStartGrammar) {
+        _hasAutoStartedGrammarPlayback = true;
+      }
+    }
     if (mounted) {
       setState(() {});
     }
@@ -341,6 +398,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       return;
     }
 
+    Map<String, dynamic>? snapshotData;
+
     try {
       if (snapshot.docs.isEmpty) {
         print("Error: No documents in snapshot");
@@ -350,9 +409,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       final data = snapshot.docs[0].data();
       if (data == null ||
           data is! Map<String, dynamic> ||
-          !data.containsKey("dialogue")) {
+          !(data.containsKey(
+              widget.lessonType == 'grammar' ? "segments" : "dialogue"))) {
         print("Error: Invalid data format in snapshot");
         return;
+      }
+      snapshotData = data;
+
+      if (widget.lessonType == 'grammar' && data['segments'] is List) {
+        _segments = List<dynamic>.from(data['segments'] as List<dynamic>);
+      }
+      if (widget.lessonType == 'grammar' && data['dialogue'] is List) {
+        _dialogue = List<dynamic>.from(data['dialogue'] as List<dynamic>);
+      }
+      if (widget.lessonType == 'grammar') {
+        _grammarPart1SegmentCount =
+            (data['part_1_segment_count'] as num?)?.toInt() ??
+                _grammarPart1SegmentCount;
       }
 
       final scriptData =
@@ -360,7 +433,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               data,
               _dialogue,
               _repetitionsMode.value,
-              widget.category ?? 'Custom Lesson');
+              widget.category ?? 'Custom Lesson',
+              segments: _segments);
 
       _script = scriptData['script'] ?? [];
       _allUsedWordsCardsRefsMap = scriptData['allUsedWordsCardsRefsMap'] ?? [];
@@ -377,6 +451,20 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final fullResolved =
         await _playlistGenerator.resolveScriptEntriesWithUrls(filteredScript);
     final playlistLen = _audioPlayerService.playlist.children.length;
+    if (widget.lessonType == 'grammar' &&
+        !_audioPlayerService.playlistInitialized &&
+        snapshotData?['part_1_complete'] == true &&
+        _hasReadyGrammarPart1Batch(snapshotData) &&
+        fullResolved.isNotEmpty) {
+      _latestSnapshot = Map<String, dynamic>.from(snapshotData!);
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _currentTrack = fullResolved.first.toString();
+        });
+      }
+      await _initializePlaylist();
+      return;
+    }
     if (playlistLen > fullResolved.length) {
       return;
     }
@@ -389,10 +477,42 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.setTrackDurations(trackDurations,
         alignedFileNames: fullResolved);
 
-    await _audioPlayerService.addToPlaylist(newAudioSources);
+    if (newAudioSources.isNotEmpty) {
+      await _audioPlayerService.addToPlaylist(newAudioSources);
+    }
 
     // Increment update number
     _updateNumber++;
+
+    if (widget.lessonType == 'grammar') {
+      final snapshotDataMap = snapshotData ?? const <String, dynamic>{};
+      final audioParts =
+          snapshotDataMap['audio_parts'] as List<dynamic>? ?? const [];
+
+      final isComplete =
+          snapshotDataMap['part_2_complete'] == true &&
+          snapshotDataMap.containsKey('timestamp') &&
+          audioParts.isNotEmpty;
+      if (isComplete) {
+        await _audioGenerationService.saveScriptToFirestore(
+          _script,
+          const [],
+          _dialogue,
+          widget.category ?? 'Custom Lesson',
+          segments: _segments,
+          audioParts: audioParts,
+          part1SegmentCount: _grammarPart1SegmentCount,
+        );
+        _audioPlayerService.setFinalTotalDuration();
+        if (mounted && !_isDisposing) {
+          setState(() {
+            _generating = false;
+            _allDialogueGenerated = true;
+          });
+        }
+      }
+      return;
+    }
 
     // Check if we've reached the numberOfTurns and set _generating to false if so
     if (_updateNumber >= widget.numberOfTurns) {
@@ -447,7 +567,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         alignedFileNames: resolved);
 
     // Set final total duration after reaching numberOfTurns or if not generating
-    if ((_updateNumber >= widget.numberOfTurns || !widget.generating) &&
+    if ((_updateNumber >= widget.numberOfTurns || !_generating) &&
         !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
     }
@@ -477,6 +597,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       _dialogue,
       _repetitionsMode.value,
       widget.category ?? 'Custom Lesson',
+      segments: _segments,
     );
 
     _script = _scriptAndWordCards['script'] ?? [];
@@ -508,7 +629,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Setup position-based track monitoring for better synchronization
   void _setupPositionBasedTrackMonitoring() {
     // Monitor position changes more frequently for better track synchronization
-    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+    _positionMonitorTimer?.cancel();
+    _positionMonitorTimer =
+        Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (_isDisposing) {
         timer.cancel();
         return;
@@ -664,6 +787,64 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }());
     } catch (e) {
       print('Error creating script and making second API call: $e');
+    }
+  }
+
+  Future<void> _createGrammarScriptFromFirstApiOnly() async {
+    try {
+      _latestSnapshot =
+          await _audioGenerationService.waitForInitialGrammarLessonPlayback();
+
+      if (!mounted || _isDisposing) return;
+      if (_latestSnapshot == null) {
+        print(
+            'Initial grammar playback not ready yet; live Firestore updates will keep trying.');
+        return;
+      }
+
+      _segments = List<dynamic>.from(_latestSnapshot!['segments'] ?? []);
+      _dialogue = List<dynamic>.from(_latestSnapshot!['dialogue'] ?? []);
+      _grammarPart1SegmentCount =
+          (_latestSnapshot!['part_1_segment_count'] as num?)?.toInt() ??
+              _segments.length;
+        if (mounted) {
+          setState(() {});
+        }
+
+      if (_script.isEmpty) {
+        _script = createGrammarPodcastScript(_latestSnapshot!);
+        if (mounted) {
+          setState(() {
+            _currentTrack = _script.isNotEmpty ? _script[0] : '';
+          });
+        }
+      }
+
+      await _audioGenerationService.saveScriptToFirestore(
+        _script,
+        const [],
+        _dialogue,
+        widget.category ?? 'Custom Lesson',
+        segments: _segments,
+        audioParts: _latestSnapshot!['audio_parts'] as List<dynamic>? ?? const [],
+        part1SegmentCount: _grammarPart1SegmentCount,
+      );
+
+      if (mounted && !_audioPlayerService.playlistInitialized) {
+        await _initializePlaylist();
+      }
+
+      unawaited(() async {
+        try {
+          await _audioGenerationService.makeSecondGrammarApiCall(
+            _latestSnapshot!,
+          );
+        } catch (e) {
+          print('Error making second grammar API call: $e');
+        }
+      }());
+    } catch (e) {
+      print('Error creating grammar script from first API: $e');
     }
   }
 
@@ -940,7 +1121,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // }
 
   void _onAllDialogueDisplayed() {
-    if (_isDisposing) return;
+    if (_isDisposing || !mounted) return;
 
     setState(() {
       _allDialogueGenerated = true;
@@ -1110,24 +1291,39 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       //   isActive: _speechRecognitionActive,
                       //   onToggle: _toggleSpeechRecognition,
                       // ),
-                      // Dialogue list - Expanded to take available space
                       Expanded(
-                        child: AnimatedDialogueList(
-                          dialogue: _dialogue,
-                          currentTrack: _currentTrack,
-                          wordsToRepeat: _wordsToRepeat ?? [],
-                          documentID: widget.documentID,
-                          useStream: widget.generating,
-                          // If embedded (persistent player), never animate - always show all immediately
-                          generating:
-                              widget.isEmbedded ? false : widget.generating,
-                          onAllDialogueDisplayed: widget.generating
-                              ? _onAllDialogueDisplayed
-                              : null,
-                          script: _script,
-                          trackDurations: _audioPlayerService.trackDurations,
-                          onSeekToTime: _seekToTime,
-                        ),
+                        child: widget.lessonType == 'grammar'
+                            ? AnimatedGrammarSectionList(
+                                segments: _segments,
+                                currentTrack: _currentTrack,
+                                audioPlayerService: _audioPlayerService,
+                                documentID: widget.documentID,
+                                part1SegmentCount: _grammarPart1SegmentCount,
+                                useStream: widget.generating,
+                                generating: widget.isEmbedded
+                                    ? false
+                                    : widget.generating,
+                                onAllSectionsDisplayed: widget.generating
+                                    ? _onAllDialogueDisplayed
+                                    : null,
+                              )
+                            : AnimatedDialogueList(
+                                dialogue: _dialogue,
+                                currentTrack: _currentTrack,
+                                wordsToRepeat: _wordsToRepeat ?? [],
+                                documentID: widget.documentID,
+                                useStream: widget.generating,
+                                generating: widget.isEmbedded
+                                    ? false
+                                    : widget.generating,
+                                onAllDialogueDisplayed: widget.generating
+                                    ? _onAllDialogueDisplayed
+                                    : null,
+                                script: _script,
+                                trackDurations:
+                                    _audioPlayerService.trackDurations,
+                                onSeekToTime: _seekToTime,
+                              ),
                       ),
                       // Position slider - fixed height
                       PositionSlider(
@@ -1170,6 +1366,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void dispose() {
     _isDisposing = true;
+    _positionMonitorTimer?.cancel();
+    _positionMonitorTimer = null;
     if (widget.generating) {
       LessonService.releaseActiveCreationSlot(widget.userID, widget.documentID);
     }

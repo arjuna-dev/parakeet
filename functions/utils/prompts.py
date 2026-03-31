@@ -667,6 +667,229 @@ def prompt_generate_lesson_topic(category, selected_words, target_language, nati
         }}
         '''
 
+
+def _grammar_level_instructions(language_level: str) -> str:
+  normalized = (language_level or "").lower()
+  if "a1" in normalized or "absolute beginner" in normalized:
+    return (
+      "LANGUAGE LEVEL (grammar) — ABSOLUTE BEGINNER / A1: explain the grammar simply, "
+      "use very short examples, avoid jargon, and prefer everyday survival language."
+    )
+  if "a2" in normalized or "beginner" in normalized:
+    return (
+      "LANGUAGE LEVEL (grammar) — BEGINNER / A2: keep explanations clear and practical, "
+      "use short everyday examples, and introduce only light terminology."
+    )
+  if "b1" in normalized or "b2" in normalized or "intermediate" in normalized:
+    return (
+      "LANGUAGE LEVEL (grammar) — INTERMEDIATE / B1-B2: use natural examples from daily life, "
+      "allow moderate sentence length, and explain form + usage clearly."
+    )
+  if "c1" in normalized or "c2" in normalized or "advanced" in normalized:
+    return (
+      "LANGUAGE LEVEL (grammar) — ADVANCED / C1-C2: use nuanced natural examples, "
+      "compare registers or edge cases when useful, and keep the lesson practical rather than academic."
+    )
+  return "LANGUAGE LEVEL (grammar): match explanation depth and example complexity to the learner level."
+
+
+def prompt_grammar_lesson(requested_topic, native_language, target_language, language_level, length_minutes="7"):
+  return f'''Create a narrator-led grammar audio lesson as JSON.
+The learner wants help with this grammar topic: "{requested_topic}".
+
+This lesson must:
+- be fully narrator based, NOT a dialogue between speakers
+- teach one grammar topic only
+- feel practical and useful in real life
+- use clear examples in {target_language}
+- be suitable for a roughly 5 to 10 minute audio lesson, target around {length_minutes} minutes
+- adapt to the learner level
+- include target-language words, phrases, or sentences in the target_language field
+- include narration/explanations in {native_language}
+- when the native_language narration mentions an exact target-language word, phrase, or sentence that should be spoken in the target-language voice, wrap only that target-language text in ||double vertical bars||
+
+{_grammar_level_instructions(language_level)}
+
+Return JSON in this exact shape:
+{{
+  "title": "Lesson title in {native_language}",
+  "lesson_type": "grammar",
+  "segments": [
+    {{
+      "section_type": "intro",
+      "title": "short section title in {native_language}",
+      "native_language": "narrator explanation in {native_language}",
+      "target_language": "optional example in {target_language}"
+    }},
+    {{
+      "section_type": "concept",
+      "title": "short section title in {native_language}",
+      "native_language": "main concept explanation in {native_language}",
+      "target_language": "short target-language example"
+    }},
+    {{
+      "section_type": "example",
+      "title": "short section title in {native_language}",
+      "native_language": "example explanation in {native_language}",
+      "target_language": "natural example sentence in {target_language}"
+    }},
+    {{
+      "section_type": "practice",
+      "title": "short section title in {native_language}",
+      "native_language": "guided practice prompt or reminder in {native_language}",
+      "target_language": "practice sentence or phrase in {target_language}"
+    }},
+    {{
+      "section_type": "recap",
+      "title": "short section title in {native_language}",
+      "native_language": "recap in {native_language}",
+      "target_language": "final target-language example"
+    }}
+  ]
+}}
+
+IMPORTANT:
+- Create 6 to 10 segments total.
+- Use section_type values from this set only: intro, concept, example, practice, recap.
+- Every segment must have native_language.
+- Most segments should also have target_language.
+- Keep target_language examples natural and level-appropriate.
+- Keep narration warm and teacher-like.
+- In native_language, write the explanation in {native_language}, but if you quote exact {target_language} forms, wrap only those exact target-language parts in ||...||.
+- Do not wrap whole native-language sentences in ||...||.
+'''
+
+
+def prompt_grammar_podcast_part_1(requested_topic, native_language, target_language, language_level, total_length_minutes="7"):
+  return f'''Create PART 1 of a grammar podcast lesson as JSON.
+The learner wants help with this grammar topic: "{requested_topic}".
+
+The podcast format must use exactly two speakers:
+- speaker_1: the narrator/teacher, who speaks mostly in {native_language}
+- speaker_2: the target-language voice, who speaks only in {target_language} examples, prompts, and drills
+
+The lesson should feel like an audio podcast, not like a chatbot or a dramatic scene.
+This is only the short introduction and setup section.
+Target duration for PART 1 is about 30 to 60 seconds.
+
+{_grammar_level_instructions(language_level)}
+
+Return JSON in this exact shape:
+{{
+  "title": "lesson title in {native_language}",
+  "lesson_type": "grammar",
+  "speakers": {{
+    "speaker_1": {{
+      "name": "Narrator",
+      "role": "narrator",
+      "language": "{native_language}"
+    }},
+    "speaker_2": {{
+      "name": "Target Voice",
+      "role": "target_language_speaker",
+      "language": "{target_language}"
+    }}
+  }},
+  "segments": [
+    {{
+      "speaker": "speaker_1",
+      "text": "teaching narration in {native_language}"
+    }},
+    {{
+      "speaker": "speaker_2",
+      "text": "short example or drill in {target_language}"
+    }}
+  ]
+}}
+
+IMPORTANT:
+- Create 6 to 10 turns total for PART 1.
+- speaker_1 must do most of the speaking.
+- speaker_2 should appear regularly with examples, drills, or repetitions in {target_language}.
+- speaker_2 must speak target-language examples at a pace appropriate for learner level {language_level}; for beginners this means slower and very clear.
+- If speaker_1 mentions an exact {target_language} word or phrase inside a teaching sentence, wrap only that exact target-language snippet in ||...|| so it can be spoken by speaker_2.
+- Do not leave target-language snippets inside speaker_1 as plain text; use ||...|| for those quoted forms.
+- Keep each turn short enough for natural podcast pacing.
+- Prefer shorter, cleaner target-language turns so the target speaker can say them slowly and clearly.
+- Focus only on introduction, quick context, and one or two simple examples.
+- Do not use markdown.
+- Return ONLY valid JSON with no commentary before or after it.
+- Escape any double quotes that appear inside text values.
+- Do not include stage directions, brackets, or speaker names inside the text itself.
+- Do not repeat the exact same example too often.
+- End PART 1 at a natural handoff point that invites more explanation next.
+'''
+
+
+def prompt_grammar_podcast_part_2(requested_topic, existing_segments, native_language, target_language, language_level, total_length_minutes="7"):
+  return f'''Create PART 2 of a grammar podcast lesson as JSON.
+The learner wants help with this grammar topic: "{requested_topic}".
+
+PART 1 has already been created with these turns:
+{existing_segments}
+
+The podcast format must use exactly two speakers:
+- speaker_1: the narrator/teacher, who speaks mostly in {native_language}
+- speaker_2: the target-language voice, who speaks only in {target_language} examples, prompts, and drills
+
+This is PART 2 only, which should contain the main lesson content after the short intro.
+
+{_grammar_level_instructions(language_level)}
+
+Return JSON in this exact shape:
+{{
+  "lesson_type": "grammar",
+  "segments": [
+    {{
+      "speaker": "speaker_1",
+      "text": "continuation teaching narration in {native_language}"
+    }},
+    {{
+      "speaker": "speaker_2",
+      "text": "continuation example or drill in {target_language}"
+    }}
+  ]
+}}
+
+IMPORTANT:
+- Create 16 to 26 turns total for PART 2.
+- Continue naturally from PART 1 instead of restarting the lesson.
+- speaker_1 must do most of the speaking.
+- speaker_2 should appear regularly with examples, drills, or repetitions in {target_language}.
+- speaker_2 must speak target-language examples at a pace appropriate for learner level {language_level}; for beginners this means slower and very clear.
+- If speaker_1 mentions an exact {target_language} word or phrase inside a teaching sentence, wrap only that exact target-language snippet in ||...|| so it can be spoken by speaker_2.
+- Do not leave target-language snippets inside speaker_1 as plain text; use ||...|| for those quoted forms.
+- Include more guided practice and a final recap.
+- Keep each turn short enough for natural podcast pacing.
+- Prefer shorter, cleaner target-language turns so the target speaker can say them slowly and clearly.
+- Do not use markdown.
+- Return ONLY valid JSON with no commentary before or after it.
+- Escape any double quotes that appear inside text values.
+- Do not include stage directions, brackets, or speaker names inside the text itself.
+- End with a clear conclusion.
+'''
+
+
+def prompt_suggest_grammar_lesson(target_language, native_language, language_level, recent_topics=None):
+  avoid_block = ""
+  if recent_topics:
+    avoid_block = f"""
+        Do not repeat or closely paraphrase these recently used grammar topics:
+        {recent_topics}
+        """
+
+  return f'''Suggest one practical grammar lesson topic for a learner of {target_language}.
+        {avoid_block}
+        The learner level is {language_level}.
+        The topic should feel useful in real life, such as tense usage, polite requests, articles, word order, question forms, negation, comparisons, or connectors.
+        Avoid academic linguistics jargon unless the level clearly supports it.
+        Return the response in this exact JSON format:
+        {{
+            "title": "The lesson title in {native_language}",
+            "topic": "The grammar topic in {native_language}"
+        }}
+        '''
+
 def prompt_suggest_custom_lesson(target_language, native_language, recent_topics=None):
   avoid_block = ""
   if recent_topics:

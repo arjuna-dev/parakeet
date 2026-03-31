@@ -47,6 +47,11 @@ class AudioDurationService {
     audioDurations.addAll(await getAudioDurationsFromNarratorStorage());
   }
 
+  Future<bool> hasAudioForFile(String fileName) async {
+    await _loadAudioDurations();
+    return audioDurations.containsKey(fileName);
+  }
+
   /// Get audio durations from narrator storage
   Future<Map<String, dynamic>> getAudioDurationsFromNarratorStorage() async {
     if (cachedAudioDurations != null) {
