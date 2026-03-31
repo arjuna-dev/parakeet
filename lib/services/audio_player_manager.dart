@@ -4,7 +4,9 @@ import 'package:parakeet/services/audio_player_service.dart';
 class LessonData {
   final String documentID;
   final List<dynamic>? dialogue;
+  final List<dynamic>? segments;
   final String category;
+  final String lessonType;
   final String targetLanguage;
   final String nativeLanguage;
   final String languageLevel;
@@ -18,7 +20,9 @@ class LessonData {
   LessonData({
     required this.documentID,
     this.dialogue,
+    this.segments,
     required this.category,
+    this.lessonType = 'conversation',
     required this.targetLanguage,
     required this.nativeLanguage,
     required this.languageLevel,

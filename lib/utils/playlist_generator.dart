@@ -13,6 +13,8 @@ class PlaylistGenerator {
   final bool hasNicknameAudio;
   final bool addressByNickname;
   final List<dynamic> wordsToRepeat;
+  final String lessonType;
+  final Future<bool> Function(String fileName)? availabilityChecker;
 
   late AudioUrlBuilder audioUrlBuilder;
 
@@ -25,6 +27,8 @@ class PlaylistGenerator {
     required this.hasNicknameAudio,
     required this.addressByNickname,
     required this.wordsToRepeat,
+    this.lessonType = 'conversation',
+    this.availabilityChecker,
   }) {
     audioUrlBuilder = AudioUrlBuilder(
       documentID: documentID,
@@ -36,27 +40,41 @@ class PlaylistGenerator {
   }
 
   /// Generate script from dialogue with repetition mode
-  Future<Map<String, dynamic>> generateScriptWithRepetitionMode(Map<String, dynamic> bigJson, List<dynamic> originalDialogue, RepetitionMode repetitionMode, String category) async {
+  Future<Map<String, dynamic>> generateScriptWithRepetitionMode(
+      Map<String, dynamic> bigJson,
+      List<dynamic> originalDialogue,
+      RepetitionMode repetitionMode,
+      String category,
+      {List<dynamic>? segments}) async {
     // Create a ValueNotifier with the repetition mode
-    final repetitionModeNotifier = ValueNotifier<RepetitionMode>(repetitionMode);
+    final repetitionModeNotifier =
+        ValueNotifier<RepetitionMode>(repetitionMode);
 
-    if (originalDialogue.isEmpty) {
+    if (lessonType != 'grammar' && originalDialogue.isEmpty) {
       print("Error: Original dialogue is empty.");
     }
 
     // Call the script generator with the ValueNotifier
-    final result = await script_generator.parseAndCreateScript(
-      bigJson,
-      wordsToRepeat,
-      originalDialogue,
-      repetitionModeNotifier,
-      userID,
-      documentID,
-      targetLanguage,
-      nativeLanguage,
-      category,
-      languageLevel: languageLevel,
-    );
+    final result = lessonType == 'grammar'
+        ? await script_generator.parseAndCreateGrammarScript(
+            bigJson,
+            segments ?? const [],
+            repetitionModeNotifier,
+            documentID,
+            languageLevel: languageLevel,
+          )
+        : await script_generator.parseAndCreateScript(
+            bigJson,
+            wordsToRepeat,
+            originalDialogue,
+            repetitionModeNotifier,
+            userID,
+            documentID,
+            targetLanguage,
+            nativeLanguage,
+            category,
+            languageLevel: languageLevel,
+          );
 
     // Dispose the ValueNotifier
     repetitionModeNotifier.dispose();
@@ -71,9 +89,16 @@ class PlaylistGenerator {
 
   /// Script entries that actually get a playlist item ([generateAudioSources] skips empty URLs).
   /// Track durations must use this list so indices match [ConcatenatingAudioSource] children.
-  Future<List<dynamic>> resolveScriptEntriesWithUrls(List<dynamic> script) async {
+  Future<List<dynamic>> resolveScriptEntriesWithUrls(
+      List<dynamic> script) async {
     final List<dynamic> out = [];
     for (var fileName in script) {
+      if (fileName is! String) continue;
+      if (!_isAlwaysAvailable(fileName) &&
+          availabilityChecker != null &&
+          !await availabilityChecker!(fileName)) {
+        continue;
+      }
       final String url = await audioUrlBuilder.constructUrl(fileName);
       if (url.isNotEmpty) {
         out.add(fileName);
@@ -90,6 +115,12 @@ class PlaylistGenerator {
     final List<AudioSource> sources = [];
     final List<dynamic> resolvedScript = [];
     for (var fileName in script) {
+      if (fileName is! String) continue;
+      if (!_isAlwaysAvailable(fileName) &&
+          availabilityChecker != null &&
+          !await availabilityChecker!(fileName)) {
+        continue;
+      }
       final String url = await audioUrlBuilder.constructUrl(fileName);
       if (url.isNotEmpty) {
         resolvedScript.add(fileName);
@@ -104,6 +135,12 @@ class PlaylistGenerator {
   Future<List<AudioSource>> audioSourcesForNames(List<dynamic> names) async {
     final List<AudioSource> sources = [];
     for (var fileName in names) {
+      if (fileName is! String) continue;
+      if (!_isAlwaysAvailable(fileName) &&
+          availabilityChecker != null &&
+          !await availabilityChecker!(fileName)) {
+        continue;
+      }
       final String url = await audioUrlBuilder.constructUrl(fileName);
       if (url.isNotEmpty) {
         sources.add(AudioSource.uri(Uri.parse(url)));
@@ -116,5 +153,17 @@ class PlaylistGenerator {
   Future<List<AudioSource>> generateAudioSources(List<dynamic> script) async {
     final r = await buildAudioSourcesFromScript(script);
     return r.sources;
+  }
+
+  bool _isAlwaysAvailable(String fileName) {
+    return fileName.startsWith('narrator_') ||
+        fileName == 'one_second_break' ||
+        fileName == 'five_second_break' ||
+        fileName == 'audio_cue' ||
+        fileName == 'nickname' ||
+        fileName == 'title' ||
+        fileName.startsWith('grammar_part_1_batch_') ||
+        fileName.startsWith('grammar_part_') ||
+        fileName.startsWith('https://');
   }
 }

@@ -93,6 +93,13 @@ class _LessonCardState extends State<LessonCard> {
     return 'Custom Lesson';
   }
 
+  String getLessonType() {
+    final data = widget.audioFile.data() as Map<String, dynamic>?;
+    final lessonType = data?['lesson_type']?.toString().trim();
+    if (lessonType == 'grammar') return 'grammar';
+    return 'conversation';
+  }
+
   String getTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -196,6 +203,9 @@ class _LessonCardState extends State<LessonCard> {
   String getEstimatedDuration() {
     try {
       final data = widget.audioFile.data() as Map<String, dynamic>?;
+      if ((data?['lesson_type']?.toString() ?? '') == 'grammar') {
+        return '~5-10 min';
+      }
       if (data?.containsKey('dialogue') == true) {
         final dialogue = widget.audioFile.get('dialogue') as List<dynamic>?;
         if (dialogue != null && dialogue.isNotEmpty) {
@@ -565,6 +575,7 @@ class _LessonCardState extends State<LessonCard> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final category = getCategory();
+    final lessonType = getLessonType();
     final categoryColor = _getCategoryColor(category);
 
     return Container(
@@ -584,14 +595,23 @@ class _LessonCardState extends State<LessonCard> {
 
             final manager =
                 Provider.of<AudioPlayerManager>(context, listen: false);
-            final dialogueRaw = widget.audioFile.get('dialogue');
-            final turnCount = dialogueRaw is List && dialogueRaw.isNotEmpty
+            final data = widget.audioFile.data() as Map<String, dynamic>?;
+            final dialogueRaw = data?['dialogue'];
+            final segmentsRaw = data?['segments'];
+            final audioPartsRaw = data?['audio_parts'];
+            final turnCount = audioPartsRaw is List && audioPartsRaw.isNotEmpty
+                ? audioPartsRaw.length
+                : dialogueRaw is List && dialogueRaw.isNotEmpty
                 ? dialogueRaw.length
-                : LessonConstants.defaultDialogueTurns;
+                : segmentsRaw is List && segmentsRaw.isNotEmpty
+                    ? segmentsRaw.length
+                    : LessonConstants.defaultDialogueTurns;
             manager.playLesson(LessonData(
               documentID: widget.audioFile.reference.parent.parent!.id,
-              dialogue: widget.audioFile.get('dialogue'),
+              dialogue: dialogueRaw is List ? dialogueRaw : const [],
+              segments: segmentsRaw is List ? segmentsRaw : const [],
               category: category,
+              lessonType: lessonType,
               targetLanguage: widget.audioFile.get('target_language'),
               nativeLanguage: (widget.audioFile.data() as Map<String, dynamic>?)
                           ?.containsKey('native_language') ==
@@ -603,7 +623,9 @@ class _LessonCardState extends State<LessonCard> {
               title: widget.audioFile.get('title'),
               scriptDocumentId: widget.audioFile.id,
               generating: false,
-              wordsToRepeat: widget.audioFile.get('words_to_repeat'),
+              wordsToRepeat: data?['words_to_repeat'] is List
+                  ? data!['words_to_repeat']
+                  : const [],
               numberOfTurns: turnCount,
             ));
 
@@ -737,6 +759,36 @@ class _LessonCardState extends State<LessonCard> {
                         ),
 
                         const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: lessonType == 'grammar'
+                                    ? colorScheme.secondaryContainer
+                                    : colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                lessonType == 'grammar'
+                                    ? 'Grammar'
+                                    : 'Conversation',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: lessonType == 'grammar'
+                                      ? colorScheme.onSecondaryContainer
+                                      : colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
 
                         // Bottom info row
                         Row(

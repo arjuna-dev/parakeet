@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:parakeet/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_web/web_only.dart' as googleWeb;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -15,6 +18,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _floatingAnimation;
   late Animation<double> _fadeAnimation;
+
+  final AuthService _authService = AuthService();
+  StreamSubscription<GoogleSignInAccount?>? _googleUserSubscription;
+  bool _googleSignInInProgress = false;
 
   @override
   void initState() {
@@ -48,10 +55,32 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
     _floatingController.repeat(reverse: true);
     _fadeController.forward();
+
+    // On web we render the official GIS button (not our own ElevatedButton),
+    // which updates the current Google user via `onCurrentUserChanged`.
+    if (kIsWeb) {
+      _googleUserSubscription = _authService.googleUserChanges.listen(
+        (GoogleSignInAccount? googleAccount) async {
+          if (googleAccount == null || !mounted) return;
+          if (_googleSignInInProgress) return;
+
+          _googleSignInInProgress = true;
+          try {
+            await _authService.signInWithGoogleAccount(
+              context,
+              googleAccount,
+            );
+          } finally {
+            if (mounted) _googleSignInInProgress = false;
+          }
+        },
+      );
+    }
   }
 
   @override
   void dispose() {
+    _googleUserSubscription?.cancel();
     _floatingController.dispose();
     _fadeController.dispose();
     super.dispose();
@@ -167,42 +196,62 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 32),
                     // Google Sign In Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await AuthService().signInWithGoogle(context);
-                        },
-                        icon: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: NetworkImage('https://developers.google.com/identity/images/g-logo.png'),
-                              fit: BoxFit.contain,
+                    if (kIsWeb)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: Center(
+                          child: googleWeb.renderButton(
+                            configuration: googleWeb.GSIButtonConfiguration(
+                              text: googleWeb.GSIButtonText.continueWith,
+                              theme: googleWeb.GSIButtonTheme.filledBlue,
+                              size: googleWeb.GSIButtonSize.medium,
+                              shape: googleWeb.GSIButtonShape.pill,
+                              logoAlignment: googleWeb.GSIButtonLogoAlignment.center,
+                              minimumWidth: 240,
                             ),
                           ),
                         ),
-                        label: const Text(
-                          'Continue with Google',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await _authService.signInWithGoogle(context);
+                          },
+                          icon: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              image: DecorationImage(
+                                image: NetworkImage(
+                                  'https://developers.google.com/identity/images/g-logo.png',
+                                ),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary.withOpacity(0.6),
-                          foregroundColor: colorScheme.onPrimary.withOpacity(0.6),
-                          elevation: 2,
-                          shadowColor: colorScheme.primary.withOpacity(0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
+                          label: const Text(
+                            'Continue with Google',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.primary.withOpacity(0.6),
+                            foregroundColor: colorScheme.onPrimary.withOpacity(0.6),
+                            elevation: 2,
+                            shadowColor: colorScheme.primary.withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
                           ),
                         ),
                       ),
-                    ),
                     if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
                       const SizedBox(height: 16),
                       // Apple Sign In Button
@@ -211,7 +260,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                         height: 56,
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            await AuthService().signInWithApple(context);
+                            await _authService.signInWithApple(context);
                           },
                           icon: const Icon(
                             Icons.apple,

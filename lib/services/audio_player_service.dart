@@ -175,7 +175,6 @@ class AudioPlayerService {
   void _recomputeTotalDurationsFromTrackList() {
     final sum = trackDurations.fold(Duration.zero, (a, b) => a + b);
     totalDuration.value = sum;
-    finalTotalDuration.value = sum;
   }
 
   void _playbackWatchdogTick() {

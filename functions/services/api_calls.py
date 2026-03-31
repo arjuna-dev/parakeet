@@ -59,8 +59,29 @@ def line_matches_words_to_repeat(line, words_to_repeat):
     return False
 
 
+def split_target_language_for_tts(text):
+    """
+    Grammar target-language examples can be long comma-separated chains.
+    Split them into smaller spoken chunks so punctuation is not verbalized awkwardly
+    and the learner hears cleaner pacing.
+    """
+    spoken = strip_transliteration_segment(text)
+    if not spoken:
+        return []
+
+    parts = re.split(r"\s*[,;:]\s*", spoken)
+    cleaned = []
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        part = re.sub(r"\s+", " ", part)
+        cleaned.append(part)
+    return cleaned if cleaned else [spoken.strip()]
+
+
 class APICalls:
-    def __init__(self, native_language, tts_provider, document_id, document, target_language, language_level, document_durations, words_to_repeat, document_target_phrases=None,  voice_1=None, voice_2=None, mock=False):
+    def __init__(self, native_language, tts_provider, document_id, document, target_language, language_level, document_durations, words_to_repeat, document_target_phrases=None,  voice_1=None, voice_2=None, mock=False, lesson_type="conversation"):
         self.turn_nr = 0
         self.generating_turns = False
         if tts_provider == TTS_PROVIDERS.GOOGLE.value:
@@ -86,6 +107,9 @@ class APICalls:
         self.push_to_firestore = push_to_firestore
         self.remove_user_from_active_creation_by_id = remove_user_from_active_creation_by_id
         self.mock = mock
+        self.lesson_type = lesson_type
+        self.root_key = "segments" if lesson_type == "grammar" else "dialogue"
+        self.segment_index_offset = 0
         self.skip = False
         self.line_handler = None
         self.futures = []
@@ -105,12 +129,12 @@ class APICalls:
         """Index in dialogue[] for the leaf at last_value_path, or None if not under dialogue."""
         if not last_value_path or len(last_value_path) < 2:
             return None
-        if last_value_path[0] != "dialogue":
+        if last_value_path[0] != self.root_key:
             return None
         idx = last_value_path[1]
         if not isinstance(idx, int):
             return None
-        dialogue = full_json.get("dialogue")
+        dialogue = full_json.get(self.root_key)
         if not isinstance(dialogue, list) or not (0 <= idx < len(dialogue)):
             return None
         return idx
@@ -141,13 +165,13 @@ class APICalls:
         last_value_path = self.get_last_value_path(full_json)
         print("last_value_path: ", last_value_path)
         last_value = self.get_value_from_path(full_json, last_value_path)
-        last_value_path_string = "_".join(map(str, last_value_path))
+        last_value_path_string = self.filename_path_string(last_value_path)
         filename = self.document_id + "/" + last_value_path_string + ".mp3"
 
-        if '"dialogue":' in current_line:
+        if f'"{self.root_key}":' in current_line:
             self.generating_turns = True
         # Turn increments
-        if self.turn_nr + 1 < len(full_json.get('dialogue', [])) and self.generating_turns == True:
+        if self.turn_nr + 1 < len(full_json.get(self.root_key, [])) and self.generating_turns == True:
             self.turn_nr += 1
             self.push_to_firestore(full_json, self.document, operation="overwrite")
         # Last turn increment
@@ -196,6 +220,74 @@ class APICalls:
                         self.futures.append(self.executor.submit(self.tts_function, self.pending_voice_2['text'], self.voice_2, self.pending_voice_2['filename'], self.document_durations, first_API_call=True, language_level=self.language_level))
                         self.pending_voice_2 = None
 
+    def handle_line_1st_API_grammar(self, current_line, full_json):
+        print("full_json: ", full_json)
+        last_value_path = self.get_last_value_path(full_json)
+        print("last_value_path: ", last_value_path)
+        last_value = self.get_value_from_path(full_json, last_value_path)
+        last_value_path_string = self.filename_path_string(last_value_path)
+        filename = self.document_id + "/" + last_value_path_string + ".mp3"
+        is_root_title = last_value_path == ["title"]
+
+        if '"segments":' in current_line:
+            self.generating_turns = True
+
+        if self.turn_nr + 1 < len(full_json.get('segments', [])) and self.generating_turns == True:
+            self.turn_nr += 1
+            self.push_to_firestore(full_json, self.document, operation="overwrite")
+
+        if is_root_title and self.generating_turns == True:
+            self.generating_turns = False
+            self.turn_nr += 1
+            self.push_to_firestore(full_json, self.document, operation="overwrite")
+
+        if is_root_title:
+            self.futures.append(self.executor.submit(self.tts_function, last_value, self.narrator_voice, filename, self.document_durations, narrator_voice=True))
+        elif '"native_language":' in current_line:
+            enclosed_words_objects = self.extract_and_classify_enclosed_words(last_value)
+            multi_chunk = len(enclosed_words_objects) > 1
+            for index, text_part in enumerate(enclosed_words_objects):
+                chunk_filename = (
+                    self.document_id + "/" + last_value_path_string + f"_{index}" + ".mp3"
+                    if multi_chunk
+                    else filename
+                )
+                if text_part['enclosed']:
+                    self.futures.append(self.executor.submit(
+                        self.tts_function,
+                        text_part['text'],
+                        self.voice_1 or self.narrator_voice,
+                        chunk_filename,
+                        self.document_durations,
+                        language_level=self.language_level
+                    ))
+                else:
+                    self.futures.append(self.executor.submit(
+                        self.tts_function,
+                        text_part['text'],
+                        self.narrator_voice,
+                        chunk_filename,
+                        self.document_durations,
+                        narrator_voice=True
+                    ))
+        elif '"target_language":' in current_line:
+            spoken_chunks = split_target_language_for_tts(last_value)
+            multi_chunk = len(spoken_chunks) > 1
+            for index, spoken_text in enumerate(spoken_chunks):
+                chunk_filename = (
+                    self.document_id + "/" + last_value_path_string + f"_{index}" + ".mp3"
+                    if multi_chunk
+                    else filename
+                )
+                self.futures.append(self.executor.submit(
+                    self.tts_function,
+                    spoken_text,
+                    self.voice_1 or self.narrator_voice,
+                    chunk_filename,
+                    self.document_durations,
+                    language_level=self.language_level
+                ))
+
     def handle_line_2nd_API(self, current_line, full_json):
 
         if self.mock:
@@ -203,12 +295,12 @@ class APICalls:
 
         last_value_path = self.get_last_value_path(full_json)
         last_value = self.get_value_from_path(full_json, last_value_path)
-        last_value_path_string = "_".join(map(str, last_value_path))
+        last_value_path_string = self.filename_path_string(last_value_path)
         filename = self.document_id + "/" + last_value_path_string + ".mp3"
 
         voice_for_turn = self.voice_for_dialogue_turn(full_json, last_value_path)
 
-        if self.turn_nr + 1 < len(full_json.get('dialogue', [])):
+        if self.turn_nr + 1 < len(full_json.get(self.root_key, [])):
             self.turn_nr += 1
             print("full_json: ", full_json)
             self.push_to_firestore(full_json, self.document, operation="overwrite")
@@ -293,6 +385,17 @@ class APICalls:
             return self.get_last_value_path(json_obj[last_index], path)
         else:
             return path
+
+    def filename_path_string(self, path):
+        adjusted_path = list(path)
+        if (
+            self.lesson_type == "grammar"
+            and len(adjusted_path) >= 2
+            and adjusted_path[0] == self.root_key
+            and isinstance(adjusted_path[1], int)
+        ):
+            adjusted_path[1] = adjusted_path[1] + self.segment_index_offset
+        return "_".join(map(str, adjusted_path))
 
     def get_value_from_path(self, json_obj, path):
         """

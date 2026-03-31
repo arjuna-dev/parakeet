@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 class FirstAPIRequest(BaseModel):
     requested_scenario: str
     category: Optional[str] = "Custom Lesson"
@@ -12,6 +13,7 @@ class FirstAPIRequest(BaseModel):
     tts_provider: str
     language_level: str
     keywords: List[str] | Optional[str] = ""
+
 
 class SecondAPIRequest(BaseModel):
     dialogue: List[dict[str, str]]
@@ -28,3 +30,28 @@ class SecondAPIRequest(BaseModel):
     words_to_repeat: List[str]
     tts_provider: str
 
+
+class FirstGrammarAPIRequest(BaseModel):
+    requested_topic: str
+    native_language: str
+    target_language: str
+    user_ID: str
+    document_id: str
+    tts_provider: str
+    language_level: str
+    length_minutes: Optional[str] = "7"
+
+
+class SecondGrammarAPIRequest(BaseModel):
+    requested_topic: str
+    title: str
+    segments: List[dict[str, str]]
+    speakers: dict[str, dict[str, str]]
+    audio_parts: List[str] | Optional[str] = ""
+    native_language: str
+    target_language: str
+    user_ID: str
+    document_id: str
+    tts_provider: str
+    language_level: str
+    length_minutes: Optional[str] = "7"

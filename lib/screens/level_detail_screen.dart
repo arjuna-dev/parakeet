@@ -212,8 +212,8 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
           widget.targetLanguage);
 
       final uid = FirebaseAuth.instance.currentUser!.uid;
-      final recentTopics =
-          await RecentLessonTopicsService.getRecentTopics(uid, widget.targetLanguage);
+      final recentTopics = await RecentLessonTopicsService.getRecentTopics(
+          uid, widget.targetLanguage);
 
       final response = await http.post(
         Uri.parse(
@@ -304,6 +304,8 @@ class _LevelDetailScreenState extends State<LevelDetailScreen> {
       manager.playLesson(LessonData(
         category: widget.category['name'],
         dialogue: const [],
+        segments: const [],
+        lessonType: 'conversation',
         title: title,
         documentID: documentId,
         userID: userId,
