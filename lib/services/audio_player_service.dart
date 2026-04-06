@@ -25,6 +25,7 @@ class AudioPlayerService {
   List<Duration> trackDurations = [];
   /// One file name per playlist index (same order as [playlist.children]); empty URLs omitted.
   List<dynamic> playlistFileNames = [];
+  List<Duration> _trackStartOffsets = [];
   final ValueNotifier<Duration> totalDuration =
       ValueNotifier<Duration>(Duration.zero);
   final ValueNotifier<Duration> finalTotalDuration =
@@ -173,8 +174,19 @@ class AudioPlayerService {
   }
 
   void _recomputeTotalDurationsFromTrackList() {
+    _trackStartOffsets = _buildTrackStartOffsets(trackDurations);
     final sum = trackDurations.fold(Duration.zero, (a, b) => a + b);
     totalDuration.value = sum;
+  }
+
+  List<Duration> _buildTrackStartOffsets(List<Duration> durations) {
+    final offsets = <Duration>[];
+    var running = Duration.zero;
+    for (final duration in durations) {
+      offsets.add(running);
+      running += duration;
+    }
+    return offsets;
   }
 
   void _playbackWatchdogTick() {
@@ -610,6 +622,11 @@ class AudioPlayerService {
   // Calculate cumulative duration up to a specific index
   Duration cumulativeDurationUpTo(int currentIndex) {
     final idx = _safePlaylistIndex(currentIndex);
+    if (idx <= 0) return Duration.zero;
+    if (_trackStartOffsets.length == trackDurations.length &&
+        idx < _trackStartOffsets.length) {
+      return _trackStartOffsets[idx];
+    }
     return trackDurations
         .take(idx)
         .fold(Duration.zero, (total, d) => total + d);
@@ -641,31 +658,58 @@ class AudioPlayerService {
 
   // Get current track index based on position for better synchronization
   int getCurrentTrackIndex() {
-    final currentIndex = player.currentIndex ?? 0;
-    final currentPosition = player.position;
-    final cumulativeDuration = cumulativeDurationUpTo(currentIndex);
-    final totalPosition = cumulativeDuration + currentPosition;
-
-    // Use position-based tracking for more accurate results
-    return findTrackIndexForPosition(totalPosition.inMilliseconds.toDouble());
+    final currentIndex = player.currentIndex;
+    if (currentIndex != null) {
+      return _safePlaylistIndex(currentIndex);
+    }
+    return findTrackIndexForPosition(player.position.inMilliseconds.toDouble());
   }
 
   // Set track durations (optionally the file names aligned 1:1 with playlist indices)
   void setTrackDurations(List<Duration> durations,
       {List<dynamic>? alignedFileNames}) {
-    trackDurations = durations;
     if (alignedFileNames != null) {
-      playlistFileNames = List<dynamic>.from(alignedFileNames);
+      final nextNames = List<dynamic>.from(alignedFileNames);
+      final mergedDurations = <Duration>[];
+
+      for (int i = 0; i < nextNames.length; i++) {
+        final incoming = i < durations.length ? durations[i] : Duration.zero;
+        final hasSameTrackAtIndex = i < playlistFileNames.length &&
+            playlistFileNames[i].toString() == nextNames[i].toString();
+
+        if (hasSameTrackAtIndex && i < trackDurations.length) {
+          final existing = trackDurations[i];
+          mergedDurations.add(existing > incoming ? existing : incoming);
+        } else {
+          mergedDurations.add(incoming);
+        }
+      }
+
+      playlistFileNames = nextNames;
+      trackDurations = mergedDurations;
+    } else if (trackDurations.length == durations.length &&
+        trackDurations.isNotEmpty) {
+      trackDurations = List<Duration>.generate(
+        durations.length,
+        (index) => trackDurations[index] > durations[index]
+            ? trackDurations[index]
+            : durations[index],
+      );
+    } else {
+      trackDurations = durations;
     }
     _resetDecoderSyncState();
-    totalDuration.value =
-        durations.fold(Duration.zero, (total, d) => total + d);
+    _recomputeTotalDurationsFromTrackList();
   }
 
   // Set final total duration
   void setFinalTotalDuration() {
     finalTotalDuration.value =
         trackDurations.fold(Duration.zero, (total, d) => total + d);
+  }
+
+  void clearFinalTotalDuration() {
+    finalTotalDuration.value = Duration.zero;
   }
 
   // Dispose resources

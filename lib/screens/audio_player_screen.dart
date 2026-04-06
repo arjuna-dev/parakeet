@@ -125,18 +125,55 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
   bool get _shouldReuseLockedPlaybackState =>
       widget.existingService != null &&
-      !_generating &&
       _audioPlayerService.playlistInitialized &&
       _audioPlayerService.finalTotalDuration.value > Duration.zero;
+
+  bool _canReuseLockedPlaybackStateForScript(List<dynamic> desiredScript) {
+    if (!_shouldReuseLockedPlaybackState) {
+      return false;
+    }
+
+    final existingNames = _audioPlayerService.playlistFileNames
+        .map((e) => e.toString())
+        .toList();
+    final desiredNames = desiredScript.map((e) => e.toString()).toList();
+
+    if (desiredNames.isEmpty) {
+      return true;
+    }
+
+    if (existingNames.length < desiredNames.length) {
+      return false;
+    }
+
+    for (int i = 0; i < desiredNames.length; i++) {
+      if (i >= existingNames.length || existingNames[i] != desiredNames[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   @override
   void initState() {
     super.initState();
-    // Initialize _generating with widget.generating
-    _generating = widget.generating;
+    final hasExistingLockedPlaybackState =
+        widget.existingService != null &&
+        widget.existingService!.playlistInitialized &&
+        widget.existingService!.finalTotalDuration.value > Duration.zero;
 
-    // For non-generating mode, all dialogue is already available
-    _allDialogueGenerated = !widget.generating;
+    // If we are re-opening an already completed lesson with a live shared
+    // player, trust the player state over the incoming widget flag.
+    _generating =
+        hasExistingLockedPlaybackState ? false : widget.generating;
+
+    // For non-generating mode, all dialogue is already available.
+    _allDialogueGenerated =
+        hasExistingLockedPlaybackState || !widget.generating;
+    if (hasExistingLockedPlaybackState && widget.lessonType == 'grammar') {
+      _grammarDurationLocked = true;
+    }
 
     // Make a mutable copy of the initial dialogue that we can update over time
     _dialogue = List<dynamic>.from(widget.dialogue);
@@ -153,6 +190,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         userID: widget.userID,
         hasPremium: _hasPremium,
       );
+    }
+
+    if (_generating) {
+      _audioPlayerService.clearFinalTotalDuration();
+      _grammarDurationLocked = false;
     }
 
     _audioPlayerService.isPlaying.addListener(_handlePlayingStateChanged);
@@ -276,13 +318,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         } else {
           print("Error: _existingBigJson is null for non-generating mode");
         }
-        if (_shouldReuseLockedPlaybackState) {
+        if (_canReuseLockedPlaybackStateForScript(_script)) {
           if (_audioPlayerService.playlistFileNames.isNotEmpty) {
             _script =
                 List<dynamic>.from(_audioPlayerService.playlistFileNames);
           }
+          _generating = false;
+          _allDialogueGenerated = true;
+          if (widget.lessonType == 'grammar') {
+            _grammarDurationLocked = true;
+          }
+          final currentIndex = _audioPlayerService.player.currentIndex ?? 0;
           _currentTrack = _pickTrackNameForPlaylistIndex(
-                  _audioPlayerService.player.currentIndex ?? 0) ??
+                  currentIndex) ??
               (_script.isNotEmpty ? _script[0] : '');
           if (mounted) {
             setState(() {});
@@ -292,7 +340,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         }
 
         // Ensure durations are loaded even if playlist was already initialized
-        if (!_shouldReuseLockedPlaybackState &&
+        if (!_canReuseLockedPlaybackStateForScript(_script) &&
             (_audioPlayerService.trackDurations.isEmpty ||
                 _audioPlayerService.totalDuration.value == Duration.zero)) {
           print("Track durations not set, calculating now...");
@@ -615,9 +663,15 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _audioPlayerService.setTrackDurations(trackDurations,
         alignedFileNames: resolved);
 
-    // Set final total duration after reaching numberOfTurns or if not generating
-    if ((_updateNumber >= widget.numberOfTurns || !_generating) &&
-        !_isDisposing) {
+    // For grammar, final duration is locked only when part 2 is complete in
+    // _updatePlaylist(). Do not let the generic duration update path freeze it
+    // early while batches are still being appended.
+    final shouldLockFinalDuration =
+        widget.lessonType == 'grammar'
+            ? !_generating
+            : (_updateNumber >= widget.numberOfTurns || !_generating);
+
+    if (shouldLockFinalDuration && !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
       if (widget.lessonType == 'grammar') {
         _grammarDurationLocked = true;
@@ -1427,6 +1481,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         player: _audioPlayerService.player,
                         cumulativeDurationUpTo:
                             _audioPlayerService.cumulativeDurationUpTo,
+                        generating: _generating,
                         pause: ({bool analyticsOn = true}) =>
                             _audioPlayerService.pause(analyticsOn: analyticsOn),
                         onSliderChangeStart: () {
