@@ -809,6 +809,8 @@ IMPORTANT:
 - speaker_2 must speak target-language examples at a pace appropriate for learner level {language_level}; for beginners this means slower and very clear.
 - If speaker_1 mentions an exact {target_language} word or phrase inside a teaching sentence, wrap only that exact target-language snippet in ||...|| so it can be spoken by speaker_2.
 - Do not leave target-language snippets inside speaker_1 as plain text; use ||...|| for those quoted forms.
+- Do not put target-language examples, conjugation lists, or vocabulary items in speaker_1 unless they are wrapped in ||...||.
+- Any exact {target_language} word, phrase, sentence, conjugation, or example must be spoken by speaker_2, never by speaker_1.
 - Keep each turn short enough for natural podcast pacing.
 - Prefer shorter, cleaner target-language turns so the target speaker can say them slowly and clearly.
 - Focus only on introduction, quick context, and one or two simple examples.
@@ -859,6 +861,8 @@ IMPORTANT:
 - speaker_2 must speak target-language examples at a pace appropriate for learner level {language_level}; for beginners this means slower and very clear.
 - If speaker_1 mentions an exact {target_language} word or phrase inside a teaching sentence, wrap only that exact target-language snippet in ||...|| so it can be spoken by speaker_2.
 - Do not leave target-language snippets inside speaker_1 as plain text; use ||...|| for those quoted forms.
+- Do not put target-language examples, conjugation lists, or vocabulary items in speaker_1 unless they are wrapped in ||...||.
+- Any exact {target_language} word, phrase, sentence, conjugation, or example must be spoken by speaker_2, never by speaker_1.
 - Include more guided practice and a final recap.
 - Keep each turn short enough for natural podcast pacing.
 - Prefer shorter, cleaner target-language turns so the target speaker can say them slowly and clearly.

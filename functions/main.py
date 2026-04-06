@@ -107,6 +107,37 @@ def _is_punctuation_only_text(text):
     return re.fullmatch(r"[\s\.,;:!?\-\(\)\[\]\"'`“”‘’/\\…]+", normalized) is not None
 
 
+def _contains_non_latin_letters(text):
+    return re.search(r"[^\x00-\x7F]", text or "") is not None
+
+
+def _promote_quoted_target_snippets(text):
+    source = text or ""
+    if "||" in source:
+        return source
+
+    patterns = [
+        r"“([^”]+)”",
+        r'"([^"]+)"',
+        r"'([^']+)'",
+        r"\(([^()]+)\)",
+    ]
+
+    promoted = source
+    for pattern in patterns:
+        def repl(match):
+            inner = (match.group(1) or "").strip()
+            if not inner or _is_punctuation_only_text(inner):
+                return match.group(0)
+            if not _contains_non_latin_letters(inner):
+                return match.group(0)
+            return f"||{inner}||"
+
+        promoted = re.sub(pattern, repl, promoted)
+
+    return promoted
+
+
 def _expand_embedded_target_voice_turns(turns):
     expanded = []
     for turn in turns or []:
@@ -114,6 +145,8 @@ def _expand_embedded_target_voice_turns(turns):
             continue
         speaker = turn.get("speaker")
         text = (turn.get("text") or "").strip()
+        if speaker == "speaker_1":
+            text = _promote_quoted_target_snippets(text)
         if not text or _is_punctuation_only_text(text):
             continue
         if speaker != "speaker_1" or "||" not in text:
@@ -824,7 +857,7 @@ def suggest_grammar_lesson_topic(req: https_fn.Request) -> https_fn.Response:
         return https_fn.Response(
             response_text,
             status=200,
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json; charset=utf-8'}
         )
     except Exception as e:
         print(f"Error in suggest_grammar_lesson_topic: {str(e)}")

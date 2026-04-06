@@ -30,6 +30,24 @@ class GrammarLessonForm extends StatefulWidget {
 }
 
 class _GrammarLessonFormState extends State<GrammarLessonForm> {
+  static const List<String> _scriptFontFallback = [
+    'Noto Sans',
+    'Noto Sans Arabic',
+    'Noto Sans JP',
+    'Noto Sans KR',
+    'Noto Sans SC',
+    'Noto Sans TC',
+    'Noto Sans Devanagari',
+    'Noto Sans Thai',
+    'Noto Sans Hebrew',
+    'Arial Unicode MS',
+    'PingFang SC',
+    'Hiragino Sans',
+    'Microsoft YaHei',
+    'Malgun Gothic',
+    'Segoe UI Symbol',
+  ];
+
   final TextEditingController _topicController = TextEditingController();
   final FocusNode _topicFocusNode = FocusNode();
   bool _isSuggestingRandom = false;
@@ -58,6 +76,44 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
 
   bool get _canCreateLesson => _topicController.text.trim().isNotEmpty;
 
+  bool get _useTopicPicker {
+    const supportedNativeLanguages = {
+      'English (Australia)',
+      'English (UK)',
+      'English (US)',
+    };
+    return supportedNativeLanguages.contains(widget.nativeLanguage);
+  }
+
+  String get _levelBucket {
+    final normalized = widget.languageLevel.toLowerCase();
+    if (normalized.contains('b1') ||
+        normalized.contains('b2') ||
+        normalized.contains('intermediate')) {
+      return 'intermediate';
+    }
+    if (normalized.contains('c1') ||
+        normalized.contains('c2') ||
+        normalized.contains('advanced')) {
+      return 'advanced';
+    }
+    return 'beginner';
+  }
+
+  List<String> get _levelTopics =>
+      grammarLessonTopicsByLevel[_levelBucket] ?? grammarLessonTopics;
+
+  String get _levelLabel {
+    switch (_levelBucket) {
+      case 'intermediate':
+        return 'Best for intermediate learners';
+      case 'advanced':
+        return 'Best for advanced learners';
+      default:
+        return 'Best for beginner learners';
+    }
+  }
+
   Future<void> _populateRandomTopicAsync() async {
     try {
       final topic = await _pickLocalFallbackTopic();
@@ -71,16 +127,17 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
   }
 
   Future<String> _pickLocalFallbackTopic() async {
+    final topicPool = _levelTopics;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       return RecentLessonTopicsService.pickUnusedScenarioKey(
-        grammarLessonTopics,
+        topicPool,
         uid,
         widget.targetLanguage,
         lessonType: RecentLessonTopicsService.grammarLessonType,
       );
     }
-    return grammarLessonTopics[Random().nextInt(grammarLessonTopics.length)];
+    return topicPool[Random().nextInt(topicPool.length)];
   }
 
   Future<void> _suggestRandomLesson() async {
@@ -107,12 +164,6 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
       setState(() {
         _topicController.text = fallback;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Using an offline grammar topic suggestion.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
     } finally {
       if (mounted) {
         setState(() {
@@ -120,6 +171,111 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
         });
       }
     }
+  }
+
+  Future<void> _showTopicPicker() async {
+    final selectedTopic = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final commonTopics = _levelTopics;
+        final extraTopics = grammarLessonTopics
+            .where((topic) => !commonTopics.contains(topic))
+            .toList();
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              Text(
+                'Common topics',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _levelLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...commonTopics.map((topic) => Column(
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          topic,
+                          style: const TextStyle(
+                            fontFamilyFallback: _scriptFontFallback,
+                          ),
+                        ),
+                        trailing: _topicController.text.trim() == topic
+                            ? Icon(
+                                Icons.check_circle,
+                                color: colorScheme.primary,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(context).pop(topic),
+                      ),
+                      Divider(
+                        color: colorScheme.outlineVariant.withOpacity(0.35),
+                        height: 1,
+                      ),
+                    ],
+                  )),
+              if (extraTopics.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Text(
+                  'More topics',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...extraTopics.map((topic) => Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            topic,
+                            style: const TextStyle(
+                              fontFamilyFallback: _scriptFontFallback,
+                            ),
+                          ),
+                          trailing: _topicController.text.trim() == topic
+                              ? Icon(
+                                  Icons.check_circle,
+                                  color: colorScheme.primary,
+                                )
+                              : null,
+                          onTap: () => Navigator.of(context).pop(topic),
+                        ),
+                        Divider(
+                          color: colorScheme.outlineVariant.withOpacity(0.35),
+                          height: 1,
+                        ),
+                      ],
+                    )),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedTopic == null || !mounted) return;
+    setState(() {
+      _topicController.text = selectedTopic;
+    });
   }
 
   void _createLesson() {
@@ -172,6 +328,14 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
                     OutlinedButton.icon(
                       onPressed:
                           _isSuggestingRandom ? null : _suggestRandomLesson,
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       icon: _isSuggestingRandom
                           ? SizedBox(
                               width: 16,
@@ -183,38 +347,80 @@ class _GrammarLessonFormState extends State<GrammarLessonForm> {
                                 ),
                               ),
                             )
-                          : const Icon(Icons.auto_awesome, size: 16),
-                      label: const Text('Generate Random'),
+                          : const Icon(Icons.auto_awesome, size: 14),
+                      label: const Text('Random'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                TextField(
-                  controller: _topicController,
-                  focusNode: _topicFocusNode,
-                  cursorColor: colorScheme.primary,
-                  decoration: InputDecoration(
-                    hintText:
-                        'Try “past tense”, “asking polite questions”, “using articles”',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                SizedBox(
+                  height: 96,
+                  child: TextField(
+                    controller: _topicController,
+                    focusNode: _topicFocusNode,
+                    readOnly: true,
+                    enableInteractiveSelection: false,
+                    showCursor: false,
+                    cursorColor: colorScheme.primary,
+                    onTap: _useTopicPicker ? _showTopicPicker : null,
+                    style: const TextStyle(
+                      fontFamilyFallback: _scriptFontFallback,
+                      height: 1.3,
                     ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    suffixIcon: _topicController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: _topicController.clear,
-                          )
-                        : null,
+                    decoration: InputDecoration(
+                      hintText: _useTopicPicker
+                          ? 'Choose a grammar topic'
+                          : 'Enter a grammar topic',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontFamilyFallback: _scriptFontFallback,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      prefixIcon: Icon(
+                        Icons.menu_book_rounded,
+                        color: colorScheme.primary,
+                      ),
+                      suffixIcon: _topicController.text.isNotEmpty
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: _topicController.clear,
+                                ),
+                                if (_useTopicPicker) ...[
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                              ],
+                            )
+                          : (_useTopicPicker
+                              ? Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: colorScheme.onSurfaceVariant,
+                                )
+                              : null),
+                    ),
+                    minLines: 2,
+                    maxLines: 3,
                   ),
-                  maxLines: 3,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.done,
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Parakeet will adapt the explanations and examples to your current learner level.',
+                  _useTopicPicker
+                      ? 'Pick a topic from the list or use Random. Parakeet will adapt the explanations and examples to your current learner level.'
+                      : 'Use Random to get a suggested grammar topic. Parakeet will adapt the explanations and examples to your current learner level.',
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurfaceVariant,

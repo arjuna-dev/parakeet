@@ -177,8 +177,16 @@ class _CustomLessonScreenState extends State<CustomLessonScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                bottom: const TabBar(
-                  tabs: [
+                bottom: TabBar(
+                  labelColor: colorScheme.primary,
+                  unselectedLabelColor:
+                      colorScheme.onSurfaceVariant.withOpacity(0.85),
+                  indicatorColor: colorScheme.primary,
+                  indicatorWeight: 3,
+                  overlayColor: WidgetStatePropertyAll(
+                    colorScheme.primary.withOpacity(0.08),
+                  ),
+                  tabs: const [
                     Tab(text: 'Conversation'),
                     Tab(text: 'Grammar'),
                   ],

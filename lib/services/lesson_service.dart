@@ -16,6 +16,18 @@ import 'package:provider/provider.dart';
 import 'package:parakeet/services/audio_player_manager.dart';
 
 class LessonService {
+  static String _normalizeSuggestionText(String value) {
+    return value
+        .replaceAll('â', '"')
+        .replaceAll('â', '"')
+        .replaceAll('â', "'")
+        .replaceAll('â', "'")
+        .replaceAll('â', '-')
+        .replaceAll('â', '-')
+        .replaceAll('Â', '')
+        .trim();
+  }
+
   /// Shows a snackbar without throwing if [context] was deactivated after an await.
   static void safeShowSnackBar(BuildContext context, SnackBar snackBar) {
     if (!context.mounted) return;
@@ -1152,8 +1164,7 @@ class LessonService {
 
     final response = await http
         .post(
-          Uri.parse(
-              'https://europe-west1-noble-descent-420612.cloudfunctions.net/suggest_grammar_lesson_topic'),
+          Uri.parse('http://localhost:8083'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             "Access-Control-Allow-Origin": "*",
@@ -1176,10 +1187,10 @@ class LessonService {
     }
 
     final Map<String, dynamic> data =
-        jsonDecode(response.body) as Map<String, dynamic>;
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     return {
-      'title': (data['title'] ?? '').toString(),
-      'topic': (data['topic'] ?? '').toString(),
+      'title': _normalizeSuggestionText((data['title'] ?? '').toString()),
+      'topic': _normalizeSuggestionText((data['topic'] ?? '').toString()),
     };
   }
 
