@@ -8,6 +8,7 @@ class PositionSlider extends StatefulWidget {
   final Function(double) findTrackIndexForPosition;
   final AudioPlayer player;
   final Function(int) cumulativeDurationUpTo;
+  final bool generating;
   final Future<void> Function({bool analyticsOn}) pause;
   final VoidCallback onSliderChangeStart;
   final VoidCallback onSliderChangeEnd;
@@ -18,6 +19,7 @@ class PositionSlider extends StatefulWidget {
     required this.findTrackIndexForPosition,
     required this.player,
     required this.cumulativeDurationUpTo,
+    required this.generating,
     required this.pause,
     required this.onSliderChangeStart,
     required this.onSliderChangeEnd,
@@ -145,12 +147,13 @@ class _PositionSliderState extends State<PositionSlider> {
                 return ValueListenableBuilder<Duration>(
                   valueListenable: widget.audioPlayerService.finalTotalDuration,
                   builder: (context, finalTotalDuration, _) {
-                    // Prefer the locked final duration once we have it.
-                    // This keeps the displayed end time stable even if decoder
-                    // updates continue refining per-track durations in the background.
-                    final effectiveTotalMs = finalTotalDuration.inMilliseconds > 0
-                        ? finalTotalDuration.inMilliseconds
-                        : totalDuration.inMilliseconds;
+                    // Always prefer the locked final duration once it exists.
+                    // Before that, fall back to the live append-only total so
+                    // the end time can grow while audio is still generating.
+                    final effectiveTotalMs =
+                        finalTotalDuration.inMilliseconds > 0
+                            ? finalTotalDuration.inMilliseconds
+                            : totalDuration.inMilliseconds;
                     final sliderMaxMs =
                         effectiveTotalMs > 0 ? effectiveTotalMs : 1000;
 

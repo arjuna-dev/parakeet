@@ -404,25 +404,38 @@ class AudioGenerationService {
           : null;
 
       if (savedData == null) {
-        return liveData;
+        return liveData == null
+            ? null
+            : await _hydrateGrammarAudioPartsFromDurations(
+                firestore, Map<String, dynamic>.from(liveData));
       }
       if (liveData == null) {
-        return savedData;
+        return await _hydrateGrammarAudioPartsFromDurations(
+            firestore, Map<String, dynamic>.from(savedData));
       }
 
       final savedAudioParts =
           savedData['audio_parts'] as List<dynamic>? ?? const [];
       final liveAudioParts =
           liveData['audio_parts'] as List<dynamic>? ?? const [];
+      final savedHasTimestamp = savedData.containsKey('timestamp');
+      final liveHasTimestamp = liveData.containsKey('timestamp');
 
       if (liveData['part_2_complete'] == true &&
           savedData['part_2_complete'] != true) {
-        return liveData;
+        return await _hydrateGrammarAudioPartsFromDurations(
+            firestore, Map<String, dynamic>.from(liveData));
       }
       if (liveAudioParts.length > savedAudioParts.length) {
-        return liveData;
+        return await _hydrateGrammarAudioPartsFromDurations(
+            firestore, Map<String, dynamic>.from(liveData));
       }
-      return savedData;
+      if (liveHasTimestamp && !savedHasTimestamp) {
+        return await _hydrateGrammarAudioPartsFromDurations(
+            firestore, Map<String, dynamic>.from(liveData));
+      }
+      return await _hydrateGrammarAudioPartsFromDurations(
+          firestore, Map<String, dynamic>.from(savedData));
     }
 
     final docRef = firestore
@@ -436,6 +449,50 @@ class AudioGenerationService {
     }
 
     return null;
+  }
+
+  Future<Map<String, dynamic>> _hydrateGrammarAudioPartsFromDurations(
+    FirebaseFirestore firestore,
+    Map<String, dynamic> data,
+  ) async {
+    final currentAudioParts =
+        (data['audio_parts'] as List<dynamic>? ?? const [])
+            .map((part) => part.toString())
+            .where((part) => part.isNotEmpty)
+            .toList();
+
+    final durationsDoc = await firestore
+        .collection('chatGPT_responses')
+        .doc(documentID)
+        .collection('file_durations')
+        .doc('file_durations')
+        .get();
+
+    if (!durationsDoc.exists) {
+      return data;
+    }
+
+    final durationData = durationsDoc.data() as Map<String, dynamic>? ?? {};
+    final reconstructedAudioParts = durationData.keys
+        .where((key) => key.startsWith('grammar_part_'))
+        .toList()
+      ..sort();
+
+    if (reconstructedAudioParts.isEmpty) {
+      return data;
+    }
+
+    final mergedAudioParts = <String>[
+      ...currentAudioParts,
+      ...reconstructedAudioParts.where((part) => !currentAudioParts.contains(part)),
+    ]..sort();
+
+    data['audio_parts'] = mergedAudioParts;
+    if (mergedAudioParts.any((part) => part.startsWith('grammar_part_2_batch_'))) {
+      data['part_2_complete'] = data['part_2_complete'] ?? true;
+    }
+
+    return data;
   }
 
   /// Access a nested value in the big JSON using a path
