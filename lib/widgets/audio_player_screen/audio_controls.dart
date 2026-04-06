@@ -18,6 +18,7 @@ class AudioControls extends StatelessWidget {
   final bool generating;
   final bool hasWordsToReview;
   final VoidCallback? onReviewWords;
+  final VoidCallback? onManualPause;
   final bool isCompleted;
   final VoidCallback? onMarkCompleted;
 
@@ -28,6 +29,7 @@ class AudioControls extends StatelessWidget {
     required this.generating,
     this.hasWordsToReview = false,
     this.onReviewWords,
+    this.onManualPause,
     this.isCompleted = false,
     this.onMarkCompleted,
   }) : super(key: key);
@@ -90,6 +92,9 @@ class AudioControls extends StatelessWidget {
                               onPressed: () {
                                 final isCurrentlyPlaying = audioPlayerService.isPlaying.value;
                                 _trackUserAction(isCurrentlyPlaying ? 'audio_controls_pause_pressed' : 'audio_controls_play_pressed');
+                                if (isCurrentlyPlaying) {
+                                  onManualPause?.call();
+                                }
                                 audioPlayerService.isPlaying.value = !audioPlayerService.isPlaying.value;
                               },
                             ),
