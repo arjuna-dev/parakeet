@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:parakeet/services/audio_player_service.dart';
 import 'package:parakeet/services/audio_generation_service.dart';
 import 'package:parakeet/services/audio_duration_service.dart';
@@ -112,6 +113,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   bool _hasPremium = false;
   int _grammarPart1SegmentCount = 0;
   bool _hasAutoStartedGrammarPlayback = false;
+  bool _suppressGrammarAutoplay = false;
+  bool _grammarDurationLocked = false;
 
   bool _hasReadyGrammarPart1Batch(Map<String, dynamic>? data) {
     final audioParts = data?['audio_parts'] as List<dynamic>? ?? const [];
@@ -145,6 +148,8 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         hasPremium: _hasPremium,
       );
     }
+
+    _audioPlayerService.isPlaying.addListener(_handlePlayingStateChanged);
 
     _audioGenerationService = AudioGenerationService(
       documentID: widget.documentID,
@@ -281,6 +286,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
               alignedFileNames: resolved);
           if (!widget.generating) {
             _audioPlayerService.setFinalTotalDuration();
+            if (widget.lessonType == 'grammar') {
+              _grammarDurationLocked = true;
+            }
           }
           if (mounted) {
             setState(() {}); // Trigger rebuild with updated durations
@@ -334,6 +342,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     if (!widget.generating) {
       _audioPlayerService.setFinalTotalDuration();
+      if (widget.lessonType == 'grammar') {
+        _grammarDurationLocked = true;
+      }
 
       // Update background audio service with final duration
       BackgroundAudioService.updateLessonInfo(
@@ -367,6 +378,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     final shouldAutoStartGrammar = widget.lessonType == 'grammar' &&
         _generating &&
         !_hasAutoStartedGrammarPlayback &&
+        !_suppressGrammarAutoplay &&
         (_latestSnapshot?['part_1_complete'] == true) &&
         _hasReadyGrammarPart1Batch(_latestSnapshot);
 
@@ -415,6 +427,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         return;
       }
       snapshotData = data;
+
+      if (widget.lessonType == 'grammar' &&
+          snapshotData['part_1_complete'] != true) {
+        _latestSnapshot = Map<String, dynamic>.from(snapshotData);
+        return;
+      }
 
       if (widget.lessonType == 'grammar' && data['segments'] is List) {
         _segments = List<dynamic>.from(data['segments'] as List<dynamic>);
@@ -504,6 +522,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
           part1SegmentCount: _grammarPart1SegmentCount,
         );
         _audioPlayerService.setFinalTotalDuration();
+        _grammarDurationLocked = true;
         if (mounted && !_isDisposing) {
           setState(() {
             _generating = false;
@@ -518,6 +537,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (_updateNumber >= widget.numberOfTurns) {
       // Only set final total duration when all dialogue is complete
       _audioPlayerService.setFinalTotalDuration();
+      if (widget.lessonType == 'grammar') {
+        _grammarDurationLocked = true;
+      }
       if (mounted && !_isDisposing) {
         setState(() {
           _generating = false;
@@ -554,6 +576,11 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _calculateTotalDurationAndUpdateTrackDurations(
       QuerySnapshot snapshot) async {
     if (_isDisposing) return;
+    if (widget.lessonType == 'grammar' &&
+        _grammarDurationLocked &&
+        _audioPlayerService.finalTotalDuration.value > Duration.zero) {
+      return;
+    }
 
     // Filter script to remove files that start with '$'
     List<dynamic> filteredScript =
@@ -570,12 +597,18 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if ((_updateNumber >= widget.numberOfTurns || !_generating) &&
         !_isDisposing) {
       _audioPlayerService.setFinalTotalDuration();
+      if (widget.lessonType == 'grammar') {
+        _grammarDurationLocked = true;
+      }
     }
   }
 
   Future<void> _updatePlaylistOnTheFly() async {
     if (_isDisposing || _generating) {
       return;
+    }
+    if (widget.lessonType == 'grammar') {
+      _grammarDurationLocked = false;
     }
 
     bool wasPlaying = _audioPlayerService.isPlaying.value;
@@ -619,6 +652,9 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         alignedFileNames: built.resolvedScript);
 
     _audioPlayerService.setFinalTotalDuration();
+    if (widget.lessonType == 'grammar') {
+      _grammarDurationLocked = true;
+    }
 
     // Resume playback if it was playing before
     if (wasPlaying) {
@@ -834,6 +870,23 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         await _initializePlaylist();
       }
 
+      final shouldAutoPlayGrammarNow =
+          mounted &&
+          !_isDisposing &&
+          !_hasAutoStartedGrammarPlayback &&
+          !_suppressGrammarAutoplay &&
+          _audioPlayerService.playlistInitialized &&
+          (_latestSnapshot?['part_1_complete'] == true) &&
+          _hasReadyGrammarPart1Batch(_latestSnapshot);
+
+      if (shouldAutoPlayGrammarNow) {
+        await _audioPlayerService.playFirstTrack();
+        _hasAutoStartedGrammarPlayback = true;
+        if (mounted) {
+          setState(() {});
+        }
+      }
+
       unawaited(() async {
         try {
           await _audioGenerationService.makeSecondGrammarApiCall(
@@ -861,6 +914,19 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _handlePlayingStateChanged() {
+    if (_isDisposing || widget.lessonType != 'grammar') return;
+    if (!_hasAutoStartedGrammarPlayback) return;
+    if (_audioPlayerService.isPlaying.value) return;
+
+    final state = _audioPlayerService.player.playerState;
+    if (state.processingState == ProcessingState.completed) {
+      return;
+    }
+
+    _suppressGrammarAutoplay = true;
   }
 
   Future<void> _loadAddressByNicknamePreference() async {
@@ -1366,6 +1432,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void dispose() {
     _isDisposing = true;
+    _audioPlayerService.isPlaying.removeListener(_handlePlayingStateChanged);
     _positionMonitorTimer?.cancel();
     _positionMonitorTimer = null;
     if (widget.generating) {

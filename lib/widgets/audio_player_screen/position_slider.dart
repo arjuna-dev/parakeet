@@ -52,15 +52,33 @@ class _PositionSliderState extends State<PositionSlider> {
                   .withOpacity(0.7),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  "Loading lesson...",
+                  "We are polishing your audio now.",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onPrimaryContainer
+                        .withOpacity(0.9),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Loading lesson...",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -127,12 +145,12 @@ class _PositionSliderState extends State<PositionSlider> {
                 return ValueListenableBuilder<Duration>(
                   valueListenable: widget.audioPlayerService.finalTotalDuration,
                   builder: (context, finalTotalDuration, _) {
-                    // One source for slider range + end label (they can diverge briefly
-                    // when only one notifier updates).
-                    final effectiveTotalMs = totalDuration.inMilliseconds >
-                            finalTotalDuration.inMilliseconds
-                        ? totalDuration.inMilliseconds
-                        : finalTotalDuration.inMilliseconds;
+                    // Prefer the locked final duration once we have it.
+                    // This keeps the displayed end time stable even if decoder
+                    // updates continue refining per-track durations in the background.
+                    final effectiveTotalMs = finalTotalDuration.inMilliseconds > 0
+                        ? finalTotalDuration.inMilliseconds
+                        : totalDuration.inMilliseconds;
                     final sliderMaxMs =
                         effectiveTotalMs > 0 ? effectiveTotalMs : 1000;
 
