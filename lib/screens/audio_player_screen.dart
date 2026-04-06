@@ -123,6 +123,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
+  bool get _shouldReuseLockedPlaybackState =>
+      widget.existingService != null &&
+      !_generating &&
+      _audioPlayerService.playlistInitialized &&
+      _audioPlayerService.finalTotalDuration.value > Duration.zero;
+
   @override
   void initState() {
     super.initState();
@@ -270,11 +276,25 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
         } else {
           print("Error: _existingBigJson is null for non-generating mode");
         }
-        await _initializePlaylist();
+        if (_shouldReuseLockedPlaybackState) {
+          if (_audioPlayerService.playlistFileNames.isNotEmpty) {
+            _script =
+                List<dynamic>.from(_audioPlayerService.playlistFileNames);
+          }
+          _currentTrack = _pickTrackNameForPlaylistIndex(
+                  _audioPlayerService.player.currentIndex ?? 0) ??
+              (_script.isNotEmpty ? _script[0] : '');
+          if (mounted) {
+            setState(() {});
+          }
+        } else {
+          await _initializePlaylist();
+        }
 
         // Ensure durations are loaded even if playlist was already initialized
-        if (_audioPlayerService.trackDurations.isEmpty ||
-            _audioPlayerService.totalDuration.value == Duration.zero) {
+        if (!_shouldReuseLockedPlaybackState &&
+            (_audioPlayerService.trackDurations.isEmpty ||
+                _audioPlayerService.totalDuration.value == Duration.zero)) {
           print("Track durations not set, calculating now...");
           List<dynamic> filteredScript =
               _script.where((fileName) => !fileName.startsWith('\$')).toList();
@@ -561,6 +581,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   // Update track length from Firestore
   Future<void> _updateTrackLength() async {
     if (_isDisposing) return;
+    if (_shouldReuseLockedPlaybackState) return;
 
     CollectionReference colRef = FirebaseFirestore.instance
         .collection('chatGPT_responses')
@@ -576,6 +597,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _calculateTotalDurationAndUpdateTrackDurations(
       QuerySnapshot snapshot) async {
     if (_isDisposing) return;
+    if (_shouldReuseLockedPlaybackState) return;
     if (widget.lessonType == 'grammar' &&
         _grammarDurationLocked &&
         _audioPlayerService.finalTotalDuration.value > Duration.zero) {
