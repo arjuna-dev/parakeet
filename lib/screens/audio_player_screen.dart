@@ -929,6 +929,12 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
     _suppressGrammarAutoplay = true;
   }
 
+  void _handleManualPause() {
+    if (widget.lessonType != 'grammar') return;
+    _suppressGrammarAutoplay = true;
+    _hasAutoStartedGrammarPlayback = true;
+  }
+
   Future<void> _loadAddressByNicknamePreference() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
@@ -1415,6 +1421,7 @@ class AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         generating: _generating,
                         hasWordsToReview: _allUsedWordsCardsRefsMap.isNotEmpty,
                         onReviewWords: _showVocabularyReview,
+                        onManualPause: _handleManualPause,
                         isCompleted: _isCompleted,
                         onMarkCompleted: _markAsCompleted,
                       ),
